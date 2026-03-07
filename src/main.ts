@@ -808,8 +808,13 @@ function handlePhysicsFrame(frame: PhysicsFrameData): void {
 
 // ─── Phase 15: Helper function to load table with physics worker ────────────────
 async function loadTableWithPhysicsWorker(tableConfig: any, sceneTarget: THREE.Scene, library?: any): Promise<void> {
-  // Build the table geometry and physics
+  // Build the table geometry
   buildTable(tableConfig, sceneTarget, library);
+
+  // Build physics world and bodies (creates tableBodyConfigs for worker)
+  if (physics) {
+    buildPhysicsTable(tableConfig, physics);
+  }
 
   // Initialize physics worker after table is built
   try {
