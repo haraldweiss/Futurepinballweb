@@ -1,0 +1,4245 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Future Pinball Web</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+    canvas { display: block; }
+    
+    #hud {
+      position: fixed; top: 178px; left: 0; right: 0;
+      padding: 6px 20px;
+      background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+      display: flex; justify-content: space-between; align-items: center;
+      z-index: 100;
+    }
+
+    /* DMD — Dot Matrix Display */
+    #dmd-wrap {
+      position: fixed; top: 8px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 95;
+      background: #060100;
+      border: 2px solid #7a3000;
+      border-radius: 8px;
+      padding: 6px 10px;
+      box-shadow: 0 0 35px rgba(255,100,0,0.3), 0 0 8px rgba(255,80,0,0.15),
+                  inset 0 0 20px rgba(0,0,0,0.9);
+    }
+    #dmd { display: block; image-rendering: pixelated; }
+    #score-display {
+      color: #ff6600; font-size: 28px;
+      text-shadow: 0 0 15px #ff6600, 0 0 30px #ff4400;
+    }
+    #ball-display {
+      color: #00aaff; font-size: 20px;
+      text-shadow: 0 0 10px #00aaff;
+    }
+    #multiplier {
+      color: #ffcc00; font-size: 20px;
+      text-shadow: 0 0 10px #ffcc00;
+    }
+
+    /* TABLE LOADER MODAL */
+    #loader-modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.92);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+    #loader-box {
+      background: linear-gradient(145deg, #1a1a2e, #16213e, #0f3460);
+      border: 2px solid #00aaff;
+      border-radius: 12px;
+      padding: 30px;
+      width: 680px;
+      max-width: 95vw;
+      box-shadow: 0 0 40px rgba(0,170,255,0.4), inset 0 0 40px rgba(0,0,50,0.5);
+    }
+    #loader-box h2 {
+      color: #00aaff;
+      font-size: 22px;
+      text-align: center;
+      margin-bottom: 6px;
+      text-shadow: 0 0 15px #00aaff;
+      letter-spacing: 3px;
+    }
+    #loader-box p.subtitle {
+      color: #556; font-size: 12px;
+      text-align: center; margin-bottom: 24px;
+      letter-spacing: 1px;
+    }
+
+    .tab-bar {
+      display: flex; gap: 4px; margin-bottom: 20px;
+    }
+    .tab-btn {
+      flex: 1; padding: 8px;
+      background: rgba(0,50,100,0.5);
+      border: 1px solid #446;
+      border-radius: 6px;
+      color: #aab; cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 12px; letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: rgba(0,170,255,0.2);
+      border-color: #00aaff; color: #00aaff;
+      text-shadow: 0 0 8px #00aaff;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Datei Upload */
+    #drop-zone {
+      border: 2px dashed #334;
+      border-radius: 10px;
+      padding: 35px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: rgba(0,20,40,0.5);
+    }
+    #drop-zone:hover, #drop-zone.drag-over {
+      border-color: #00aaff;
+      background: rgba(0,100,200,0.1);
+      box-shadow: 0 0 20px rgba(0,170,255,0.2);
+    }
+    #drop-zone .icon { font-size: 48px; margin-bottom: 12px; }
+    #drop-zone p { color: #667; font-size: 13px; line-height: 1.8; }
+    #drop-zone strong { color: #00aaff; }
+    #file-input { display: none; }
+
+    /* Format Info */
+    .format-info {
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(255,150,0,0.08);
+      border: 1px solid rgba(255,150,0,0.3);
+      border-radius: 8px;
+    }
+    .format-info p { color: #aa7700; font-size: 11px; line-height: 1.8; }
+    .format-info strong { color: #ffaa00; }
+
+    /* Demo Tische */
+    .table-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; max-height: 340px; overflow-y: auto;
+      padding-right: 4px;
+    }
+    .table-grid::-webkit-scrollbar { width: 4px; }
+    .table-grid::-webkit-scrollbar-track { background: #111; }
+    .table-grid::-webkit-scrollbar-thumb { background: #00aaff; border-radius: 2px; }
+
+    .table-card {
+      background: rgba(0,30,60,0.6);
+      border: 1px solid #223;
+      border-radius: 8px; padding: 12px;
+      cursor: pointer; transition: all 0.25s;
+    }
+    .table-card:hover {
+      border-color: #00aaff;
+      background: rgba(0,80,160,0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0,170,255,0.2);
+    }
+    .table-card .preview {
+      width: 100%; height: 80px;
+      border-radius: 4px; margin-bottom: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+    }
+    .table-card h3 { color: #eee; font-size: 13px; margin-bottom: 3px; }
+    .table-card span { color: #99b; font-size: 11px; }
+    .table-card .badge {
+      display: inline-block; margin-top: 5px;
+      padding: 2px 8px; border-radius: 10px;
+      font-size: 10px;
+    }
+    .badge-classic { background: rgba(255,100,0,0.2); color: #ff6600; border: 1px solid #ff6600; }
+    .badge-modern  { background: rgba(0,150,255,0.2); color: #00aaff; border: 1px solid #00aaff; }
+    .badge-demo    { background: rgba(0,200,100,0.2); color: #00cc66; border: 1px solid #00cc66; }
+
+    /* Parser Log */
+    #parse-log {
+      background: #000;
+      border: 1px solid #334;
+      border-radius: 6px;
+      padding: 10px;
+      height: 120px;
+      overflow-y: auto;
+      font-size: 11px;
+      color: #889;
+      margin-top: 12px;
+    }
+    #parse-log .log-ok    { color: #00cc66; }
+    #parse-log .log-warn  { color: #ffaa00; }
+    #parse-log .log-error { color: #ff4444; }
+    #parse-log .log-info  { color: #00aaff; }
+
+    /* Buttons */
+    .btn-primary {
+      width: 100%; padding: 12px;
+      background: linear-gradient(135deg, #0066cc, #004499);
+      border: 1px solid #00aaff;
+      border-radius: 8px; color: #fff;
+      font-family: 'Courier New', monospace;
+      font-size: 14px; letter-spacing: 2px;
+      cursor: pointer; margin-top: 16px;
+      transition: all 0.2s;
+      text-shadow: 0 0 8px #00aaff;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #0088ff, #0055bb);
+      box-shadow: 0 0 20px rgba(0,170,255,0.4);
+    }
+    .btn-secondary {
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid #334;
+      border-radius: 6px; color: #556;
+      font-family: 'Courier New', monospace;
+      font-size: 12px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { border-color: #667; color: #889; }
+
+    #controls {
+      position: fixed; bottom: 15px; left: 50%;
+      transform: translateX(-50%);
+      color: #445; font-size: 11px;
+      text-align: center; letter-spacing: 1px;
+      z-index: 100; pointer-events: none;
+    }
+    #controls span { color: #668; }
+
+    /* Notification */
+    #notification {
+      position: fixed; top: 70px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,200,100,0.15);
+      border: 1px solid #00cc66;
+      border-radius: 8px; padding: 10px 24px;
+      color: #00cc66; font-size: 14px;
+      letter-spacing: 2px;
+      opacity: 0; transition: opacity 0.4s;
+      z-index: 200;
+      text-shadow: 0 0 10px #00cc66;
+    }
+
+    #open-loader {
+      position: fixed; top: 183px; right: 20px;
+      padding: 8px 16px;
+      background: rgba(0,50,100,0.8);
+      border: 1px solid #00aaff;
+      border-radius: 6px; color: #00aaff;
+      font-family: 'Courier New', monospace;
+      font-size: 12px; cursor: pointer;
+      z-index: 100; letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+    #open-loader:hover {
+      background: rgba(0,100,200,0.6);
+      box-shadow: 0 0 15px rgba(0,170,255,0.4);
+    }
+
+    /* Vollbild-Button */
+    #fullscreen-btn {
+      position: fixed; top: 183px; right: 145px;
+      padding: 8px 12px;
+      background: rgba(0,30,60,0.8);
+      border: 1px solid #334; border-radius: 6px;
+      color: #556; font-size: 16px; cursor: pointer;
+      z-index: 100; transition: all 0.2s;
+    }
+    #fullscreen-btn:hover { border-color: #00aaff; color: #00aaff; }
+
+    /* Mobile Touch-Controls (nur auf Touch-Geräten sichtbar) */
+    .touch-btn {
+      position: fixed; bottom: 30px;
+      width: 130px; height: 85px;
+      background: rgba(0,80,160,0.22);
+      border: 2px solid rgba(0,170,255,0.4);
+      border-radius: 14px;
+      display: none; /* per JS aktiviert */
+      align-items: center; justify-content: center;
+      color: rgba(0,170,255,0.8); font-size: 26px;
+      font-family: 'Courier New', monospace;
+      touch-action: none; user-select: none;
+      z-index: 90; -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 0 15px rgba(0,170,255,0.15);
+    }
+    #touch-left  { left: 16px; }
+    #touch-right { right: 16px; }
+    #touch-plunger {
+      position: fixed; bottom: 30px; left: 50%;
+      transform: translateX(-50%);
+      width: 100px; height: 85px;
+      background: rgba(100,0,0,0.22);
+      border: 2px solid rgba(255,80,0,0.4);
+      border-radius: 50%; display: none;
+      align-items: center; justify-content: center;
+      color: rgba(255,100,0,0.8); font-size: 22px;
+      touch-action: none; user-select: none; z-index: 90;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── Multi-Screen Button ─────────────────────────────────────────────────── */
+    #multiscreen-btn {
+      position: fixed; top: 183px; right: 215px;
+      padding: 8px 12px;
+      background: rgba(0,30,60,0.8);
+      border: 1px solid #334; border-radius: 6px;
+      color: #556; font-size: 14px; cursor: pointer;
+      z-index: 100; transition: all 0.2s;
+      font-family: 'Courier New', monospace;
+    }
+    #multiscreen-btn:hover { border-color: #ffcc00; color: #ffcc00; }
+    #multiscreen-btn.active-multi { border-color: #ffcc00; color: #ffcc00;
+      box-shadow: 0 0 10px rgba(255,200,0,0.3); }
+
+    /* ── DMD-Modus-Button (Dot/Solid) ───────────────────────────────────── */
+    #dmd-mode-btn {
+      position: fixed; top: 8px; left: 50%;
+      transform: translateX(340px);
+      padding: 3px 8px;
+      background: rgba(0,0,0,0.7);
+      border: 1px solid #5a3000; border-radius: 4px;
+      color: #ff8800; font-size: 11px; cursor: pointer;
+      z-index: 96; font-family: 'Courier New', monospace;
+      transition: all 0.2s;
+    }
+    #dmd-mode-btn:hover { border-color: #ff8800; }
+
+    /* ── Hide-DMD-Button (für Multi-Screen) ─────────────────────────────── */
+    #hide-dmd-btn {
+      position: fixed; top: 183px; right: 285px;
+      padding: 8px 12px;
+      background: rgba(0,30,60,0.8);
+      border: 1px solid #334; border-radius: 6px;
+      color: #556; font-size: 13px; cursor: pointer;
+      z-index: 100; transition: all 0.2s;
+      font-family: 'Courier New', monospace;
+    }
+    #hide-dmd-btn:hover { border-color: #ff8800; color: #ff8800; }
+    #hide-dmd-btn.dmd-hidden { border-color: #ff4400; color: #ff4400; }
+
+    /* ── View-Settings-Panel ─────────────────────────────────────────────── */
+    #view-btn {
+      position: fixed; top: 183px; right: 355px;
+      padding: 8px 12px;
+      background: rgba(0,30,60,0.8);
+      border: 1px solid #334; border-radius: 6px;
+      color: #556; font-size: 14px; cursor: pointer;
+      z-index: 100; transition: all 0.2s;
+    }
+    #view-btn:hover { border-color: #00cc66; color: #00cc66; }
+    #view-panel {
+      position: fixed; top: 220px; right: 310px;
+      background: rgba(5,10,20,0.97);
+      border: 1px solid #00cc66;
+      border-radius: 10px; padding: 16px 18px;
+      z-index: 200; display: none;
+      min-width: 230px;
+      box-shadow: 0 0 20px rgba(0,200,100,0.2);
+      font-family: 'Courier New', monospace;
+    }
+    #view-panel.open { display: block; }
+    #view-panel h4 {
+      color: #00cc66; font-size: 11px; letter-spacing: 2px;
+      margin-bottom: 14px; text-align: center;
+    }
+    .vp-row { margin-bottom: 11px; }
+    .vp-row label {
+      display: flex; justify-content: space-between;
+      color: #99b; font-size: 11px; margin-bottom: 4px;
+    }
+    .vp-row label span { color: #00cc66; min-width: 36px; text-align: right; }
+    .vp-row input[type=range] {
+      width: 100%; accent-color: #00cc66;
+      cursor: pointer;
+    }
+    #view-panel button {
+      width: 100%; margin-top: 6px; padding: 7px;
+      background: rgba(0,100,50,0.3);
+      border: 1px solid #00cc66; border-radius: 5px;
+      color: #00cc66; cursor: pointer;
+      font-family: 'Courier New', monospace; font-size: 11px;
+      letter-spacing: 1px; transition: all 0.2s;
+    }
+    #view-panel button:hover { background: rgba(0,150,80,0.4); }
+
+    /* ── Multi-Screen Modal ──────────────────────────────────────────────────── */
+    #multiscreen-modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.88);
+      display: none; align-items: center; justify-content: center;
+      z-index: 1100;
+    }
+    #multiscreen-modal.open { display: flex; }
+    #ms-box {
+      background: linear-gradient(145deg, #12121e, #1a1a2e);
+      border: 2px solid #ffcc00;
+      border-radius: 14px; padding: 28px;
+      width: 560px; max-width: 95vw;
+      box-shadow: 0 0 40px rgba(255,200,0,0.3);
+    }
+    #ms-box h2 { color: #ffcc00; font-size: 18px; text-align: center;
+      letter-spacing: 3px; margin-bottom: 6px;
+      text-shadow: 0 0 15px #ffcc00; }
+    #ms-box .ms-sub { color: #556; font-size: 11px; text-align: center;
+      margin-bottom: 22px; letter-spacing: 1px; }
+    .ms-layout-grid { display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px; margin-bottom: 18px; }
+    .ms-layout-card {
+      border: 2px solid #334; border-radius: 10px; padding: 14px 10px;
+      text-align: center; cursor: pointer; transition: all 0.25s;
+      background: rgba(0,20,40,0.5);
+    }
+    .ms-layout-card:hover, .ms-layout-card.selected {
+      border-color: #ffcc00; background: rgba(80,60,0,0.2);
+      box-shadow: 0 0 15px rgba(255,200,0,0.2);
+    }
+    .ms-layout-card .ms-icon { font-size: 36px; margin-bottom: 8px; }
+    .ms-layout-card h3 { color: #eee; font-size: 12px; margin-bottom: 4px;
+      letter-spacing: 1px; }
+    .ms-layout-card p { color: #99a; font-size: 10px; line-height: 1.6; }
+    #ms-detect-info {
+      background: rgba(0,100,50,0.1); border: 1px solid rgba(0,200,100,0.3);
+      border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;
+      color: #556; font-size: 11px; display: none;
+    }
+    #ms-detect-info.visible { display: block; }
+    #ms-detect-info span { color: #00cc66; }
+    .ms-btn-row { display: flex; gap: 10px; }
+    #ms-autodetect {
+      flex: 1; padding: 10px;
+      background: rgba(0,100,50,0.2); border: 1px solid #00cc66;
+      border-radius: 7px; color: #00cc66; cursor: pointer;
+      font-family: 'Courier New', monospace; font-size: 12px;
+      letter-spacing: 1px; transition: all 0.2s;
+    }
+    #ms-autodetect:hover { background: rgba(0,150,80,0.3); }
+    #ms-apply {
+      flex: 2; padding: 10px;
+      background: linear-gradient(135deg, #664400, #443300);
+      border: 1px solid #ffcc00; border-radius: 7px; color: #ffcc00;
+      cursor: pointer; font-family: 'Courier New', monospace;
+      font-size: 13px; letter-spacing: 2px; transition: all 0.2s;
+    }
+    #ms-apply:hover { background: linear-gradient(135deg, #886600, #665500);
+      box-shadow: 0 0 15px rgba(255,200,0,0.3); }
+    #ms-close {
+      position: absolute; top: 10px; right: 14px;
+      background: none; border: none; color: #556; font-size: 20px;
+      cursor: pointer; padding: 4px 8px;
+    }
+    #ms-close:hover { color: #fff; }
+
+    /* ── Secondary Window: body role classes hide game UI ────────────────────── */
+    body.role-dmd #hud, body.role-dmd #open-loader, body.role-dmd #fullscreen-btn,
+    body.role-dmd #controls, body.role-dmd #loader-modal, body.role-dmd #notification,
+    body.role-dmd #multiscreen-btn, body.role-dmd #touch-left, body.role-dmd #touch-right,
+    body.role-dmd #touch-plunger,
+    body.role-backglass #hud, body.role-backglass #open-loader, body.role-backglass #fullscreen-btn,
+    body.role-backglass #controls, body.role-backglass #loader-modal, body.role-backglass #notification,
+    body.role-backglass #multiscreen-btn, body.role-backglass #touch-left,
+    body.role-backglass #touch-right, body.role-backglass #touch-plunger
+    { display: none !important; }
+
+    /* DMD window: fullscreen centered DMD */
+    body.role-dmd #dmd-wrap {
+      position: fixed; top: 50% !important; left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      padding: 20px 30px;
+      border-width: 3px;
+      box-shadow: 0 0 60px rgba(255,100,0,0.5), 0 0 20px rgba(255,80,0,0.3),
+                  inset 0 0 30px rgba(0,0,0,0.9);
+    }
+
+    /* Backglass window: full canvas */
+    #backglass-canvas {
+      display: none; position: fixed; inset: 0;
+      width: 100%; height: 100%;
+    }
+    body.role-backglass #backglass-canvas { display: block; }
+    body.role-backglass #dmd-wrap { display: none !important; }
+
+    /* ── 1-Screen: Inline-Backglass-Panel (rechts) ───────────────────────── */
+    body.show-bg-panel #backglass-canvas {
+      display: block;
+      position: fixed;
+      right: 0; top: 0;
+      width: 30vw; height: 100vh;
+      z-index: 95;
+      border-left: 1px solid rgba(255,200,0,0.25);
+      inset: unset;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div id="score-display">SCORE: <span id="score">0</span></div>
+    <div id="multiplier">×<span id="multi">1</span></div>
+    <div id="ball-display">BALL <span id="ballnum">1</span>/3</div>
+  </div>
+
+  <button id="open-loader">📂 TISCH LADEN</button>
+
+  <div id="notification"></div>
+
+  <!-- DMD — DOT MATRIX DISPLAY -->
+  <div id="dmd-wrap">
+    <canvas id="dmd"></canvas>
+  </div>
+
+  <!-- TABLE LOADER MODAL -->
+  <div id="loader-modal">
+    <div id="loader-box">
+      <h2>⚡ FUTURE PINBALL WEB</h2>
+      <p class="subtitle">TABLE LOADER v1.0 — SELECT OR IMPORT A TABLE</p>
+
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('demo')">🎮 DEMO TISCHE</button>
+        <button class="tab-btn" onclick="switchTab('import')">📂 FP IMPORT</button>
+        <button class="tab-btn" onclick="switchTab('tables')">📁 TABELLEN</button>
+        <button class="tab-btn" onclick="switchTab('library')">📚 BIBLIOTHEK</button>
+        <button class="tab-btn" onclick="switchTab('info')">ℹ️ FORMAT INFO</button>
+        <button class="tab-btn" onclick="switchTab('script')">📜 SCRIPT</button>
+      </div>
+
+      <!-- Demo Tische Tab -->
+      <div class="tab-content active" id="tab-demo">
+        <div class="table-grid">
+          <div class="table-card" onclick="loadDemoTable('classic')">
+            <div class="preview" style="background: linear-gradient(135deg,#1a4a15,#0d2a0a)">🎱</div>
+            <h3>Classic Arcade</h3>
+            <span>3 Bumper • 2 Flipper</span><br>
+            <span class="badge badge-classic">CLASSIC</span>
+          </div>
+          <div class="table-card" onclick="loadDemoTable('space')">
+            <div class="preview" style="background: linear-gradient(135deg,#0a0a2a,#1a0a3a)">🚀</div>
+            <h3>Space Attack</h3>
+            <span>5 Bumper • 2 Flipper</span><br>
+            <span class="badge badge-modern">MODERN</span>
+          </div>
+          <div class="table-card" onclick="loadDemoTable('fire')">
+            <div class="preview" style="background: linear-gradient(135deg,#3a0a00,#1a0500)">🔥</div>
+            <h3>Fire Storm</h3>
+            <span>4 Bumper • 2 Flipper</span><br>
+            <span class="badge badge-modern">MODERN</span>
+          </div>
+          <div class="table-card" onclick="loadDemoTable('ocean')">
+            <div class="preview" style="background: linear-gradient(135deg,#001a3a,#00102a)">🌊</div>
+            <h3>Ocean Deep</h3>
+            <span>4 Bumper • 2 Flipper</span><br>
+            <span class="badge badge-demo">DEMO</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Import Tab -->
+      <div class="tab-content" id="tab-import">
+        <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+          <div class="icon">📁</div>
+          <p>
+            <strong>Klicken oder .fpt Datei hier reinziehen</strong><br>
+            Future Pinball Table Dateien (.fpt)<br>
+            <span style="font-size:11px; color:#445">
+              Unterstützte Elemente werden automatisch erkannt und geladen
+            </span>
+          </p>
+        </div>
+        <input type="file" id="file-input" accept=".fpt,.fp,.json">
+
+        <div class="format-info">
+          <p>
+            <strong>⚠️ Hinweis zum .fpt Format:</strong><br>
+            Future Pinball .fpt Dateien sind proprietäre Binärdateien.
+            Der Web-Parser liest verfügbare Metadaten, Tisch-Layout Informationen
+            und rekonstruiert das Spielfeld bestmöglich.<br>
+            <strong>Vollständige Kompatibilität</strong> erfordert das originale FP für
+            komplexe Scripting-Logik (VBScript).
+          </p>
+        </div>
+
+        <div id="parse-log">
+          <span class="log-info">> Parser bereit. Datei laden um zu beginnen...</span>
+        </div>
+      </div>
+
+      <!-- Info Tab -->
+      <div class="tab-content" id="tab-info">
+        <div style="color:#667; font-size:12px; line-height:2;">
+          <p style="color:#00aaff; margin-bottom:10px;">📋 UNTERSTÜTZTE FORMATE</p>
+          <p>✅ <span style="color:#ddd">.fpt</span> — Future Pinball Table (Basis-Parsing)</p>
+          <p>✅ <span style="color:#ddd">.json</span> — Web-Pinball JSON Format (nativ)</p>
+          <p>🔄 <span style="color:#ddd">.fp</span> — Future Pinball Projekt (experimentell)</p>
+          <br>
+          <p style="color:#00aaff; margin-bottom:10px;">🎮 STEUERUNG</p>
+          <p>⬅️ <span style="color:#ddd">LEFT SHIFT</span> — Linker Flipper</p>
+          <p>➡️ <span style="color:#ddd">RIGHT SHIFT</span> — Rechter Flipper</p>
+          <p>⬆️ <span style="color:#ddd">ENTER halten</span> — Plunger aufladen</p>
+          <p>⬆️ <span style="color:#ddd">ENTER loslassen</span> — Ball abschießen</p>
+          <p>↔️ <span style="color:#ddd">Z / X</span> — Tisch nudgen (3× = TILT!)</p>
+          <p>🔄 <span style="color:#ddd">R</span> — Ball zurücksetzen</p>
+          <p>🎵 <span style="color:#ddd">M</span> — Musik an/aus</p>
+          <br>
+          <p style="color:#00aaff; margin-bottom:10px;">🔧 ÜBER DAS PROJEKT</p>
+          <p style="color:#556; line-height:1.8">
+            Future Pinball Web ist eine Browser-basierte Neuimplementierung<br>
+            des originalen <a href="https://futurepinball.com/" 
+            style="color:#00aaff" target="_blank">Future Pinball</a> Simulators.<br>
+            Basiert auf Three.js (WebGL) + Rapier2D Physics (WASM).
+          </p>
+        </div>
+      </div>
+
+      <!-- Tables Directory Tab -->
+      <div class="tab-content" id="tab-tables">
+        <div class="dir-section">
+          <div class="dir-row">
+            <input type="text" id="table-dir-path" placeholder="Kein Verzeichnis gewählt..." readonly style="flex:1; padding:6px; background:#000; border:1px solid #334; border-radius:4px; color:#667;">
+            <button id="btn-browse-tables" style="padding:6px 12px; margin-left:8px; background:#004466; border:1px solid #00aaff; border-radius:4px; color:#00aaff; cursor:pointer;">📂 Durchsuchen</button>
+            <input type="file" id="table-dir-input" webkitdirectory accept=".fpt" style="display:none">
+          </div>
+          <div id="table-file-grid" class="table-grid" style="margin-top:12px;">
+            <p style="color:#667; font-size:12px; text-align:center;">Wähle ein Verzeichnis, um verfügbare Tabellen zu laden...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Library Directory Tab -->
+      <div class="tab-content" id="tab-library">
+        <div class="dir-section">
+          <div class="dir-row">
+            <input type="text" id="lib-dir-path" placeholder="Kein Verzeichnis gewählt..." readonly style="flex:1; padding:6px; background:#000; border:1px solid #334; border-radius:4px; color:#667;">
+            <button id="btn-browse-library" style="padding:6px 12px; margin-left:8px; background:#004466; border:1px solid #00aaff; border-radius:4px; color:#00aaff; cursor:pointer;">📂 Durchsuchen</button>
+            <input type="file" id="lib-dir-input" webkitdirectory accept=".fpl" style="display:none">
+          </div>
+          <div id="lib-status" class="log-info" style="margin-top:12px; color:#667;">Keine Bibliothek geladen.</div>
+          <div id="lib-file-list" style="margin-top:12px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Script Tab -->
+      <div class="tab-content" id="tab-script">
+        <div id="script-status" style="color:#556; font-size:11px; margin-bottom:8px; letter-spacing:1px;">
+          Kein Script geladen — .fpt Datei mit VBScript importieren
+        </div>
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
+          <div style="flex:1">
+            <div style="color:#667; font-size:10px; margin-bottom:3px; letter-spacing:1px;">VBSCRIPT (Original)</div>
+            <textarea id="script-raw" readonly
+              style="width:100%; height:120px; background:#000; border:1px solid #334; border-radius:4px;
+                     color:#778; font-family:'Courier New',monospace; font-size:9px; padding:5px;
+                     resize:none; outline:none; line-height:1.5;"></textarea>
+          </div>
+          <div style="flex:1">
+            <div style="color:#667; font-size:10px; margin-bottom:3px; letter-spacing:1px;">JAVASCRIPT (Transpiled)</div>
+            <textarea id="script-js" readonly
+              style="width:100%; height:120px; background:#000; border:1px solid #334; border-radius:4px;
+                     color:#6a8; font-family:'Courier New',monospace; font-size:9px; padding:5px;
+                     resize:none; outline:none; line-height:1.5;"></textarea>
+          </div>
+        </div>
+        <div id="script-log"
+          style="background:#000; border:1px solid #334; border-radius:5px; padding:7px;
+                 height:55px; overflow-y:auto; font-size:10px; color:#889; line-height:1.6;">
+          <span class="log-info">> Script-Engine bereit.</span>
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="closeLoader()">▶ SPIELEN</button>
+    </div>
+  </div>
+
+  <div id="controls">
+    <span>LEFT SHIFT</span> Flipper L &nbsp;|&nbsp; <span>RIGHT SHIFT</span> Flipper R
+    &nbsp;|&nbsp; <span>ENTER halten</span> Plunger &nbsp;|&nbsp; <span>Z/X</span> Tilt &nbsp;|&nbsp; <span>M</span> Musik &nbsp;|&nbsp; <span>R</span> Reset
+  </div>
+
+  <button id="fullscreen-btn"  title="Vollbild"            onclick="toggleFullscreen()">⛶</button>
+  <button id="multiscreen-btn" title="Multi-Screen Setup"  onclick="openMultiscreenModal()">⊞</button>
+  <button id="view-btn"        title="Ansicht anpassen"    onclick="toggleViewPanel()">⚙</button>
+  <button id="hide-dmd-btn"    title="DMD ausblenden"      onclick="toggleHideDMD()">DMD</button>
+  <button id="dmd-mode-btn"    title="DMD: Dot / Solid"    onclick="toggleDMDMode()">DOT</button>
+
+  <!-- View-Settings-Panel -->
+  <div id="view-panel">
+    <h4>⚙ ANSICHT</h4>
+    <div class="vp-row">
+      <label>ZOOM <span id="vp-zoom-val">16</span></label>
+      <input type="range" id="vp-zoom" min="8" max="28" step="0.5" value="16"
+             oninput="applyViewSettings()">
+    </div>
+    <div class="vp-row">
+      <label>NEIGUNG <span id="vp-tilt-val">0.5</span></label>
+      <input type="range" id="vp-tilt" min="-3" max="4" step="0.25" value="0.5"
+             oninput="applyViewSettings()">
+    </div>
+    <div class="vp-row">
+      <label>BLICKWINKEL <span id="vp-fov-val">58</span></label>
+      <input type="range" id="vp-fov" min="35" max="85" step="1" value="58"
+             oninput="applyViewSettings()">
+    </div>
+    <button onclick="resetViewSettings()">↺ RESET</button>
+  </div>
+
+  <!-- Multi-Screen Setup Modal -->
+  <div id="multiscreen-modal">
+    <div id="ms-box" style="position:relative">
+      <button id="ms-close" onclick="closeMultiscreenModal()">✕</button>
+      <h2>⊞ MULTI-SCREEN SETUP</h2>
+      <p class="ms-sub">CHOOSE YOUR DISPLAY CONFIGURATION</p>
+
+      <div class="ms-layout-grid">
+        <div class="ms-layout-card selected" id="ms-card-1" onclick="selectMsLayout(1)">
+          <div class="ms-icon">🖥️</div>
+          <h3>1 SCREEN</h3>
+          <p>Spielfeld + Backglass-<br>Panel im Hauptfenster</p>
+        </div>
+        <div class="ms-layout-card" id="ms-card-2" onclick="selectMsLayout(2)">
+          <div class="ms-icon">🖥️🖥️</div>
+          <h3>2 SCREENS</h3>
+          <p>Spielfeld | Backglass<br>+ DMD gestapelt</p>
+        </div>
+        <div class="ms-layout-card" id="ms-card-3" onclick="selectMsLayout(3)">
+          <div class="ms-icon">🖥️🖥️🖥️</div>
+          <h3>3 SCREENS</h3>
+          <p>Spielfeld | Backglass<br>| DMD — frei platzierbar</p>
+        </div>
+      </div>
+
+      <div id="ms-detect-info"></div>
+
+      <div class="ms-btn-row">
+        <button id="ms-autodetect" onclick="autoDetectScreens()">⚡ AUTO-DETECT</button>
+        <button id="ms-apply" onclick="applyMsLayout()">▶ APPLY LAYOUT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Backglass Canvas (used in role=backglass window) -->
+  <canvas id="backglass-canvas"></canvas>
+
+  <!-- Mobile Touch-Controls -->
+  <div id="touch-left"    class="touch-btn">◀</div>
+  <div id="touch-right"   class="touch-btn">▶</div>
+  <div id="touch-plunger" class="touch-btn">↑</div>
+
+<!-- Role detection: run before module so CSS class is applied early -->
+<script>
+  window.FPW_ROLE = new URLSearchParams(location.search).get('role'); // 'dmd'|'backglass'|null
+  if (window.FPW_ROLE) document.body.classList.add('role-' + window.FPW_ROLE);
+</script>
+
+<!-- CFB (Compound File Binary / OLE2) Parser — liest FPT-Streams im Browser -->
+<script src="https://cdn.jsdelivr.net/npm/cfb@1.2.2/dist/cfb.min.js"></script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.162/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.162/examples/jsm/",
+    "@dimforge/rapier2d-compat": "https://cdn.jsdelivr.net/npm/@dimforge/rapier2d-compat@0.12.0/rapier.es.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import RAPIER from '@dimforge/rapier2d-compat';
+
+// ─── MULTI-SCREEN / BROADCAST CHANNEL ────────────────────────────────────────
+const FPW_ROLE     = window.FPW_ROLE; // 'dmd' | 'backglass' | null
+const multiChannel = typeof BroadcastChannel !== 'undefined'
+  ? new BroadcastChannel('fpw-multiscreen') : null;
+
+// ─── RAPIER2D PHYSIK ──────────────────────────────────────────────────────────
+// physics-Objekt: null bis initPhysics() abgeschlossen
+let physics = null;
+
+async function initPhysics() {
+  await RAPIER.init();
+  const world      = new RAPIER.World({ x: 0.0, y: -9.8 });
+  const eventQueue = new RAPIER.EventQueue(true);
+
+  // ── Ball (Dynamic) ─────────────────────────────────────────────────────────
+  const ballBody = world.createRigidBody(
+    RAPIER.RigidBodyDesc.dynamic()
+      .setTranslation(2.55, -5.0)
+      .setGravityScale(0.0)      // startet in der Lane (kein Schwerkraft)
+      .setLinearDamping(0.0)
+      .setAngularDamping(0.9)
+  );
+  const ballCollider = world.createCollider(
+    RAPIER.ColliderDesc.ball(0.22).setRestitution(0.5).setFriction(0.3),
+    ballBody
+  );
+
+  // ── Linker Flipper (Kinematic-Position) ────────────────────────────────────
+  const lFlipperBody = world.createRigidBody(
+    RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(-0.82, -4.6)
+  );
+  world.createCollider(
+    RAPIER.ColliderDesc.cuboid(1.05, 0.13)
+      .setTranslation(1.05, 0.0)
+      .setRestitution(0.5).setFriction(0.6),
+    lFlipperBody
+  );
+
+  // ── Rechter Flipper (Kinematic-Position) ───────────────────────────────────
+  const rFlipperBody = world.createRigidBody(
+    RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0.82, -4.6)
+  );
+  world.createCollider(
+    RAPIER.ColliderDesc.cuboid(1.05, 0.13)
+      .setTranslation(-1.05, 0.0)
+      .setRestitution(0.5).setFriction(0.6),
+    rFlipperBody
+  );
+
+  // ── Wände (Static, ein Mal angelegt) ──────────────────────────────────────
+  function addFixedBox(x, y, hw, hh, angle = 0, restitution = 0.75) {
+    const body = world.createRigidBody(
+      RAPIER.RigidBodyDesc.fixed().setTranslation(x, y).setRotation(angle)
+    );
+    world.createCollider(
+      RAPIER.ColliderDesc.cuboid(hw, hh).setRestitution(restitution).setFriction(0.2),
+      body
+    );
+    return body;
+  }
+
+  addFixedBox(-3.15,  0.0,  0.11, 6.25);      // Linke Wand
+  addFixedBox( 3.15,  0.0,  0.11, 6.25);      // Rechte Wand
+  addFixedBox( 0.0,   6.15, 3.27, 0.11);      // Obere Wand
+  // Lane-Trennwand nur visuell — kein Rapier-Body (würde Ball beim Launch blockieren)
+
+  // Drain-Führungen nur visuell — kein Rapier-Body (würden Aufwärtspfad blockieren)
+
+  // ── Leit-Bogen am Ende der Shooter-Lane ───────────────────────────────────
+  // Lenkt Ball von gerade-oben nach links ins Spielfeld (von (3.05,5.4)→(1.65,5.96))
+  addFixedBox(2.35, 5.68, 0.60, 0.08, Math.atan2(0.56, -1.40), 0.65);
+
+  // ── Slingshots (Static, ein Mal, feste Position) ──────────────────────────
+  const slingshotMap = new Map();
+  function addSlingshot(x, y, angle, side) {
+    const body = world.createRigidBody(
+      RAPIER.RigidBodyDesc.fixed().setTranslation(x, y).setRotation(angle)
+    );
+    const collider = world.createCollider(
+      RAPIER.ColliderDesc.cuboid(0.09, 0.65)
+        .setRestitution(0.85).setFriction(0.1)
+        .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
+      body
+    );
+    slingshotMap.set(collider.handle, side);
+  }
+  addSlingshot(-2.0, -1.6, -0.3, 'left');
+  addSlingshot( 2.0, -1.6,  0.3, 'right');
+
+  physics = {
+    world, ballBody, ballCollider, eventQueue,
+    lFlipperBody, rFlipperBody,
+    bumperMap:   new Map(),
+    targetMap:   new Map(),
+    slingshotMap,
+    tableBodies: []
+  };
+}
+
+// ── Pro-Tisch: Bumper/Target/Rampen-Bodies erzeugen (bei Tischwechsel) ────────
+function buildPhysicsTable(config) {
+  if (!physics) return;
+  const { world } = physics;
+
+  // Alte per-Tisch-Bodies entfernen
+  physics.tableBodies.forEach(b => { try { world.removeRigidBody(b); } catch(_) {} });
+  physics.tableBodies = [];
+  physics.bumperMap.clear();
+  physics.targetMap.clear();
+
+  // Bumper
+  config.bumpers.forEach((b, i) => {
+    const body = world.createRigidBody(
+      RAPIER.RigidBodyDesc.fixed().setTranslation(b.x, b.y)
+    );
+    physics.tableBodies.push(body);
+    const collider = world.createCollider(
+      RAPIER.ColliderDesc.ball(0.42)
+        .setRestitution(0.7).setFriction(0.0)
+        .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
+      body
+    );
+    physics.bumperMap.set(collider.handle, { x: b.x, y: b.y, mesh: bumpers[i]?.mesh, index: i });
+  });
+
+  // Standup Targets
+  (config.targets || []).forEach((t, i) => {
+    const body = world.createRigidBody(
+      RAPIER.RigidBodyDesc.fixed().setTranslation(t.x, t.y)
+    );
+    physics.tableBodies.push(body);
+    const collider = world.createCollider(
+      RAPIER.ColliderDesc.cuboid(0.28, 0.21)
+        .setRestitution(0.7).setFriction(0.2)
+        .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
+      body
+    );
+    physics.targetMap.set(collider.handle, { x: t.x, y: t.y, mesh: targets[i]?.mesh, index: i });
+  });
+
+  // Rampen
+  (config.ramps || []).forEach(r => {
+    const cx  = (r.x1 + r.x2) / 2, cy = (r.y1 + r.y2) / 2;
+    const dx  = r.x2 - r.x1,       dy = r.y2 - r.y1;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const body = world.createRigidBody(
+      RAPIER.RigidBodyDesc.fixed().setTranslation(cx, cy).setRotation(Math.atan2(dy, dx))
+    );
+    physics.tableBodies.push(body);
+    world.createCollider(
+      RAPIER.ColliderDesc.cuboid(len / 2, 0.07).setRestitution(0.8).setFriction(0.25),
+      body
+    );
+  });
+}
+
+// ── Scoring-Callbacks (aus Rapier Collision-Events) ──────────────────────────
+function scoreBumperHit(bumperData) {
+  if (!bumperData?.mesh) return;
+  // Powered kick: Ball weg vom Bumper-Zentrum (mit Mindestgeschwindigkeit)
+  const pos = physics.ballBody.translation();
+  const dx  = pos.x - bumperData.x, dy = pos.y - bumperData.y;
+  const d   = Math.sqrt(dx * dx + dy * dy);
+  if (d > 0.001) {
+    const vel = physics.ballBody.linvel();
+    const spd = Math.max(Math.hypot(vel.x, vel.y), 5.5) * 1.1;
+    physics.ballBody.setLinvel({ x: (dx / d) * spd, y: (dy / d) * spd }, true);
+  }
+  // Flash + Partikel
+  const ud = bumperData.mesh.userData;
+  ud.light.intensity = 4.0; ud.ringMat.emissiveIntensity = 2.5;
+  setTimeout(() => { ud.light.intensity = 0.9; ud.ringMat.emissiveIntensity = 1.2; }, 130);
+  spawnParticles(bumperData.x, bumperData.y, ud.color, 14);
+  state.score += 100 * state.multiplier;
+  state.bumperHits++;
+  if (state.bumperHits % 5 === 0 && state.multiplier < 5) {
+    state.multiplier++;
+    showNotification(`🔥 ×${state.multiplier} MULTIPLIER!`);
+    dmdEvent(`\u00d7${state.multiplier} MULTIPLIER!`);
+  }
+  if (state.bumperHits % 10 === 0) launchMultiBall();
+  playSound('bumper');
+  callScriptBumper(bumperData.index ?? 0);
+  updateHUD();
+}
+
+function scoreTargetHit(targetData) {
+  if (!targetData?.mesh) return;
+  state.score += 200 * state.multiplier;
+  const ud = targetData.mesh.userData;
+  ud.faceMat.emissiveIntensity = 3.0; ud.light.intensity = 3.0;
+  setTimeout(() => { ud.faceMat.emissiveIntensity = 0.7; ud.light.intensity = 0.7; }, 150);
+  spawnParticles(targetData.x, targetData.y, ud.color, 10);
+  dmdEvent('TARGET!');
+  playSound('bumper');
+  callScriptTarget(targetData.index ?? 0);
+  updateHUD();
+}
+
+function scoreSlingshotHit(side) {
+  const dir = side === 'left' ? 1 : -1;
+  physics.ballBody.applyImpulse({ x: dir * 3.0, y: 2.5 }, true);
+  state.score += 50 * state.multiplier;
+  playSound('bumper');
+  callScriptSlingshot(side);
+  updateHUD();
+}
+
+// ─── FPT RESSOURCEN ────────────────────────────────────────────────────────────
+// Werden beim CFB-Parsing befüllt und von buildTable / playSound abgerufen.
+const fptResources = {
+  textures: {},    // CFB-Entry-Name → THREE.Texture
+  sounds:   {},    // CFB-Entry-Name → AudioBuffer
+  playfield: null, // Größte gefundene Image-Textur (Spielfeld-Artwork)
+  script:    null, // VBScript-Quellcode aus CFB
+  mapped: {        // Gemappte Sounds für Game-Events
+    bumper: null, flipper: null, drain: null
+  }
+};
+
+// ─── HIGHSCORE (localStorage) ─────────────────────────────────────────────────
+const HS_KEY = 'fpw_highscores_v1';
+
+function getTopScores() {
+  try { return JSON.parse(localStorage.getItem(HS_KEY)) || []; }
+  catch(_) { return []; }
+}
+
+// Speichert Score, gibt 1-basierten Rang zurück (1 = neuer #1)
+function recordScore(score) {
+  if (score <= 0) return 0;
+  const list = getTopScores();
+  list.push(score);
+  list.sort((a, b) => b - a);
+  list.splice(5); // Top 5 behalten
+  try { localStorage.setItem(HS_KEY, JSON.stringify(list)); } catch(_) {}
+  return list.indexOf(score) + 1;
+}
+
+// ─── WEB AUDIO ────────────────────────────────────────────────────────────────
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playSound(type) {
+  try {
+    const ctx = getAudioCtx();
+
+    // ── FPT-Sound (originales Audio aus der .fpt-Datei) ──────────────────────
+    const fptBuf = fptResources.mapped[type];
+    if (fptBuf) {
+      const src  = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      src.buffer = fptBuf;
+      src.connect(gain);
+      gain.connect(ctx.destination);
+      gain.gain.value = type === 'flipper' ? 0.5 : 0.75;
+      src.start();
+      return; // Originalen Sound verwenden, kein Synthesizer
+    }
+
+    // ── Synthesizer-Fallback (wenn kein FPT-Sound geladen) ───────────────────
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    const now = ctx.currentTime;
+
+    if (type === 'bumper') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(220, now + 0.12);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now); osc.stop(now + 0.15);
+    } else if (type === 'flipper') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(200, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.06);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+      osc.start(now); osc.stop(now + 0.08);
+    } else if (type === 'drain') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(55, now + 0.6);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+      osc.start(now); osc.stop(now + 0.7);
+    }
+  } catch(e) { /* Audio nicht verfügbar */ }
+}
+
+// ─── HINTERGRUNDMUSIK ─────────────────────────────────────────────────────────
+let bgMusicActive = false;
+let bgMusicGain   = null;
+let bgMusicSource = null; // FPT AudioBufferSource (wenn geladen)
+
+// Synthetische Pinball-Musik: Pentatonisches Arpeggio + Bassline
+// Verwendet setTimeout-Scheduling (~5 ms Jitter, für Musik ausreichend).
+function startBGMusic() {
+  if (bgMusicActive) return;
+  bgMusicActive = true;
+  const ctx  = getAudioCtx();
+  bgMusicGain = ctx.createGain();
+  bgMusicGain.gain.value = 0.055;
+  bgMusicGain.connect(ctx.destination);
+
+  // A-Moll Pentatonik: A B D E G
+  const MELODY = [220, 246.9, 293.7, 329.6, 392, 329.6, 246.9, 220,
+                  261.6, 220, 196, 220, 246.9, 329.6, 392, 440];
+  const BASS   = [55, 55, 73.4, 82.4, 55, 55, 73.4, 55];
+  const TEMPO  = 0.18; // Sekunden pro Schritt
+
+  let step = 0;
+
+  const tick = () => {
+    if (!bgMusicActive || !bgMusicGain) return;
+    const now = ctx.currentTime;
+
+    // Melodie-Note
+    const mOsc  = ctx.createOscillator();
+    const mGain = ctx.createGain();
+    mOsc.type = 'square';
+    mOsc.frequency.value = MELODY[step % MELODY.length];
+    mGain.gain.setValueAtTime(0.07, now);
+    mGain.gain.exponentialRampToValueAtTime(0.001, now + TEMPO * 0.75);
+    mOsc.connect(mGain); mGain.connect(bgMusicGain);
+    mOsc.start(now); mOsc.stop(now + TEMPO);
+
+    // Bass auf jedem 2. Schritt
+    if (step % 2 === 0) {
+      const bOsc  = ctx.createOscillator();
+      const bGain = ctx.createGain();
+      const bFilt = ctx.createBiquadFilter();
+      bOsc.type = 'sawtooth';
+      bOsc.frequency.value = BASS[(step / 2) % BASS.length];
+      bFilt.type = 'lowpass'; bFilt.frequency.value = 280;
+      bGain.gain.setValueAtTime(0.35, now + 0.01);
+      bGain.gain.exponentialRampToValueAtTime(0.001, now + TEMPO * 1.8);
+      bOsc.connect(bFilt); bFilt.connect(bGain); bGain.connect(bgMusicGain);
+      bOsc.start(now + 0.01); bOsc.stop(now + TEMPO * 2);
+    }
+
+    step++;
+    setTimeout(tick, TEMPO * 1000);
+  };
+  tick();
+}
+
+function stopBGMusic() {
+  bgMusicActive = false;
+  if (bgMusicSource) { try { bgMusicSource.stop(); } catch(_) {} bgMusicSource = null; }
+  if (bgMusicGain)   {
+    bgMusicGain.gain.setTargetAtTime(0, getAudioCtx().currentTime, 0.3);
+    setTimeout(() => { bgMusicGain = null; }, 800);
+  }
+}
+
+// Spielt einen FPT AudioBuffer als Looping-Hintergrundmusik
+function playFPTMusic(audioBuffer) {
+  stopBGMusic();
+  bgMusicActive = true;
+  const ctx  = getAudioCtx();
+  bgMusicGain = ctx.createGain();
+  bgMusicGain.gain.value = 0.5;
+  bgMusicGain.connect(ctx.destination);
+  bgMusicSource = ctx.createBufferSource();
+  bgMusicSource.buffer = audioBuffer;
+  bgMusicSource.loop   = true;
+  bgMusicSource.connect(bgMusicGain);
+  bgMusicSource.start();
+}
+
+function toggleMusic() {
+  if (bgMusicActive) { stopBGMusic(); showNotification('🔇 MUSIK AUS'); }
+  else               { startBGMusic(); showNotification('🎵 MUSIK AN'); }
+}
+
+// ─── DMD (DOT MATRIX DISPLAY) ─────────────────────────────────────────────────
+const DMD_W = 128, DMD_H = 32;
+const DMD_DOT = 4, DMD_GAP = 1, DMD_STEP = DMD_DOT + DMD_GAP; // 5px/dot
+
+// Dotted / Solid Modus — gespeichert in localStorage
+let dmdSolidMode = localStorage.getItem('fpw_dmd_mode') === 'solid';
+
+const dmdCanvas = document.getElementById('dmd');
+dmdCanvas.width  = DMD_W * DMD_STEP;   // 640
+dmdCanvas.height = DMD_H * DMD_STEP;   // 160
+const dmdCtx = dmdCanvas.getContext('2d');
+
+// Off-Screen-Canvas für Text-Rasterisierung (2× Größe für bessere Anti-Aliasing)
+const DMD_SCALE = 2; // Render-Skalierung für schärfere Schrift
+const dmdOff = document.createElement('canvas');
+dmdOff.width = DMD_W * DMD_SCALE; dmdOff.height = DMD_H * DMD_SCALE;
+const dmdOff2d = dmdOff.getContext('2d');
+dmdOff2d.imageSmoothingEnabled = true;
+
+const dmdState = {
+  mode: 'attract',  // attract | playing | event | gameover
+  eventText: '',
+  eventTimer: 0,
+  scrollX: 0,
+  animFrame: 0
+};
+
+// Zeichnet Text auf den Off-Screen-Canvas (2× Skala für bessere Qualität)
+function dmdDrawText(text, x, y, size, align = 'center') {
+  const S = DMD_SCALE;
+  dmdOff2d.font = `bold ${size * S}px "Courier New", monospace`;
+  dmdOff2d.textAlign = align;
+  dmdOff2d.fillStyle = '#fff';
+  dmdOff2d.fillText(text, x * S, y * S);
+}
+
+// Überträgt Off-Screen-Pixel als amber Dots (oder Solid) auf den DMD-Canvas
+function dmdFlush() {
+  dmdCtx.fillStyle = '#060100';
+  dmdCtx.fillRect(0, 0, dmdCanvas.width, dmdCanvas.height);
+
+  if (dmdSolidMode) {
+    // ── Solid-Modus: skaliert hochziehen + Amber-Tint ──────────────────────
+    dmdCtx.save();
+    dmdCtx.imageSmoothingEnabled = true;
+    dmdCtx.imageSmoothingQuality = 'high';
+    dmdCtx.drawImage(dmdOff, 0, 0, dmdCanvas.width, dmdCanvas.height);
+    // Amber-Tint via multiply (weiße Pixel werden orange)
+    dmdCtx.globalCompositeOperation = 'multiply';
+    dmdCtx.fillStyle = 'rgb(255,145,0)';
+    dmdCtx.fillRect(0, 0, dmdCanvas.width, dmdCanvas.height);
+    dmdCtx.restore();
+    return;
+  }
+
+  // ── Dot-Modus: pixelweise samplen ─────────────────────────────────────────
+  const S  = DMD_SCALE;
+  const px = dmdOff2d.getImageData(0, 0, DMD_W * S, DMD_H * S).data;
+
+  for (let row = 0; row < DMD_H; row++) {
+    for (let col = 0; col < DMD_W; col++) {
+      // Mittelpixel des 2×2-Blocks als Helligkeit
+      const sr = row * S + (S >> 1), sc = col * S + (S >> 1);
+      const b = px[(sr * DMD_W * S + sc) * 4];
+      const cx = col * DMD_STEP + DMD_DOT * 0.5;
+      const cy = row * DMD_STEP + DMD_DOT * 0.5;
+
+      if (b > 20) {
+        const t   = b / 255;
+        const lev = t < 0.25 ? 0.25 : t < 0.5 ? 0.5 : t < 0.75 ? 0.75 : 1.0;
+        const g   = Math.floor(55  + 85  * lev);
+        const a   = 0.40 + 0.60 * lev;
+        dmdCtx.fillStyle = `rgba(255,${g},0,${a})`;
+      } else {
+        dmdCtx.fillStyle = '#180400';
+      }
+      dmdCtx.beginPath();
+      dmdCtx.arc(cx, cy, DMD_DOT * 0.44, 0, Math.PI * 2);
+      dmdCtx.fill();
+    }
+  }
+}
+
+function dmdClear() {
+  dmdOff2d.fillStyle = '#000';
+  dmdOff2d.fillRect(0, 0, DMD_W * DMD_SCALE, DMD_H * DMD_SCALE);
+}
+
+// ── DMD Render-Funktionen ──────────────────────────────────────────────────────
+function dmdRenderAttract() {
+  dmdClear();
+  const phase = Math.floor(dmdState.animFrame / 150) % 3;
+
+  if (phase === 1) {
+    // Highscore-Anzeige
+    const scores = getTopScores();
+    dmdDrawText('HIGH SCORES', DMD_W / 2, 9, 9);
+    if (scores[0]) dmdDrawText(`#1  ${scores[0].toLocaleString()}`, DMD_W / 2, 21, 7);
+    if (scores[1]) dmdDrawText(`#2  ${scores[1].toLocaleString()}`, DMD_W / 2, 30, 6);
+  } else if (phase === 2) {
+    // Steuerungs-Hinweis
+    dmdDrawText('ENTER HALTEN = PLUNGER', DMD_W / 2, 10, 7);
+    dmdDrawText('Z / X = TILT   M = MUSIK', DMD_W / 2, 22, 7);
+    dmdDrawText('LEFT/RIGHT SHIFT = FLIPPER', DMD_W / 2, 30, 6);
+  } else {
+    // Scrolltext (2× Skala)
+    const S   = DMD_SCALE;
+    const msg = '  FUTURE PINBALL WEB  \u2014 INSERT COIN \u2014  ';
+    dmdOff2d.font = `bold ${8 * S}px "Courier New", monospace`;
+    dmdOff2d.textAlign = 'left';
+    dmdOff2d.fillStyle = '#fff';
+    const w = dmdOff2d.measureText(msg).width;
+    const x = DMD_W * S - ((dmdState.scrollX * 0.6 * S) % (w + DMD_W * S));
+    dmdOff2d.fillText(msg, x, 13 * S);
+    dmdOff2d.fillStyle = '#aaa';
+    dmdOff2d.font = `bold ${6 * S}px "Courier New", monospace`;
+    dmdOff2d.textAlign = 'center';
+    dmdOff2d.fillText('FUTURE PINBALL WEB v1.0', DMD_W * S / 2, 27 * S);
+  }
+
+  dmdState.scrollX++;
+  dmdFlush();
+}
+
+function dmdRenderPlaying() {
+  dmdClear();
+  const scoreStr = state.score.toLocaleString().padStart(12, ' ');
+  dmdDrawText(scoreStr, DMD_W / 2, 14, 14);
+  const tname = (currentTableConfig ? currentTableConfig.name : 'FUTURE PINBALL').toUpperCase();
+  dmdDrawText(`BALL ${state.ballNum}/3   \u00d7${state.multiplier}   ${tname}`, DMD_W / 2, 28, 7);
+  dmdFlush();
+}
+
+function dmdRenderEvent() {
+  dmdClear();
+  const flash = Math.floor(dmdState.animFrame / 7) % 2 === 0;
+  if (flash) dmdDrawText(dmdState.eventText, DMD_W / 2, 13, 11);
+  const pts = `+${100 * state.multiplier} PTS`;
+  dmdDrawText(pts, DMD_W / 2, 28, 7);
+  dmdFlush();
+}
+
+function dmdRenderGameOver() {
+  dmdClear();
+  const flash = Math.floor(dmdState.animFrame / 18) % 2 === 0;
+  if (state.lastRank === 1 && flash) {
+    dmdDrawText('NEW HIGH SCORE!', DMD_W / 2, 10, 10);
+  } else if (flash) {
+    dmdDrawText('GAME OVER', DMD_W / 2, 10, 13);
+  }
+  const rankStr = state.lastRank ? `RANK #${state.lastRank}  ` : '';
+  dmdDrawText(rankStr + 'SCORE: ' + state.lastScore.toLocaleString(), DMD_W / 2, 26, 7);
+  dmdFlush();
+}
+
+// Zentrale Update-Funktion – wird aus animate() aufgerufen
+function dmdUpdate() {
+  dmdState.animFrame++;
+  if (dmdState.eventTimer > 0) {
+    dmdState.eventTimer--;
+    dmdState.mode = 'event';
+  } else if (dmdState.mode === 'event') {
+    dmdState.mode = 'playing';
+  }
+  switch (dmdState.mode) {
+    case 'attract':  dmdRenderAttract();  break;
+    case 'playing':  dmdRenderPlaying();  break;
+    case 'event':    dmdRenderEvent();    break;
+    case 'gameover': dmdRenderGameOver(); break;
+  }
+}
+
+// Löst einen DMD-Event-Flash aus (~1 Sekunde)
+function dmdEvent(text) {
+  dmdState.eventText = text;
+  dmdState.eventTimer = 55;
+  dmdState.animFrame  = 0;
+  dmdState.mode = 'event';
+}
+
+// ─── DMD-MODUS-TOGGLE (Dot / Solid) ──────────────────────────────────────────
+window.toggleDMDMode = function() {
+  dmdSolidMode = !dmdSolidMode;
+  localStorage.setItem('fpw_dmd_mode', dmdSolidMode ? 'solid' : 'dot');
+  const btn = document.getElementById('dmd-mode-btn');
+  if (btn) btn.textContent = dmdSolidMode ? 'SOLID' : 'DOT';
+};
+// Init-Label
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('dmd-mode-btn');
+  if (btn) btn.textContent = dmdSolidMode ? 'SOLID' : 'DOT';
+});
+
+// ─── HIDE-DMD-TOGGLE (für Multi-Screen) ──────────────────────────────────────
+let _dmdHidden = false;
+window.toggleHideDMD = function() {
+  _dmdHidden = !_dmdHidden;
+  const wrap = document.getElementById('dmd-wrap');
+  if (wrap) wrap.style.display = _dmdHidden ? 'none' : '';
+  const btn  = document.getElementById('hide-dmd-btn');
+  if (btn)  btn.classList.toggle('dmd-hidden', _dmdHidden);
+  if (btn)  btn.title = _dmdHidden ? 'DMD einblenden' : 'DMD ausblenden';
+};
+
+// ─── VIEW SETTINGS (Kamera) ───────────────────────────────────────────────────
+const VIEW_KEY = 'fpw_view';
+let viewSettings = (() => {
+  try { return JSON.parse(localStorage.getItem(VIEW_KEY)) || {}; } catch(_) { return {}; }
+})();
+
+window.toggleViewPanel = function() {
+  document.getElementById('view-panel').classList.toggle('open');
+};
+
+window.applyViewSettings = function() {
+  const zoom = parseFloat(document.getElementById('vp-zoom').value);
+  const tilt = parseFloat(document.getElementById('vp-tilt').value);
+  const fov  = parseFloat(document.getElementById('vp-fov').value);
+  document.getElementById('vp-zoom-val').textContent = zoom.toFixed(1);
+  document.getElementById('vp-tilt-val').textContent = tilt.toFixed(2);
+  document.getElementById('vp-fov-val').textContent  = fov.toFixed(0);
+  camera.position.set(0, tilt - 9.5, zoom);
+  camera.lookAt(0, tilt * 0.5 + 0.3, 0);
+  camera.fov = fov;
+  camera.updateProjectionMatrix();
+  viewSettings = { zoom, tilt, fov };
+  localStorage.setItem(VIEW_KEY, JSON.stringify(viewSettings));
+};
+
+window.resetViewSettings = function() {
+  document.getElementById('vp-zoom').value = 16;
+  document.getElementById('vp-tilt').value = 0.5;
+  document.getElementById('vp-fov').value  = 58;
+  applyViewSettings();
+};
+
+function initViewSettings() {
+  const { zoom = 16, tilt = 0.5, fov = 58 } = viewSettings;
+  const zEl = document.getElementById('vp-zoom');
+  const tEl = document.getElementById('vp-tilt');
+  const fEl = document.getElementById('vp-fov');
+  if (zEl) { zEl.value = zoom; document.getElementById('vp-zoom-val').textContent = zoom; }
+  if (tEl) { tEl.value = tilt; document.getElementById('vp-tilt-val').textContent = tilt; }
+  if (fEl) { fEl.value = fov;  document.getElementById('vp-fov-val').textContent  = fov; }
+  if (zoom !== 16 || tilt !== 0.5 || fov !== 58) applyViewSettings();
+}
+
+// ─── SCENE ────────────────────────────────────────────────────────────────────
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050508);
+scene.fog = new THREE.Fog(0x050508, 20, 50);
+
+const camera = new THREE.PerspectiveCamera(58, innerWidth/innerHeight, 0.1, 200);
+camera.position.set(0, -9, 16);
+camera.lookAt(0, 0.5, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.3;
+document.body.appendChild(renderer.domElement);
+
+// View-Settings aus localStorage laden (nach erstem Render-Frame)
+requestAnimationFrame(initViewSettings);
+
+// Bloom
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(
+  new THREE.Vector2(innerWidth, innerHeight), 1.0, 0.5, 0.15
+);
+composer.addPass(bloom);
+
+// ─── CURRENT TABLE STATE ───────────────────────────────────────────────────────
+let tableGroup    = null;
+let bumpers       = [];
+let currentTableConfig = null;
+let plungerKnob   = null;
+let extraBalls    = [];   // Multiball: zusätzliche Bälle
+let ramps         = [];   // Rampen: [{x1,y1,x2,y2,nx,ny}]
+
+// ─── BELEUCHTUNG ──────────────────────────────────────────────────────────────
+const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambient);
+
+const mainSpot = new THREE.SpotLight(0xffffff, 3.0, 40, Math.PI/3.5, 0.25);
+mainSpot.position.set(0, 10, 14);
+mainSpot.castShadow = true;
+mainSpot.shadow.mapSize.set(2048,2048);
+mainSpot.shadow.camera.near = 0.5;
+mainSpot.shadow.camera.far  = 40;
+scene.add(mainSpot);
+
+// ─── REALISTIC FLIPPER BUILDER ────────────────────────────────────────────────
+function buildRealisticFlipper(side) {
+  /*
+    Echter Flipper-Look:
+    - Breite, abgeschrägte Gummikappe am Ende (dick)
+    - Dünne Spitze am Pivot
+    - Konischer Körper (trapezförmig)
+    - Silbernes Metall + orangenes Gummi
+  */
+  const group = new THREE.Group();
+
+  // — Flipper-Körper aus mehreren Segmenten (konisch) —
+  const segments = 8;
+  const len = 2.1;
+
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: 0xddddee,
+    metalness: 0.95,
+    roughness: 0.08,
+    emissive: 0x223366,
+    emissiveIntensity: 0.15
+  });
+
+  // Konischer Flipper-Körper via ExtrudeGeometry-Profil
+  const shape = new THREE.Shape();
+  // Oben (Spielfeldseite)
+  shape.moveTo(0,       0.14);   // Pivot oben (dünn)
+  shape.lineTo(len,     0.26);   // Spitze oben (breiter)
+  shape.lineTo(len,    -0.10);   // Spitze unten
+  shape.lineTo(0.05,  -0.10);   // Pivot unten
+  shape.closePath();
+
+  const extSettings = {
+    depth: 0.18,
+    bevelEnabled: true,
+    bevelThickness: 0.03,
+    bevelSize: 0.03,
+    bevelSegments: 3
+  };
+  const bodyGeom = new THREE.ExtrudeGeometry(shape, extSettings);
+  bodyGeom.translate(0, -0.07, -0.09);
+
+  const body = new THREE.Mesh(bodyGeom, bodyMat);
+  body.castShadow = true;
+  group.add(body);
+
+  // — Gummi-Kappe am Ende (orangenes Gummi wie echte Flipper) —
+  const rubberMat = new THREE.MeshStandardMaterial({
+    color: 0xcc5500,
+    roughness: 0.85,
+    metalness: 0.02,
+    emissive: 0x441100,
+    emissiveIntensity: 0.2
+  });
+  const tipGeom = new THREE.CylinderGeometry(0.16, 0.10, 0.22, 16);
+  const tip = new THREE.Mesh(tipGeom, rubberMat);
+  tip.rotation.z = Math.PI / 2;
+  tip.position.set(len, 0.02, 0);
+  group.add(tip);
+
+  // — Pivot-Pin (kleiner Metallzylinder am Drehpunkt) —
+  const pivotMat = new THREE.MeshStandardMaterial({
+    color: 0xaaaacc, metalness: 1.0, roughness: 0.05
+  });
+  const pivotGeom = new THREE.CylinderGeometry(0.12, 0.12, 0.30, 12);
+  const pivot = new THREE.Mesh(pivotGeom, pivotMat);
+  pivot.rotation.x = Math.PI / 2;
+  pivot.position.set(0, 0, 0);
+  group.add(pivot);
+
+  // — Gummi-Streifen entlang des Körpers —
+  const rubberLineGeom = new THREE.BoxGeometry(len * 0.9, 0.07, 0.06);
+  const rubberLine = new THREE.Mesh(rubberLineGeom, rubberMat);
+  rubberLine.position.set(len * 0.5 + 0.05, 0.165, 0.05);
+  group.add(rubberLine);
+
+  // — Licht am Flipper —
+  const fLight = new THREE.PointLight(0x8899ff, 0.6, 4);
+  fLight.position.set(len * 0.5, 0, 0.5);
+  group.add(fLight);
+
+  group.userData.flipperLight = fLight;
+
+  // Spiegelung für rechten Flipper
+  if (side === 'right') {
+    group.scale.x = -1;
+  }
+
+  return group;
+}
+
+// ─── TABLE BUILDER ─────────────────────────────────────────────────────────────
+let slingshots = []; // [{x, y, side}]
+
+function buildTable(config) {
+  slingshots = [];
+  ramps = [];
+  // ExtraBalls (Multiball) beim Tisch-Wechsel entfernen
+  extraBalls.forEach(b => scene.remove(b.mesh));
+  extraBalls.length = 0;
+  // Alten Tisch entfernen
+  if (tableGroup) {
+    scene.remove(tableGroup);
+    tableGroup.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+        else obj.material.dispose();
+      }
+    });
+  }
+  bumpers = [];
+  tableGroup = new THREE.Group();
+  scene.add(tableGroup);
+
+  // — Spielfeld —
+  const tableGeom = new THREE.BoxGeometry(6, 12, 0.25);
+  const hasFPTTex = !!fptResources.playfield;
+  const tableMat  = new THREE.MeshStandardMaterial({
+    color:             hasFPTTex ? 0xffffff : config.tableColor,
+    map:               hasFPTTex ? fptResources.playfield : null,
+    roughness:         hasFPTTex ? 0.55 : 0.75,
+    metalness:         0.05,
+    emissive:          hasFPTTex ? 0x000000 : config.tableColor,
+    emissiveIntensity: hasFPTTex ? 0        : 0.04
+  });
+  const tableMesh = new THREE.Mesh(tableGeom, tableMat);
+  tableMesh.receiveShadow = true;
+  tableGroup.add(tableMesh);
+
+  // Spielfeld-Linien (dekorativ)
+  const linesMat = new THREE.MeshStandardMaterial({
+    color: config.accentColor,
+    emissive: config.accentColor,
+    emissiveIntensity: 0.6,
+    roughness: 0.3
+  });
+  [-1.5, 0, 1.5].forEach(x => {
+    const lineG = new THREE.BoxGeometry(0.03, 8, 0.01);
+    const line = new THREE.Mesh(lineG, linesMat);
+    line.position.set(x, 0.5, 0.13);
+    tableGroup.add(line);
+  });
+
+  // — Wände —
+  const wallMat = new THREE.MeshStandardMaterial({
+    color: 0x886644,
+    roughness: 0.5,
+    metalness: 0.4,
+    emissive: 0x221100,
+    emissiveIntensity: 0.2
+  });
+
+  [[-3.15, 0], [3.15, 0]].forEach(([x, y]) => {
+    const wg = new THREE.BoxGeometry(0.22, 12.5, 0.55);
+    const w  = new THREE.Mesh(wg, wallMat);
+    w.position.set(x, y, 0.38);
+    w.castShadow = true;
+    tableGroup.add(w);
+  });
+
+  // Obere Wand
+  const topW = new THREE.Mesh(new THREE.BoxGeometry(6.55, 0.22, 0.55), wallMat);
+  topW.position.set(0, 6.15, 0.38);
+  topW.castShadow = true;
+  tableGroup.add(topW);
+
+  // — Shooter Lane (rechte Seite) —
+  const laneMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.95 });
+  const laneM   = new THREE.Mesh(new THREE.BoxGeometry(0.72, 2.8, 0.14), laneMat);
+  laneM.position.set(2.64, -4.3, 0.2);
+  tableGroup.add(laneM);
+
+  // Lane-Trennwand
+  const divMat = new THREE.MeshStandardMaterial({ color: 0x664422, roughness: 0.5, metalness: 0.5 });
+  const divM   = new THREE.Mesh(new THREE.BoxGeometry(0.12, 3.4, 0.55), divMat);
+  divM.position.set(2.26, -4.0, 0.38);
+  tableGroup.add(divM);
+
+  // — Plunger (Federzug-Abschussmechanismus) —
+  const pKnobMat = new THREE.MeshStandardMaterial({ color: 0xcc2200, metalness: 0.8, roughness: 0.2,
+    emissive: 0x440000, emissiveIntensity: 0.4 });
+  const pRodMat  = new THREE.MeshStandardMaterial({ color: 0xaaaacc, metalness: 0.9, roughness: 0.1 });
+  const pBaseMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.7, roughness: 0.3 });
+
+  plungerKnob = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 12), pKnobMat);
+  const pRod  = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.9, 8), pRodMat);
+  const pBase = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.1, 12), pBaseMat);
+
+  pRod.rotation.x  = Math.PI / 2;
+  pRod.position.y  = -0.45;
+  pBase.rotation.x = Math.PI / 2;
+  pBase.position.y = -0.9;
+
+  plungerKnob.position.set(2.64, -5.5, 0.4);
+  pRod .position.set(2.64, -5.95, 0.4);
+  pBase.position.set(2.64, -5.9,  0.35);
+  plungerKnob.castShadow = true;
+
+  tableGroup.add(plungerKnob);
+  tableGroup.add(pRod);
+  tableGroup.add(pBase);
+
+  // — Bumper erzeugen —
+  config.bumpers.forEach(b => {
+    const g = buildBumper(b.x, b.y, b.color);
+    tableGroup.add(g);
+    bumpers.push({ mesh: g, x: b.x, y: b.y });
+  });
+
+  // — Schleuder-Rampen (Slingshots) links & rechts —
+  buildSlingshot(-2.0, -2.2, 'left',  config.accentColor);
+  buildSlingshot( 2.0, -2.2, 'right', config.accentColor);
+  slingshots.push({ x: -2.0, y: -1.0, side: 'left'  });
+  slingshots.push({ x:  2.0, y: -1.0, side: 'right' });
+
+  // — Rampen aus Config —
+  (config.ramps || []).forEach(r => buildRamp(r.x1, r.y1, r.x2, r.y2, r.color || config.accentColor));
+
+  // — Rollover-Lanes oben —
+  buildRolloverLanes(config.accentColor);
+
+  // — Drain-Führungen (Inlane/Outlane) —
+  buildDrainGuides(config.accentColor);
+
+  // — Standup Targets —
+  targets = [];
+  (config.targets || []).forEach(t => {
+    const mesh = buildTarget(t.x, t.y, t.color);
+    tableGroup.add(mesh);
+    targets.push({ x: t.x, y: t.y, mesh });
+  });
+
+  // — Tisch-Name Dekor (Schriftzug auf Spielfeld) —
+  buildTableLabel(config.name, config.accentColor);
+
+  // — Tisch-Beleuchtung —
+  const oldLights = scene.children.filter(c => c.isPointLight && c.userData.tableLight);
+  oldLights.forEach(c => scene.remove(c));
+  config.lights.forEach(l => {
+    const pl = new THREE.PointLight(l.color, l.intensity, l.dist);
+    pl.position.set(l.x, l.y, l.z);
+    pl.userData.tableLight = true;
+    scene.add(pl);
+  });
+
+  currentTableConfig = config;
+  buildPhysicsTable(config);   // Rapier: Bumper/Target/Rampen-Bodies erzeugen
+  dmdState.mode = 'playing';
+  dmdEvent(config.name.toUpperCase());
+  showNotification(`✅ ${config.name} geladen!`);
+}
+
+// ─── BUMPER ───────────────────────────────────────────────────────────────────
+function buildBumper(x, y, color) {
+  const g = new THREE.Group();
+  g.position.set(x, y, 0.18);
+
+  // Basis
+  const baseMat = new THREE.MeshStandardMaterial({
+    color: 0x222222, roughness: 0.3, metalness: 0.8
+  });
+  const baseM = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.12, 20), baseMat);
+  baseM.rotation.x = Math.PI/2;
+  g.add(baseM);
+
+  // Leuchtring
+  const ringMat = new THREE.MeshStandardMaterial({
+    color: color, emissive: color, emissiveIntensity: 1.2,
+    roughness: 0.2, metalness: 0.3
+  });
+  const ringM = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.07, 8, 24), ringMat);
+  ringM.position.z = 0.1;
+  g.add(ringM);
+
+  // Kuppel
+  const domeMat = new THREE.MeshStandardMaterial({
+    color: 0xeeeeee, emissive: color, emissiveIntensity: 0.5,
+    roughness: 0.15, metalness: 0.7
+  });
+  const domeM = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 16, 0, Math.PI*2, 0, Math.PI/2), domeMat);
+  domeM.rotation.x = Math.PI/2;
+  domeM.position.z = 0.08;
+  g.add(domeM);
+
+  // Licht
+  const pl = new THREE.PointLight(color, 0.9, 3.5);
+  pl.position.z = 0.4;
+  g.add(pl);
+
+  // Innere Streben
+  for (let i=0; i<4; i++) {
+    const sm = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06, 0.36, 0.06),
+      new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.9 })
+    );
+    sm.rotation.z = (Math.PI/2) * i;
+    sm.position.z = 0.05;
+    g.add(sm);
+  }
+
+  g.userData = { light: pl, ringMat, domeMat, color, baseFlash: false };
+  return g;
+}
+
+// ─── SLINGSHOT ────────────────────────────────────────────────────────────────
+function buildSlingshot(x, y, side, color) {
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x885522, roughness: 0.4, metalness: 0.5,
+    emissive: color, emissiveIntensity: 0.1
+  });
+
+  const sign = side === 'left' ? 1 : -1;
+  const pts  = [
+    new THREE.Vector3(0,     0,    0),
+    new THREE.Vector3(sign*0.8, 1.2, 0),
+    new THREE.Vector3(sign*0.3, 2.2, 0)
+  ];
+
+  const curve  = new THREE.CatmullRomCurve3(pts);
+  const points = curve.getPoints(12);
+  const geom   = new THREE.BufferGeometry().setFromPoints(points);
+  const line   = new THREE.Line(geom, new THREE.LineBasicMaterial({ color: color, linewidth: 2 }));
+  line.position.set(x, y, 0.3);
+  tableGroup.add(line);
+
+  // Slingshot Körper
+  const sg = new THREE.Mesh(
+    new THREE.BoxGeometry(0.18, 1.2, 0.32),
+    mat
+  );
+  sg.position.set(x, y+0.6, 0.3);
+  sg.rotation.z = side === 'left' ? -0.3 : 0.3;
+  sg.castShadow = true;
+  tableGroup.add(sg);
+}
+
+// ─── ROLLOVER LANES ───────────────────────────────────────────────────────────
+function buildRolloverLanes(color) {
+  const mat = new THREE.MeshStandardMaterial({
+    color: color, emissive: color, emissiveIntensity: 0.8,
+    roughness: 0.3
+  });
+  [-1.8, -0.6, 0.6, 1.8].forEach(x => {
+    const lG = new THREE.BoxGeometry(0.5, 0.08, 0.04);
+    const l  = new THREE.Mesh(lG, mat);
+    l.position.set(x, 5.4, 0.25);
+    tableGroup.add(l);
+  });
+}
+
+// ─── DRAIN-FÜHRUNGEN ─────────────────────────────────────────────────────────
+function buildDrainGuides(color) {
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0xcc8800, roughness: 0.6, metalness: 0.3,
+    emissive: color, emissiveIntensity: 0.15
+  });
+
+  // Diagonale Inlane-Führungen (Ball zu Flippern leiten)
+  [[-1, -1], [1, 1]].forEach(([sx, sc]) => {
+    const g = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.8, 0.35), mat);
+    g.position.set(sx * 2.2, -3.5, 0.3);
+    g.rotation.z = sc * 0.35;
+    g.castShadow = true;
+    tableGroup.add(g);
+  });
+
+  // Outlane-Begrenzung
+  [[-2.7, -3.8], [2.7, -3.8]].forEach(([x, y]) => {
+    const g = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.4, 0.35), mat);
+    g.position.set(x, y, 0.3);
+    g.castShadow = true;
+    tableGroup.add(g);
+  });
+}
+
+// ─── TISCH-LABEL (dekorativer Schriftzug auf Spielfeld) ──────────────────────
+function buildTableLabel(name, color) {
+  // Leuchtende Linie als dekorativer "Schriftzug"-Indikator
+  const mat = new THREE.MeshStandardMaterial({
+    color: color, emissive: color, emissiveIntensity: 0.9, roughness: 0.2
+  });
+  // Drei schmale Querlinien als Tisch-Branding-Dekoration
+  [0, 0.18, 0.36].forEach((offset, i) => {
+    const w = 3.0 - i * 0.5;
+    const g = new THREE.Mesh(new THREE.BoxGeometry(w, 0.04, 0.01), mat);
+    g.position.set(0, 1.0 - offset, 0.13);
+    tableGroup.add(g);
+  });
+}
+
+// ─── RAMPEN ───────────────────────────────────────────────────────────────────
+// Baut eine Rampe als schräge BoxGeometry von (x1,y1) nach (x2,y2).
+// Speichert die Liniensegment-Daten für Kollisionserkennung.
+function buildRamp(x1, y1, x2, y2, color) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const length = Math.sqrt(dx*dx + dy*dy);
+  if (length < 0.01) return;
+  const angle = Math.atan2(dy, dx);
+
+  const mat = new THREE.MeshStandardMaterial({
+    color, emissive: color, emissiveIntensity: 0.25,
+    roughness: 0.35, metalness: 0.7
+  });
+  const geom = new THREE.BoxGeometry(length, 0.10, 0.28);
+  const mesh = new THREE.Mesh(geom, mat);
+  mesh.position.set((x1+x2)/2, (y1+y2)/2, 0.28);
+  mesh.rotation.z = angle;
+  mesh.castShadow = true;
+  tableGroup.add(mesh);
+
+  // Normalvektor (senkrecht zur Rampe, nach innen zeigend)
+  const nx = -dy / length, ny = dx / length;
+  ramps.push({ x1, y1, x2, y2, nx, ny, len: length });
+}
+
+// ─── ROLLOVER LANES SCORING ───────────────────────────────────────────────────
+// Die 4 Rollover-Lanes bei y=5.4 (buildRolloverLanes) jetzt mit Kollision.
+const ROLLOVER_XS = [-1.8, -0.6, 0.6, 1.8];
+let rolloversHit  = [false, false, false, false];
+
+function checkRolloverLanes() {
+  ROLLOVER_XS.forEach((rx, i) => {
+    const dx = state.ballPos.x - rx;
+    const dy = state.ballPos.y - 5.4;
+    if (Math.abs(dx) < 0.3 && Math.abs(dy) < 0.2) {
+      if (!rolloversHit[i]) {
+        rolloversHit[i] = true;
+        state.score += 500 * state.multiplier;
+        spawnParticles(rx, 5.4, currentTableConfig?.accentColor || 0x00ff88, 8);
+        updateHUD();
+        // Alle 4 getroffen?
+        if (rolloversHit.every(Boolean)) {
+          rolloversHit.fill(false);
+          state.multiplier = Math.min(5, state.multiplier + 1);
+          dmdEvent('\u00d7' + state.multiplier + ' ROLLOVER BONUS!');
+          showNotification(`🏆 ×${state.multiplier} ROLLOVER BONUS!`);
+          updateHUD();
+        } else {
+          dmdEvent('ROLLOVER!');
+        }
+      }
+    } else {
+      rolloversHit[i] = false; // Reset wenn Ball weg
+    }
+  });
+}
+
+// checkRamps() entfernt — Rampen werden jetzt von Rapier2D verwaltet
+
+// ─── STANDUP TARGET ───────────────────────────────────────────────────────────
+let targets = [];
+
+function buildTarget(x, y, color) {
+  const g = new THREE.Group();
+  g.position.set(x, y, 0.18);
+
+  const faceMat = new THREE.MeshStandardMaterial({
+    color: color, emissive: color, emissiveIntensity: 0.7,
+    roughness: 0.3, metalness: 0.2
+  });
+  const backMat = new THREE.MeshStandardMaterial({
+    color: 0x333344, roughness: 0.6, metalness: 0.5
+  });
+
+  // Fläche (leuchtend)
+  const face = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.42, 0.05), faceMat);
+  face.position.z = 0.06;
+  g.add(face);
+
+  // Rückseite + Rahmen
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.50, 0.12), backMat);
+  g.add(frame);
+
+  // Licht
+  const pl = new THREE.PointLight(color, 0.7, 2.5);
+  pl.position.z = 0.3;
+  g.add(pl);
+
+  g.userData = { light: pl, faceMat, color, hit: false };
+  return g;
+}
+
+// ─── FLIPPER SETUP ────────────────────────────────────────────────────────────
+const leftFlipperGroup  = buildRealisticFlipper('left');
+const rightFlipperGroup = buildRealisticFlipper('right');
+
+leftFlipperGroup.position.set(-0.82, -4.6, 0.35);
+rightFlipperGroup.position.set( 0.82, -4.6, 0.35);
+
+scene.add(leftFlipperGroup);
+scene.add(rightFlipperGroup);
+
+// ─── BALL ─────────────────────────────────────────────────────────────────────
+const ballGeom = new THREE.SphereGeometry(0.22, 32, 32);
+const ballMat  = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  metalness: 1.0,
+  roughness: 0.0,
+  emissive: 0x99bbff,
+  emissiveIntensity: 0.35
+});
+const ball = new THREE.Mesh(ballGeom, ballMat);
+ball.castShadow = true;
+scene.add(ball);
+
+const ballGlow = new THREE.PointLight(0xaabbff, 1.5, 3.5);
+ball.add(ballGlow);
+
+// ─── PARTIKEL-SYSTEM ──────────────────────────────────────────────────────────
+const MAX_PARTS   = 300;
+const partPos     = new Float32Array(MAX_PARTS * 3);
+const partCol     = new Float32Array(MAX_PARTS * 3);
+const partGeo     = new THREE.BufferGeometry();
+partGeo.setAttribute('position', new THREE.BufferAttribute(partPos, 3));
+partGeo.setAttribute('color',    new THREE.BufferAttribute(partCol, 3));
+const partMat  = new THREE.PointsMaterial({
+  size: 0.09, vertexColors: true,
+  transparent: true, opacity: 1.0,
+  sizeAttenuation: true, depthWrite: false
+});
+const partMesh = new THREE.Points(partGeo, partMat);
+scene.add(partMesh);
+
+const partData = []; // { x, y, z, vx, vy, vz, life, r, g, b }
+
+// Spawnt N Funken-Partikel an (wx, wy) im 3D-Raum
+function spawnParticles(wx, wy, hexColor, count = 14) {
+  const r = ((hexColor >> 16) & 0xff) / 255;
+  const g = ((hexColor >>  8) & 0xff) / 255;
+  const b = ( hexColor        & 0xff) / 255;
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.4;
+    const spd   = 2.5 + Math.random() * 4.5;
+    partData.push({
+      x: wx, y: wy, z: 0.55,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd,
+      vz: 1.5 + Math.random() * 3.0,
+      life: 1.0, r, g, b
+    });
+    if (partData.length > MAX_PARTS) partData.shift();
+  }
+}
+
+// Aktualisiert Partikel, schreibt in BufferGeometry
+function updateParticles(dt) {
+  let n = 0;
+  for (let i = 0; i < partData.length; i++) {
+    const p = partData[i];
+    p.life -= dt * 2.2;
+    if (p.life <= 0) continue;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.z += p.vz * dt;
+    p.vz -= 12 * dt; // Schwerkraft
+    const t = p.life;  // Helligkeit = Lebenszeit
+    partPos[n*3]   = p.x;
+    partPos[n*3+1] = p.y;
+    partPos[n*3+2] = p.z;
+    partCol[n*3]   = p.r * t;
+    partCol[n*3+1] = p.g * t;
+    partCol[n*3+2] = p.b * t;
+    partData[n]    = p;
+    n++;
+  }
+  partData.length = n;
+  partGeo.attributes.position.needsUpdate = true;
+  partGeo.attributes.color.needsUpdate    = true;
+  partGeo.setDrawRange(0, n);
+}
+
+// ─── GAME STATE ───────────────────────────────────────────────────────────────
+const state = {
+  ballPos: new THREE.Vector3(2.55, -5.0, 0.5),
+  ballVel: { x: 0, y: 0 },
+  inLane: true,
+  score: 0,
+  ballNum: 1,
+  multiplier: 1,
+  bumperHits: 0,
+  // Plunger
+  plungerCharge:    0,     // 0..1 Ladestand
+  plungerCharging:  false, // wird Enter gehalten?
+  // Tilt
+  tiltWarnings: 0,
+  tiltActive:   false,
+  // Ball Save
+  ballSaveTimer: 0,
+  // Highscore
+  lastRank:  0,
+  lastScore: 0
+};
+
+const keys = { left: false, right: false };
+
+document.addEventListener('keydown', e => {
+  getAudioCtx();
+  if (e.key === 'Shift' && e.location === 1) { keys.left  = true; playSound('flipper'); callScriptFlipper('left',  true); }
+  if (e.key === 'Shift' && e.location === 2) { keys.right = true; playSound('flipper'); callScriptFlipper('right', true); }
+  // Plunger: Enter halten = Aufladen
+  if (e.key === 'Enter' && state.inLane && !state.plungerCharging) {
+    state.plungerCharging = true;
+  }
+  if (e.key === 'r' || e.key === 'R') resetBall();
+  if (e.key === 'm' || e.key === 'M') toggleMusic();
+  // Tilt: Z = links nudgen, X = rechts nudgen
+  if (e.key === 'z' || e.key === 'Z') nudgeTable(-1);
+  if (e.key === 'x' || e.key === 'X') nudgeTable( 1);
+});
+document.addEventListener('keyup', e => {
+  if (e.key === 'Shift' && e.location === 1) { keys.left  = false; callScriptFlipper('left',  false); }
+  if (e.key === 'Shift' && e.location === 2) { keys.right = false; callScriptFlipper('right', false); }
+  // Plunger: Enter loslassen = Abschuss
+  if (e.key === 'Enter' && state.inLane && state.plungerCharging) {
+    state.plungerCharging = false;
+    const charge = state.plungerCharge;
+    state.inLane    = false;
+    const vx = 0;                      // Plunger schießt gerade hoch (kein Seitenversatz)
+    const vy =  6.0 + charge * 9.0;   // 6..15 Kraft
+    state.ballVel.x = vx;
+    state.ballVel.y = vy;
+    state.plungerCharge  = 0;
+    state.ballSaveTimer  = 3.5;
+    if (physics) {
+      physics.ballBody.setGravityScale(1.0, true);
+      physics.ballBody.setTranslation({ x: 2.55, y: -5.0 }, true);
+      physics.ballBody.setLinvel({ x: vx, y: vy }, true);
+    }
+    playSound('bumper');
+    startBGMusic();
+  }
+});
+
+function resetBall() {
+  state.ballPos.set(2.55, -5.0, 0.5);
+  state.ballVel.x = 0;
+  state.ballVel.y = 0;
+  state.inLane       = true;
+  state.tiltWarnings = 0;
+  state.tiltActive   = false;
+  state.plungerCharge    = 0;
+  state.plungerCharging  = false;
+  if (physics) {
+    physics.ballBody.setGravityScale(0.0, true);
+    physics.ballBody.setTranslation({ x: 2.55, y: -5.0 }, true);
+    physics.ballBody.setLinvel({ x: 0, y: 0 }, true);
+    physics.ballBody.setAngvel(0, true);
+  }
+}
+
+// ─── TILT-MECHANIK ────────────────────────────────────────────────────────────
+function nudgeTable(direction) {
+  if (state.tiltActive || state.inLane) return;
+  state.tiltWarnings++;
+
+  if (state.tiltWarnings >= 3) {
+    state.tiltActive = true;
+    if (physics) {
+      physics.ballBody.setLinvel({ x: direction * 1.5, y: -3.0 }, true);
+    } else {
+      state.ballVel.x = direction * 1.5;
+      state.ballVel.y = -3.0;
+    }
+    dmdEvent('TILT!!!');
+    showNotification('⚠️ TILT!');
+    playSound('drain');
+    setTimeout(() => { state.tiltActive = false; }, 100);
+  } else {
+    const force = 1.8 + state.tiltWarnings * 0.6;
+    if (physics) {
+      physics.ballBody.applyImpulse({ x: direction * force, y: 0.5 }, true);
+    } else {
+      state.ballVel.x += direction * force;
+      state.ballVel.y += 0.5;
+    }
+    dmdEvent(state.tiltWarnings === 2 ? 'TILT WARNING!!' : 'TILT WARNING!');
+    spawnParticles(state.ballPos.x, state.ballPos.y, 0xffaa00, 6);
+  }
+}
+
+// ─── MULTIBALL ────────────────────────────────────────────────────────────────
+function launchMultiBall() {
+  if (extraBalls.length >= 2 || state.inLane) return;
+
+  // Goldener Zusatzball (visuell abgesetzt vom Hauptball)
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.22, 24, 24),
+    new THREE.MeshStandardMaterial({
+      color: 0xffcc00, metalness: 1.0, roughness: 0.05,
+      emissive: 0xff8800, emissiveIntensity: 0.4
+    })
+  );
+  const glow = new THREE.PointLight(0xffaa00, 1.8, 4);
+  mesh.add(glow);
+  mesh.castShadow = true;
+  scene.add(mesh);
+
+  const startX = (Math.random() - 0.5) * 1.2;
+  const startY = 2.5 + Math.random();
+  let rapierBody = null;
+  if (physics) {
+    rapierBody = physics.world.createRigidBody(
+      RAPIER.RigidBodyDesc.dynamic()
+        .setTranslation(startX, startY)
+        .setLinearDamping(0.0)
+        .setAngularDamping(0.9)
+    );
+    physics.world.createCollider(
+      RAPIER.ColliderDesc.ball(0.22).setRestitution(0.5).setFriction(0.3),
+      rapierBody
+    );
+    rapierBody.setLinvel({ x: -3 + Math.random() * 6, y: 5 + Math.random() * 5 }, true);
+  }
+  extraBalls.push({
+    pos: new THREE.Vector3(startX, startY, 0.5),
+    vel: { x: 0, y: 0 },
+    mesh, rapierBody
+  });
+
+  dmdEvent('MULTIBALL!');
+  showNotification('🎱 MULTIBALL!');
+  spawnParticles(0, 2, 0xffcc00, 30);
+  playSound('bumper');
+}
+
+function updateExtraBalls(dt) {
+  for (let i = extraBalls.length - 1; i >= 0; i--) {
+    const b = extraBalls[i];
+
+    if (b.rapierBody && physics) {
+      // Rapier übernimmt Physik; nur Position lesen
+      const pos = b.rapierBody.translation();
+      const vel = b.rapierBody.linvel();
+      b.pos.x = pos.x; b.pos.y = pos.y;
+      b.vel.x = vel.x; b.vel.y = vel.y;
+
+      // Bumper-Kick + Scoring (Proximity, da kein eigenes Event pro Extraball)
+      bumpers.forEach(bu => {
+        const dx = b.pos.x - bu.x, dy = b.pos.y - bu.y;
+        const d  = Math.sqrt(dx * dx + dy * dy);
+        if (d < 0.55 && d > 0.001) {
+          const spd = Math.max(Math.hypot(vel.x, vel.y), 5.5) * 1.1;
+          b.rapierBody.setLinvel({ x: (dx / d) * spd, y: (dy / d) * spd }, true);
+          state.score += 150 * state.multiplier;
+          spawnParticles(bu.x, bu.y, bu.mesh.userData.color, 8);
+          updateHUD();
+        }
+      });
+
+      // Drain
+      if (b.pos.y < -7.0) {
+        physics.world.removeRigidBody(b.rapierBody);
+        scene.remove(b.mesh);
+        extraBalls.splice(i, 1);
+        playSound('drain');
+        if (extraBalls.length === 0) dmdEvent('SINGLE BALL');
+        continue;
+      }
+    } else {
+      // Fallback: altes manuelles Physik-System (wenn Rapier nicht geladen)
+      b.vel.y -= 9.8 * dt;
+      b.pos.x += b.vel.x * dt;
+      b.pos.y += b.vel.y * dt;
+      if (b.pos.x >  2.82) { b.pos.x =  2.82; b.vel.x *= -0.82; }
+      if (b.pos.x < -2.82) { b.pos.x = -2.82; b.vel.x *= -0.82; }
+      if (b.pos.y >  5.90) { b.pos.y =  5.90; b.vel.y *= -0.82; }
+      bumpers.forEach(bu => {
+        const dx = b.pos.x - bu.x, dy = b.pos.y - bu.y;
+        const d  = Math.sqrt(dx * dx + dy * dy);
+        if (d < 0.55 && d > 0.001) {
+          const spd = Math.max(Math.sqrt(b.vel.x**2 + b.vel.y**2), 5.5);
+          b.vel.x = (dx/d) * spd * 1.1; b.vel.y = (dy/d) * spd * 1.1;
+          state.score += 150 * state.multiplier;
+          spawnParticles(bu.x, bu.y, bu.mesh.userData.color, 8);
+          updateHUD();
+        }
+      });
+      if (b.pos.y < -7.0) {
+        scene.remove(b.mesh); extraBalls.splice(i, 1);
+        playSound('drain');
+        if (extraBalls.length === 0) dmdEvent('SINGLE BALL');
+        continue;
+      }
+    }
+
+    b.mesh.position.set(b.pos.x, b.pos.y, 0.5);
+    b.mesh.rotation.x += b.vel.y * dt * 0.6;
+    b.mesh.rotation.z -= b.vel.x * dt * 0.6;
+  }
+}
+
+// ─── UPDATE FLIPPERS ──────────────────────────────────────────────────────────
+function updateFlippers() {
+  const lAngle = keys.left  ? THREE.MathUtils.degToRad(30)  : THREE.MathUtils.degToRad(-25);
+  const rAngle = keys.right ? THREE.MathUtils.degToRad(-30) : THREE.MathUtils.degToRad(25);
+
+  leftFlipperGroup.rotation.z  += (lAngle - leftFlipperGroup.rotation.z)  * 0.35;
+  rightFlipperGroup.rotation.z += (rAngle - rightFlipperGroup.rotation.z) * 0.35;
+
+  // Rapier: Kinematic-Bodies auf visuelle Rotation setzen (Positionsbasis → Impulsübertrag)
+  if (physics) {
+    physics.lFlipperBody.setNextKinematicRotation(leftFlipperGroup.rotation.z);
+    physics.rFlipperBody.setNextKinematicRotation(rightFlipperGroup.rotation.z);
+  }
+
+  // Licht & Glow Reaktion
+  const lFL = leftFlipperGroup.userData.flipperLight;
+  const rFL = rightFlipperGroup.userData.flipperLight;
+  if (lFL) lFL.intensity = keys.left  ? 2.0 : 0.6;
+  if (rFL) rFL.intensity = keys.right ? 2.0 : 0.6;
+}
+
+// ─── PLUNGER UPDATE ───────────────────────────────────────────────────────────
+function updatePlunger(dt) {
+  if (!plungerKnob) return;
+  if (state.inLane && state.plungerCharging) {
+    // Aufladen: bis max 1.0
+    state.plungerCharge = Math.min(1.0, state.plungerCharge + dt * 0.9);
+    // Knopf zieht sich nach hinten (Richtung Spieler)
+    plungerKnob.position.y = -5.5 - state.plungerCharge * 0.7;
+    // DMD zeigt Ladestand
+    if (Math.floor(state.plungerCharge * 10) % 3 === 0) {
+      const bars = '█'.repeat(Math.floor(state.plungerCharge * 8));
+      dmdState.eventText = `POWER ${bars}`;
+      dmdState.eventTimer = 3;
+      dmdState.mode = 'event';
+    }
+  } else {
+    // Rückfeder: schnell zurück in Ausgangsposition
+    plungerKnob.position.y += (-5.5 - plungerKnob.position.y) * 0.35;
+    if (state.inLane) state.plungerCharge = 0;
+  }
+}
+
+// ─── KOLLISIONEN ──────────────────────────────────────────────────────────────
+// Wände, Bumper, Flipper, Slingshots, Targets und Rampen werden vollständig
+// durch Rapier2D verwaltet (initPhysics + buildPhysicsTable).
+// Scoring via Collision-Events in animate().
+// Rollover-Lanes bleiben als einfache Proximity-Checks (keine Physik-Response).
+
+// ─── HUD ──────────────────────────────────────────────────────────────────────
+function updateHUD() {
+  document.getElementById('score').textContent  = state.score.toLocaleString();
+  document.getElementById('ballnum').textContent = state.ballNum;
+  document.getElementById('multi').textContent   = state.multiplier;
+  // DMD: aus Event-Mode zurück zu Playing wenn kein Event aktiv
+  if (dmdState.mode !== 'event' && dmdState.mode !== 'gameover') {
+    dmdState.mode = 'playing';
+  }
+}
+
+// ─── NOTIFICATION ─────────────────────────────────────────────────────────────
+window.showNotification = function(msg) {
+  const n   = document.getElementById('notification');
+  n.textContent = msg;
+  n.style.opacity = '1';
+  setTimeout(() => n.style.opacity = '0', 2500);
+  // DMD-Event mit bereinigtem Text (Emojis entfernen)
+  const clean = msg.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+  if (clean.length > 1) dmdEvent(clean.substring(0, 22).toUpperCase());
+};
+
+// ─── GAME LOOP ────────────────────────────────────────────────────────────────
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+
+  // Flipper-Kinematics VOR dem Physics-Step setzen
+  updateFlippers();
+
+  if (physics) {
+    if (state.inLane) {
+      // Ball in Plunger-Lane halten (Gravitation aus, Position fixieren)
+      physics.ballBody.setGravityScale(0.0, true);
+      physics.ballBody.setLinvel({ x: 0, y: 0 }, true);
+      physics.ballBody.setAngvel(0, true);
+      physics.ballBody.setTranslation({ x: 2.55, y: -5.0 }, true);
+    } else {
+      // ── Physics-Step ────────────────────────────────────────────────────
+      physics.world.step(physics.eventQueue);
+
+      // Ball-Position + Velocity aus Rapier lesen
+      const pos = physics.ballBody.translation();
+      const vel = physics.ballBody.linvel();
+      state.ballPos.x = pos.x;
+      state.ballPos.y = pos.y;
+      state.ballVel.x = vel.x;
+      state.ballVel.y = vel.y;
+
+      // ── Collision-Events: Scoring ────────────────────────────────────────
+      physics.eventQueue.drainCollisionEvents((h1, h2, started) => {
+        if (!started) return;
+        const ballH = physics.ballCollider.handle;
+        const other = h1 === ballH ? h2 : (h2 === ballH ? h1 : -1);
+        if (other < 0) return;
+
+        const bumperData = physics.bumperMap.get(other);
+        if (bumperData) { scoreBumperHit(bumperData); return; }
+
+        const targetData = physics.targetMap.get(other);
+        if (targetData) { scoreTargetHit(targetData); return; }
+
+        const slingSide = physics.slingshotMap.get(other);
+        if (slingSide !== undefined) { scoreSlingshotHit(slingSide); return; }
+      });
+
+      // Rollover-Lanes (einfache Proximity, kein Rapier nötig)
+      checkRolloverLanes();
+
+      // ── Drain / Ball Save ────────────────────────────────────────────────
+      if (state.ballPos.y < -7.0) {
+        if (state.ballSaveTimer > 0) {
+          state.ballSaveTimer = 0;
+          dmdEvent('BALL SAVED!');
+          spawnParticles(state.ballPos.x, -6.8, 0x00ff88, 18);
+          playSound('flipper');
+          resetBall();
+        } else {
+          const bonus = Math.floor(state.bumperHits * 100 * state.multiplier * 0.5);
+          if (bonus > 0) {
+            state.score += bonus;
+            dmdEvent('BONUS +' + bonus.toLocaleString());
+            updateHUD();
+          }
+          playSound('drain');
+          callScriptDrain();
+          if (state.ballNum >= 3) {
+            const rank       = recordScore(state.score);
+            state.lastRank   = rank;
+            state.lastScore  = state.score;
+            state.ballNum    = 1;
+            state.score      = 0;
+            state.multiplier = 1;
+            state.bumperHits = 0;
+            dmdState.mode      = 'gameover';
+            dmdState.animFrame = 0;
+            updateHUD();
+            showNotification(rank === 1 ? '🏆 NEW HIGH SCORE!' : '🎮 GAME OVER — Neues Spiel!');
+          } else {
+            state.ballNum++;
+            state.multiplier = 1;
+            state.bumperHits = 0;
+            updateHUD();
+            dmdEvent(`BALL ${state.ballNum}`);
+          }
+          resetBall();
+        }
+      }
+    }
+  }
+
+  ball.position.set(state.ballPos.x, state.ballPos.y, state.ballPos.z);
+  ball.rotation.x += state.ballVel.y * dt * 0.6;
+  ball.rotation.z -= state.ballVel.x * dt * 0.6;
+
+  // Ball-Save-Timer (läuft nach Abschuss)
+  if (state.ballSaveTimer > 0) {
+    const prev = state.ballSaveTimer;
+    state.ballSaveTimer -= dt;
+    if (Math.ceil(state.ballSaveTimer) < Math.ceil(prev) && state.ballSaveTimer > 0) {
+      dmdState.eventText  = `BALL SAVE  ${Math.ceil(state.ballSaveTimer)}`;
+      dmdState.eventTimer = 8;
+      dmdState.mode       = 'event';
+    }
+  }
+
+  updatePlunger(dt);
+  updateExtraBalls(dt);
+  updateParticles(dt);
+  dmdUpdate();
+  composer.render();
+
+  // Inline-Backglass (1-Screen-Mode)
+  if (_bgPanelActive) drawInlineBackglass();
+
+  // Broadcast state to secondary windows (DMD / backglass)
+  if (multiChannel) {
+    multiChannel.postMessage({
+      type:         'state',
+      score:        state.score,
+      ballNum:      state.ballNum,
+      multiplier:   state.multiplier,
+      inLane:       state.inLane,
+      dmdMode:      dmdState.mode,
+      dmdEventText: dmdState.eventText,
+      dmdAnimFrame: dmdState.animFrame,
+      dmdScrollX:   dmdState.scrollX,
+      dmdEventTimer:dmdState.eventTimer,
+      lastRank:     state.lastRank,
+      lastScore:    state.lastScore,
+      bumperHits:   state.bumperHits,
+      tableName:    currentTableConfig ? currentTableConfig.name : 'FUTURE PINBALL',
+      tableAccent:  currentTableConfig ? currentTableConfig.accentColor : 0x00ff66,
+      tableColor:   currentTableConfig ? currentTableConfig.tableColor  : 0x1a4a15,
+      highScores:   getTopScores()
+    });
+  }
+}
+
+// ─── INLINE BACKGLASS (1-Screen Mode) ────────────────────────────────────────
+let _bgPanelActive = false;
+
+function initInlineBackglass() {
+  _bgPanelActive = true;
+  document.body.classList.add('show-bg-panel');
+  const canvas = document.getElementById('backglass-canvas');
+  const setSize = () => {
+    canvas.width  = Math.round(window.innerWidth * 0.30);
+    canvas.height = window.innerHeight;
+  };
+  setSize();
+  window.addEventListener('resize', setSize);
+}
+
+function stopInlineBackglass() {
+  _bgPanelActive = false;
+  document.body.classList.remove('show-bg-panel');
+}
+
+function drawInlineBackglass() {
+  const canvas = document.getElementById('backglass-canvas');
+  if (!canvas || !canvas.width) return;
+  const ctx    = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const toHex = n => '#' + ('000000' + n.toString(16)).slice(-6);
+  const accent = currentTableConfig ? toHex(currentTableConfig.accentColor) : '#00ff66';
+  const tcolor = currentTableConfig ? toHex(currentTableConfig.tableColor)  : '#1a4a15';
+
+  // Hintergrund-Verlauf
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#0a0a14');
+  bg.addColorStop(0.5, tcolor + '44');
+  bg.addColorStop(1, '#050508');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Neon-Seitenstreifen
+  const bw = Math.max(4, W * 0.025);
+  [0, W - bw].forEach(x => {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, 'transparent'); g.addColorStop(0.3, accent);
+    g.addColorStop(0.7, accent); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.fillRect(x, 0, bw, H);
+  });
+
+  // Tisch-Name
+  const ts = Math.min(H * 0.052, W * 0.09);
+  ctx.save();
+  ctx.shadowColor = accent; ctx.shadowBlur = 22;
+  ctx.fillStyle = accent;
+  ctx.font = `bold ${ts}px "Courier New", monospace`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText((currentTableConfig?.name || 'FUTURE PINBALL').toUpperCase(), W / 2, H * 0.02);
+  ctx.restore();
+
+  // Trenn-Linie
+  ctx.save(); ctx.strokeStyle = accent; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.45;
+  ctx.beginPath(); ctx.moveTo(W*0.08, H*0.11); ctx.lineTo(W*0.92, H*0.11); ctx.stroke();
+  ctx.restore();
+
+  // Score-Label
+  ctx.save(); ctx.fillStyle = '#553300';
+  ctx.font = `${H*0.030}px "Courier New", monospace`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('SCORE', W / 2, H * 0.13); ctx.restore();
+
+  // Score-Zahl
+  const ss = Math.min(H * 0.12, W * 0.13);
+  ctx.save(); ctx.shadowColor = '#ff6600'; ctx.shadowBlur = 28;
+  ctx.fillStyle = '#ff6600';
+  ctx.font = `bold ${ss}px "Courier New", monospace`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText(state.score.toLocaleString(), W / 2, H * 0.16); ctx.restore();
+
+  // Multiplier
+  const ms = Math.min(H * 0.06, W * 0.10);
+  ctx.save(); ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 14;
+  ctx.fillStyle = '#ffcc00';
+  ctx.font = `bold ${ms}px "Courier New", monospace`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText('MULT', W*0.08, H*0.34); ctx.restore();
+  ctx.save(); ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 14;
+  ctx.fillStyle = '#ffcc00';
+  ctx.font = `bold ${ms*1.35}px "Courier New", monospace`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText('×' + state.multiplier, W*0.08, H*0.375); ctx.restore();
+
+  // Ball-Anzeige
+  const ballR = Math.min(W * 0.065, H * 0.038);
+  const bx0   = W * 0.52, by0 = H * 0.375;
+  ctx.save(); ctx.fillStyle = '#334';
+  ctx.font = `${H*0.028}px "Courier New", monospace`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText('BALL', bx0, H*0.344); ctx.restore();
+  for (let i = 0; i < 3; i++) {
+    const cx = bx0 + i * (ballR * 2.3) + ballR;
+    const cy = by0 + ballR;
+    ctx.save();
+    ctx.shadowColor = i < state.ballNum ? '#00aaff' : 'transparent';
+    ctx.shadowBlur  = i < state.ballNum ? 12 : 0;
+    ctx.fillStyle   = i < state.ballNum ? '#00aaff' : '#1a2a3a';
+    ctx.beginPath(); ctx.arc(cx, cy, ballR, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // Highscores
+  const scores = getTopScores();
+  if (scores.length > 0) {
+    ctx.save(); ctx.fillStyle = '#446';
+    ctx.font = `${H*0.026}px "Courier New", monospace`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('HIGH SCORES', W*0.08, H*0.51); ctx.restore();
+    scores.slice(0, 3).forEach((s, i) => {
+      ctx.save();
+      ctx.fillStyle = i === 0 ? '#ffcc00' : '#556';
+      ctx.shadowColor = i === 0 ? '#ffcc00' : 'transparent'; ctx.shadowBlur = i === 0 ? 8 : 0;
+      ctx.font = `${H*0.032}px "Courier New", monospace`;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillText(`#${i+1} ${s.toLocaleString()}`, W*0.08, H*(0.545 + i * 0.045));
+      ctx.restore();
+    });
+  }
+
+  // Eingebettetes DMD-Panel
+  const dY = H * 0.74, dH = H * 0.23, dW = W * 0.86, dX = W * 0.07;
+  ctx.fillStyle = '#050200'; ctx.strokeStyle = '#5a2200'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(dX, dY, dW, dH, 5);
+  else               ctx.rect(dX, dY, dW, dH);
+  ctx.fill(); ctx.stroke();
+  const dmdC = document.getElementById('dmd');
+  if (dmdC) {
+    ctx.save(); ctx.globalAlpha = 0.92;
+    ctx.drawImage(dmdC, dX + 4, dY + 4, dW - 8, dH - 8);
+    ctx.restore();
+  }
+}
+
+// ─── TABLE CONFIGS ─────────────────────────────────────────────────────────────
+const TABLE_CONFIGS = {
+  classic: {
+    name: 'Classic Arcade',
+    tableColor: 0x1a4a15,
+    accentColor: 0x00ff66,
+    bumpers: [
+      { x:-1.1, y:2.2, color:0xff2200 },
+      { x: 1.1, y:2.2, color:0xff9900 },
+      { x: 0.0, y:3.6, color:0xff00aa },
+    ],
+    targets: [
+      { x: 1.8, y: 0.8, color:0xff2200 },
+      { x: 1.8, y: 0.1, color:0xff6600 },
+      { x: 1.8, y:-0.6, color:0xff9900 },
+    ],
+    ramps: [
+      { x1:-2.6, y1: 0.2, x2:-1.5, y2: 1.6, color:0x00ff66 },
+      { x1: 2.0, y1: 0.2, x2: 1.5, y2: 1.6, color:0x00ff66 },
+    ],
+    lights: [
+      { color:0x00ff66, intensity:0.6, dist:8, x:0,   y:3,  z:3 },
+      { color:0x004422, intensity:0.5, dist:8, x:-2,  y:-2, z:3 },
+    ]
+  },
+  space: {
+    name: 'Space Attack',
+    tableColor: 0x05051a,
+    accentColor: 0x0066ff,
+    bumpers: [
+      { x:-1.3, y:1.5, color:0x0088ff },
+      { x: 1.3, y:1.5, color:0x00ccff },
+      { x: 0.0, y:3.0, color:0xcc00ff },
+      { x:-0.8, y:4.2, color:0xff0066 },
+      { x: 0.8, y:4.2, color:0xff6600 },
+    ],
+    targets: [
+      { x:-1.8, y: 1.0, color:0xcc00ff },
+      { x:-1.8, y: 0.2, color:0x0088ff },
+      { x:-1.8, y:-0.6, color:0x00ccff },
+    ],
+    ramps: [
+      { x1:-2.5, y1:-0.5, x2:-1.2, y2: 2.0, color:0x0066ff },
+      { x1: 2.0, y1:-0.5, x2: 1.2, y2: 2.0, color:0x0066ff },
+      { x1:-1.0, y1: 4.5, x2: 1.0, y2: 5.2, color:0xcc00ff },
+    ],
+    lights: [
+      { color:0x0044ff, intensity:1.0, dist:10, x:0,  y:2,  z:4 },
+      { color:0xff0066, intensity:0.5, dist:8,  x:-2, y:4,  z:3 },
+      { color:0x00ccff, intensity:0.5, dist:8,  x:2,  y:4,  z:3 },
+    ]
+  },
+  fire: {
+    name: 'Fire Storm',
+    tableColor: 0x1a0500,
+    accentColor: 0xff4400,
+    bumpers: [
+      { x:-1.0, y:2.0, color:0xff2200 },
+      { x: 1.0, y:2.0, color:0xff6600 },
+      { x: 0.0, y:3.5, color:0xffaa00 },
+      { x:-1.5, y:3.8, color:0xff0000 },
+    ],
+    targets: [
+      { x: 1.8, y: 1.2, color:0xff2200 },
+      { x: 1.8, y: 0.4, color:0xff6600 },
+    ],
+    ramps: [
+      { x1:-2.6, y1: 0.0, x2:-1.8, y2: 1.8, color:0xff4400 },
+      { x1: 2.0, y1: 0.0, x2: 1.8, y2: 1.8, color:0xff4400 },
+    ],
+    lights: [
+      { color:0xff2200, intensity:1.0, dist:10, x:0,  y:2, z:4 },
+      { color:0xff8800, intensity:0.6, dist:8,  x:-2, y:0, z:3 },
+      { color:0xff4400, intensity:0.6, dist:8,  x:2,  y:0, z:3 },
+    ]
+  },
+  ocean: {
+    name: 'Ocean Deep',
+    tableColor: 0x001a2e,
+    accentColor: 0x00ccff,
+    bumpers: [
+      { x:-0.8, y:2.0, color:0x0088ff },
+      { x: 0.8, y:2.0, color:0x00ddff },
+      { x: 0.0, y:3.2, color:0x00ffcc },
+      { x:-1.6, y:3.5, color:0x0055ff },
+    ],
+    targets: [
+      { x:-1.8, y: 0.5, color:0x00ffcc },
+      { x: 1.8, y: 0.5, color:0x00aaff },
+      { x: 0.0, y:-0.2, color:0x0055ff },
+    ],
+    ramps: [
+      { x1:-2.5, y1:-0.8, x2:-1.3, y2: 1.5, color:0x00ccff },
+      { x1: 2.0, y1:-0.8, x2: 1.3, y2: 1.5, color:0x00ccff },
+      { x1:-0.8, y1: 4.8, x2: 0.8, y2: 5.4, color:0x00ffcc },
+    ],
+    lights: [
+      { color:0x0055aa, intensity:0.8, dist:10, x:0,  y:2, z:4 },
+      { color:0x00aaff, intensity:0.5, dist:8,  x:-2, y:3, z:3 },
+      { color:0x00ffcc, intensity:0.5, dist:8,  x:2,  y:3, z:3 },
+    ]
+  }
+};
+
+// ─── LOADER FUNCTIONS (global) ────────────────────────────────────────────────
+window.switchTab = function(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.includes(
+      tab === 'demo' ? 'DEMO' :
+      tab === 'import' ? 'IMPORT' :
+      tab === 'tables' ? 'TABELLEN' :
+      tab === 'library' ? 'BIBLIOTHEK' :
+      tab === 'info' ? 'FORMAT' :
+      'SCRIPT'
+    ));
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  const tabEl = document.getElementById('tab-'+tab);
+  if (tabEl) tabEl.classList.add('active');
+};
+
+window.loadDemoTable = function(key) {
+  buildTable(TABLE_CONFIGS[key]);
+  closeLoader();
+};
+
+window.closeLoader = function() {
+  document.getElementById('loader-modal').style.display = 'none';
+  if (!currentTableConfig) buildTable(TABLE_CONFIGS['classic']);
+};
+
+document.getElementById('open-loader').onclick = () => {
+  document.getElementById('loader-modal').style.display = 'flex';
+};
+
+// ─── LZO1X-1 DECOMPRESSOR (Pure JavaScript) ───────────────────────────────────
+// Implementiert den LZO1X-1 Decompressionsalgorithmus ohne externe Dependencies.
+// Basiert auf der miniLZO / pylzo Referenz.
+// Gibt null zurück bei Fehler (graceful fallback).
+function lzo1xDecompress(src, sizeHint) {
+  try {
+    const out = new Uint8Array(sizeHint || Math.min(src.length * 10 + 65536, 48 << 20));
+    let ip = 0, op = 0;
+
+    // M1 quick-match: 3 Bytes, Offset 11 Bit (nach Literal / Match)
+    const m1 = (t) => {
+      const mp = op - 0x801 - (t >> 2) - (src[ip++] << 2);
+      out[op++] = out[mp]; out[op++] = out[mp+1]; out[op++] = out[mp+2];
+      return src[ip++]; // nächster Command-Byte
+    };
+
+    let t = src[ip++];
+
+    // Initialer Literal-Run (erster Byte > 17)
+    if (t > 17) {
+      t -= 17;
+      while (t-- > 0) out[op++] = src[ip++];
+      t = src[ip++];
+      if (t < 16) t = m1(t);
+    }
+
+    outer: for (;;) {
+
+      // ── Literal-Run (t < 16) ─────────────────────────────────────────────────
+      if (t < 16) {
+        let n = t;
+        if (n === 0) {
+          n = 15; while (src[ip] === 0) { n += 255; ip++; } n += src[ip++];
+        }
+        n += 3;
+        while (n-- > 0) out[op++] = src[ip++];
+        t = src[ip++];
+        if (t < 16) { t = m1(t); continue outer; }
+      }
+
+      // ── Match ─────────────────────────────────────────────────────────────────
+      let ml, mp;
+
+      if (t >= 64) {
+        // M2: kurzer Match, 1 Control + 1 Offset-Byte (11 Bit)
+        mp = op - 1 - ((t >> 2) & 7) - (src[ip++] << 3);
+        ml = (t >> 5) + 1;
+
+      } else if (t >= 32) {
+        // M3: mittlerer Match, variable Länge, 14-Bit-Offset + 0x4000
+        ml = t & 31;
+        if (ml === 0) { ml = 31; while (src[ip] === 0) { ml += 255; ip++; } ml += src[ip++]; }
+        ml += 2;
+        const l3 = src[ip++], h3 = src[ip++];
+        mp = op - 1 - (l3 >> 2) - (h3 << 6) - 0x4000;
+
+      } else {
+        // M4: langer Match, variable Länge, 16-Bit-Offset, optional +32768
+        ml = t & 7;
+        if (ml === 0) { ml = 7; while (src[ip] === 0) { ml += 255; ip++; } ml += src[ip++]; }
+        ml += 2;
+        const hi0 = (t & 8) << 11;       // 0 oder 32768
+        const l4 = src[ip++], h4 = src[ip++];
+        const off = (l4 >> 2) | (h4 << 6);
+        if (hi0 === 0 && off === 0) break outer; // EOF-Marker
+        mp = op - hi0 - off - 0x4001;
+      }
+
+      // Match kopieren (forward copy für Überlappungen)
+      let m = mp;
+      for (let i = 0; i < ml; i++) out[op++] = out[m++];
+
+      t = src[ip++];
+      if (t < 16) t = m1(t);
+    }
+
+    return out.subarray(0, op);
+  } catch (_) { return null; }
+}
+
+// Versucht LZO1X-Dekompression aus einem FPT-Stream.
+// FPT speichert: [uint32 chunk_len][uint32 chunk_id][uint32? orig_size][lzo_data]
+// orig_size liegt oft bei Offset 8 (= uint32 an Position 0 des Data-Bereichs).
+function tryLZOExtract(bytes) {
+  // Mögliche Offsets für LZO-Daten: 8 (direkt), 12 (mit orig_size-Header)
+  for (const [dataOff, sizeOff] of [[12, 8], [8, 0], [16, 12]]) {
+    if (bytes.length <= dataOff) continue;
+    const view = new DataView(bytes.buffer, bytes.byteOffset);
+    let hint = 0;
+    try { hint = view.getUint32(sizeOff, true); } catch (_) {}
+    if (hint > 64 * 1024 * 1024 || hint < 0) hint = 0; // Plausibilitätsprüfung
+    const result = lzo1xDecompress(bytes.slice(dataOff), hint || undefined);
+    if (result && result.length > 4) return result;
+  }
+  return null;
+}
+
+// ─── CFB / OLE2 RESSOURCEN-EXTRAKTION ─────────────────────────────────────────
+
+// Erkennt Bild-MIME anhand Magic Bytes ab Offset
+function detectImageMime(buf, off = 0) {
+  if (buf.length < off + 4) return null;
+  const [a, b, c, d] = [buf[off], buf[off+1], buf[off+2], buf[off+3]];
+  if (a===0x89 && b===0x50 && c===0x4E && d===0x47) return 'image/png';
+  if (a===0xFF && b===0xD8)                          return 'image/jpeg';
+  if (a===0x42 && b===0x4D)                          return 'image/bmp';
+  if (a===0x47 && b===0x49 && c===0x46)              return 'image/gif';
+  if (a===0x52 && b===0x49 && c===0x46 && d===0x46 &&
+      buf[off+8]===0x57 && buf[off+9]===0x45)        return 'image/webp';
+  return null;
+}
+
+// Erkennt Audio-MIME anhand Magic Bytes ab Offset
+function detectAudioMime(buf, off = 0) {
+  if (buf.length < off + 4) return null;
+  const [a, b, c, d] = [buf[off], buf[off+1], buf[off+2], buf[off+3]];
+  if (a===0x52 && b===0x49 && c===0x46 && d===0x46) return 'audio/wav';   // RIFF
+  if (a===0x4F && b===0x67 && c===0x67 && d===0x53) return 'audio/ogg';   // OggS
+  if (a===0x49 && b===0x44 && c===0x33)              return 'audio/mpeg';  // ID3
+  if ((a===0xFF) && (b & 0xE0)===0xE0)               return 'audio/mpeg';  // MP3 sync
+  return null;
+}
+
+// Hilfsfunktion: rohe Bytes → THREE.Texture (bei erkannter MIME)
+async function bytesToTexture(slice, mime) {
+  const blob    = new Blob([slice], { type: mime });
+  const url     = URL.createObjectURL(blob);
+  try {
+    const tex = await new THREE.TextureLoader().loadAsync(url);
+    tex.flipY      = false;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+    return tex;
+  } finally { URL.revokeObjectURL(url); }
+}
+
+// Versucht, eine THREE.Texture aus rohen Bytes zu erstellen.
+// Prüft: 1) Magic Bytes an Standard-Offsets (unkomprimiert)
+//        2) LZO1X-Dekompression (FPT-komprimierte Ressourcen)
+async function extractImageFromBytes(bytes) {
+  // ── Versuch 1: Unkomprimiert ───────────────────────────────────────────────
+  for (const off of [8, 0, 4, 12, 16, 32, 64]) {
+    const mime = detectImageMime(bytes, off);
+    if (!mime) continue;
+    try { return await bytesToTexture(bytes.slice(off), mime); } catch (_) {}
+  }
+
+  // ── Versuch 2: LZO1X-komprimiert ──────────────────────────────────────────
+  const decompressed = tryLZOExtract(bytes);
+  if (decompressed) {
+    for (const off of [0, 8, 4]) {
+      const mime = detectImageMime(decompressed, off);
+      if (!mime) continue;
+      try { return await bytesToTexture(decompressed.slice(off), mime); } catch (_) {}
+    }
+  }
+
+  return null;
+}
+
+// Versucht, einen AudioBuffer aus rohen Bytes zu dekodieren.
+// Prüft: 1) Magic Bytes (WAV/OGG/MP3) an Standard-Offsets
+//        2) LZO1X-Dekompression
+async function extractSoundFromBytes(bytes) {
+  const tryDecode = async (slice) => {
+    const ctx = getAudioCtx();
+    const ab  = slice.buffer.slice(slice.byteOffset, slice.byteOffset + slice.byteLength);
+    return ctx.decodeAudioData(ab);
+  };
+
+  // ── Versuch 1: Unkomprimiert ─────────────────────────────────────────────
+  for (const off of [8, 0, 4, 12, 16, 32]) {
+    if (!detectAudioMime(bytes, off)) continue;
+    try { return await tryDecode(bytes.slice(off)); } catch (_) {}
+  }
+
+  // ── Versuch 2: LZO1X-komprimiert ─────────────────────────────────────────
+  const decompressed = tryLZOExtract(bytes);
+  if (decompressed) {
+    for (const off of [0, 8, 4]) {
+      if (!detectAudioMime(decompressed, off)) continue;
+      try { return await tryDecode(decompressed.slice(off)); } catch (_) {}
+    }
+  }
+
+  return null;
+}
+
+// Parst die CFB-Struktur und extrahiert alle Image- und Sound-Streams.
+// Gibt { textureCount, soundCount } zurück.
+async function parseCFBResources(arrayBuffer) {
+  // fptResources zurücksetzen
+  fptResources.textures  = {};
+  fptResources.sounds    = {};
+  fptResources.playfield = null;
+  fptResources.mapped    = { bumper: null, flipper: null, drain: null };
+
+  let cfb;
+  try {
+    cfb = CFB.read(new Uint8Array(arrayBuffer), { type: 'array' });
+  } catch (e) {
+    logMsg('CFB Parse-Fehler: ' + e.message, 'warn');
+    return { textureCount: 0, soundCount: 0 };
+  }
+
+  const entries = (cfb.FileIndex || []).filter(e => e.t === 2 && e.size > 0);
+  logMsg('CFB-Streams gefunden: ' + entries.length, entries.length > 0 ? 'ok' : 'warn');
+
+  let largestTexSize = 0;
+
+  for (const entry of entries) {
+    const name  = entry.name || '';
+    const bytes = entry.content; // Uint8Array
+
+    const nameL = name.toLowerCase();
+
+    // ── Texturen ──────────────────────────────────────────────────────────────
+    if (/image|texture|playfield|table|backdrop|translite/i.test(nameL)) {
+      const tex = await extractImageFromBytes(bytes);
+      if (tex) {
+        fptResources.textures[name] = tex;
+        logMsg('  Textur: "' + name + '" (' + (bytes.length/1024).toFixed(0) + ' KB)', 'ok');
+        // Größte Textur = Spielfeld-Artwork
+        if (bytes.length > largestTexSize) {
+          largestTexSize = bytes.length;
+          fptResources.playfield = tex;
+        }
+      }
+    }
+
+    // ── VBScript ──────────────────────────────────────────────────────────────
+    if (!fptResources.script &&
+        (/script|code|vbs/i.test(nameL) || name === 'TableScript' || name === 'Script')) {
+      try {
+        const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+        if (/\bSub\s+\w+/i.test(text) && /\bEnd\s+Sub\b/i.test(text)) {
+          fptResources.script = text;
+          logMsg('  Script: "' + name + '" (' + text.split('\n').length + ' Zeilen VBScript)', 'ok');
+        }
+      } catch(_) {}
+    }
+
+    // ── Sounds & Musik ────────────────────────────────────────────────────────
+    if (/sound|music|sfx|wav|ogg|audio/i.test(nameL)) {
+      const buf = await extractSoundFromBytes(bytes);
+      if (buf) {
+        // Lange Tracks (>8s) = Hintergrundmusik, kurze = Soundeffekte
+        if (buf.duration > 8 || nameL.includes('music')) {
+          if (!fptResources.musicTrack) fptResources.musicTrack = buf;
+          logMsg('  Musik: "' + name + '" (' + buf.duration.toFixed(1) + 's)', 'ok');
+        } else {
+          fptResources.sounds[name] = buf;
+          logMsg('  Sound: "' + name + '" (' + buf.duration.toFixed(2) + 's)', 'ok');
+        }
+      }
+    }
+  }
+
+  // Heuristischer Script-Fallback: beliebigen Stream prüfen, der VBScript enthält
+  if (!fptResources.script) {
+    for (const entry of entries) {
+      if (entry.size < 50 || entry.size > 2 * 1024 * 1024) continue;
+      try {
+        const text = new TextDecoder('utf-8', { fatal: false }).decode(entry.content.slice(0, 8192));
+        if (/\bSub\s+\w+.*?\bEnd\s+Sub\b/is.test(text)) {
+          const full = new TextDecoder('utf-8', { fatal: false }).decode(entry.content);
+          fptResources.script = full;
+          logMsg('  Script (heuristisch): "' + (entry.name || '?') + '"', 'ok');
+          break;
+        }
+      } catch(_) {}
+    }
+  }
+
+  const textureCount = Object.keys(fptResources.textures).length;
+  const soundCount   = Object.keys(fptResources.sounds).length;
+  return { textureCount, soundCount };
+}
+
+// Mappt extrahierte Sounds heuristisch auf Game-Events.
+function mapFPTSounds(sounds) {
+  const names = Object.keys(sounds);
+  const find  = (pattern) => names.find(n => pattern.test(n));
+
+  const bumperKey  = find(/bump|pop|kick|hit|knock/i);
+  const flipperKey = find(/flip|solenoid|arm|coil/i);
+  const drainKey   = find(/drain|ball.?lost|out|gutter/i);
+
+  if (bumperKey)  { fptResources.mapped.bumper  = sounds[bumperKey];  logMsg('  Bumper-Sound: "' + bumperKey + '"', 'ok'); }
+  if (flipperKey) { fptResources.mapped.flipper = sounds[flipperKey]; logMsg('  Flipper-Sound: "' + flipperKey + '"', 'ok'); }
+  if (drainKey)   { fptResources.mapped.drain   = sounds[drainKey];   logMsg('  Drain-Sound: "' + drainKey + '"', 'ok'); }
+
+  // Fallback: erste verfügbare Sounds zuweisen
+  if (!fptResources.mapped.bumper  && names[0]) fptResources.mapped.bumper  = sounds[names[0]];
+  if (!fptResources.mapped.flipper && names[1]) fptResources.mapped.flipper = sounds[names[1]];
+}
+
+// ─── VBSCRIPT → JAVASCRIPT TRANSPILER ────────────────────────────────────────
+// Transformiert VBScript-Ausdrücke in JS (nur Expression-Kontext)
+function _vbsXpr(e) {
+  return e
+    .replace(/\bTrue\b/gi, 'true')
+    .replace(/\bFalse\b/gi, 'false')
+    .replace(/\bNothing\b/gi, 'null')
+    .replace(/\bNull\b/gi, 'null')
+    .replace(/\bNot\s+/gi, '!')
+    .replace(/\s+And\s+/gi, ' && ')
+    .replace(/\s+Or\s+/gi, ' || ')
+    .replace(/\s+Mod\s+/gi, ' % ')
+    .replace(/<>/g, '!==')
+    .replace(/(?<![<>!])=(?!=)/g, '===')   // VBScript = im Ausdruck ist Vergleich
+    .replace(/\s*&\s*/g, ' + ')            // String-Konkatenation
+    .replace(/\bChr\((\d+)\)/gi, 'String.fromCharCode($1)')
+    .replace(/\bLen\(([^)]+)\)/gi, '($1).length')
+    .replace(/\bUCase\(([^)]+)\)/gi, '($1).toUpperCase()')
+    .replace(/\bLCase\(([^)]+)\)/gi, '($1).toLowerCase()')
+    .replace(/\bInt\(([^)]+)\)/gi, 'Math.floor($1)')
+    .replace(/\bFix\(([^)]+)\)/gi, 'Math.trunc($1)')
+    .replace(/\bCInt\(([^)]+)\)/gi, 'parseInt($1)')
+    .replace(/\bCDbl\(([^)]+)\)/gi, 'parseFloat($1)')
+    .replace(/\bCStr\(([^)]+)\)/gi, 'String($1)')
+    .replace(/\bRnd\b/gi, 'Math.random()')
+    .replace(/\bAbs\(([^)]+)\)/gi, 'Math.abs($1)')
+    .replace(/\bSgn\(([^)]+)\)/gi, 'Math.sign($1)')
+    .replace(/\bSqr\(([^)]+)\)/gi, 'Math.sqrt($1)');
+}
+
+// Transformiert ein VBScript-Statement in ein JS-Statement
+function _vbsStmt(s) {
+  const t = s.trim();
+  // Assignment erkennen: lhs = rhs  (kein <=, >=, != davor)
+  const eqIdx = t.search(/(?<![<>!])=(?!=)/);
+  if (eqIdx > 0) {
+    const lhs = t.slice(0, eqIdx).trim();
+    if (/^[\w.[\]()]+$/.test(lhs)) {
+      return `${lhs} = ${_vbsXpr(t.slice(eqIdx + 1).trim())}`;
+    }
+  }
+  // Prozedur-Aufruf ohne Klammern: FuncName arg1, arg2
+  const noParens = t.match(/^(\w+)\s+(?![=<>])(.+)$/);
+  if (noParens && !t.includes('(')) {
+    const args = noParens[2].split(',').map(a => _vbsXpr(a.trim())).join(', ');
+    return `${noParens[1]}(${args})`;
+  }
+  return _vbsXpr(t);
+}
+
+// Transpiliert VBScript-Quellcode nach JavaScript.
+// Unterstützt: Sub/Function, If/ElseIf/Else/End If, For/Next,
+//              Do While/Loop, Select Case, Dim, Const, Exit, Call, Set.
+function vbsToJS(src) {
+  const lines = src.replace(/\r\n?/g, '\n').split('\n');
+  const out   = [];
+  let depth   = 0;
+  const pad   = () => '  '.repeat(Math.max(0, depth));
+
+  for (const rawLine of lines) {
+    const t = rawLine.trim();
+    if (!t) { out.push(''); continue; }
+
+    // Kommentar
+    if (t.startsWith("'") || /^rem\s/i.test(t)) {
+      out.push(pad() + '// ' + t.replace(/^'|^rem\s+/i, ''));
+      continue;
+    }
+
+    // Inline-Kommentar entfernen (außerhalb von Strings, grobe Heuristik)
+    let code = t;
+    const sqIdx = t.indexOf("'");
+    if (sqIdx > 0 && (t.slice(0, sqIdx).match(/"/g) || []).length % 2 === 0) {
+      code = t.slice(0, sqIdx).trim();
+    }
+    if (!code) continue;
+
+    let m;
+
+    // Sub / Function
+    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Sub\s+(\w+)\s*\((.*?)\)/i))) {
+      out.push(pad() + `function ${m[1]}(${m[2]}) {`); depth++; continue;
+    }
+    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Function\s+(\w+)\s*\((.*?)\)/i))) {
+      out.push(pad() + `function ${m[1]}(${m[2]}) {`); depth++; continue;
+    }
+    if (/^End\s+(Sub|Function)$/i.test(code)) {
+      depth = Math.max(0, depth - 1); out.push(pad() + '}'); continue;
+    }
+
+    // If / ElseIf / Else / End If
+    if ((m = code.match(/^If\s+(.*?)\s+Then$/i))) {
+      out.push(pad() + `if (${_vbsXpr(m[1])}) {`); depth++; continue;
+    }
+    if ((m = code.match(/^If\s+(.*?)\s+Then\s+(.+)$/i))) {
+      out.push(pad() + `if (${_vbsXpr(m[1])}) { ${_vbsStmt(m[2])}; }`); continue;
+    }
+    if ((m = code.match(/^ElseIf\s+(.*?)\s+Then$/i))) {
+      depth = Math.max(0, depth - 1);
+      out.push(pad() + `} else if (${_vbsXpr(m[1])}) {`); depth++; continue;
+    }
+    if (/^Else$/i.test(code)) {
+      depth = Math.max(0, depth - 1); out.push(pad() + '} else {'); depth++; continue;
+    }
+    if (/^End\s+If$/i.test(code)) {
+      depth = Math.max(0, depth - 1); out.push(pad() + '}'); continue;
+    }
+
+    // For / Next
+    if ((m = code.match(/^For\s+(\w+)\s*=\s*(.+?)\s+To\s+(.+?)(?:\s+Step\s+(.+))?$/i))) {
+      const v = m[1], a = _vbsXpr(m[2].trim()), b = _vbsXpr(m[3].trim());
+      const st = m[4] ? parseFloat(m[4]) : 1;
+      const op = st < 0 ? '>=' : '<=';
+      const inc = st === 1 ? `${v}++` : st === -1 ? `${v}--` : `${v} += ${st}`;
+      out.push(pad() + `for (let ${v} = ${a}; ${v} ${op} ${b}; ${inc}) {`); depth++; continue;
+    }
+    if (/^Next(?:\s+\w+)?$/i.test(code)) {
+      depth = Math.max(0, depth - 1); out.push(pad() + '}'); continue;
+    }
+
+    // Do While / Do Until / Loop
+    if ((m = code.match(/^Do\s+While\s+(.*)/i))) {
+      out.push(pad() + `while (${_vbsXpr(m[1])}) {`); depth++; continue;
+    }
+    if ((m = code.match(/^Do\s+Until\s+(.*)/i))) {
+      out.push(pad() + `while (!(${_vbsXpr(m[1])})) {`); depth++; continue;
+    }
+    if (/^Loop$/i.test(code)) {
+      depth = Math.max(0, depth - 1); out.push(pad() + '}'); continue;
+    }
+
+    // Select Case / Case / End Select
+    if ((m = code.match(/^Select\s+Case\s+(.*)/i))) {
+      out.push(pad() + `switch (${_vbsXpr(m[1])}) {`); depth++; continue;
+    }
+    if (/^Case\s+Else$/i.test(code)) {
+      out.push(pad() + 'default:'); continue;
+    }
+    if ((m = code.match(/^Case\s+(.*)/i))) {
+      const cases = m[1].split(',').map(v => `case ${_vbsXpr(v.trim())}:`).join(' ');
+      out.push(pad() + cases); continue;
+    }
+    if (/^End\s+Select$/i.test(code)) {
+      depth = Math.max(0, depth - 1); out.push(pad() + '}'); continue;
+    }
+
+    // Dim / Const
+    if ((m = code.match(/^Dim\s+(.*)/i))) {
+      const vars = m[1].split(',')
+        .map(v => v.trim().replace(/\s+As\s+\w+/i, '').replace(/\(.*?\)/, '').trim())
+        .filter(Boolean);
+      out.push(pad() + 'let ' + vars.join(', ') + ';'); continue;
+    }
+    if ((m = code.match(/^Const\s+(\w+)\s*=\s*(.*)/i))) {
+      out.push(pad() + `const ${m[1]} = ${_vbsXpr(m[2])};`); continue;
+    }
+
+    // Exit Sub/Function/For
+    if (/^Exit\s+(Sub|Function)$/i.test(code)) { out.push(pad() + 'return;'); continue; }
+    if (/^Exit\s+For$/i.test(code))             { out.push(pad() + 'break;');  continue; }
+
+    // Call / Set / With (With ignorieren)
+    if ((m = code.match(/^Call\s+(.*)/i)))               { out.push(pad() + _vbsStmt(m[1]) + ';'); continue; }
+    if ((m = code.match(/^Set\s+([\w.]+)\s*=\s*(.*)/i))) { out.push(pad() + `${m[1]} = ${_vbsXpr(m[2])};`); continue; }
+    if (/^With\s+/i.test(code) || /^End\s+With$/i.test(code)) { continue; }
+
+    // Allgemeines Statement
+    out.push(pad() + _vbsStmt(code) + ';');
+  }
+  return out.join('\n');
+}
+
+// ─── FP SCRIPT API & EXECUTION ────────────────────────────────────────────────
+let fpScriptHandlers   = {};  // { 'Bumper1_Hit': fn, ... }
+
+function fpScriptLog(msg, type = 'info') {
+  const el = document.getElementById('script-log');
+  if (!el) return;
+  const span = document.createElement('span');
+  span.className = 'log-' + type;
+  span.textContent = '> ' + msg;
+  el.appendChild(span);
+  el.appendChild(document.createElement('br'));
+  el.scrollTop = el.scrollHeight;
+}
+
+// Baut das API-Objekt, das dem Script-Scope zur Verfügung steht
+function buildFPScriptAPI() {
+  const sounds = fptResources.sounds || {};
+
+  // Einfache Timer-Proxies: TimerName.Enabled = True / TimerName.Interval = n
+  const _timers = {};
+  const makeTimer = (name) => ({
+    get Enabled() { return !!_timers[name + '_id']; },
+    set Enabled(v) {
+      clearInterval(_timers[name + '_id']);
+      delete _timers[name + '_id'];
+      if (v) _timers[name + '_id'] = setInterval(() => callScriptFn(name + '_Expired'), _timers[name + '_ms'] || 1000);
+    },
+    get Interval() { return _timers[name + '_ms'] || 1000; },
+    set Interval(ms) { _timers[name + '_ms'] = ms; }
+  });
+
+  return {
+    // ── Scoring ──────────────────────────────────────────────────────────────
+    AddScore:  (n) => { state.score += Math.floor(+n || 0); updateHUD(); },
+    AddBonus:  (n) => { state.score += Math.floor((+n || 0) * 0.5); updateHUD(); },
+    BIPScore:  (_t, n) => { state.score += Math.floor(+n || 0); updateHUD(); },
+    GetScore:  () => state.score,
+    GetBall:   () => state.ballNum,
+    get BallInPlay() { return state.ballNum; },
+
+    // ── Sound ────────────────────────────────────────────────────────────────
+    PlaySound: (name, loop = 0, vol = 100) => {
+      const key = Object.keys(sounds).find(k => k === name ||
+        k.toLowerCase().includes(String(name).toLowerCase()));
+      const buf = key ? sounds[key] : null;
+      if (buf) {
+        const ctx = getAudioCtx();
+        const src = ctx.createBufferSource();
+        const gain = ctx.createGain();
+        src.buffer = buf;
+        src.loop   = !!loop;
+        gain.gain.value = Math.max(0, Math.min(1, (+vol || 100) / 100));
+        src.connect(gain); gain.connect(ctx.destination);
+        src.start();
+      } else {
+        playSound(/flip/i.test(String(name)) ? 'flipper' : /drain|ball.*lost/i.test(String(name)) ? 'drain' : 'bumper');
+      }
+    },
+    StopSound:  (_name) => {},
+    PlayMusic:  (name) => {
+      const buf = sounds[name] || fptResources.musicTrack;
+      if (buf) playFPTMusic(buf); else startBGMusic();
+    },
+    StopMusic:  () => stopBGMusic(),
+
+    // ── DMD ──────────────────────────────────────────────────────────────────
+    DMDText:    (text) => dmdEvent(String(text).slice(0, 22).toUpperCase()),
+
+    // ── Lights / Flasher (Stubs mit Log) ─────────────────────────────────────
+    LightOn:     (name) => fpScriptLog('Light ON: '    + name),
+    LightOff:    (name) => fpScriptLog('Light OFF: '   + name),
+    LightBlink:  (name) => fpScriptLog('Light BLINK: ' + name),
+    SetLight:    (name, val) => fpScriptLog('SetLight: ' + name + '=' + val),
+    FlasherOn:   (name) => { showNotification('💡 ' + name); fpScriptLog('Flasher ON: ' + name); },
+    FlasherOff:  (name) => fpScriptLog('Flasher OFF: '  + name),
+    FlasherBlink:(name) => fpScriptLog('Flasher BLINK: '+ name),
+
+    // ── Solenoids (Stubs) ────────────────────────────────────────────────────
+    FireCoil:    (name) => fpScriptLog('FireCoil: '    + name),
+    SolenoidOn:  (name) => fpScriptLog('Solenoid ON: ' + name),
+    SolenoidOff: (name) => fpScriptLog('Solenoid OFF: '+ name),
+
+    // ── Multiball ────────────────────────────────────────────────────────────
+    AddBalls:       (n) => { for (let i = 0; i < Math.max(0, (+n||1) - 1); i++) launchMultiBall(); },
+    MultiballStart: (n) => { for (let i = 0; i < Math.max(0, (+n||2) - 1); i++) launchMultiBall(); },
+
+    // ── Dialogs ──────────────────────────────────────────────────────────────
+    MsgBox: (msg) => { fpScriptLog(String(msg), 'info'); showNotification(String(msg).slice(0, 30)); },
+
+    // ── VBScript Math/String Built-ins ───────────────────────────────────────
+    Int: Math.floor, Fix: Math.trunc, Abs: Math.abs, Sqr: Math.sqrt,
+    Sin: Math.sin, Cos: Math.cos, Tan: Math.tan, Atn: Math.atan,
+    Exp: Math.exp, Log: Math.log, Rnd: Math.random, Randomize: () => {},
+    Chr: (n) => String.fromCharCode(+n || 0),
+    Asc: (s) => (String(s || '') || '\0').charCodeAt(0),
+    Len: (s) => String(s || '').length,
+    Left:  (s, n) => String(s || '').slice(0, +n),
+    Right: (s, n) => String(s || '').slice(-(+n)),
+    Mid:   (s, p, l) => { const ss = String(s||''); return l != null ? ss.slice(p-1, p-1+(+l)) : ss.slice(p-1); },
+    UCase: (s) => String(s || '').toUpperCase(),
+    LCase: (s) => String(s || '').toLowerCase(),
+    Trim:  (s) => String(s || '').trim(),
+    LTrim: (s) => String(s || '').trimStart(),
+    RTrim: (s) => String(s || '').trimEnd(),
+    Str:   String, CInt: (n) => parseInt(n) || 0,
+    CDbl: (n) => parseFloat(n) || 0, CStr: String, CBool: Boolean,
+    InStr:   (s, sub) => { const i = String(s||'').indexOf(sub); return i < 0 ? 0 : i + 1; },
+    Replace: (s, a, b) => String(s || '').replaceAll(a, b),
+    Space:   (n) => ' '.repeat(+n || 0),
+    String:  (n, c) => (typeof c === 'number' ? String.fromCharCode(c) : String(c)[0] || '').repeat(+n || 0),
+    IsNothing: (x) => x == null, IsNull: (x) => x == null,
+    IsEmpty:   (x) => x == null || x === '', IsNumeric: (x) => !isNaN(parseFloat(x)),
+
+    // Timer-Factory (für TimerName.Enabled = True Muster)
+    _makeTimer: makeTimer
+  };
+}
+
+// Sammelt Timer-Namen aus transpiliertem Code und erstellt Proxy-Objekte
+function _collectTimers(api, jsCode) {
+  const re = /\b(\w+Timer\w*)\b/gi;
+  const names = new Set();
+  let m;
+  while ((m = re.exec(jsCode)) !== null) names.add(m[1]);
+  for (const name of names) {
+    if (!(name in api)) api[name] = api._makeTimer(name);
+  }
+}
+
+// Führt transpilierten VBScript-Code im FP-API-Kontext aus
+function runFPScript(vbsCode) {
+  fpScriptHandlers = {};
+
+  // Transpilieren
+  let jsCode;
+  try {
+    jsCode = vbsToJS(vbsCode);
+  } catch(e) {
+    fpScriptLog('Transpile-Fehler: ' + e.message, 'error');
+    return;
+  }
+
+  // API aufbauen + Timer sammeln
+  const api = buildFPScriptAPI();
+  _collectTimers(api, jsCode);
+
+  // Alle Funktionsnamen aus transpiliertem Code sammeln
+  const fnNames = [];
+  const fnRe = /^function\s+(\w+)\s*\(/mg;
+  let m;
+  while ((m = fnRe.exec(jsCode)) !== null) fnNames.push(m[1]);
+
+  // API-Bindings (var Name = __api__.Name)
+  const bindings = Object.keys(api)
+    .map(k => `var ${k} = __api__['${k}'];`).join('\n');
+
+  // Collect-Code: alle definierten Funktionen in __h__ eintragen
+  const collect = fnNames
+    .map(n => `if (typeof ${n} === 'function') __h__['${n}'] = ${n};`)
+    .join('\n');
+
+  try {
+    const fn = new Function('__api__', '__h__', bindings + '\n' + jsCode + '\n' + collect);
+    fn(api, fpScriptHandlers);
+  } catch(e) {
+    fpScriptLog('Script-Fehler: ' + e.message, 'error');
+  }
+
+  const count = Object.keys(fpScriptHandlers).length;
+  const names5 = Object.keys(fpScriptHandlers).slice(0, 5).join(', ');
+  fpScriptLog(`${count} Handler: ${names5}${count > 5 ? ' ...' : ''}`, count > 0 ? 'ok' : 'warn');
+
+  // UI aktualisieren
+  const rawEl  = document.getElementById('script-raw');
+  const jsEl   = document.getElementById('script-js');
+  const statEl = document.getElementById('script-status');
+  if (rawEl)  rawEl.value  = vbsCode;
+  if (jsEl)   jsEl.value   = jsCode;
+  if (statEl) {
+    statEl.textContent = `${count} Handler aktiv | ${vbsCode.split('\n').length} Zeilen VBScript`;
+    statEl.style.color = count > 0 ? '#00cc66' : '#ffaa00';
+  }
+
+  // Init-Handler aufrufen
+  callScriptFn('Table1_Init') || callScriptFn('Init') || callScriptFn('Initialize');
+}
+
+// Ruft einen benannten Script-Handler auf (mit Fehlerbehandlung)
+function callScriptFn(name, ...args) {
+  try {
+    const fn = fpScriptHandlers[name];
+    if (typeof fn === 'function') { fn(...args); return true; }
+  } catch(e) {
+    fpScriptLog(name + ' Fehler: ' + e.message, 'warn');
+  }
+  return false;
+}
+
+// Event-Dispatch: Bumper[i] → Bumper1_Hit, ...
+function callScriptBumper(index) {
+  callScriptFn('Bumper' + (index + 1) + '_Hit');
+}
+
+// Event-Dispatch: Target[i] → Target1_Hit / StandupTarget1_Hit
+function callScriptTarget(index) {
+  callScriptFn('Target'        + (index + 1) + '_Hit') ||
+  callScriptFn('StandupTarget' + (index + 1) + '_Hit');
+}
+
+// Event-Dispatch: Slingshot → LeftSlingshot_Hit / RightSlingshot_Hit
+function callScriptSlingshot(side) {
+  const name = side === 'left' ? 'LeftSlingshot' : 'RightSlingshot';
+  callScriptFn(name + '_Hit') || callScriptFn(name + '_Slingshot');
+}
+
+// Event-Dispatch: Drain → BallDrain / Table1_BallDrained
+function callScriptDrain() {
+  callScriptFn('BallDrain') ||
+  callScriptFn('Table1_BallDrained') ||
+  callScriptFn('Table_BallDrain');
+}
+
+// Event-Dispatch: Flipper → LeftFlipper_Enabled / _Disabled
+function callScriptFlipper(side, isDown) {
+  const name = side === 'left' ? 'LeftFlipper' : 'RightFlipper';
+  callScriptFn(name + (isDown ? '_Enabled' : '_Disabled'));
+}
+
+// ─── FPT FILE PARSER ──────────────────────────────────────────────────────────
+const fileInput = document.getElementById('file-input');
+const dropZone  = document.getElementById('drop-zone');
+const parseLog  = document.getElementById('parse-log');
+
+function logMsg(msg, type='info') {
+  const span = document.createElement('span');
+  span.className = 'log-' + type;
+  span.textContent = '> ' + msg;
+  parseLog.appendChild(span);
+  parseLog.appendChild(document.createElement('br'));
+  parseLog.scrollTop = parseLog.scrollHeight;
+}
+
+// ── Strategie A: Null-terminierte ASCII-Strings ───────────────────────────────
+function extractNullStrings(bytes, minLen = 4) {
+  const out = []; let cur = '';
+  for (let i = 0; i < bytes.length; i++) {
+    const c = bytes[i];
+    if (c >= 32 && c < 127) { cur += String.fromCharCode(c); }
+    else { if (cur.length >= minLen) out.push(cur); cur = ''; }
+  }
+  return out;
+}
+
+// ── Strategie B: Pascal-Strings (1-Byte und 2-Byte Length-Prefix) ─────────────
+function extractPascalStrings(bytes) {
+  const view = new DataView(bytes.buffer);
+  const out  = new Set();
+
+  for (let i = 0; i < bytes.length - 3; i++) {
+    // 1-Byte prefix
+    const len1 = bytes[i];
+    if (len1 >= 3 && len1 <= 60 && i + 1 + len1 < bytes.length) {
+      let s = '', ok = true;
+      for (let j = 0; j < len1; j++) {
+        const c = bytes[i + 1 + j];
+        if (c >= 32 && c < 127) s += String.fromCharCode(c);
+        else { ok = false; break; }
+      }
+      if (ok && /^[A-Za-z0-9\s\-_'!\.,:]+$/.test(s)) out.add(s.trim());
+    }
+    // 2-Byte LE prefix
+    if (i + 2 < bytes.length) {
+      const len2 = view.getUint16(i, true);
+      if (len2 >= 3 && len2 <= 80 && i + 2 + len2 < bytes.length) {
+        let s = '', ok = true;
+        for (let j = 0; j < len2; j++) {
+          const c = bytes[i + 2 + j];
+          if (c >= 32 && c < 127) s += String.fromCharCode(c);
+          else { ok = false; break; }
+        }
+        if (ok && /^[A-Za-z0-9\s\-_'!\.,:]+$/.test(s)) out.add(s.trim());
+      }
+    }
+  }
+  return [...out];
+}
+
+// ── Strategie C: Float32-Koordinaten-Paare im FP-Spielfeld-Bereich ───────────
+// FP verwendet intern ca. 2100×4200 Einheiten (Standard 21"×42" Spielfeld).
+// Alternativ auch kleinere Skalen möglich (z.B. 0–800 × 0–1600).
+function extractFPCoords(bytes) {
+  const view = new DataView(bytes.buffer);
+  const clusters = [];
+  const FP_SCALES = [
+    { xMax: 2100, yMax: 4200, scale: 1/350 },  // Vollskala
+    { xMax:  800, yMax: 1600, scale: 1/133 },  // Halbe Skala
+    { xMax:  400, yMax:  800, scale: 1/66.7 }, // Viertel Skala
+  ];
+
+  // Für jede Skala suchen
+  for (const sc of FP_SCALES) {
+    const found = [];
+    for (let i = 0; i < bytes.length - 8; i += 4) {
+      let x, y;
+      try { x = view.getFloat32(i,   true); y = view.getFloat32(i+4, true); }
+      catch (e) { continue; }
+      if (isFinite(x) && isFinite(y) &&
+          x > sc.xMax * 0.05 && x < sc.xMax * 0.95 &&
+          y > sc.yMax * 0.05 && y < sc.yMax * 0.95) {
+        found.push({ fpX: x, fpY: y });
+      }
+    }
+    if (found.length >= 3 && found.length <= 200) {
+      // Koordinaten in Welt-Space umrechnen
+      clusters.push(found.map(p => ({
+        x: (p.fpX / sc.xMax) * 6 - 3,
+        y: (p.fpY / sc.yMax) * 12 - 6
+      })));
+    }
+  }
+  // Bestes Cluster: das mit plausibler Tischdichte
+  return clusters.length ? clusters[0] : [];
+}
+
+// ── Signatur-Erkennung ─────────────────────────────────────────────────────────
+function detectFPSignature(bytes) {
+  if (bytes[0] === 0x46 && bytes[1] === 0x50 && bytes[2] === 0x54) return 'FPT v1';
+  if (bytes[0] === 0x46 && bytes[1] === 0x50)                       return 'FP/FPT';
+  if (bytes[0] === 0x46 && bytes[1] === 0x55 && bytes[2] === 0x54) return 'FUT';
+  // Prüfe auf bekannte FP-Versionsstrings in den ersten 512 Bytes
+  const head = String.fromCharCode(...bytes.slice(0, 512).filter(b => b >= 32 && b < 127));
+  if (head.includes('FuturePinball') || head.includes('Future Pinball')) return 'FP (Text-Header)';
+  if (head.includes('FPT'))  return 'FPT (Partial)';
+  return null;
+}
+
+// ── Konfidenz-Score berechnen ─────────────────────────────────────────────────
+function calcConfidence(sig, stringCount, coordCount, fileSize) {
+  let score = 0;
+  if (sig)           score += 30;
+  if (stringCount > 10) score += 20;
+  if (stringCount > 30) score += 10;
+  if (coordCount  > 3)  score += 20;
+  if (coordCount  > 10) score += 10;
+  if (fileSize > 50000) score += 10;
+  return Math.min(score, 100);
+}
+
+// ── Hauptfunktion (async – nutzt file.arrayBuffer()) ──────────────────────────
+async function parseFPTFile(file) {
+  parseLog.innerHTML = '';
+  logMsg('Datei: ' + file.name, 'info');
+  logMsg('Größe: ' + (file.size / 1024).toFixed(1) + ' KB', 'info');
+
+  // JSON nativ parsen
+  if (file.name.toLowerCase().endsWith('.json')) {
+    try {
+      const text = await file.text();
+      const cfg  = JSON.parse(text);
+      logMsg('✓ JSON geparst', 'ok');
+      if (cfg.name && cfg.bumpers && cfg.tableColor != null) {
+        logMsg('✓ Gültiges Web-Pinball Format', 'ok');
+        buildTable(cfg);
+        closeLoader();
+      } else {
+        logMsg('⚠ Kein gültiges Tisch-Format', 'warn');
+      }
+    } catch (err) {
+      logMsg('✗ JSON Fehler: ' + err.message, 'error');
+    }
+    return;
+  }
+
+  // Binärdatei laden
+  const buffer = await file.arrayBuffer();
+  const bytes  = new Uint8Array(buffer);
+  logMsg('Analysiere Binärformat...', 'info');
+
+  // ── STRATEGIE 1: CFB/OLE2-Parsing (FPT-nativer Weg) ──────────────────────
+  if (typeof CFB !== 'undefined') {
+    logMsg('Versuche CFB/OLE2-Extraktion...', 'info');
+    const { textureCount, soundCount } = await parseCFBResources(buffer);
+
+    if (textureCount > 0 || soundCount > 0) {
+      logMsg(`✓ CFB: ${textureCount} Textur(en), ${soundCount} Sound(s) extrahiert`, 'ok');
+      if (soundCount > 0) {
+        logMsg('Mappe Sounds auf Game-Events...', 'info');
+        mapFPTSounds(fptResources.sounds);
+      }
+      if (fptResources.playfield) {
+        logMsg('✓ Spielfeld-Textur geladen — originales Artwork aktiv', 'ok');
+      }
+
+      // Tisch-Name aus Dateiname, da CFB-Strings bereits geloggt
+      const tableName = file.name.replace(/\.(fpt|fp)$/i, '');
+      const generatedConfig = {
+        name: tableName,
+        tableColor: 0x111111,
+        accentColor: 0xff8800,
+        bumpers: [
+          { x:-1.1, y:2.2, color:0xff2200 },
+          { x: 1.1, y:2.2, color:0xff9900 },
+          { x: 0.0, y:3.6, color:0xff00aa },
+        ],
+        targets: [],
+        lights: [
+          { color:0xff8800, intensity:0.6, dist:8, x:0,  y:3,  z:3 },
+          { color:0x442200, intensity:0.5, dist:8, x:-2, y:-2, z:3 },
+        ]
+      };
+      logMsg('Lade Spielfeld...', 'info');
+      buildTable(generatedConfig);
+      closeLoader();
+      // FPT-Musik abspielen wenn vorhanden, sonst synthetische Musik
+      if (fptResources.musicTrack) {
+        logMsg('✓ Spiele FPT-Musik...', 'ok');
+        playFPTMusic(fptResources.musicTrack);
+      }
+      if (fptResources.script) {
+        logMsg('VBScript gefunden — transpiliere...', 'info');
+        runFPScript(fptResources.script);
+        switchTab('script');
+      }
+      logMsg('✓ "' + tableName + '" mit originalen Assets geladen!', 'ok');
+      return;
+    } else {
+      logMsg('CFB: keine Texturen/Sounds gefunden — Fallback', 'warn');
+    }
+  }
+
+  // ── STRATEGIE 2: Heuristischer Fallback-Parser ───────────────────────────
+  logMsg('Starte Heuristik-Parser...', 'info');
+
+    // ── Signatur ──────────────────────────────────────────────────────────────
+    const sig = detectFPSignature(bytes);
+    if (sig) logMsg('✓ Signatur: ' + sig, 'ok');
+    else     logMsg('⚠ Unbekannte Signatur — generischer Parser', 'warn');
+
+    // ── Version aus Bytes 2–5 lesen ───────────────────────────────────────────
+    const ver = bytes[2] + '.' + bytes[3];
+    if (bytes[2] > 0 && bytes[2] < 20) logMsg('Format-Version: ' + ver, 'info');
+
+    // ── Strategie A: Null-Strings ─────────────────────────────────────────────
+    logMsg('Extrahiere ASCII-Strings...', 'info');
+    const nullStrings = extractNullStrings(bytes);
+    logMsg('Null-Strings gefunden: ' + nullStrings.length, nullStrings.length > 5 ? 'ok' : 'warn');
+
+    // ── Strategie B: Pascal-Strings ───────────────────────────────────────────
+    const pascalStrings = extractPascalStrings(bytes);
+    logMsg('Pascal-Strings gefunden: ' + pascalStrings.length, 'info');
+
+    // Alle Strings zusammenführen und deduplizieren
+    const allStrings = [...new Set([...nullStrings, ...pascalStrings])]
+      .filter(s => s.length >= 3 && s.length <= 80)
+      .filter(s => /^[A-Za-z0-9\s\-_'!\.,:]+$/.test(s));
+
+    // Tisch-Name: Längster sinnvoller String in den ersten 50 Strings
+    const nameCandidate = allStrings
+      .filter(s => s.length >= 4 && s.length <= 50 && /[A-Za-z]/.test(s))
+      .sort((a, b) => b.length - a.length)
+      .find(s => !/^(the|and|for|with|from|this|that|version|copyright)/i.test(s));
+    const tableName = nameCandidate || file.name.replace(/\.(fpt|fp)$/i, '');
+    logMsg('Tisch-Name: "' + tableName + '"', 'ok');
+
+    // Autor (zweiter plausibler String)
+    const authorCandidate = allStrings
+      .filter(s => s !== nameCandidate && s.length >= 4 && s.length <= 40 && /[A-Za-z]/.test(s))
+      .find(s => !/^(table|pinball|future|version)/i.test(s));
+    if (authorCandidate) logMsg('Möglicher Autor: "' + authorCandidate + '"', 'info');
+
+    // ── Strategie C: Koordinaten ──────────────────────────────────────────────
+    logMsg('Scanne Float-Koordinaten...', 'info');
+    const coords = extractFPCoords(bytes);
+    logMsg('Koordinaten-Kandidaten: ' + coords.length, coords.length > 0 ? 'ok' : 'info');
+
+    // ── Farb-Analyse ──────────────────────────────────────────────────────────
+    logMsg('Farbpaletten-Analyse...', 'info');
+    const sample = bytes.slice(Math.min(200, bytes.length), Math.min(4000, bytes.length));
+    let rScore = 0, gScore = 0, bScore = 0;
+    for (let i = 0; i + 2 < sample.length; i += 3) {
+      rScore += sample[i];
+      gScore += sample[i+1];
+      bScore += sample[i+2];
+    }
+    const dom = rScore > gScore && rScore > bScore ? 'rot' :
+                bScore > rScore && bScore > gScore ? 'blau' :
+                gScore > rScore && gScore > bScore ? 'grün' : 'neutral';
+    logMsg('Dominante Farbton: ' + dom, 'info');
+
+    const tableColor = dom === 'rot'  ? 0x1a0500 :
+                       dom === 'blau' ? 0x00050f : 0x0a100a;
+    const accent     = dom === 'rot'  ? 0xff4400 :
+                       dom === 'blau' ? 0x0088ff : 0x00cc66;
+
+    // ── Bumper-Positionen ─────────────────────────────────────────────────────
+    // Wenn Koordinaten gefunden: erste 5 davon als Bumper nutzen
+    const bumperColors = [0xff2200, 0xff9900, 0x00aaff, 0xff00cc, 0x00ff88];
+    const fallbackPos  = [[-1.0,2.0],[1.0,2.0],[0.0,3.3],[-1.4,3.8],[1.4,3.8]];
+    const bumperCount  = Math.min(2 + Math.floor(bytes[Math.min(512, bytes.length-1)] % 4), 5);
+
+    let bumpCfg;
+    if (coords.length >= 3) {
+      // Koordinaten im oberen Spielfeld-Bereich (y > 0) als Bumper nutzen
+      const upperCoords = coords.filter(c => c.y > 0 && c.y < 5 && Math.abs(c.x) < 2.5);
+      const usedCoords  = upperCoords.slice(0, Math.min(5, Math.max(3, upperCoords.length)));
+      bumpCfg = usedCoords.map((c, i) => ({ x: c.x, y: c.y, color: bumperColors[i % 5] }));
+      logMsg('Bumper aus Koordinaten platziert: ' + bumpCfg.length, 'ok');
+    } else {
+      bumpCfg = Array.from({ length: bumperCount }, (_, i) => ({
+        x: fallbackPos[i][0], y: fallbackPos[i][1], color: bumperColors[i]
+      }));
+      logMsg('Bumper-Fallback-Positionen: ' + bumpCfg.length, 'info');
+    }
+
+    // ── Targets aus unteren Koordinaten ──────────────────────────────────────
+    let targetCfg = [];
+    if (coords.length >= 6) {
+      const midCoords = coords.filter(c => c.y >= -1 && c.y < 2 && Math.abs(c.x) > 1.2 && Math.abs(c.x) < 2.5);
+      targetCfg = midCoords.slice(0, 3).map((c, i) => ({ x: c.x, y: c.y, color: bumperColors[i] }));
+      if (targetCfg.length) logMsg('Targets aus Koordinaten: ' + targetCfg.length, 'ok');
+    }
+
+    // ── Konfidenz-Score ───────────────────────────────────────────────────────
+    const confidence = calcConfidence(sig, allStrings.length, coords.length, file.size);
+    logMsg(`Konfidenz-Score: ${confidence}%`, confidence > 60 ? 'ok' : confidence > 30 ? 'warn' : 'error');
+
+    // ── Config aufbauen ───────────────────────────────────────────────────────
+    const generatedConfig = {
+      name: tableName,
+      tableColor,
+      accentColor: accent,
+      bumpers: bumpCfg,
+      targets: targetCfg,
+      lights: [
+        { color: accent, intensity: 0.8, dist: 10, x:  0, y: 2, z: 4 },
+        { color: accent, intensity: 0.4, dist:  8, x: -2, y:-2, z: 3 },
+      ]
+    };
+
+    logMsg('✓ Konfiguration generiert — lade Spielfeld...', 'ok');
+    buildTable(generatedConfig);
+    closeLoader();
+    logMsg('✓ "' + tableName + '" geladen!', 'ok');
+}
+
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) parseFPTFile(e.target.files[0]);
+});
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('drag-over');
+});
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) parseFPTFile(f);
+});
+
+// ─── RESIZE ───────────────────────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+});
+
+// ─── VOLLBILD ─────────────────────────────────────────────────────────────────
+window.toggleFullscreen = function() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  } else {
+    document.exitFullscreen?.();
+  }
+};
+
+// ─── MOBILE TOUCH-CONTROLS ────────────────────────────────────────────────────
+(function setupTouch() {
+  if (!('ontouchstart' in window) && navigator.maxTouchPoints < 1) return;
+
+  // Touch-Buttons einblenden
+  ['touch-left','touch-right','touch-plunger'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'flex';
+  });
+
+  const bindFlipper = (id, side) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('touchstart', e => {
+      e.preventDefault();
+      keys[side] = true;
+      getAudioCtx();
+      playSound('flipper');
+    }, { passive: false });
+    el.addEventListener('touchend', e => { e.preventDefault(); keys[side] = false; }, { passive: false });
+  };
+  bindFlipper('touch-left',  'left');
+  bindFlipper('touch-right', 'right');
+
+  // Plunger-Touch: drücken = laden, loslassen = schießen
+  const plBtn = document.getElementById('touch-plunger');
+  if (plBtn) {
+    plBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      getAudioCtx();
+      if (state.inLane && !state.plungerCharging) state.plungerCharging = true;
+    }, { passive: false });
+    plBtn.addEventListener('touchend', e => {
+      e.preventDefault();
+      if (state.inLane && state.plungerCharging) {
+        state.plungerCharging = false;
+        const charge = state.plungerCharge;
+        state.inLane         = false;
+        state.ballVel.x      = -1.5 - charge * 3.0;
+        state.ballVel.y      =  6.0 + charge * 9.0;
+        state.plungerCharge  = 0;
+        state.ballSaveTimer  = 3.5;
+        playSound('bumper');
+        startBGMusic();
+      }
+    }, { passive: false });
+  }
+})();
+
+// ─── SECONDARY WINDOW: DMD-ONLY MODE ─────────────────────────────────────────
+function setupDMDWindow() {
+  document.title = 'FPW — DMD';
+  // Position beim Schließen speichern
+  window.addEventListener('beforeunload', () => {
+    try {
+      localStorage.setItem('fpw_winpos_dmd', JSON.stringify({
+        x: window.screenX, y: window.screenY,
+        w: window.outerWidth, h: window.outerHeight
+      }));
+    } catch(_) {}
+  });
+  // Reuse the existing DMD canvas – just scale it up to fill the window
+  const wrap = document.getElementById('dmd-wrap');
+  const canvas = document.getElementById('dmd');
+
+  function resizeDMD() {
+    const aspect = DMD_W / DMD_H;
+    const ww = window.innerWidth  - 60;
+    const wh = window.innerHeight - 40;
+    let w = ww, h = ww / aspect;
+    if (h > wh) { h = wh; w = h * aspect; }
+    canvas.style.width  = w + 'px';
+    canvas.style.height = h + 'px';
+  }
+  resizeDMD();
+  window.addEventListener('resize', resizeDMD);
+
+  // Animate DMD using received state
+  function dmdLoop() {
+    requestAnimationFrame(dmdLoop);
+    dmdState.animFrame++;
+    switch (dmdState.mode) {
+      case 'attract':  dmdRenderAttract();  break;
+      case 'playing':  dmdRenderPlaying();  break;
+      case 'event':    dmdRenderEvent();    break;
+      case 'gameover': dmdRenderGameOver(); break;
+    }
+    if (dmdState.mode === 'event') {
+      dmdState.eventTimer--;
+      if (dmdState.eventTimer <= 0) dmdState.mode = 'playing';
+    }
+  }
+  dmdLoop();
+
+  if (multiChannel) {
+    multiChannel.onmessage = ({ data }) => {
+      if (data.type !== 'state') return;
+      // Sync dmdState from main window
+      dmdState.mode       = data.dmdMode;
+      dmdState.eventText  = data.dmdEventText;
+      dmdState.animFrame  = data.dmdAnimFrame;
+      dmdState.scrollX    = data.dmdScrollX;
+      dmdState.eventTimer = data.dmdEventTimer;
+      // Sync game state for rendering functions
+      state.score      = data.score;
+      state.ballNum    = data.ballNum;
+      state.multiplier = data.multiplier;
+      state.lastRank   = data.lastRank;
+      state.lastScore  = data.lastScore;
+      // currentTableConfig name for dmdRenderPlaying
+      if (!currentTableConfig) currentTableConfig = { name: data.tableName };
+      else currentTableConfig.name = data.tableName;
+    };
+  }
+}
+
+// ─── SECONDARY WINDOW: BACKGLASS MODE ────────────────────────────────────────
+function setupBackglassWindow() {
+  document.title = 'FPW — Backglass';
+  // Position beim Schließen speichern
+  window.addEventListener('beforeunload', () => {
+    try {
+      localStorage.setItem('fpw_winpos_backglass', JSON.stringify({
+        x: window.screenX, y: window.screenY,
+        w: window.outerWidth, h: window.outerHeight
+      }));
+    } catch(_) {}
+  });
+  const canvas  = document.getElementById('backglass-canvas');
+  const ctx     = canvas.getContext('2d');
+  // ?nodmd=1 → kein eingebettetes DMD (3-Screen-Modus: DMD in eigenem Fenster)
+  const showEmbedDMD = !new URLSearchParams(location.search).has('nodmd');
+
+  let bgState = {
+    score: 0, ballNum: 1, multiplier: 1, tableName: 'FUTURE PINBALL',
+    tableAccent: 0x00ff66, tableColor: 0x1a4a15,
+    dmdMode: 'attract', dmdEventText: '', dmdAnimFrame: 0,
+    dmdScrollX: 0, dmdEventTimer: 0, lastRank: 0, lastScore: 0,
+    highScores: [], bumperHits: 0
+  };
+
+  // Convert hex number to CSS color
+  function hexToCSS(hex) {
+    return '#' + ('000000' + hex.toString(16)).slice(-6);
+  }
+
+  function drawBackglass() {
+    const W = canvas.width, H = canvas.height;
+    const accent = hexToCSS(bgState.tableAccent);
+    const tcolor = hexToCSS(bgState.tableColor);
+
+    // Background gradient
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#0a0a14');
+    bg.addColorStop(0.5, tcolor + '44');
+    bg.addColorStop(1, '#050508');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Side neon bars
+    const barW = Math.max(6, W * 0.015);
+    ['left','right'].forEach((side, i) => {
+      const x = i === 0 ? 0 : W - barW;
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, 'transparent');
+      g.addColorStop(0.3, accent);
+      g.addColorStop(0.7, accent);
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g;
+      ctx.fillRect(x, 0, barW, H);
+    });
+
+    // Title header area
+    const titleH = H * 0.18;
+    const titleGrad = ctx.createLinearGradient(0, 0, 0, titleH);
+    titleGrad.addColorStop(0, 'rgba(0,0,0,0.7)');
+    titleGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = titleGrad;
+    ctx.fillRect(0, 0, W, titleH);
+
+    // Table name
+    const titleSize = Math.min(H * 0.08, W * 0.07);
+    ctx.save();
+    ctx.shadowColor = accent;
+    ctx.shadowBlur  = 30;
+    ctx.fillStyle   = accent;
+    ctx.font        = `bold ${titleSize}px "Courier New", monospace`;
+    ctx.textAlign   = 'center';
+    ctx.textBaseline= 'top';
+    ctx.fillText(bgState.tableName.toUpperCase(), W / 2, H * 0.03);
+    ctx.restore();
+
+    // Decorative separator line
+    ctx.save();
+    ctx.shadowColor = accent; ctx.shadowBlur = 8;
+    ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.globalAlpha = 0.6;
+    ctx.beginPath(); ctx.moveTo(W*0.05, H*0.145); ctx.lineTo(W*0.95, H*0.145);
+    ctx.stroke();
+    ctx.restore();
+
+    // SCORE — large amber 7-segment-style number
+    const scoreSize = Math.min(H * 0.18, W * 0.14);
+    ctx.save();
+    ctx.shadowColor = '#ff6600'; ctx.shadowBlur = 40;
+    ctx.fillStyle   = '#ff6600';
+    ctx.font        = `bold ${scoreSize}px "Courier New", monospace`;
+    ctx.textAlign   = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(bgState.score.toLocaleString(), W / 2, H * 0.17);
+    ctx.restore();
+
+    // SCORE label
+    ctx.save();
+    ctx.fillStyle = '#664400'; ctx.font = `${H*0.04}px "Courier New", monospace`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('SCORE', W / 2, H * 0.15);
+    ctx.restore();
+
+    // Multiplier  ×N
+    const multSize = Math.min(H * 0.09, W * 0.08);
+    ctx.save();
+    ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 20;
+    ctx.fillStyle   = '#ffcc00';
+    ctx.font        = `bold ${multSize}px "Courier New", monospace`;
+    ctx.textAlign   = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('×' + bgState.multiplier, W * 0.07, H * 0.40);
+    ctx.restore();
+    ctx.save();
+    ctx.fillStyle = '#664400'; ctx.font = `${H*0.035}px "Courier New", monospace`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('MULT', W * 0.07, H * 0.37);
+    ctx.restore();
+
+    // BALL indicator
+    const ballR = Math.min(W * 0.045, H * 0.05);
+    const bx0   = W * 0.65, by0 = H * 0.39;
+    ctx.save();
+    ctx.fillStyle = '#334'; ctx.font = `${H*0.035}px "Courier New", monospace`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('BALL', bx0, H * 0.37);
+    ctx.restore();
+    for (let i = 0; i < 3; i++) {
+      const cx = bx0 + i * (ballR * 2.4) + ballR;
+      const cy = by0 + ballR;
+      ctx.save();
+      if (i < bgState.ballNum) {
+        ctx.shadowColor = '#00aaff'; ctx.shadowBlur = 15;
+        ctx.fillStyle   = '#00aaff';
+      } else {
+        ctx.fillStyle = '#112233';
+      }
+      ctx.beginPath(); ctx.arc(cx, cy, ballR, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    // ── Separator ────────────────────────────────────────────────────────────
+    ctx.save();
+    ctx.strokeStyle = '#223'; ctx.lineWidth = 1; ctx.globalAlpha = 0.5;
+    ctx.beginPath(); ctx.moveTo(W*0.05, H*0.52); ctx.lineTo(W*0.95, H*0.52);
+    ctx.stroke();
+    ctx.restore();
+
+    // ── High Scores panel ────────────────────────────────────────────────────
+    const hsY0 = H * 0.54;
+    ctx.save();
+    ctx.fillStyle = accent; ctx.font = `bold ${H*0.04}px "Courier New", monospace`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.shadowColor = accent; ctx.shadowBlur = 10;
+    ctx.fillText('HIGH SCORES', W / 2, hsY0);
+    ctx.restore();
+    bgState.highScores.slice(0, 5).forEach((sc, i) => {
+      const y = hsY0 + H * 0.07 + i * H * 0.065;
+      const isTop = i === 0;
+      ctx.save();
+      ctx.fillStyle   = isTop ? '#ffcc00' : '#aaa';
+      ctx.shadowColor = isTop ? '#ffcc00' : 'transparent';
+      ctx.shadowBlur  = isTop ? 12 : 0;
+      ctx.font        = `${isTop ? 'bold ' : ''}${H*0.042}px "Courier New", monospace`;
+      ctx.textAlign   = 'left';  ctx.textBaseline = 'top';
+      ctx.fillText(`#${i+1}`, W * 0.15, y);
+      ctx.textAlign   = 'right';
+      ctx.fillText(sc.toLocaleString(), W * 0.85, y);
+      ctx.restore();
+    });
+
+    // ── DMD-Panel (unten) — nur ohne ?nodmd=1 ─────────────────────────────────
+    if (showEmbedDMD) {
+      const dmdY = H * 0.82, dmdW = W * 0.82, dmdH = H * 0.14;
+      const dmdX = (W - dmdW) / 2;
+      ctx.save();
+      ctx.fillStyle = '#060100';
+      ctx.strokeStyle = '#7a3000'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(dmdX - 8, dmdY - 8, dmdW + 16, dmdH + 16, 7);
+      else               ctx.rect(dmdX - 8, dmdY - 8, dmdW + 16, dmdH + 16);
+      ctx.fill(); ctx.stroke();
+      ctx.restore();
+      ctx.drawImage(dmdCanvas, dmdX, dmdY, dmdW, dmdH);
+    }
+  }
+
+  function resizeBG() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    drawBackglass();
+  }
+  resizeBG();
+  window.addEventListener('resize', resizeBG);
+
+  // Animate backglass
+  function bgLoop() {
+    requestAnimationFrame(bgLoop);
+    // Sync dmdState so DMD animation runs locally
+    dmdState.animFrame  = bgState.dmdAnimFrame;
+    dmdState.mode       = bgState.dmdMode;
+    dmdState.eventText  = bgState.dmdEventText;
+    dmdState.scrollX    = bgState.dmdScrollX;
+    dmdState.eventTimer = bgState.dmdEventTimer;
+    state.score      = bgState.score;
+    state.ballNum    = bgState.ballNum;
+    state.multiplier = bgState.multiplier;
+    state.lastRank   = bgState.lastRank;
+    state.lastScore  = bgState.lastScore;
+    if (!currentTableConfig) currentTableConfig = { name: bgState.tableName };
+    else currentTableConfig.name = bgState.tableName;
+    // Advance local DMD frame
+    bgState.dmdAnimFrame++;
+    dmdUpdate(); // renders into dmdCanvas (off-screen)
+    drawBackglass();
+  }
+  bgLoop();
+
+  if (multiChannel) {
+    multiChannel.onmessage = ({ data }) => {
+      if (data.type !== 'state') return;
+      Object.assign(bgState, {
+        score: data.score, ballNum: data.ballNum, multiplier: data.multiplier,
+        tableName: data.tableName, tableAccent: data.tableAccent,
+        tableColor: data.tableColor, dmdMode: data.dmdMode,
+        dmdEventText: data.dmdEventText, dmdAnimFrame: data.dmdAnimFrame,
+        dmdScrollX: data.dmdScrollX, dmdEventTimer: data.dmdEventTimer,
+        lastRank: data.lastRank, lastScore: data.lastScore,
+        highScores: data.highScores || [], bumperHits: data.bumperHits
+      });
+    };
+  }
+}
+
+// ─── MULTI-SCREEN WINDOW MANAGEMENT (global) ────────────────────────────────
+let _msLayout = 1; // currently selected layout
+const _msWindows = {};
+
+window.selectMsLayout = function(n) {
+  _msLayout = n;
+  [1, 2, 3].forEach(i => {
+    const c = document.getElementById('ms-card-' + i);
+    if (c) c.classList.toggle('selected', i === n);
+  });
+};
+
+window.openMultiscreenModal = function() {
+  document.getElementById('multiscreen-modal').classList.add('open');
+};
+window.closeMultiscreenModal = function() {
+  document.getElementById('multiscreen-modal').classList.remove('open');
+};
+
+window.autoDetectScreens = async function() {
+  const info = document.getElementById('ms-detect-info');
+  info.classList.add('visible');
+  info.innerHTML = '<span>Scanning...</span>';
+
+  let screenCount = 1;
+  try {
+    if ('getScreenDetails' in window) {
+      const details = await window.getScreenDetails();
+      screenCount = details.screens.length;
+    } else if (window.screen && screen.isExtended) {
+      screenCount = 2; // extended desktop detected
+    }
+  } catch(e) { /* permission denied or not supported */ }
+
+  if (screenCount >= 3) {
+    info.innerHTML = `<span>✓ ${screenCount} screens detected</span> — 3-screen layout recommended`;
+    selectMsLayout(3);
+  } else if (screenCount === 2) {
+    info.innerHTML = `<span>✓ 2 screens detected</span> — 2-screen layout recommended`;
+    selectMsLayout(2);
+  } else {
+    info.innerHTML = `<span>1 screen detected</span> — or extended desktop not reported by browser`;
+    selectMsLayout(1);
+  }
+};
+
+// Gespeicherte Fensterposition laden oder Fallback
+function _winSpec(role, dw, dh) {
+  try {
+    const s = JSON.parse(localStorage.getItem('fpw_winpos_' + role));
+    if (s?.w > 100) return `width=${s.w},height=${s.h},left=${s.x},top=${s.y}`;
+  } catch(_) {}
+  return `width=${dw},height=${dh}`;
+}
+
+window.applyMsLayout = function() {
+  closeMultiscreenModal();
+
+  // Bestehende Nebenfenster schließen
+  ['dmd', 'backglass'].forEach(role => {
+    if (_msWindows[role] && !_msWindows[role].closed) _msWindows[role].close();
+    delete _msWindows[role];
+  });
+  stopInlineBackglass();
+
+  const btn  = document.getElementById('multiscreen-btn');
+  const hdBtn = document.getElementById('hide-dmd-btn');
+  const base = location.origin + location.pathname;
+  const sw   = screen.width;
+  const sh   = screen.height;
+
+  if (_msLayout === 1) {
+    // ── 1 Screen: Backglass als rechtes Panel ─────────────────────────────
+    initInlineBackglass();
+    btn.classList.add('active-multi');
+    btn.title = '1-Screen + Backglass Panel — click to reconfigure';
+
+  } else if (_msLayout === 2) {
+    // ── 2 Screens: Playfield + Backglass+DMD-Fenster (frei positionierbar) ─
+    const spec = _winSpec('backglass', sw, sh);
+    _msWindows['backglass'] = window.open(
+      base + '?role=backglass', 'fpw_backglass',
+      spec + ',toolbar=no,menubar=no,scrollbars=no,resizable=yes'
+    );
+    if (hdBtn) { hdBtn.style.display = 'block'; hdBtn.title = 'DMD über Spielfeld ausblenden'; }
+    btn.classList.add('active-multi');
+    btn.title = '2-Screen Active — click to reconfigure';
+    showNotification('2-Screen: Backglass-Fenster auf zweiten Monitor ziehen');
+
+  } else if (_msLayout === 3) {
+    // ── 3 Screens: Playfield + Backglass + DMD (je frei platzierbar) ──────
+    const bgSpec  = _winSpec('backglass', Math.round(sw*0.75), Math.round(sh*0.75));
+    const dmdSpec = _winSpec('dmd',       Math.round(sw*0.55), Math.round(sh*0.28));
+    _msWindows['backglass'] = window.open(
+      base + '?role=backglass&nodmd=1', 'fpw_backglass',
+      bgSpec + ',toolbar=no,menubar=no,scrollbars=no,resizable=yes'
+    );
+    _msWindows['dmd'] = window.open(
+      base + '?role=dmd', 'fpw_dmd',
+      dmdSpec + ',toolbar=no,menubar=no,scrollbars=no,resizable=yes'
+    );
+    if (hdBtn) { hdBtn.style.display = 'block'; hdBtn.title = 'DMD über Spielfeld ausblenden'; }
+    btn.classList.add('active-multi');
+    btn.title = '3-Screen Active — click to reconfigure';
+    showNotification('3-Screen: Fenster auf gewünschte Bildschirme ziehen');
+  }
+};
+
+// ─── START ────────────────────────────────────────────────────────────────────
+if (FPW_ROLE === 'dmd') {
+  renderer.domElement.remove();
+  setupDMDWindow();
+} else if (FPW_ROLE === 'backglass') {
+  renderer.domElement.remove();
+  setupBackglassWindow();
+} else {
+  // Rapier WASM async laden, dann Tisch bauen und Loop starten
+  (async () => {
+    try {
+      await initPhysics();
+    } catch(e) {
+      console.warn('Rapier init fehlgeschlagen, Fallback auf manuelle Physik:', e);
+    }
+    buildTable(TABLE_CONFIGS['classic']);
+    animate();
+    // 1-Screen-Default: Backglass-Panel direkt aktivieren
+    initInlineBackglass();
+    document.getElementById('multiscreen-btn')?.classList.add('active-multi');
+  })();
+}
+</script>
+</body>
+</html>

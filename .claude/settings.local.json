@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(python3:*)",
+      "Bash(node:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(\"/Library/WebServer/Documents/Futurepinball Web/FPT_PARSER_IMPROVEMENTS.md\":*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(/tmp/test-summary.txt:*)",
+      "WebFetch(domain:www.ravarcade.pl)",
+      "Bash(/tmp/analysis_summary.txt:*)",
+      "Bash(wc:*)",
+      "Bash(\"/Library/WebServer/Documents/Futurepinball Web/PHASE13_COMPLETION_SUMMARY.md\":*)",
+      "Bash(/tmp/update_rotation.py:*)",
+      "Bash(/tmp/update_api.py:*)",
+      "Bash(\"ROTATION_REDRAW_QUICK_REFERENCE.md\":*)",
+      "Bash(\"ROTATION_REDRAW_STATUS.txt\":*)",
+      "Bash(ls -lh PHASE_13.3*.md ROTATION_REDRAW*.md ROTATION_REDRAW_STATUS.txt)",
+      "Bash(/tmp/analyze_plunger.md:*)",
+      "Bash(/tmp/update_ball_pos.py:*)",
+      "Bash(/tmp/fix_physics_pos.py:*)",
+      "Bash(/tmp/fix_launch_pos.py:*)",
+      "Bash(\"PLUNGER_BALL_POSITIONING_FIX.md\":*)",
+      "Bash(\"PLUNGER_FIX_SUMMARY.txt\":*)",
+      "Bash(\"FINAL_SUMMARY_PHASE_13.4.md\":*)",
+      "Bash(\"DELIVERABLES_PHASE_13.4.txt\":*)",
+      "Bash(/tmp/fix_rotation.py:*)",
+      "Bash(\"ROTATION_FIX_DOUBLE_ANIMATION.md\":*)",
+      "Bash(/tmp/fix_plunger_velocity.py:*)",
+      "Bash(/tmp/fix_touch_plunger.py:*)",
+      "Bash(\"PLUNGER_LAUNCH_FIX.md\":*)",
+      "Bash(/tmp/geometry_refactor_report.md:*)",
+      "Bash(/tmp/line_by_line_details.md:*)",
+      "Bash(/tmp/implementation_checklist.md:*)"
+    ]
+  }
+}

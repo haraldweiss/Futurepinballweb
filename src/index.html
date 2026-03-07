@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Future Pinball Web</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#00aaff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="FP Web">
+  <link rel="apple-touch-icon" href="/icon-192.svg">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+    canvas { display: block; }
+
+    #hud {
+      position: fixed; top: 178px; left: 0; right: 0;
+      padding: 6px 20px;
+      background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+      display: flex; justify-content: space-between; align-items: center;
+      z-index: 100;
+    }
+    #dmd-wrap {
+      position: fixed; top: 8px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 95;
+      background: #060100;
+      border: 2px solid #7a3000;
+      border-radius: 8px; padding: 6px 10px;
+      box-shadow: 0 0 35px rgba(255,100,0,0.3), 0 0 8px rgba(255,80,0,0.15), inset 0 0 20px rgba(0,0,0,0.9);
+    }
+    #dmd { display: block; image-rendering: pixelated; }
+    #score-display { color: #ff6600; font-size: 28px; text-shadow: 0 0 15px #ff6600, 0 0 30px #ff4400; }
+    #ball-display  { color: #00aaff; font-size: 20px; text-shadow: 0 0 10px #00aaff; }
+    #multiplier    { color: #ffcc00; font-size: 20px; text-shadow: 0 0 10px #ffcc00; }
+
+    /* TABLE LOADER MODAL */
+    #loader-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    #loader-box {
+      background: linear-gradient(145deg, #1a1a2e, #16213e, #0f3460);
+      border: 2px solid #00aaff; border-radius: 12px; padding: 30px;
+      width: 680px; max-width: 95vw;
+      box-shadow: 0 0 40px rgba(0,170,255,0.4), inset 0 0 40px rgba(0,0,50,0.5);
+    }
+    #loader-box h2 { color: #00aaff; font-size: 22px; text-align: center; margin-bottom: 6px; text-shadow: 0 0 15px #00aaff; letter-spacing: 3px; }
+    #loader-box p.subtitle { color: #556; font-size: 12px; text-align: center; margin-bottom: 24px; letter-spacing: 1px; }
+
+    .tab-bar { display: flex; gap: 4px; margin-bottom: 20px; }
+    .tab-btn  { flex: 1; padding: 8px; background: rgba(0,50,100,0.5); border: 1px solid #446; border-radius: 6px; color: #aab; cursor: pointer; font-family: 'Courier New', monospace; font-size: 12px; letter-spacing: 1px; transition: all 0.2s; }
+    .tab-btn.active { background: rgba(0,170,255,0.2); border-color: #00aaff; color: #00aaff; text-shadow: 0 0 8px #00aaff; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    #drop-zone { border: 2px dashed #334; border-radius: 10px; padding: 35px 20px; text-align: center; cursor: pointer; transition: all 0.3s; background: rgba(0,20,40,0.5); }
+    #drop-zone:hover, #drop-zone.drag-over { border-color: #00aaff; background: rgba(0,100,200,0.1); box-shadow: 0 0 20px rgba(0,170,255,0.2); }
+    #drop-zone .icon { font-size: 48px; margin-bottom: 12px; }
+    #drop-zone p { color: #667; font-size: 13px; line-height: 1.8; }
+    #drop-zone strong { color: #00aaff; }
+    #file-input { display: none; }
+
+    .format-info { margin-top: 16px; padding: 12px; background: rgba(255,150,0,0.08); border: 1px solid rgba(255,150,0,0.3); border-radius: 8px; }
+    .format-info p { color: #aa7700; font-size: 11px; line-height: 1.8; }
+    .format-info strong { color: #ffaa00; }
+
+    .table-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 340px; overflow-y: auto; padding-right: 4px; }
+    .table-grid::-webkit-scrollbar { width: 4px; }
+    .table-grid::-webkit-scrollbar-track { background: #111; }
+    .table-grid::-webkit-scrollbar-thumb { background: #00aaff; border-radius: 2px; }
+    .table-card { background: rgba(0,30,60,0.6); border: 1px solid #223; border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.25s; }
+    .table-card:hover { border-color: #00aaff; background: rgba(0,80,160,0.3); transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,170,255,0.2); }
+    .table-card .preview { width: 100%; height: 80px; border-radius: 4px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; font-size: 32px; }
+    .table-card h3 { color: #eee; font-size: 13px; margin-bottom: 3px; }
+    .table-card span { color: #99b; font-size: 11px; }
+    .table-card .badge { display: inline-block; margin-top: 5px; padding: 2px 8px; border-radius: 10px; font-size: 10px; }
+    .badge-classic { background: rgba(255,100,0,0.2); color: #ff6600; border: 1px solid #ff6600; }
+    .badge-modern  { background: rgba(0,150,255,0.2); color: #00aaff; border: 1px solid #00aaff; }
+    .badge-demo    { background: rgba(0,200,100,0.2); color: #00cc66; border: 1px solid #00cc66; }
+
+    #parse-log { background: #000; border: 1px solid #334; border-radius: 6px; padding: 10px; height: 120px; overflow-y: auto; font-size: 11px; color: #889; margin-top: 12px; }
+    #parse-log .log-ok    { color: #00cc66; }
+    #parse-log .log-warn  { color: #ffaa00; }
+    #parse-log .log-error { color: #ff4444; }
+    #parse-log .log-info  { color: #00aaff; }
+
+    .btn-primary { width: 100%; padding: 12px; background: linear-gradient(135deg,#0066cc,#004499); border: 1px solid #00aaff; border-radius: 8px; color: #fff; font-family: 'Courier New',monospace; font-size: 14px; letter-spacing: 2px; cursor: pointer; margin-top: 16px; transition: all 0.2s; text-shadow: 0 0 8px #00aaff; }
+    .btn-primary:hover { background: linear-gradient(135deg,#0088ff,#0055bb); box-shadow: 0 0 20px rgba(0,170,255,0.4); }
+    .btn-secondary { padding: 8px 16px; background: transparent; border: 1px solid #334; border-radius: 6px; color: #556; font-family: 'Courier New',monospace; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .btn-secondary:hover { border-color: #667; color: #889; }
+
+    #controls { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); color: #445; font-size: 11px; text-align: center; letter-spacing: 1px; z-index: 100; pointer-events: none; }
+    #controls span { color: #668; }
+
+    #notification { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: rgba(0,200,100,0.15); border: 1px solid #00cc66; border-radius: 8px; padding: 10px 24px; color: #00cc66; font-size: 14px; letter-spacing: 2px; opacity: 0; transition: opacity 0.4s; z-index: 200; text-shadow: 0 0 10px #00cc66; }
+
+    #open-loader { position: fixed; top: 183px; right: 20px; padding: 8px 16px; background: rgba(0,50,100,0.8); border: 1px solid #00aaff; border-radius: 6px; color: #00aaff; font-family: 'Courier New',monospace; font-size: 12px; cursor: pointer; z-index: 100; letter-spacing: 1px; transition: all 0.2s; }
+    #open-loader:hover { background: rgba(0,100,200,0.6); box-shadow: 0 0 15px rgba(0,170,255,0.4); }
+
+    #editor-btn { position: fixed; top: 183px; right: 425px; padding: 8px 12px; background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: 14px; cursor: pointer; z-index: 100; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; }
+    #editor-btn:hover { border-color: #ffcc00; color: #ffcc00; }
+    #fullscreen-btn  { position: fixed; top: 183px; right: 145px; padding: 8px 12px; background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: 16px; cursor: pointer; z-index: 100; transition: all 0.2s; }
+    #fullscreen-btn:hover { border-color: #00aaff; color: #00aaff; }
+
+    .touch-btn { position: fixed; bottom: 30px; width: 130px; height: 85px; background: rgba(0,80,160,0.22); border: 2px solid rgba(0,170,255,0.4); border-radius: 14px; display: none; align-items: center; justify-content: center; color: rgba(0,170,255,0.8); font-size: 26px; font-family: 'Courier New',monospace; touch-action: none; user-select: none; z-index: 90; -webkit-tap-highlight-color: transparent; box-shadow: 0 0 15px rgba(0,170,255,0.15); }
+    #touch-left  { left: 16px; }
+    #touch-right { right: 16px; }
+    #touch-plunger { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); width: 100px; height: 85px; background: rgba(100,0,0,0.22); border: 2px solid rgba(255,80,0,0.4); border-radius: 50%; display: none; align-items: center; justify-content: center; color: rgba(255,100,0,0.8); font-size: 22px; touch-action: none; user-select: none; z-index: 90; -webkit-tap-highlight-color: transparent; }
+
+    #multiscreen-btn { position: fixed; top: 183px; right: 215px; padding: 8px 12px; background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: 14px; cursor: pointer; z-index: 100; transition: all 0.2s; font-family: 'Courier New',monospace; }
+    #multiscreen-btn:hover { border-color: #ffcc00; color: #ffcc00; }
+    #multiscreen-btn.active-multi { border-color: #ffcc00; color: #ffcc00; box-shadow: 0 0 10px rgba(255,200,0,0.3); }
+
+    #dmd-mode-btn { position: fixed; top: 8px; left: 50%; transform: translateX(340px); padding: 3px 8px; background: rgba(0,0,0,0.7); border: 1px solid #5a3000; border-radius: 4px; color: #ff8800; font-size: 11px; cursor: pointer; z-index: 96; font-family: 'Courier New',monospace; transition: all 0.2s; }
+    #dmd-mode-btn:hover { border-color: #ff8800; }
+
+    #hide-dmd-btn { position: fixed; top: 183px; right: 285px; padding: 8px 12px; background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: 13px; cursor: pointer; z-index: 100; transition: all 0.2s; font-family: 'Courier New',monospace; }
+    #hide-dmd-btn:hover { border-color: #ff8800; color: #ff8800; }
+    #hide-dmd-btn.dmd-hidden { border-color: #ff4400; color: #ff4400; }
+
+    #install-btn { position: fixed; top: 183px; right: 495px; padding: 8px 12px; background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: 13px; cursor: pointer; z-index: 100; transition: all 0.2s; display: none; }
+    #install-btn.visible { display: block; }
+    #install-btn:hover { border-color: #00cc66; color: #00cc66; box-shadow: 0 0 10px rgba(0,200,100,0.2); }
+
+    #view-btn { position: fixed; top: 183px; right: 355px; padding: 8px 12px; background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: 14px; cursor: pointer; z-index: 100; transition: all 0.2s; }
+    #view-btn:hover { border-color: #00cc66; color: #00cc66; }
+    #view-panel { position: fixed; top: 220px; right: 310px; background: rgba(5,10,20,0.97); border: 1px solid #00cc66; border-radius: 10px; padding: 16px 18px; z-index: 200; display: none; min-width: 230px; box-shadow: 0 0 20px rgba(0,200,100,0.2); font-family: 'Courier New',monospace; }
+    #view-panel.open { display: block; }
+    #view-panel h4 { color: #00cc66; font-size: 11px; letter-spacing: 2px; margin-bottom: 14px; text-align: center; }
+    .vp-row { margin-bottom: 11px; }
+    .vp-row label { display: flex; justify-content: space-between; color: #99b; font-size: 11px; margin-bottom: 4px; }
+    .vp-row label span { color: #00cc66; min-width: 36px; text-align: right; }
+    .vp-row input[type=range] { width: 100%; accent-color: #00cc66; cursor: pointer; }
+    #view-panel button { width: 100%; margin-top: 6px; padding: 7px; background: rgba(0,100,50,0.3); border: 1px solid #00cc66; border-radius: 5px; color: #00cc66; cursor: pointer; font-family: 'Courier New',monospace; font-size: 11px; letter-spacing: 1px; transition: all 0.2s; }
+    #view-panel button:hover { background: rgba(0,150,80,0.4); }
+
+    #multiscreen-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.88); display: none; align-items: center; justify-content: center; z-index: 1100; }
+    #multiscreen-modal.open { display: flex; }
+    #ms-box { background: linear-gradient(145deg,#12121e,#1a1a2e); border: 2px solid #ffcc00; border-radius: 14px; padding: 28px; width: 560px; max-width: 95vw; box-shadow: 0 0 40px rgba(255,200,0,0.3); }
+    #ms-box h2 { color: #ffcc00; font-size: 18px; text-align: center; letter-spacing: 3px; margin-bottom: 6px; text-shadow: 0 0 15px #ffcc00; }
+    #ms-box .ms-sub { color: #556; font-size: 11px; text-align: center; margin-bottom: 22px; letter-spacing: 1px; }
+    .ms-layout-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+    .ms-layout-card { border: 2px solid #334; border-radius: 10px; padding: 14px 10px; text-align: center; cursor: pointer; transition: all 0.25s; background: rgba(0,20,40,0.5); }
+    .ms-layout-card:hover, .ms-layout-card.selected { border-color: #ffcc00; background: rgba(80,60,0,0.2); box-shadow: 0 0 15px rgba(255,200,0,0.2); }
+    .ms-layout-card .ms-icon { font-size: 36px; margin-bottom: 8px; }
+    .ms-layout-card h3 { color: #eee; font-size: 12px; margin-bottom: 4px; letter-spacing: 1px; }
+    .ms-layout-card p { color: #99a; font-size: 10px; line-height: 1.6; }
+    #ms-detect-info { background: rgba(0,100,50,0.1); border: 1px solid rgba(0,200,100,0.3); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; color: #556; font-size: 11px; display: none; }
+    #ms-detect-info.visible { display: block; }
+    #ms-detect-info span { color: #00cc66; }
+    .ms-btn-row { display: flex; gap: 10px; }
+    #ms-autodetect { flex: 1; padding: 10px; background: rgba(0,100,50,0.2); border: 1px solid #00cc66; border-radius: 7px; color: #00cc66; cursor: pointer; font-family: 'Courier New',monospace; font-size: 12px; letter-spacing: 1px; transition: all 0.2s; }
+    #ms-autodetect:hover { background: rgba(0,150,80,0.3); }
+    #ms-apply { flex: 2; padding: 10px; background: linear-gradient(135deg,#664400,#443300); border: 1px solid #ffcc00; border-radius: 7px; color: #ffcc00; cursor: pointer; font-family: 'Courier New',monospace; font-size: 13px; letter-spacing: 2px; transition: all 0.2s; }
+    #ms-apply:hover { background: linear-gradient(135deg,#886600,#665500); box-shadow: 0 0 15px rgba(255,200,0,0.3); }
+    #ms-close { position: absolute; top: 10px; right: 14px; background: none; border: none; color: #556; font-size: 20px; cursor: pointer; padding: 4px 8px; }
+    #ms-close:hover { color: #fff; }
+
+    body.role-dmd #hud, body.role-dmd #open-loader, body.role-dmd #fullscreen-btn,
+    body.role-dmd #controls, body.role-dmd #loader-modal, body.role-dmd #notification,
+    body.role-dmd #multiscreen-btn, body.role-dmd #touch-left, body.role-dmd #touch-right, body.role-dmd #touch-plunger,
+    body.role-backglass #hud, body.role-backglass #open-loader, body.role-backglass #fullscreen-btn,
+    body.role-backglass #controls, body.role-backglass #loader-modal, body.role-backglass #notification,
+    body.role-backglass #multiscreen-btn, body.role-backglass #touch-left,
+    body.role-backglass #touch-right, body.role-backglass #touch-plunger
+    { display: none !important; }
+
+    body.role-dmd #dmd-wrap { position: fixed; top: 50% !important; left: 50% !important; transform: translate(-50%,-50%) !important; padding: 20px 30px; border-width: 3px; box-shadow: 0 0 60px rgba(255,100,0,0.5), 0 0 20px rgba(255,80,0,0.3), inset 0 0 30px rgba(0,0,0,0.9); }
+
+    #backglass-canvas { display: none; position: fixed; inset: 0; width: 100%; height: 100%; }
+    body.role-backglass #backglass-canvas { display: block; }
+    body.role-backglass #dmd-wrap { display: none !important; }
+
+    body.show-bg-panel #backglass-canvas { display: block; position: fixed; right: 0; top: 0; width: 30vw; height: 100vh; z-index: 95; border-left: 1px solid rgba(255,200,0,0.25); inset: unset; }
+  </style>
+</head>
+<body>
+
+  <div id="hud">
+    <div id="score-display">SCORE: <span id="score">0</span></div>
+    <div id="sequence-display" style="color:#00ff88; font-size:14px; text-shadow:0 0 10px #00ff88; display:none;">
+      SEQ: <span id="seq-progress">0/4</span>
+    </div>
+    <div id="multiplier">×<span id="multi">1</span></div>
+    <div id="ball-display">BALL <span id="ballnum">1</span>/3</div>
+  </div>
+
+  <button id="open-loader">📂 TISCH LADEN</button>
+  <div id="notification"></div>
+
+  <div id="dmd-wrap">
+    <canvas id="dmd"></canvas>
+  </div>
+
+  <!-- TABLE LOADER MODAL -->
+  <div id="loader-modal">
+    <div id="loader-box">
+      <h2>⚡ FUTURE PINBALL WEB</h2>
+      <p class="subtitle">TABLE LOADER v1.0 — SELECT OR IMPORT A TABLE</p>
+
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('demo')">🎮 DEMO TISCHE</button>
+        <button class="tab-btn" onclick="switchTab('import')">📂 FP IMPORT</button>
+        <button class="tab-btn" onclick="switchTab('info')">ℹ️ FORMAT INFO</button>
+        <button class="tab-btn" onclick="switchTab('script')">📜 SCRIPT</button>
+      </div>
+
+      <div class="tab-content active" id="tab-demo">
+        <div class="table-grid">
+          <div class="table-card" onclick="loadDemoTable('classic')">
+            <div class="preview" style="background:linear-gradient(135deg,#1a4a15,#0d2a0a)">🎱</div>
+            <h3>Classic Arcade</h3><span>3 Bumper • 2 Flipper</span><br>
+            <span class="badge badge-classic">CLASSIC</span>
+          </div>
+          <div class="table-card" onclick="loadDemoTable('space')">
+            <div class="preview" style="background:linear-gradient(135deg,#0a0a2a,#1a0a3a)">🚀</div>
+            <h3>Space Attack</h3><span>5 Bumper • 2 Flipper</span><br>
+            <span class="badge badge-modern">MODERN</span>
+          </div>
+          <div class="table-card" onclick="loadDemoTable('fire')">
+            <div class="preview" style="background:linear-gradient(135deg,#3a0a00,#1a0500)">🔥</div>
+            <h3>Fire Storm</h3><span>4 Bumper • 2 Flipper</span><br>
+            <span class="badge badge-modern">MODERN</span>
+          </div>
+          <div class="table-card" onclick="loadDemoTable('ocean')">
+            <div class="preview" style="background:linear-gradient(135deg,#001a3a,#00102a)">🌊</div>
+            <h3>Ocean Deep</h3><span>4 Bumper • 2 Flipper</span><br>
+            <span class="badge badge-demo">DEMO</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-import">
+        <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+          <div class="icon">📁</div>
+          <p><strong>Klicken oder .fpt Datei hier reinziehen</strong><br>
+          Future Pinball Table Dateien (.fpt)<br>
+          <span style="font-size:11px;color:#445">Unterstützte Elemente werden automatisch erkannt und geladen</span></p>
+        </div>
+        <input type="file" id="file-input" accept=".fpt,.fp,.json,.fpl">
+        <div class="format-info">
+          <p><strong>⚠️ Hinweis zum .fpt Format:</strong><br>
+          Future Pinball .fpt Dateien sind proprietäre Binärdateien. Der Web-Parser liest verfügbare Metadaten,
+          Tisch-Layout Informationen und rekonstruiert das Spielfeld bestmöglich.</p>
+        </div>
+
+        <!-- FPL Library Selector -->
+        <div id="library-selector" style="display:none; margin-top:20px; padding:15px; border:1px solid #0a0; border-radius:8px; background:#051405;">
+          <h3 style="color:#0f0; margin:0 0 10px 0;">📚 Library Tables</h3>
+          <p id="library-name" style="color:#0a0; font-size:12px; margin:5px 0 10px 0;"></p>
+          <div id="library-tables" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;"></div>
+        </div>
+
+        <style>
+          .library-table-btn {
+            padding: 10px;
+            background: #1a3a1a;
+            border: 1px solid #00ff66;
+            color: #0f0;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.2s;
+            font-family: monospace;
+          }
+          .library-table-btn:hover {
+            background: #00ff66;
+            color: #000;
+            box-shadow: 0 0 8px #00ff66;
+          }
+        </style>
+
+        <div id="parse-log"><span class="log-info">> Parser bereit. Datei laden um zu beginnen...</span></div>
+      </div>
+
+      <div class="tab-content" id="tab-info">
+        <div style="color:#667;font-size:12px;line-height:2;">
+          <p style="color:#00aaff;margin-bottom:10px;">📋 UNTERSTÜTZTE FORMATE</p>
+          <p>✅ <span style="color:#ddd">.fpt</span> — Future Pinball Table (Basis-Parsing)</p>
+          <p>✅ <span style="color:#ddd">.json</span> — Web-Pinball JSON Format (nativ)</p>
+          <p>🔄 <span style="color:#ddd">.fp</span> — Future Pinball Projekt (experimentell)</p>
+          <br>
+          <p style="color:#00aaff;margin-bottom:10px;">🎮 STEUERUNG</p>
+          <p>⬅️ <span style="color:#ddd">LEFT SHIFT</span> — Linker Flipper</p>
+          <p>➡️ <span style="color:#ddd">RIGHT SHIFT</span> — Rechter Flipper</p>
+          <p>⬆️ <span style="color:#ddd">ENTER halten</span> — Plunger aufladen / loslassen</p>
+          <p>↔️ <span style="color:#ddd">Z / X</span> — Tisch nudgen (3× = TILT!)</p>
+          <p>🔄 <span style="color:#ddd">R</span> — Ball zurücksetzen</p>
+          <p>🎵 <span style="color:#ddd">M</span> — Musik an/aus</p>
+          <br>
+          <p style="color:#00aaff;margin-bottom:10px;">🔧 ÜBER DAS PROJEKT</p>
+          <p style="color:#556;line-height:1.8">
+            Future Pinball Web ist eine Browser-basierte Neuimplementierung.<br>
+            Basiert auf Three.js (WebGL) + Rapier2D Physics (WASM).<br>
+            <strong style="color:#aab">Vite + TypeScript</strong> — Modularer Build.
+          </p>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-script">
+        <div id="script-status" style="color:#556;font-size:11px;margin-bottom:8px;letter-spacing:1px;">
+          Kein Script geladen — .fpt Datei mit VBScript importieren
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <div style="flex:1">
+            <div style="color:#667;font-size:10px;margin-bottom:3px;letter-spacing:1px;">VBSCRIPT (Original)</div>
+            <textarea id="script-raw" readonly style="width:100%;height:120px;background:#000;border:1px solid #334;border-radius:4px;color:#778;font-family:'Courier New',monospace;font-size:9px;padding:5px;resize:none;outline:none;line-height:1.5;"></textarea>
+          </div>
+          <div style="flex:1">
+            <div style="color:#667;font-size:10px;margin-bottom:3px;letter-spacing:1px;">JAVASCRIPT (Transpiled)</div>
+            <textarea id="script-js" readonly style="width:100%;height:120px;background:#000;border:1px solid #334;border-radius:4px;color:#6a8;font-family:'Courier New',monospace;font-size:9px;padding:5px;resize:none;outline:none;line-height:1.5;"></textarea>
+          </div>
+        </div>
+        <div id="script-log" style="background:#000;border:1px solid #334;border-radius:5px;padding:7px;height:55px;overflow-y:auto;font-size:10px;color:#889;line-height:1.6;">
+          <span class="log-info">> Script-Engine bereit.</span>
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="closeLoader()">▶ SPIELEN</button>
+    </div>
+  </div>
+
+  <div id="controls">
+    <span>LEFT SHIFT</span> Flipper L &nbsp;|&nbsp; <span>RIGHT SHIFT</span> Flipper R
+    &nbsp;|&nbsp; <span>ENTER halten</span> Plunger &nbsp;|&nbsp; <span>Z/X</span> Tilt &nbsp;|&nbsp; <span>M</span> Musik &nbsp;|&nbsp; <span>R</span> Reset
+  </div>
+
+  <button id="install-btn" title="App installieren" onclick="installPWA()">INSTALL</button>
+  <a id="editor-btn" href="editor.html" target="_blank" title="Tisch-Editor">✏️</a>
+  <button id="fullscreen-btn"  title="Vollbild"           onclick="toggleFullscreen()">FULL</button>
+  <button id="multiscreen-btn" title="Multi-Screen Setup" onclick="openMultiscreenModal()">SCREENS</button>
+  <button id="view-btn"        title="Ansicht anpassen"   onclick="toggleViewPanel()">VIEW</button>
+  <button id="hide-dmd-btn"    title="DMD ausblenden"     onclick="toggleHideDMD()">DMD</button>
+  <button id="dmd-mode-btn"    title="DMD: Dot / Solid"   onclick="toggleDMDMode()">DOT</button>
+
+  <div id="view-panel">
+    <h4>⚙ ANSICHT</h4>
+    <div class="vp-row">
+      <label>ZOOM <span id="vp-zoom-val">16</span></label>
+      <input type="range" id="vp-zoom" min="8" max="28" step="0.5" value="16" oninput="applyViewSettings()">
+    </div>
+    <div class="vp-row">
+      <label>NEIGUNG <span id="vp-tilt-val">0.5</span></label>
+      <input type="range" id="vp-tilt" min="-3" max="4" step="0.25" value="0.5" oninput="applyViewSettings()">
+    </div>
+    <div class="vp-row">
+      <label>BLICKWINKEL <span id="vp-fov-val">58</span></label>
+      <input type="range" id="vp-fov" min="35" max="85" step="1" value="58" oninput="applyViewSettings()">
+    </div>
+    <button onclick="resetViewSettings()">↺ RESET</button>
+  </div>
+
+  <div id="multiscreen-modal">
+    <div id="ms-box" style="position:relative">
+      <button id="ms-close" onclick="closeMultiscreenModal()">✕</button>
+      <h2>⊞ MULTI-SCREEN SETUP</h2>
+      <p class="ms-sub">CHOOSE YOUR DISPLAY CONFIGURATION</p>
+      <div class="ms-layout-grid">
+        <div class="ms-layout-card selected" id="ms-card-1" onclick="selectMsLayout(1)">
+          <div class="ms-icon">🖥️</div><h3>1 SCREEN</h3><p>Spielfeld + Backglass-Panel im Hauptfenster</p>
+        </div>
+        <div class="ms-layout-card" id="ms-card-2" onclick="selectMsLayout(2)">
+          <div class="ms-icon">🖥️🖥️</div><h3>2 SCREENS</h3><p>Spielfeld | Backglass + DMD gestapelt</p>
+        </div>
+        <div class="ms-layout-card" id="ms-card-3" onclick="selectMsLayout(3)">
+          <div class="ms-icon">🖥️🖥️🖥️</div><h3>3 SCREENS</h3><p>Spielfeld | Backglass | DMD — frei platzierbar</p>
+        </div>
+      </div>
+      <div id="ms-detect-info"></div>
+      <div class="ms-btn-row">
+        <button id="ms-autodetect" onclick="autoDetectScreens()">⚡ AUTO-DETECT</button>
+        <button id="ms-apply" onclick="applyMsLayout()">▶ APPLY LAYOUT</button>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="backglass-canvas"></canvas>
+  <div id="touch-left"    class="touch-btn">◀</div>
+  <div id="touch-right"   class="touch-btn">▶</div>
+  <div id="touch-plunger" class="touch-btn">↑</div>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

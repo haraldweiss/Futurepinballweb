@@ -1,0 +1,123 @@
+  Future Pinball Web — Transfer & Start                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                             
+  Methode A: Nur den fertigen Build übertragen (einfachste Option)                                                                                                                                                                                                           
+                                                            
+  Voraussetzung: Kein Node.js nötig. Nur ein einfacher Webserver.
+
+  1. Dateien kopieren
+
+  Kopiere den Ordner dist/ auf den Zielrechner — z.B. per USB-Stick, scp, oder Netzwerkfreigabe.
+
+  dist/
+    index.html
+    editor.html
+    manifest.webmanifest
+    sw.js
+    icon-192.svg
+    icon-512.svg
+    assets/
+      main-*.js
+      editor-*.js
+
+  2. Webserver starten
+
+  Wichtig: Die App kann nicht per Doppelklick auf index.html geöffnet werden!
+  Rapier2D (WASM) und der Service Worker benötigen zwingend einen HTTP-Server.
+
+  Option 1 — Python (überall vorinstalliert):
+  cd /pfad/zu/dist
+  python3 -m http.server 8080
+  Dann im Browser: http://localhost:8080
+
+  Option 2 — Node.js serve:
+  npx serve dist
+
+  Option 3 — Apache/MAMP/XAMPP:
+  Ordner dist/ in das Webroot-Verzeichnis kopieren (z.B. /Library/WebServer/Documents/fpw/),
+  dann: http://localhost/fpw/
+
+  Option 4 — VS Code Live Server:
+  Rechtsklick auf dist/index.html → „Open with Live Server"
+
+  ---
+  Methode B: Quellcode übertragen und selbst bauen (für Entwickler)
+
+  Voraussetzungen
+
+  - Node.js ≥ 18 — https://nodejs.org herunterladen und installieren
+  - npm ist automatisch dabei
+
+  1. Projektordner kopieren
+
+  Alles außer node_modules/ und dist/ übertragen:
+
+  Futurepinball Web/
+    src/
+    package.json
+    tsconfig.json
+    vite.config.ts
+    index.html          ← Legacy-Fallback
+
+  Am schnellsten mit einem Archiv:
+  # Auf dem Quellrechner:
+  zip -r fpweb.zip "Futurepinball Web" --exclude "*/node_modules/*" --exclude "*/dist/*"
+
+  2. Abhängigkeiten installieren
+
+  cd "Futurepinball Web"
+  npm install
+
+  Dieser Schritt lädt alle Bibliotheken (Three.js, Rapier2D, Vite, …) herunter — einmalig, braucht Internet.
+
+  3a. Produktions-Build erstellen
+
+  npm run build
+
+  Erzeugt den dist/-Ordner. Dann wie in Methode A einen Webserver starten.
+
+  3b. Entwicklungsmodus mit Hot-Reload
+
+  npm run dev
+
+  Öffnet automatisch http://localhost:5173 — Änderungen am Code werden sofort sichtbar.
+
+  ---
+  Übersicht Ports & URLs
+
+  ┌──────────────┬──────────────────────────────┬─────────────────────┐
+  │   Methode    │             URL              │       Hinweis       │
+  ├──────────────┼──────────────────────────────┼─────────────────────┤
+  │ Python       │ http://localhost:8080        │ Port frei wählbar   │
+  ├──────────────┼──────────────────────────────┼─────────────────────┤
+  │ npx serve    │ http://localhost:3000        │                     │
+  ├──────────────┼──────────────────────────────┼─────────────────────┤
+  │ Vite Dev     │ http://localhost:5173        │ nur für Entwicklung │
+  ├──────────────┼──────────────────────────────┼─────────────────────┤
+  │ Apache (Mac) │ http://localhost/ordnername/ │                     │
+  └──────────────┴──────────────────────────────┴─────────────────────┘
+
+  ---
+  PWA installieren (optional)
+
+  Sobald die App im Chrome/Edge über HTTP(S) läuft, erscheint der INSTALL-Button oben rechts.
+  Klicken → App wird als eigenständige Desktop-App installiert und ist danach offline verfügbar.
+
+  Auf iOS/Safari: Teilen → Zum Home-Bildschirm (kein Install-Button, aber identisch).
+
+  ---
+  Häufige Probleme
+
+  ┌──────────────────────────────────┬────────────────────────────┬───────────────────────────────────────────────────┐
+  │             Problem              │          Ursache           │                      Lösung                       │
+  ├──────────────────────────────────┼────────────────────────────┼───────────────────────────────────────────────────┤
+  │ Weißer/leerer Bildschirm         │ file:// statt http://      │ Webserver starten                                 │
+  ├──────────────────────────────────┼────────────────────────────┼───────────────────────────────────────────────────┤
+  │ WASM-Fehler in Konsole           │ Gleiche Ursache            │ Gleiche Lösung                                    │
+  ├──────────────────────────────────┼────────────────────────────┼───────────────────────────────────────────────────┤
+  │ Service Worker registriert nicht │ Kein HTTPS außer localhost │ Lokal testen oder HTTPS einrichten                │
+  ├──────────────────────────────────┼────────────────────────────┼───────────────────────────────────────────────────┤
+  │ npm install schlägt fehl         │ Kein Internet              │ Mit Internet ausführen, danach offline möglich    │
+  ├──────────────────────────────────┼────────────────────────────┼───────────────────────────────────────────────────┤
+  │ Port belegt                      │ Anderer Prozess läuft      │ python3 -m http.server 8081 (anderen Port wählen) │
+  └──────────────────────────────────┴────────────────────────────┴───────────────────────────────────────────────────┘
+
