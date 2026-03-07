@@ -335,7 +335,8 @@ function buildEnhancedBumper(
   color: number,
   lod: 'high' | 'med' | 'low' = 'high',
   size: number = 1.0,
-  lightCfg?: { intensity: number; distance: number }
+  lightCfg?: { intensity: number; distance: number },
+  geomPool?: any
 ): THREE.Group {
   const group = new THREE.Group();
   group.position.set(x, y, 0.125);
@@ -458,7 +459,8 @@ function buildEnhancedTarget(
   x: number,
   y: number,
   color: number,
-  lightCfg?: { intensity: number; distance: number }
+  lightCfg?: { intensity: number; distance: number },
+  geomPool?: any
 ): THREE.Group {
   const g = new THREE.Group();
   g.position.set(x, y, 0.18);
@@ -1046,7 +1048,7 @@ export function scoreSlingshotHit(side: string): void {
 }
 
 // ─── Realistischer Flipper ────────────────────────────────────────────────────
-export function buildRealisticFlipper(side: 'left' | 'right', length: number = 2.1): THREE.Group {
+export function buildRealisticFlipper(side: 'left' | 'right', length: number = 2.1, geomPool?: any): THREE.Group {
   const group = new THREE.Group();
   const len   = length;
   const scale = len / 2.1;  // Normalize to original length
@@ -1089,7 +1091,7 @@ export function buildRealisticFlipper(side: 'left' | 'right', length: number = 2
 }
 
 // ─── Bumper bauen (mit Enhanced Geometry + LOD + Variable Size + Custom Light) ──
-export function buildBumper(x: number, y: number, color: number, lod: 'high'|'med'|'low' = 'high', size: number = 1.0, lightCfg?: { intensity: number; distance: number }): THREE.Mesh | THREE.Group {
+export function buildBumper(x: number, y: number, color: number, lod: 'high'|'med'|'low' = 'high', size: number = 1.0, lightCfg?: { intensity: number; distance: number }, geomPool?: any): THREE.Mesh | THREE.Group {
   // Phase 7: Try to use extracted MS3D model first
   const fptRes = fptResources as any;
   if (fptRes.models && fptRes.models instanceof Map) {
@@ -1119,7 +1121,7 @@ export function buildBumper(x: number, y: number, color: number, lod: 'high'|'me
 
   // Use enhanced geometry for high-quality rendering when available
   if (geometryConfig.useLargePolygons && lod === 'high') {
-    return buildEnhancedBumper(x, y, color, lod, size, lightCfg);
+    return buildEnhancedBumper(x, y, color, lod, size, lightCfg, geomPool);
   }
 
   // Fallback to basic geometry
@@ -1171,7 +1173,7 @@ export function buildBumper(x: number, y: number, color: number, lod: 'high'|'me
 }
 
 // ─── Target bauen (mit Enhanced Geometry + Custom Light) ────────────────────────
-export function buildTarget(x: number, y: number, color: number, lightCfg?: { intensity: number; distance: number }): THREE.Group {
+export function buildTarget(x: number, y: number, color: number, lightCfg?: { intensity: number; distance: number }, geomPool?: any): THREE.Group {
   // Phase 7: Try to use extracted MS3D model first
   const fptRes = fptResources as any;
   if (fptRes.models && fptRes.models instanceof Map) {
@@ -1200,7 +1202,7 @@ export function buildTarget(x: number, y: number, color: number, lightCfg?: { in
 
   // Use enhanced geometry for high-quality rendering when available
   if (geometryConfig.useLargePolygons) {
-    return buildEnhancedTarget(x, y, color, lightCfg);
+    return buildEnhancedTarget(x, y, color, lightCfg, geomPool);
   }
 
   // Fallback to basic geometry
@@ -1233,7 +1235,7 @@ export function buildTarget(x: number, y: number, color: number, lightCfg?: { in
 }
 
 // ─── Rampe bauen (mit Custom Light) ───────────────────────────────────────────
-export function buildRamp(x1: number, y1: number, x2: number, y2: number, color: number, scene: THREE.Scene, lightCfg?: { intensity: number; distance: number }): void {
+export function buildRamp(x1: number, y1: number, x2: number, y2: number, color: number, scene: THREE.Scene, lightCfg?: { intensity: number; distance: number }, geomPool?: any): void {
   const cx=(x1+x2)/2, cy=(y1+y2)/2;
   const dx=x2-x1, dy=y2-y1;
   const len=Math.sqrt(dx*dx+dy*dy), angle=Math.atan2(dy,dx);
@@ -1507,7 +1509,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   config.bumpers.forEach(b => {
     // LOD: weiter oben (höher y) = ferner von Kamera → weniger Polys
     const lod = b.y > 3.5 ? 'low' : b.y > 2.0 ? 'med' : 'high';
-    const m = buildBumper(b.x, b.y, b.color, lod, b.size, b.light);
+    const m = buildBumper(b.x, b.y, b.color, lod, b.size, b.light, geomPool);
     (m as any).castShadow = true;
     tg.add(m);
     bumpers.push({ x:b.x, y:b.y, mesh:m as any });
@@ -1515,7 +1517,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
 
   (config.targets || []).forEach(t => {
     // Targets: simplify geometry for distant ones (y < -0.5)
-    const g = buildTarget(t.x, t.y, t.color, t.light);
+    const g = buildTarget(t.x, t.y, t.color, t.light, geomPool);
     if (t.y < -0.5) {
       // Low LOD: reduce material detail
       g.traverse((obj: any) => {
@@ -1526,7 +1528,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
     targets.push({ x:t.x, y:t.y, mesh:g as any });
   });
 
-  (config.ramps || []).forEach(r => buildRamp(r.x1, r.y1, r.x2, r.y2, r.color, scene, r.light));
+  (config.ramps || []).forEach(r => buildRamp(r.x1, r.y1, r.x2, r.y2, r.color, scene, r.light, geomPool));
 
   // Lichter
   (config.lights || []).forEach(l => {

@@ -115,6 +115,8 @@ export interface LightConfig {
   decay?: number;
   castShadow?: boolean;
   shadowMapSize?: number;
+  shadowBias?: number;
+  normalBias?: number;
 }
 
 /**

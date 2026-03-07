@@ -4,7 +4,8 @@
  */
 
 import * as THREE from 'three';
-import { RenderPass as RenderPassBase, UnrealBloomPass } from 'three/addons/postprocessing/index.js';
+import { RenderPass as RenderPassBase } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 import { RenderPass } from './graphics-types';
