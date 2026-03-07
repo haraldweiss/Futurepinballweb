@@ -1259,6 +1259,7 @@ export function buildPhysicsTable(config: TableConfig, phys: any): void {
   const { world } = phys;
   phys.tableBodies.forEach((b: any) => { try { world.removeRigidBody(b); } catch { /* ignore */ } });
   phys.tableBodies = [];
+  phys.tableBodyConfigs = [];  // ✓ NEW: Store serializable configs for worker
   phys.bumperMap.clear();
   phys.targetMap.clear();
 
@@ -1287,6 +1288,8 @@ export function buildPhysicsTable(config: TableConfig, phys: any): void {
       body
     );
     phys.bumperMap.set(collider.handle, { x:b.x, y:b.y, mesh:bumpers[i]?.mesh??null, index:i });
+    // ✓ NEW: Store serializable config for worker
+    phys.tableBodyConfigs.push({ type: 'bumper', x: b.x, y: b.y, radius: 0.42 * sizeScale, restitution: rest, friction: fric });
   });
 
   (config.targets || []).forEach((t, i) => {
@@ -1302,19 +1305,24 @@ export function buildPhysicsTable(config: TableConfig, phys: any): void {
       body
     );
     phys.targetMap.set(collider.handle, { x:t.x, y:t.y, mesh:targets[i]?.mesh??null, index:i });
+    // ✓ NEW: Store serializable config for worker
+    phys.tableBodyConfigs.push({ type: 'box', x: t.x, y: t.y, width: 0.28, height: 0.21, restitution: rest, friction: fric });
   });
 
   (config.ramps || []).forEach((r, i) => {
     const cx=(r.x1+r.x2)/2, cy=(r.y1+r.y2)/2;
     const dx=r.x2-r.x1, dy=r.y2-r.y1;
     const len=Math.sqrt(dx*dx+dy*dy);
+    const angle = Math.atan2(dy,dx);
     // Per-element physics override
     const elemOvr = elemPhys.ramps?.[i] ?? {};
     const rest = elemOvr.restitution ?? rampRest;
     const fric = elemOvr.friction ?? rampFric;
-    const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(cx,cy).setRotation(Math.atan2(dy,dx)));
+    const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(cx,cy).setRotation(angle));
     phys.tableBodies.push(body);
     world.createCollider(RAPIER.ColliderDesc.cuboid(len/2, 0.07).setRestitution(rest).setFriction(fric), body);
+    // ✓ NEW: Store serializable config for worker
+    phys.tableBodyConfigs.push({ type: 'box', x: cx, y: cy, rotation: angle, width: len/2, height: 0.07, restitution: rest, friction: fric });
   });
 
   // ─── Phase 1: PLUNGER PHYSICS ───
@@ -1327,6 +1335,8 @@ export function buildPhysicsTable(config: TableConfig, phys: any): void {
     RAPIER.ColliderDesc.cuboid(0.08, 2.2).setFriction(0.3),
     plungerLaneLeft
   );
+  // ✓ NEW: Store serializable config for worker
+  phys.tableBodyConfigs.push({ type: 'box', x: 2.35, y: -4.8, width: 0.08, height: 2.2, friction: 0.3 });
 
   // Right wall of plunger lane
   const plungerLaneRight = world.createRigidBody(
@@ -1337,6 +1347,8 @@ export function buildPhysicsTable(config: TableConfig, phys: any): void {
     RAPIER.ColliderDesc.cuboid(0.08, 2.2).setFriction(0.3),
     plungerLaneRight
   );
+  // ✓ NEW: Store serializable config for worker
+  phys.tableBodyConfigs.push({ type: 'box', x: 2.95, y: -4.8, width: 0.08, height: 2.2, friction: 0.3 });
 
   // Bottom plunger guide (prevent ball escape)
   const plungerGuide = world.createRigidBody(
@@ -1347,6 +1359,8 @@ export function buildPhysicsTable(config: TableConfig, phys: any): void {
     RAPIER.ColliderDesc.cuboid(0.35, 0.12).setFriction(0.5),
     plungerGuide
   );
+  // ✓ NEW: Store serializable config for worker
+  phys.tableBodyConfigs.push({ type: 'box', x: 2.65, y: -6.3, width: 0.35, height: 0.12, friction: 0.5 });
 }
 
 // ─── Tisch bauen ─────────────────────────────────────────────────────────────

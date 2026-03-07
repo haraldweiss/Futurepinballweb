@@ -692,7 +692,7 @@ async function initPhysics(): Promise<void> {
   addSeg( 1.15, -4.85,  2.5, -6.2);  // right drain guide
 
   setPhysics({ world, ballBody, ballCollider, eventQueue, lFlipperBody, rFlipperBody,
-    bumperMap: new Map(), targetMap: new Map(), slingshotMap, tableBodies: [] });
+    bumperMap: new Map(), targetMap: new Map(), slingshotMap, tableBodies: [], tableBodyConfigs: [] }); // ✓ NEW: For worker serialization
 }
 
 // ─── Ball Reset ───────────────────────────────────────────────────────────────
@@ -754,7 +754,7 @@ async function setupPhysicsWorker(): Promise<void> {
         flipperLength: 2.1,
         flipperRestitution: 0.5,
         flipperFriction: 0.6,
-        tableBodies: [],
+        tableBodies: physics.tableBodyConfigs || [],  // ✓ FIXED: Pass serialized configs instead of RigidBody objects
         bumperMap: physics.bumperMap,
         targetMap: physics.targetMap,
         slingshotMap: physics.slingshotMap,
