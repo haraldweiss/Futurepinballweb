@@ -35,6 +35,9 @@ let lastPhysicsUpdate = 0;
  * Called once from main thread with initial configuration.
  */
 function initializePhysics(config: any): void {
+  // Reset table bodies array for fresh initialization (prevents stale body accumulation on reload)
+  tableBodies = [];
+
   // Create world
   world = new RAPIER.World(gravity);
   eventQueue = new RAPIER.EventQueue(true);

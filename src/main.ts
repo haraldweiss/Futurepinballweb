@@ -808,13 +808,8 @@ function handlePhysicsFrame(frame: PhysicsFrameData): void {
 
 // ─── Phase 15: Helper function to load table with physics worker ────────────────
 async function loadTableWithPhysicsWorker(tableConfig: any, sceneTarget: THREE.Scene, library?: any): Promise<void> {
-  // Build the table geometry
+  // Build the table geometry (this internally calls buildPhysicsTable at the end)
   buildTable(tableConfig, sceneTarget, library);
-
-  // Build physics world and bodies (creates tableBodyConfigs for worker)
-  if (physics) {
-    buildPhysicsTable(tableConfig, physics);
-  }
 
   // Initialize physics worker after table is built
   try {
@@ -2022,16 +2017,25 @@ function setupBackglassForTable(): void {
 
 window.loadDemoTable = async (key: string) => {
   resetGameState();
-  await loadTableWithPhysicsWorker(TABLE_CONFIGS[key], scene);
-  setupBackglassForTable();
+  try {
+    await loadTableWithPhysicsWorker(TABLE_CONFIGS[key], scene);
+    setupBackglassForTable();
+  } catch (error) {
+    console.error('Demo table load failed:', error);
+    // Even on error, ensure modal is closed so user can interact with game
+  }
   window.closeLoader();
 };
 
 window.closeLoader = async function closeLoader() {
   (document.getElementById('loader-modal') as HTMLElement).style.display='none';
   if (!currentTableConfig) {
-    await loadTableWithPhysicsWorker(TABLE_CONFIGS['classic'], scene);
-    setupBackglassForTable();
+    try {
+      await loadTableWithPhysicsWorker(TABLE_CONFIGS['classic'], scene);
+      setupBackglassForTable();
+    } catch (error) {
+      console.error('Classic table load failed in closeLoader:', error);
+    }
   }
 };
 
@@ -2461,7 +2465,11 @@ if (FPW_ROLE === 'dmd') {
         } else { await loadTableWithPhysicsWorker(TABLE_CONFIGS['classic'], scene); }
       } catch { await loadTableWithPhysicsWorker(TABLE_CONFIGS['classic'], scene); }
     } else {
-      await loadTableWithPhysicsWorker(TABLE_CONFIGS['classic'], scene);
+      try {
+        await loadTableWithPhysicsWorker(TABLE_CONFIGS['classic'], scene);
+      } catch (error) {
+        console.error('Initial classic table load failed:', error);
+      }
     }
 
     // Initialize B.A.M. Engine (after table is loaded and currentTableConfig is set)
