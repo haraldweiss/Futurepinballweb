@@ -475,7 +475,7 @@ function buildEnhancedTarget(
     normalScale: new THREE.Vector2(0.3, 0.3),
   });
 
-  const face = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.42, 0.08), faceMat);
+  const face = new THREE.Mesh(geomPool?.getBox(0.55, 0.42, 0.08) ?? new THREE.BoxGeometry(0.55, 0.42, 0.08), faceMat);
   face.position.z = 0.06;
   face.castShadow = true;
   face.receiveShadow = true;
@@ -488,7 +488,7 @@ function buildEnhancedTarget(
     metalness: 0.5,
   });
 
-  const backing = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.52, 0.20), backMat);
+  const backing = new THREE.Mesh(geomPool?.getBox(0.65, 0.52, 0.20) ?? new THREE.BoxGeometry(0.65, 0.52, 0.20), backMat);
   backing.position.z = -0.05;
   backing.castShadow = true;
   backing.receiveShadow = true;
@@ -1065,16 +1065,16 @@ export function buildRealisticFlipper(side: 'left' | 'right', length: number = 2
   group.add(body);
 
   const rubberMat = new THREE.MeshStandardMaterial({ color:0xcc5500, roughness:0.85, metalness:0.02, emissive:0x441100, emissiveIntensity:0.2 });
-  const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.10, 0.22, 16), rubberMat);
+  const tip = new THREE.Mesh(geomPool?.getCylinder(0.16, 0.22, 16) ?? new THREE.CylinderGeometry(0.16, 0.10, 0.22, 16), rubberMat);
   tip.rotation.z = Math.PI/2; tip.position.set(len, 0.02, 0);
   group.add(tip);
 
   const pivotMat = new THREE.MeshStandardMaterial({ color:0xaaaacc, metalness:1.0, roughness:0.05 });
-  const pivot = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.30, 12), pivotMat);
+  const pivot = new THREE.Mesh(geomPool?.getCylinder(0.12, 0.30, 12) ?? new THREE.CylinderGeometry(0.12, 0.12, 0.30, 12), pivotMat);
   pivot.rotation.x = Math.PI/2;
   group.add(pivot);
 
-  const rubberLine = new THREE.Mesh(new THREE.BoxGeometry(len*0.9, 0.07, 0.06), rubberMat);
+  const rubberLine = new THREE.Mesh(geomPool?.getBox(len*0.9, 0.07, 0.06) ?? new THREE.BoxGeometry(len*0.9, 0.07, 0.06), rubberMat);
   rubberLine.position.set(len*0.5+0.05, 0.165, 0.05);
   group.add(rubberLine);
 
@@ -1137,19 +1137,22 @@ export function buildBumper(x: number, y: number, color: number, lod: 'high'|'me
   const ringSegs = lod === 'high' ? 32 : lod === 'med' ? 20 : 12;
   const capSegs = lod === 'high' ? 20 : lod === 'med' ? 12 : 6;
 
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.55, 0.20, baseSegs), baseMat);
+  // Get geometry pool for optimization
+  const pool = getGraphicsPipeline()?.getGeometryPool();
+
+  const base = new THREE.Mesh(pool?.getCylinder(0.45, 0.20, baseSegs) ?? new THREE.CylinderGeometry(0.45, 0.55, 0.20, baseSegs), baseMat);
   base.rotation.x = Math.PI/2;
   base.castShadow = true;
   base.receiveShadow = true;
   group.add(base);
 
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.08, ringTubes, ringSegs), ringMat);
+  const ring = new THREE.Mesh(pool?.getTorus(0.36, 0.08, ringTubes, ringSegs) ?? new THREE.TorusGeometry(0.36, 0.08, ringTubes, ringSegs), ringMat);
   ring.position.z = 0.10;
   ring.castShadow = true;
   ring.receiveShadow = true;
   group.add(ring);
 
-  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 0.15, capSegs), capMat);
+  const cap = new THREE.Mesh(pool?.getCylinder(0.24, 0.15, capSegs) ?? new THREE.CylinderGeometry(0.24, 0.28, 0.15, capSegs), capMat);
   cap.rotation.x = Math.PI/2; cap.position.z = 0.18;
   cap.castShadow = true;
   cap.receiveShadow = true;
@@ -1207,13 +1210,13 @@ export function buildTarget(x: number, y: number, color: number, lightCfg?: { in
   const faceMat = new THREE.MeshStandardMaterial({ color, emissive:color, emissiveIntensity:0.7, roughness:0.3, metalness:0.2 });
   const backMat = new THREE.MeshStandardMaterial({ color:0x333344, roughness:0.6, metalness:0.5 });
 
-  const face = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.42, 0.05), faceMat);
+  const face = new THREE.Mesh(geomPool?.getBox(0.55, 0.42, 0.05) ?? new THREE.BoxGeometry(0.55, 0.42, 0.05), faceMat);
   face.position.z = 0.06;
   face.castShadow = true;
   face.receiveShadow = true;
   g.add(face);
 
-  const back = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.50, 0.12), backMat);
+  const back = new THREE.Mesh(geomPool?.getBox(0.62, 0.50, 0.12) ?? new THREE.BoxGeometry(0.62, 0.50, 0.12), backMat);
   back.castShadow = true;
   back.receiveShadow = true;
   g.add(back);
@@ -1235,7 +1238,7 @@ export function buildRamp(x1: number, y1: number, x2: number, y2: number, color:
   const dx=x2-x1, dy=y2-y1;
   const len=Math.sqrt(dx*dx+dy*dy), angle=Math.atan2(dy,dx);
   const mat = new THREE.MeshStandardMaterial({ color, emissive:color, emissiveIntensity:0.3, roughness:0.5, metalness:0.4, transparent:true, opacity:0.7 });
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(len, 0.12, 0.18), mat);
+  const mesh = new THREE.Mesh(geomPool?.getBox(len, 0.12, 0.18) ?? new THREE.BoxGeometry(len, 0.12, 0.18), mat);
   mesh.position.set(cx, cy, 0.25);
   mesh.rotation.z = angle;
   scene.add(mesh);
@@ -1390,7 +1393,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   scene.add(tg);
 
   // Spielfeld (mit verbesserter Texture-Anwendung)
-  const tableGeom = new THREE.BoxGeometry(6, 12, 0.25);
+  const tableGeom = geomPool?.getBox(6, 12, 0.25) ?? new THREE.BoxGeometry(6, 12, 0.25);
   const hasFPTTex = !!fptResources.playfield;
 
   const tableMat  = new THREE.MeshStandardMaterial({
@@ -1420,21 +1423,21 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
 
   // Subtle center axis line on the playfield surface
   const axMat = new THREE.MeshStandardMaterial({ color: config.accentColor, emissive: config.accentColor, emissiveIntensity: 0.6, roughness: 0.3 });
-  const axLine = new THREE.Mesh(new THREE.BoxGeometry(0.03, 10.5, 0.01), axMat);
+  const axLine = new THREE.Mesh(geomPool?.getBox(0.03, 10.5, 0.01) ?? new THREE.BoxGeometry(0.03, 10.5, 0.01), axMat);
   axLine.position.set(0, 0.3, 0.135); tg.add(axLine);
 
   // Helper: segment-oriented guide rail
   const buildGuide = (x1:number,y1:number,x2:number,y2:number,mat:THREE.Material,w=0.16,h=0.38) => {
     const cx=(x1+x2)/2, cy=(y1+y2)/2, dx=x2-x1, dy=y2-y1;
     const len=Math.sqrt(dx*dx+dy*dy), angle=Math.atan2(dy,dx);
-    const m = new THREE.Mesh(new THREE.BoxGeometry(len,w,h), mat as any);
+    const m = new THREE.Mesh(geomPool?.getBox(len,w,h) ?? new THREE.BoxGeometry(len,w,h), mat as any);
     m.position.set(cx,cy,0.32); m.rotation.z=angle; m.castShadow=true; tg.add(m);
   };
 
   // Wände
   const wallMat = new THREE.MeshStandardMaterial({ color:0x1a2233, metalness:0.8, roughness:0.25, emissive:0x050a14, emissiveIntensity:1.0 });
   const addWall = (x:number,y:number,w:number,h:number,z=0.3) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,z), wallMat);
+    const m = new THREE.Mesh(geomPool?.getBox(w,h,z) ?? new THREE.BoxGeometry(w,h,z), wallMat);
     m.position.set(x,y,0.26); m.castShadow = true; tg.add(m);
   };
   addWall(0, 6.05, 6.2, 0.2, 0.5);
@@ -1447,8 +1450,8 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   });
   const addEdgeGlow = (x:number, len:number, vertical=true) => {
     const geo = vertical
-      ? new THREE.BoxGeometry(0.05, len, 0.05)
-      : new THREE.BoxGeometry(len, 0.05, 0.05);
+      ? (geomPool?.getBox(0.05, len, 0.05) ?? new THREE.BoxGeometry(0.05, len, 0.05))
+      : (geomPool?.getBox(len, 0.05, 0.05) ?? new THREE.BoxGeometry(len, 0.05, 0.05));
     const m = new THREE.Mesh(geo, glowMat);
     m.position.set(x, 0, 0.47); tg.add(m);
   };
@@ -1456,7 +1459,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
 
   // Lane-Trennwand
   const laneMat = new THREE.MeshStandardMaterial({ color:0x334455, metalness:0.5, roughness:0.5 });
-  const laneDiv = new THREE.Mesh(new THREE.BoxGeometry(0.15, 4.0, 0.4), laneMat);
+  const laneDiv = new THREE.Mesh(geomPool?.getBox(0.15, 4.0, 0.4) ?? new THREE.BoxGeometry(0.15, 4.0, 0.4), laneMat);
   laneDiv.position.set(2.2, -3.0, 0.3); tg.add(laneDiv);
 
   // Guide rail material (dark metal)
@@ -1485,8 +1488,8 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   ].forEach(s => {
     const slG = new THREE.Group();
     slG.position.set(s.x, s.y, 0.3); slG.rotation.z = s.r;
-    slG.add(new THREE.Mesh(new THREE.BoxGeometry(0.24, 1.32, 0.42), slBodyMat));
-    const glow = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.28, 0.36), slGlowMat);
+    slG.add(new THREE.Mesh(geomPool?.getBox(0.24, 1.32, 0.42) ?? new THREE.BoxGeometry(0.24, 1.32, 0.42), slBodyMat));
+    const glow = new THREE.Mesh(geomPool?.getBox(0.06, 1.28, 0.36) ?? new THREE.BoxGeometry(0.06, 1.28, 0.36), slGlowMat);
     glow.position.x = s.gx;
     slG.add(glow);
     tg.add(slG);
@@ -1495,7 +1498,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
 
   // Rollover-Lane-Markierungen
   [-1.8,-0.6,0.6,1.8].forEach(rx => {
-    const rm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.01),
+    const rm = new THREE.Mesh(geomPool?.getBox(0.18, 0.08, 0.01) ?? new THREE.BoxGeometry(0.18, 0.08, 0.01),
       new THREE.MeshStandardMaterial({ color:config.accentColor, emissive:config.accentColor, emissiveIntensity:1.0 }));
     rm.position.set(rx, 5.4, 0.14); tg.add(rm);
   });
@@ -1542,14 +1545,14 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   const plungerGroup = new THREE.Group();
   plungerGroup.position.set(2.65, -6.3, 0.3);
   const knobMat  = new THREE.MeshStandardMaterial({ color:0xcc3300, metalness:0.3, roughness:0.6, emissive:0x440000, emissiveIntensity:0.2 });
-  const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.22, 16), knobMat);
+  const knob = new THREE.Mesh(geomPool?.getCylinder(0.16, 0.22, 16) ?? new THREE.CylinderGeometry(0.16, 0.18, 0.22, 16), knobMat);
   knob.rotation.x = Math.PI/2;
   plungerGroup.add(knob);
-  const rod  = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.0, 10),
+  const rod  = new THREE.Mesh(geomPool?.getCylinder(0.06, 1.0, 10) ?? new THREE.CylinderGeometry(0.06, 0.06, 1.0, 10),
     new THREE.MeshStandardMaterial({ color:0xaaaacc, metalness:1.0, roughness:0.1 }));
   rod.rotation.x = Math.PI/2; rod.position.z = 0.6;
   plungerGroup.add(rod);
-  const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.15),
+  const base = new THREE.Mesh(geomPool?.getBox(0.5, 0.5, 0.15) ?? new THREE.BoxGeometry(0.5, 0.5, 0.15),
     new THREE.MeshStandardMaterial({ color:0x333344, metalness:0.7, roughness:0.4 }));
   base.position.z = 1.15;
   plungerGroup.add(base);
