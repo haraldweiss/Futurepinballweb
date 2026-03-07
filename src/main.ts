@@ -7,6 +7,7 @@ import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass }     from 'three/addons/postprocessing/ShaderPass.js';
 import { FXAAShader }     from 'three/addons/shaders/FXAAShader.js';
+import { createVolumetricLightingPass } from './graphics/volumetric-lighting';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -464,6 +465,13 @@ bloomPass.threshold = 0.15;  // Lower threshold for more bloom (more surfaces gl
 bloomPass.strength = 1.6;    // Increased from 1.1 for more dramatic effect
 bloomPass.radius = 0.75;     // Wider glow falloff for softer bloom edges
 composer.addPass(bloomPass);
+
+// ─── Phase 15: Volumetric Lighting (God Rays) ──────────────────────────
+// Add atmospheric volumetric lighting effect between bloom and FXAA
+const volumetricPass = createVolumetricLightingPass(renderer);
+volumetricPass.setIntensity(0.6);  // Default intensity
+volumetricPass.setParameters(0.8, 0.4, 0.95, 32);  // density, weight, decay, samples
+composer.addPass((volumetricPass as any).pass || volumetricPass);
 
 // FXAA: smoother edges at high DPI, performance-friendly alternative to MSAA
 const fxaaPass = new ShaderPass(FXAAShader);
