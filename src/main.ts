@@ -7,6 +7,7 @@ import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass }     from 'three/addons/postprocessing/ShaderPass.js';
 import { FXAAShader }     from 'three/addons/shaders/FXAAShader.js';
+import { createVolumetricLightingPass } from './graphics/volumetric-lighting';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -26,7 +27,7 @@ import { TABLE_CONFIGS, buildTable, buildPhysicsTable, buildRealisticFlipper, sc
 import { runFPScript, callScriptFlipper, callScriptDrain } from './script-engine';
 import { parseFPTFile, parseFPLFile, logMsg, getBackglassArtwork } from './fpt-parser';
 import { getBackglassRenderer, disposeBackglass } from './backglass';
-import { getProfiler, QUALITY_PRESETS } from './profiler';
+import { getProfiler } from './profiler';
 import { ScoreDisplayManager } from './score-display';
 import {
   initializeAudioSystem, getAudioSystem, AudioCategory,
@@ -367,6 +368,12 @@ const gl = renderer.getContext()!;
 
 document.body.appendChild(renderer.domElement);
 
+// ─── Global light variables (used throughout the app) ──────────────────────────
+let mainSpot: THREE.SpotLight;
+let ambLight: THREE.AmbientLight;
+let fillLight: THREE.PointLight;
+let rimLight: THREE.DirectionalLight;
+
 // ─── Environment Mapping (Phase 1: PBR Enhancements) ───────────────────────────
 // Create a simple environment map for metallic surface reflections
 (function setupEnvironmentMap() {
@@ -465,6 +472,14 @@ bloomPass.strength = 1.6;    // Increased from 1.1 for more dramatic effect
 bloomPass.radius = 0.75;     // Wider glow falloff for softer bloom edges
 composer.addPass(bloomPass);
 
+// ─── Phase 15+: Volumetric Lighting (God Rays) ───────────────────────────────────
+const volumetricPass = createVolumetricLightingPass(renderer);
+volumetricPass.setLightPosition(0, 14, 16);  // Match main spotlight position
+volumetricPass.setParameters(0.8, 0.4, 0.95, 32);  // Default parameters
+volumetricPass.setExposure(0.3);  // Subtle effect
+volumetricPass.renderToScreen = false;  // Not the final pass
+composer.addPass(volumetricPass);
+
 // FXAA: smoother edges at high DPI, performance-friendly alternative to MSAA
 const fxaaPass = new ShaderPass(FXAAShader);
 fxaaPass.uniforms['resolution'].value.x = 1 / (innerWidth * renderer.getPixelRatio());
@@ -486,9 +501,9 @@ if (lightManager) {
 } else {
   // Fallback: create lights manually if LightManager unavailable
   console.warn('⚠️ LightManager not available, creating lights manually');
-  const ambLight = new THREE.AmbientLight(0xffffff, 0.35);
+  ambLight = new THREE.AmbientLight(0xffffff, 0.35);
   scene.add(ambLight);
-  const mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI/3.0, 0.20);
+  mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI/3.0, 0.20);
   mainSpot.position.set(0, 14, 16);
   mainSpot.castShadow = true;
   mainSpot.shadow.mapSize.set(2048, 2048);
@@ -498,14 +513,14 @@ if (lightManager) {
   mainSpot.shadow.camera.far = 120;
   mainSpot.shadow.blurSamples = 16;
   scene.add(mainSpot);
-  const fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
+  fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
   fillLight.position.set(-9, 6, 9);
   fillLight.castShadow = true;
   scene.add(fillLight);
   const accentLight = new THREE.PointLight(0xccddff, 0.8, 25);
   accentLight.position.set(9, 4, 5);
   scene.add(accentLight);
-  const rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
+  rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
   rimLight.position.set(0, 22, -12);
   rimLight.castShadow = true;
   scene.add(rimLight);

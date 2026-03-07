@@ -180,14 +180,12 @@ export interface GraphicsMetrics {
  * Base render pass - renders scene to target.
  */
 export class BaseRenderPass extends RenderPass {
-  private renderPass: THREE.RenderPass;
   private composer: THREE.EffectComposer;
 
   constructor(composer: THREE.EffectComposer, scene: THREE.Scene, camera: THREE.Camera) {
     super('BaseRender');
     this.composer = composer;
-    this.renderPass = new (require('three/addons/postprocessing/RenderPass.js').RenderPass)(scene, camera);
-    this.renderPass.renderToScreen = false;  // Let other passes handle output
+    // RenderPass should be created and added to composer in GraphicsPipeline
   }
 
   render(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void {

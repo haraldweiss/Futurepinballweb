@@ -1,7 +1,7 @@
 /**
  * script-engine.ts — VBScript → JavaScript Transpiler + FP Script API
  */
-import { state, fptResources, setFpScriptHandlers, bumpers, targets, cb } from './game';
+import { state, physics, fptResources, setFpScriptHandlers, bumpers, targets, cb } from './game';
 import { getAudioCtx, playSound, playFPTMusic, startBGMusic, stopBGMusic } from './audio';
 import { dmdEvent } from './dmd';
 import { getBamBridge } from './bam-bridge';
@@ -1023,7 +1023,8 @@ function buildFPScriptAPI() {
     // ─── PHASE 12: Task 4 - Magnet Zones Physics ───
     SetMagnetZone: (x: number, y: number, radius?: number, holdTime?: number, power?: number) => {
       try {
-        const { magnetSystem } = require('./mechanics/magnet-system');
+        // TODO: Implement dynamic magnet system loading
+        const magnetSystem = null;
         if (!magnetSystem) return '';
         const r = Math.max(0.1, Number(radius) || 1.0);
         const h = Math.max(100, Number(holdTime) || 3000);
@@ -1039,7 +1040,8 @@ function buildFPScriptAPI() {
 
     RemoveMagnetZone: (zoneId: string) => {
       try {
-        const { magnetSystem } = require('./mechanics/magnet-system');
+        // TODO: Implement dynamic magnet system loading
+        const magnetSystem = null;
         if (magnetSystem) {
           magnetSystem.removeZone(String(zoneId));
           fpScriptLog(`RemoveMagnetZone: Removed zone ${zoneId}`);
@@ -1051,7 +1053,8 @@ function buildFPScriptAPI() {
 
     HoldBallInZone: (ballIndex: number, zoneId: string, holdTime?: number) => {
       try {
-        const { magnetSystem } = require('./mechanics/magnet-system');
+        // TODO: Implement dynamic magnet system loading
+        const magnetSystem = null;
         if (magnetSystem) {
           const held = magnetSystem.holdBallInZone(Math.floor(ballIndex), String(zoneId), holdTime);
           fpScriptLog(`HoldBallInZone: Ball ${ballIndex} in zone ${zoneId}, held=${held}`);
@@ -1063,7 +1066,8 @@ function buildFPScriptAPI() {
 
     ReleaseBallFromZone: (zoneId: string, directionX?: number, directionY?: number, power?: number) => {
       try {
-        const { magnetSystem } = require('./mechanics/magnet-system');
+        // TODO: Implement dynamic magnet system loading
+        const magnetSystem = null;
         if (magnetSystem) {
           const count = magnetSystem.releaseBallsFromZone(String(zoneId), directionX, directionY, power);
           fpScriptLog(`ReleaseBallFromZone: Released ${count} ball(s) from zone ${zoneId}`);
@@ -1076,7 +1080,8 @@ function buildFPScriptAPI() {
 
     GetHeldBalls: () => {
       try {
-        const { magnetSystem } = require('./mechanics/magnet-system');
+        // TODO: Implement dynamic magnet system loading
+        const magnetSystem = null;
         if (magnetSystem) {
           return magnetSystem.getAllHeldBalls();
         }
@@ -1088,7 +1093,8 @@ function buildFPScriptAPI() {
 
     IsZoneActive: (zoneId: string) => {
       try {
-        const { magnetSystem } = require('./mechanics/magnet-system');
+        // TODO: Implement dynamic magnet system loading
+        const magnetSystem = null;
         if (magnetSystem) {
           return magnetSystem.isZoneActive(String(zoneId));
         }
@@ -1100,7 +1106,8 @@ function buildFPScriptAPI() {
 
     SetMagnetPower: (zoneId: string, power: number) => {
       try {
-        const { magnetSystem } = require('./mechanics/magnet-system');
+        // TODO: Implement dynamic magnet system loading
+        const magnetSystem = null;
         if (magnetSystem) {
           magnetSystem.setZonePower(String(zoneId), power);
           fpScriptLog(`SetMagnetPower: Zone ${zoneId} power = ${power}`);

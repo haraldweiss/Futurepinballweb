@@ -238,7 +238,7 @@ function updateFlipperRotation(side: 'left' | 'right', angle: number): void {
   // Update rotation for kinematic body
   const currentPos = flipper.translation();
   flipper.setNextKinematicRotation(angle);
-  flipper.setNextKinematicPosition(currentPos);
+  flipper.setNextKinematicTranslation(currentPos);
 }
 
 /**

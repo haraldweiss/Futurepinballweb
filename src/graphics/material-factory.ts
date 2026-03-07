@@ -5,6 +5,8 @@
 
 import * as THREE from 'three';
 import { MaterialConfig, CachedMaterial, UVRegion, TextureAtlas } from './graphics-types';
+import { TextureAnalyzer } from './texture-analyzer';
+import { getNormalMapGenerator } from './normal-map-generator';
 
 /**
  * MaterialFactory manages material creation and caching.
@@ -20,6 +22,7 @@ export class MaterialFactory {
   private materialCache: Map<string, CachedMaterial> = new Map();
   private textureAtlases: Map<string, TextureAtlas> = new Map();
   private normalMapCache: Map<string, THREE.Texture> = new Map();
+  private textureAnalyzer: TextureAnalyzer = new TextureAnalyzer();
 
   /**
    * Create a cache key from material config.
@@ -45,6 +48,49 @@ export class MaterialFactory {
       roughness: 0.7,
     };
     return this.getMaterial(config, 'playfield');
+  }
+
+  /**
+   * Get or create a playfield material with intelligent texture analysis.
+   * Infers metalness, roughness, and emissive properties from texture.
+   */
+  getPlayfieldMaterialWithAnalysis(texture: THREE.Texture): THREE.MeshStandardMaterial {
+    const inferred = this.textureAnalyzer.inferMaterialProperties(texture, 'playfield');
+
+    const config: MaterialConfig = {
+      color: inferred.color,
+      metalness: inferred.metalness,
+      roughness: inferred.roughness,
+      emissive: inferred.emissiveIntensity > 0 ? inferred.emissiveColor ?? inferred.emissive : 0x000000,
+      emissiveIntensity: inferred.emissiveIntensity,
+    };
+
+    return this.getMaterial(config, `playfield_analyzed_${texture.uuid}`);
+  }
+
+  /**
+   * Get or create playfield material with normal map generation
+   */
+  getPlayfieldMaterialWithNormalMap(texture: THREE.Texture): THREE.MeshStandardMaterial {
+    const inferred = this.textureAnalyzer.inferMaterialProperties(texture, 'playfield');
+    const normalMapGen = getNormalMapGenerator();
+
+    // Generate normal map (async friendly, cached)
+    const normalMap = normalMapGen.generateFromTexture(texture, 0.6, texture.uuid);
+
+    // Adjust roughness down when normal map is applied (appears more detailed)
+    const adjustedRoughness = Math.max(0.3, inferred.roughness - 0.05);
+
+    const config: MaterialConfig = {
+      color: inferred.color,
+      metalness: inferred.metalness,
+      roughness: adjustedRoughness,
+      emissive: inferred.emissiveIntensity > 0 ? inferred.emissiveColor ?? inferred.emissive : 0x000000,
+      emissiveIntensity: inferred.emissiveIntensity,
+      normalMap,
+    };
+
+    return this.getMaterial(config, `playfield_analyzed_normal_${texture.uuid}`);
   }
 
   /**
