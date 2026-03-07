@@ -18,6 +18,10 @@ import { getAnimationBindingManager } from './mechanics/animation-binding';
 import { getAnimationScheduler } from './mechanics/animation-scheduler';
 import { getBamBridge } from './bam-bridge';
 import { getGraphicsPipeline } from './main';
+// Phase 15: Future imports (modules not yet integrated to main)
+// import { PlayfieldMeshBuilder, BumperPosition, TargetPosition } from './geometry/playfield-mesh-builder';
+// import { TextureAnalyzer } from './graphics/texture-analyzer';
+// import { getNormalMapGenerator } from './graphics/normal-map-generator';
 
 // ─── PHASE 2: Advanced Lighting & Effects System ───────────────────────────────
 /**
