@@ -469,7 +469,7 @@ composer.addPass(bloomPass);
 // ─── Phase 15: Volumetric Lighting (God Rays) ──────────────────────────
 // Add atmospheric volumetric lighting effect between bloom and FXAA
 const volumetricPass = createVolumetricLightingPass(renderer);
-volumetricPass.setIntensity(0.6);  // Default intensity
+volumetricPass.setExposure(0.6);  // Default intensity
 volumetricPass.setParameters(0.8, 0.4, 0.95, 32);  // density, weight, decay, samples
 composer.addPass((volumetricPass as any).pass || volumetricPass);
 
@@ -1576,6 +1576,13 @@ function applyQualityPreset(): void {
     console.log(`  └─ Backglass: ${currentPreset.backglass3D ? '3D' : '2D'}`);
   } else if (backglassRenderer) {
     backglassRenderer.setEnabled(false);
+  }
+
+  // ─── Volumetric Lighting ───
+  volumetricPass.enabled = currentPreset.volumetricEnabled;
+  if (currentPreset.volumetricEnabled) {
+    volumetricPass.setExposure(currentPreset.volumetricIntensity);
+    console.log(`  └─ Volumetric: ${(currentPreset.volumetricIntensity * 100).toFixed(0)}%`);
   }
 
   // ─── DMD Resolution ───

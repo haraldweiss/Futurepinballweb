@@ -20,6 +20,8 @@ export interface QualityPreset {
   bloomEnabled: boolean;
   bloomStrength: number;
   bloomRadius: number;
+  volumetricEnabled: boolean;
+  volumetricIntensity: number;
   dofEnabled: boolean;
   particleCount: number;
 
@@ -34,6 +36,10 @@ export interface QualityPreset {
   // Backglass settings
   backglassEnabled: boolean;
   backglass3D: boolean;
+
+  // Volumetric lighting settings
+  volumetricEnabled: boolean;
+  volumetricIntensity: number;
 
   // Adaptive settings
   targetFPS: number;
@@ -57,6 +63,8 @@ export const QUALITY_PRESETS: Record<string, QualityPreset> = {
     dmdGlowIntensity: 0.3,
     backglassEnabled: false,
     backglass3D: false,
+    volumetricEnabled: false,
+    volumetricIntensity: 0.0,
     targetFPS: 30,
     pixelRatioCap: 1,
   },
@@ -76,6 +84,8 @@ export const QUALITY_PRESETS: Record<string, QualityPreset> = {
     dmdGlowIntensity: 0.5,
     backglassEnabled: true,
     backglass3D: false,
+    volumetricEnabled: true,
+    volumetricIntensity: 0.5,
     targetFPS: 50,
     pixelRatioCap: 1.5,
   },
@@ -95,6 +105,8 @@ export const QUALITY_PRESETS: Record<string, QualityPreset> = {
     dmdGlowIntensity: 0.7,
     backglassEnabled: true,
     backglass3D: true,
+    volumetricEnabled: true,
+    volumetricIntensity: 0.8,
     targetFPS: 60,
     pixelRatioCap: 2,
   },
@@ -114,6 +126,8 @@ export const QUALITY_PRESETS: Record<string, QualityPreset> = {
     dmdGlowIntensity: 1.0,
     backglassEnabled: true,
     backglass3D: true,
+    volumetricEnabled: true,
+    volumetricIntensity: 1.0,
     targetFPS: 60,
     pixelRatioCap: 2,
   },
