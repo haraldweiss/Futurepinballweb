@@ -71,8 +71,11 @@ import {
 } from './graphics/graphics-pipeline';
 import {
   FileSystemBrowser, FileInfo, FileOverview, formatFileSize, formatDate, createFileOverview,
-  getFileSystemBrowser, resetFileSystemBrowser,
+  getFileSystemBrowser, resetFileSystemBrowser, getFileStatistics, getCompatibleLibraries,
 } from './file-browser';
+import {
+  FileBrowserUIManager, getFileBrowserUIManager, resetFileBrowserUIManager,
+} from './file-browser-ui';
 import {
   ResourceManager, initializeResourceManager, getResourceManager, resetResourceManager,
   type ResourceBudgets,
@@ -2257,21 +2260,43 @@ function updateFileBrowserUI(): void {
   // Update status
   const tableCount = fileBrowserState.selectedTableFile ? 1 : 0;
   const libCount = fileBrowserState.selectedLibraryFiles.length;
+  const tableSize = fileBrowserState.selectedTableFile ? fileBrowserState.selectedTableFile.size : 0;
+  const libSize = fileBrowserState.selectedLibraryFiles.reduce((sum, lib) => sum + lib.size, 0);
+  const totalSize = tableSize + libSize;
 
   const statusEl = document.getElementById('browser-status')!;
   statusEl.innerHTML = `
-    <div>📚 Tische: <span style="color:#00ff88;">${tableCount}</span></div>
-    <div>📦 Bibliotheken: <span style="color:#0088ff;">${libCount}</span></div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+      <div style="background: rgba(0, 150, 100, 0.1); border: 1px solid #00ff88; border-radius: 4px; padding: 8px;">
+        <div style="color: #667; font-size: 9px; margin-bottom: 3px;">📚 TISCH</div>
+        <div style="color: #00ff88; font-size: 13px; font-weight: bold;">${tableCount}</div>
+        <div style="color: #556; font-size: 9px; margin-top: 2px;">${formatFileSize(tableSize)}</div>
+      </div>
+      <div style="background: rgba(0, 100, 180, 0.1); border: 1px solid #0088ff; border-radius: 4px; padding: 8px;">
+        <div style="color: #667; font-size: 9px; margin-bottom: 3px;">📦 BIBLIOTHEKEN</div>
+        <div style="color: #0088ff; font-size: 13px; font-weight: bold;">${libCount}</div>
+        <div style="color: #556; font-size: 9px; margin-top: 2px;">${formatFileSize(libSize)}</div>
+      </div>
+    </div>
+    <div style="color: #667; font-size: 9px; padding-top: 8px; border-top: 1px solid #334;">
+      <div style="color: #ffaa00;">💾 Gesamt: ${formatFileSize(totalSize)}</div>
+    </div>
   `;
 
   // Show/hide load button
   const loadBtn = document.getElementById('load-selected-btn')!;
-  loadBtn.style.display = fileBrowserState.selectedTableFile ? 'block' : 'none';
+  if (fileBrowserState.selectedTableFile) {
+    loadBtn.style.display = 'block';
+    loadBtn.innerHTML = `▶ ${fileBrowserState.selectedTableFile.name} LADEN`;
+  } else {
+    loadBtn.style.display = 'none';
+  }
 }
 
 window.browseTableDirectory = async function() {
   try {
     const browser = getFileSystemBrowser();
+    const uiManager = getFileBrowserUIManager();
     const tables = await browser.selectTableDirectory();
 
     fileBrowserState.tableDirectory = browser.getSelectedDirectories().tableDirectory;
@@ -2290,19 +2315,43 @@ window.browseTableDirectory = async function() {
     tablesList.style.display = 'block';
     tablesList.innerHTML = '';
 
-    for (const table of tables) {
-      const row = document.createElement('div');
-      row.style.cssText = 'padding:6px;border-bottom:1px solid #223;cursor:pointer;transition:all 0.2s;';
-      row.onmouseover = () => row.style.background = 'rgba(0,150,100,0.15)';
-      row.onmouseout = () => row.style.background = '';
-      row.onclick = () => selectTableFile(table);
+    // Add filter input
+    const filterContainer = document.createElement('div');
+    filterContainer.style.cssText = 'margin-bottom: 8px;';
+    const filterInput = document.createElement('input');
+    filterInput.type = 'text';
+    filterInput.placeholder = '🔍 Tisch durchsuchen...';
+    filterInput.style.cssText = `
+      width: 100%;
+      padding: 4px 6px;
+      background: rgba(0, 20, 40, 0.5);
+      border: 1px solid #334;
+      border-radius: 4px;
+      color: #aab;
+      font-size: 10px;
+      font-family: 'Courier New', monospace;
+      box-sizing: border-box;
+    `;
 
-      row.innerHTML = `
-        <div style="color:#00ff88;font-size:11px;margin-bottom:2px;">${table.name}</div>
-        <div style="color:#556;font-size:9px;">${formatFileSize(table.size)} • ${formatDate(table.modified)}</div>
-      `;
-      tablesList.appendChild(row);
-    }
+    filterContainer.appendChild(filterInput);
+    tablesList.parentElement?.insertBefore(filterContainer, tablesList);
+
+    // Render table rows
+    const renderRows = (filesToRender: FileInfo[]) => {
+      tablesList.innerHTML = '';
+      for (const table of filesToRender) {
+        const row = uiManager.createFileRow(table, false, (file) => selectTableFile(file));
+        tablesList.appendChild(row);
+      }
+    };
+
+    renderRows(tables);
+
+    // Filter on input
+    filterInput.oninput = () => {
+      const filtered = uiManager.filterFiles(tables, filterInput.value);
+      renderRows(filtered);
+    };
 
     updateFileBrowserUI();
   } catch (error) {
@@ -2313,10 +2362,12 @@ window.browseTableDirectory = async function() {
 window.browseLibraryDirectory = async function() {
   try {
     const browser = getFileSystemBrowser();
+    const uiManager = getFileBrowserUIManager();
     const libraries = await browser.selectLibraryDirectory();
 
     fileBrowserState.libraryDirectory = browser.getSelectedDirectories().libraryDirectory;
-    fileBrowserState.selectedLibraryFiles = libraries;
+    // Start with all libraries selected
+    fileBrowserState.selectedLibraryFiles = [...libraries];
 
     // Update library list UI
     const libsList = document.getElementById('libraries-list')!;
@@ -2330,16 +2381,53 @@ window.browseLibraryDirectory = async function() {
     libsList.style.display = 'block';
     libsList.innerHTML = '';
 
-    for (const lib of libraries) {
-      const row = document.createElement('div');
-      row.style.cssText = 'padding:6px;border-bottom:1px solid #223;';
+    // Add filter input
+    const filterContainer = document.createElement('div');
+    filterContainer.style.cssText = 'margin-bottom: 8px;';
+    const filterInput = document.createElement('input');
+    filterInput.type = 'text';
+    filterInput.placeholder = '🔍 Bibliothek durchsuchen...';
+    filterInput.style.cssText = `
+      width: 100%;
+      padding: 4px 6px;
+      background: rgba(0, 20, 40, 0.5);
+      border: 1px solid #334;
+      border-radius: 4px;
+      color: #aab;
+      font-size: 10px;
+      font-family: 'Courier New', monospace;
+      box-sizing: border-box;
+    `;
 
-      row.innerHTML = `
-        <div style="color:#0088ff;font-size:11px;margin-bottom:2px;">✓ ${lib.name}</div>
-        <div style="color:#556;font-size:9px;">${formatFileSize(lib.size)}</div>
-      `;
-      libsList.appendChild(row);
-    }
+    filterContainer.appendChild(filterInput);
+    libsList.parentElement?.insertBefore(filterContainer, libsList);
+
+    // Render library rows with checkboxes
+    const renderRows = (filesToRender: FileInfo[]) => {
+      libsList.innerHTML = '';
+      for (const lib of filesToRender) {
+        const isSelected = fileBrowserState.selectedLibraryFiles.some(l => l.name === lib.name);
+        const row = uiManager.createLibraryCheckbox(lib, isSelected, (file, selected) => {
+          if (selected) {
+            if (!fileBrowserState.selectedLibraryFiles.some(l => l.name === file.name)) {
+              fileBrowserState.selectedLibraryFiles.push(file);
+            }
+          } else {
+            fileBrowserState.selectedLibraryFiles = fileBrowserState.selectedLibraryFiles.filter(l => l.name !== file.name);
+          }
+          updateFileBrowserUI();
+        });
+        libsList.appendChild(row);
+      }
+    };
+
+    renderRows(libraries);
+
+    // Filter on input
+    filterInput.oninput = () => {
+      const filtered = uiManager.filterFiles(libraries, filterInput.value);
+      renderRows(filtered);
+    };
 
     updateFileBrowserUI();
   } catch (error) {

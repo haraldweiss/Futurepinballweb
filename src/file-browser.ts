@@ -180,6 +180,34 @@ export function createFileOverview(
 }
 
 /**
+ * Library compatibility helper
+ */
+export function getCompatibleLibraries(selectedLibraries: FileInfo[], tableCount: number): FileInfo[] {
+  // All selected libraries are considered compatible with the selected table
+  // In the future, this could check library metadata or compatibility info
+  return selectedLibraries;
+}
+
+/**
+ * Get statistics for file overview
+ */
+export function getFileStatistics(tables: FileInfo[], libraries: FileInfo[]) {
+  const tableSize = tables.reduce((sum, f) => sum + f.size, 0);
+  const librarySize = libraries.reduce((sum, f) => sum + f.size, 0);
+  const totalSize = tableSize + librarySize;
+
+  return {
+    tableCount: tables.length,
+    libraryCount: libraries.length,
+    totalSize,
+    tableSize,
+    librarySize,
+    averageTableSize: tables.length > 0 ? tableSize / tables.length : 0,
+    averageLibrarySize: libraries.length > 0 ? librarySize / libraries.length : 0,
+  };
+}
+
+/**
  * Global browser instance
  */
 let globalBrowser: FileSystemBrowser | null = null;
