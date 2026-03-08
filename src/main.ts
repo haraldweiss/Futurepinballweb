@@ -14,7 +14,8 @@ import {
   bumpers, extraBalls, partData,
   setPhysics, setFpScriptHandlers, setLoadedLibrary, setBAMEngine, cb,
 } from './game';
-import { getAudioCtx, playSound, startBGMusic, stopBGMusic, playFPTMusic, toggleMusic } from './audio';
+import { getAudioCtx, playSound, startBGMusic, stopBGMusic, playFPTMusic, toggleMusic, initializeAudioPooling } from './audio';
+import { getAudioSourcePool } from './audio-source-pool';
 import { BAMEngine } from './bam-engine';
 import { BamBridge, initializeBamBridge, getBamBridge } from './bam-bridge';
 import {
@@ -346,6 +347,10 @@ let scoreDisplayManager: ScoreDisplayManager | null = null;
 
 // ─── Phase 9: Enhanced Audio System ──────────────────────────────────────────
 let enhancedAudioSystem = initializeAudioSystem();
+
+// ─── Phase 6: Audio Source Pool (GC pressure reduction) ──────────────────────
+initializeAudioPooling();
+logMsg(`🎵 AudioSourcePool initialized (16 pre-allocated sources)`, 'ok');
 
 // ─── Phase 10+: Cabinet System (Rotation & Profiles) ──────────────────────────
 let cabinetSystem = initializeCabinetSystem();
@@ -3034,6 +3039,18 @@ function installPWA() {
   logMsg(`📚 LibraryCache reset with fresh TTL`, 'ok');
 };
 
+// ─── Phase 6: Audio Source Pool System Exports ───────────────────────────────
+// Public API for audio source pooling and GC pressure reduction
+(window as any).getAudioSourcePool = getAudioSourcePool;
+(window as any).getAudioSourcePoolStats = () => {
+  const pool = getAudioSourcePool();
+  return pool.getStats();
+};
+(window as any).logAudioSourcePoolStats = () => {
+  const pool = getAudioSourcePool();
+  pool.logStats();
+};
+
 // TypeScript: globale Funktionen
 declare global {
   interface Window {
@@ -3074,6 +3091,9 @@ declare global {
     logLibraryCacheStats:  () => void;
     cleanupLibraryCache:   () => void;
     resetLibraryCache:     () => void;
+    getAudioSourcePool:    () => any;
+    getAudioSourcePoolStats: () => any;
+    logAudioSourcePoolStats: () => void;
   }
 }
 

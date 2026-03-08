@@ -1,4 +1,5 @@
 import { fptResources } from './game';
+import { initializeAudioSourcePool, getAudioSourcePool } from './audio-source-pool';
 
 // ── Audio Context ─────────────────────────────────────────────────────────────
 let _audioCtx: AudioContext | null = null;
@@ -6,6 +7,12 @@ let _audioCtx: AudioContext | null = null;
 export function getAudioCtx(): AudioContext {
   if (!_audioCtx) _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
   return _audioCtx;
+}
+
+// ─── Phase 6: Initialize audio source pool on first audio context creation ────
+export function initializeAudioPooling(): void {
+  const ctx = getAudioCtx();
+  initializeAudioSourcePool(ctx, 16);  // Pool of 16 reusable sources
 }
 
 // ─── Device Detection (for audio optimization) ───────────────────────────────
@@ -23,11 +30,15 @@ export function playSound(type: 'bumper' | 'flipper' | 'drain' | string): void {
     // FPT-originaler Sound
     const fptBuf = fptResources.mapped[type as 'bumper' | 'flipper' | 'drain'];
     if (fptBuf) {
-      const src  = ctx.createBufferSource();
+      // Phase 6: Use pooled source instead of creating new one
+      const pool = getAudioSourcePool();
+      const src  = pool.acquireSource();
       const gain = ctx.createGain();
       src.buffer = fptBuf;
       src.connect(gain); gain.connect(ctx.destination);
       gain.gain.value = type === 'flipper' ? 0.35 : 0.6;  // Reduced mobile volume
+      // Release back to pool when finished
+      src.onended = () => pool.releaseSource(src);
       src.start();
       return;
     }
@@ -79,7 +90,9 @@ export function playBumperSoundWithIntensity(intensity: number): void {
     // FPT-original sound with volume variation
     const fptBuf = fptResources.mapped['bumper'];
     if (fptBuf) {
-      const src = ctx.createBufferSource();
+      // Phase 6: Use pooled source
+      const pool = getAudioSourcePool();
+      const src = pool.acquireSource();
       const gain = ctx.createGain();
       src.buffer = fptBuf;
       src.connect(gain);
@@ -88,6 +101,8 @@ export function playBumperSoundWithIntensity(intensity: number): void {
       gain.gain.value = 0.3 + clampedIntensity * 0.3;
       // Pitch shift via playback rate: 0.8x (soft) to 1.2x (hard)
       src.playbackRate.value = 0.8 + clampedIntensity * 0.4;
+      // Release back to pool when finished
+      src.onended = () => pool.releaseSource(src);
       src.start();
       return;
     }
