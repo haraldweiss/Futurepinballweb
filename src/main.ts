@@ -780,11 +780,28 @@ function resetGameState(): void {
 
 // ─── Phase 15: Initialize Physics Worker (after table build) ──────────────────────
 async function setupPhysicsWorker(): Promise<void> {
+  (window as any).SETUP_WORKER_START = Date.now();
   try {
+    (window as any).SETUP_WORKER_INIT_START = Date.now();
     const bridge = await initializePhysicsWorker();
+    (window as any).SETUP_WORKER_INIT_OK = Date.now();
+    (window as any).SETUP_WORKER_INIT_TIME = (window as any).SETUP_WORKER_INIT_OK - (window as any).SETUP_WORKER_INIT_START;
 
     // Configure physics world with current table settings
     if (physics) {
+      (window as any).SETUP_WORKER_CONFIG_START = Date.now();
+
+      // Clean maps to remove non-serializable data (mesh objects, functions)
+      const cleanBumperMap = new Map();
+      physics.bumperMap.forEach((value: any, key: any) => {
+        cleanBumperMap.set(key, { x: value.x, y: value.y, index: value.index });
+      });
+
+      const cleanTargetMap = new Map();
+      physics.targetMap.forEach((value: any, key: any) => {
+        cleanTargetMap.set(key, { x: value.x, y: value.y, index: value.index });
+      });
+
       bridge.initializePhysicsWorld({
         ballInitialPos: { x: 2.65, y: -5.2 },
         ballRestitution: 0.5,
@@ -795,22 +812,30 @@ async function setupPhysicsWorker(): Promise<void> {
         flipperRestitution: 0.5,
         flipperFriction: 0.6,
         tableBodies: [],
-        bumperMap: physics.bumperMap,
-        targetMap: physics.targetMap,
+        bumperMap: cleanBumperMap,
+        targetMap: cleanTargetMap,
         slingshotMap: physics.slingshotMap,
       });
+      (window as any).SETUP_WORKER_CONFIG_OK = Date.now();
 
       // Setup callback for physics frame updates
+      (window as any).SETUP_WORKER_CALLBACK_START = Date.now();
       bridge.setFrameCallback((frame: PhysicsFrameData) => {
         handlePhysicsFrame(frame);
       });
+      (window as any).SETUP_WORKER_CALLBACK_OK = Date.now();
 
       console.log('✓ Physics worker initialized and ready');
+      (window as any).SETUP_WORKER_COMPLETE = true;
+    } else {
+      (window as any).SETUP_WORKER_NO_PHYSICS = true;
     }
   } catch (error) {
+    (window as any).SETUP_WORKER_ERROR = (error as Error).message;
     console.error('Failed to initialize physics worker:', error);
     console.warn('Falling back to single-threaded physics');
   }
+  (window as any).SETUP_WORKER_END = Date.now();
 }
 
 // ─── Phase 15: Handle Physics Frame Updates ────────────────────────────────────
@@ -848,23 +873,30 @@ function handlePhysicsFrame(frame: PhysicsFrameData): void {
 
 // ─── Phase 15: Helper function to load table with physics worker ────────────────
 async function loadTableWithPhysicsWorker(tableConfig: any, sceneTarget: THREE.Scene, library?: any): Promise<void> {
+  console.log('[loadTableWithPhysicsWorker] START');
   // Build the table geometry and physics
   (window as any).BUILD_TABLE_START = Date.now();
+  console.log('[loadTableWithPhysicsWorker] Building table...');
   buildTable(tableConfig, sceneTarget, library);
   (window as any).BUILD_TABLE_OK = Date.now();
   (window as any).BUILD_TABLE_TIME_MS = (window as any).BUILD_TABLE_OK - (window as any).BUILD_TABLE_START;
+  console.log('[loadTableWithPhysicsWorker] Table built in', (window as any).BUILD_TABLE_TIME_MS, 'ms');
 
   // Initialize physics worker after table is built
   (window as any).PHYSICS_WORKER_START = Date.now();
+  console.log('[loadTableWithPhysicsWorker] Setting up physics worker...');
   try {
     await setupPhysicsWorker();
     (window as any).PHYSICS_WORKER_OK = Date.now();
     (window as any).PHYSICS_WORKER_TIME_MS = (window as any).PHYSICS_WORKER_OK - (window as any).PHYSICS_WORKER_START;
+    console.log('[loadTableWithPhysicsWorker] Physics worker setup OK in', (window as any).PHYSICS_WORKER_TIME_MS, 'ms');
+    (window as any).LOAD_TABLE_COMPLETE = true;
   } catch (error) {
     (window as any).PHYSICS_WORKER_ERROR = error?.message;
     console.error('Physics worker setup failed:', error);
     // Continue with single-threaded physics fallback
   }
+  console.log('[loadTableWithPhysicsWorker] COMPLETE');
 }
 
 // ─── Tilt ────────────────────────────────────────────────────────────────────
@@ -2499,13 +2531,17 @@ window.addEventListener('beforeunload', () => {
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
+console.log('[INIT] FPW_ROLE:', FPW_ROLE, '- Starting main initialization');
 if (FPW_ROLE === 'dmd') {
+  console.log('[INIT] DMD role detected');
   renderer.domElement.remove();
   setupDMDWindow();
 } else if (FPW_ROLE === 'backglass') {
+  console.log('[INIT] Backglass role detected');
   renderer.domElement.remove();
   setupBackglassWindow();
 } else {
+  console.log('[INIT] Main window role - starting async IIFE');
   (window as any).INIT_ASYNC_IIFE_STARTED = true;
   (async () => {
     (window as any).INIT_IN_ASYNC_IIFE = true;
@@ -2518,21 +2554,8 @@ if (FPW_ROLE === 'dmd') {
       console.warn('Rapier init fehlgeschlagen:', e);
     }
 
-    (window as any).INIT_TABLE_LOAD_START = true;
-    // Custom-Tisch aus Editor laden (wenn ?load=custom gesetzt)
-    const loadCustom = new URLSearchParams(location.search).get('load') === 'custom';
-    if (loadCustom) {
-      try {
-        const cfg = JSON.parse(localStorage.getItem('fpw_custom_table') ?? 'null');
-        if (cfg?.name && cfg?.bumpers) {
-          await loadTableWithPhysicsWorker(cfg, scene);
-          (document.getElementById('loader-modal') as HTMLElement).style.display = 'none';
-          showNotification('✅ Custom-Tisch geladen!');
-        } else { await loadTableWithPhysicsWorker(TABLE_CONFIGS['classic'], scene); }
-      } catch { await loadTableWithPhysicsWorker(TABLE_CONFIGS['classic'], scene); }
-    } else {
-      await loadTableWithPhysicsWorker(TABLE_CONFIGS['classic'], scene);
-    }
+    // Skip initial table load during startup - let user select from loader
+    console.log('[INIT] Skipping initial table load - showing loader');
     (window as any).INIT_TABLE_LOAD_OK = true;
 
     // Initialize B.A.M. Engine (after table is loaded and currentTableConfig is set)

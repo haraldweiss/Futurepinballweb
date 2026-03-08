@@ -11,6 +11,7 @@ import RAPIER from '@dimforge/rapier2d-compat';
 
 // ─── Worker State ───────────────────────────────────────────────────────────
 
+let rapierInitialized = false;
 let world: RAPIER.World | null = null;
 let eventQueue: RAPIER.EventQueue | null = null;
 
@@ -314,12 +315,19 @@ type CollisionEvent = {
 };
 
 // Message handler
-self.onmessage = (event: MessageEvent<WorkerMessage>) => {
+self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
   const { type, ...params } = event.data;
 
   try {
     switch (type) {
       case 'init': {
+        // Ensure RAPIER is initialized before setting up physics
+        if (!rapierInitialized) {
+          console.log('[Physics Worker] Initializing RAPIER...');
+          await RAPIER.init();
+          rapierInitialized = true;
+          console.log('[Physics Worker] RAPIER initialized');
+        }
         initializePhysics((params as any).config);
         self.postMessage({ type: 'ready' });
         break;

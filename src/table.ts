@@ -1395,6 +1395,7 @@ export function buildPhysicsTable(config: TableConfig, phys: any): void {
 
 // ─── Tisch bauen ─────────────────────────────────────────────────────────────
 export function buildTable(config: TableConfig, scene: THREE.Scene, library?: any): void {
+  console.log('[buildTable] START - config:', config.name);
   // Merge library resources if provided
   if (library) {
     // Texture inheritance: library textures available for fallback
@@ -1415,6 +1416,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   // ─── Phase 14: Get Graphics Resources for optimized allocation ────────────────
   const geomPool = getGraphicsPipeline()?.getGeometryPool();
   const matFactory = getGraphicsPipeline()?.getMaterialFactory();
+  console.log('[buildTable] Graphics pipeline OK - geomPool:', !!geomPool, 'matFactory:', !!matFactory);
 
   slingshots.length = 0;
   ramps.length      = 0;
@@ -1461,6 +1463,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   tableMesh.receiveShadow = true;
   tableMesh.castShadow = false;  // Nur Schatten empfangen, nicht werfen
   tg.add(tableMesh);
+  console.log('[buildTable] Playfield mesh created');
 
   // Debug-Log für Texture-Status
   if (hasFPTTex) console.log('✓ FPT-Playfield-Texture wird verwendet');
@@ -1500,6 +1503,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
     m.position.set(x, 0, 0.47); tg.add(m);
   };
   addEdgeGlow(-2.94, 12.5); addEdgeGlow(2.94, 12.5);
+  console.log('[buildTable] Walls and edge glows created');
 
   // Lane-Trennwand
   const laneMat = new THREE.MeshStandardMaterial({ color:0x334455, metalness:0.5, roughness:0.5 });
@@ -1539,6 +1543,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
     tg.add(slG);
     slingshots.push({ x:s.x, y:s.y, side:s.side });
   });
+  console.log('[buildTable] Slingshots created');
 
   // Rollover-Lane-Markierungen
   [-1.8,-0.6,0.6,1.8].forEach(rx => {
@@ -1548,6 +1553,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   });
 
   // Bumper + Targets + Rampen (LOD basierend auf Entfernung)
+  console.log('[buildTable] Building bumpers - count:', config.bumpers.length);
   config.bumpers.forEach(b => {
     // LOD: weiter oben (höher y) = ferner von Kamera → weniger Polys
     const lod = b.y > 3.5 ? 'low' : b.y > 2.0 ? 'med' : 'high';
@@ -1556,7 +1562,9 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
     tg.add(m);
     bumpers.push({ x:b.x, y:b.y, mesh:m as any });
   });
+  console.log('[buildTable] Bumpers complete');
 
+  console.log('[buildTable] Building targets - count:', (config.targets || []).length);
   (config.targets || []).forEach(t => {
     // Targets: simplify geometry for distant ones (y < -0.5)
     const g = buildTarget(t.x, t.y, t.color, t.light, geomPool);
@@ -1569,15 +1577,20 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
     tg.add(g);
     targets.push({ x:t.x, y:t.y, mesh:g as any });
   });
+  console.log('[buildTable] Targets complete');
 
+  console.log('[buildTable] Building ramps - count:', (config.ramps || []).length);
   (config.ramps || []).forEach(r => buildRamp(r.x1, r.y1, r.x2, r.y2, r.color, scene, r.light, geomPool));
+  console.log('[buildTable] Ramps complete');
 
   // Lichter
+  console.log('[buildTable] Adding lights - count:', (config.lights || []).length);
   (config.lights || []).forEach(l => {
     const pl = new THREE.PointLight(l.color, l.intensity, l.dist);
     pl.position.set(l.x, l.y, l.z);
     scene.add(pl);
   });
+  console.log('[buildTable] Lights complete');
 
   // Flipper-area accent fill lights (illuminate lower table in theme color)
   const faL = new THREE.PointLight(config.accentColor, 0.55, 7.0);
@@ -1612,5 +1625,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   setCurrentTableConfig(config);
   rolloversHit = [false, false, false, false];
 
+  console.log('[buildTable] Building physics - physics:', !!physics);
   if (physics) buildPhysicsTable(config, physics);
+  console.log('[buildTable] COMPLETE');
 }

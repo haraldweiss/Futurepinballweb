@@ -36,7 +36,8 @@
       "Bash(/tmp/geometry_refactor_report.md:*)",
       "Bash(/tmp/line_by_line_details.md:*)",
       "Bash(/tmp/implementation_checklist.md:*)",
-      "Bash(/tmp/geometry_pool_report.md:*)"
+      "Bash(/tmp/geometry_pool_report.md:*)",
+      "Bash(curl -s http://localhost:5173/)"
     ]
   }
 }
