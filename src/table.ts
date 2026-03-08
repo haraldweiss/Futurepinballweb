@@ -1362,66 +1362,88 @@ export function buildPhysicsTable(config: TableConfig, phys: any): void {
   });
 
   // ─── PERIMETER WALLS (Main Enclosure) ───
-  // Top wall
+  // Top wall (completely seals top)
   const topWall = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(0, 6.2)
+    RAPIER.RigidBodyDesc.fixed().setTranslation(0, 6.3)
   );
   phys.tableBodies.push(topWall);
   world.createCollider(
-    RAPIER.ColliderDesc.cuboid(3.2, 0.15).setFriction(0.2),
+    RAPIER.ColliderDesc.cuboid(3.3, 0.2).setFriction(0.2),
     topWall
   );
 
-  // Left wall
+  // Left wall (extended to fully seal left side from top to drain)
   const leftWall = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(-3.1, 0)
+    RAPIER.RigidBodyDesc.fixed().setTranslation(-3.15, 0)
   );
   phys.tableBodies.push(leftWall);
   world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.15, 6.5).setFriction(0.2),
+    RAPIER.ColliderDesc.cuboid(0.15, 7.0).setFriction(0.2),
     leftWall
   );
 
-  // Right wall
+  // Right wall (extended to fully seal right side from top to drain)
   const rightWall = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(3.1, 0)
+    RAPIER.RigidBodyDesc.fixed().setTranslation(3.15, 0)
   );
   phys.tableBodies.push(rightWall);
   world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.15, 6.5).setFriction(0.2),
+    RAPIER.ColliderDesc.cuboid(0.15, 7.0).setFriction(0.2),
     rightWall
   );
 
-  // ─── SLINGSHOT WALLS (Prevent escape between flippers) ───
-  // Left slingshot barrier (at angle)
+  // ─── LEFT FLIPPER GUIDE RAIL (from flipper base toward drain) ───
+  // Guides ball from left flipper toward center drain gap
+  const leftFlipperRail = world.createRigidBody(
+    RAPIER.RigidBodyDesc.fixed().setTranslation(-0.75, -4.5).setRotation(0.3)
+  );
+  phys.tableBodies.push(leftFlipperRail);
+  world.createCollider(
+    RAPIER.ColliderDesc.cuboid(0.08, 0.8).setFriction(0.4),
+    leftFlipperRail
+  );
+
+  // ─── RIGHT FLIPPER GUIDE RAIL (from flipper base toward drain) ───
+  // Guides ball from right flipper toward center drain gap
+  const rightFlipperRail = world.createRigidBody(
+    RAPIER.RigidBodyDesc.fixed().setTranslation(0.75, -4.5).setRotation(-0.3)
+  );
+  phys.tableBodies.push(rightFlipperRail);
+  world.createCollider(
+    RAPIER.ColliderDesc.cuboid(0.08, 0.8).setFriction(0.4),
+    rightFlipperRail
+  );
+
+  // ─── SLINGSHOT WALLS (Outer side barriers) ───
+  // Left slingshot barrier (at angle, guards left flipper side)
   const leftSlingshotWall = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(-1.95, -1.8).setRotation(-0.4)
+    RAPIER.RigidBodyDesc.fixed().setTranslation(-2.2, -1.5).setRotation(-0.5)
   );
   phys.tableBodies.push(leftSlingshotWall);
   world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.15, 1.0).setFriction(0.3),
+    RAPIER.ColliderDesc.cuboid(0.12, 0.9).setFriction(0.3),
     leftSlingshotWall
   );
 
-  // Right slingshot barrier (at angle)
+  // Right slingshot barrier (at angle, guards right flipper side)
   const rightSlingshotWall = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(1.95, -1.8).setRotation(0.4)
+    RAPIER.RigidBodyDesc.fixed().setTranslation(2.2, -1.5).setRotation(0.5)
   );
   phys.tableBodies.push(rightSlingshotWall);
   world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.15, 1.0).setFriction(0.3),
+    RAPIER.ColliderDesc.cuboid(0.12, 0.9).setFriction(0.3),
     rightSlingshotWall
   );
 
-  // ─── FLIPPER SAFETY BARRIER (Prevent drain between flippers) ───
-  // Creates a small wall between the flippers at drain level
-  const flipperSafetyBar = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(0, -4.9)
+  // ─── DRAIN ZONE BOTTOM (Detects ball loss) ───
+  // Extends below drain level to catch any escaping balls
+  const drainBottom = world.createRigidBody(
+    RAPIER.RigidBodyDesc.fixed().setTranslation(0, -6.0)
   );
-  phys.tableBodies.push(flipperSafetyBar);
+  phys.tableBodies.push(drainBottom);
   world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.3, 0.08).setFriction(0.4),
-    flipperSafetyBar
+    RAPIER.ColliderDesc.cuboid(3.2, 0.2).setFriction(0.1),
+    drainBottom
   );
 
   // ─── Phase 1: PLUNGER PHYSICS ───
