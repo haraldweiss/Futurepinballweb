@@ -124,6 +124,8 @@ export function playBumperSoundWithIntensity(intensity: number): void {
 let bgMusicActive = false;
 let bgMusicGain:   GainNode | null = null;
 let bgMusicSource: AudioBufferSourceNode | null = null;
+// Phase 3: Support streaming audio via HTML audio element
+let bgMusicElement: HTMLAudioElement | null = null;
 
 export function startBGMusic(): void {
   if (bgMusicActive || audioSuppressFlipped) return;  // Don't start on low-end mobile
@@ -169,25 +171,61 @@ export function startBGMusic(): void {
 
 export function stopBGMusic(): void {
   bgMusicActive = false;
+  // Phase 3: Stop BufferSource if active
   if (bgMusicSource) { try { bgMusicSource.stop(); } catch { /* ignore */ } bgMusicSource = null; }
+  // Phase 3: Stop streaming audio element if active
+  if (bgMusicElement) {
+    try { bgMusicElement.pause(); bgMusicElement.currentTime = 0; } catch { /* ignore */ }
+    bgMusicElement = null;
+  }
   if (bgMusicGain) {
     bgMusicGain.gain.setTargetAtTime(0, getAudioCtx().currentTime, 0.3);
     setTimeout(() => { bgMusicGain = null; }, 800);
   }
 }
 
-export function playFPTMusic(audioBuffer: AudioBuffer): void {
+// Phase 3: Support both AudioBuffer (full decode) and Blob URL string (streaming)
+export function playFPTMusic(audioResource: AudioBuffer | string): void {
   stopBGMusic();
   bgMusicActive = true;
   const ctx = getAudioCtx();
-  bgMusicGain  = ctx.createGain();
-  bgMusicGain.gain.value = 0.5;
-  bgMusicGain.connect(ctx.destination);
-  bgMusicSource = ctx.createBufferSource();
-  bgMusicSource.buffer = audioBuffer;
-  bgMusicSource.loop   = true;
-  bgMusicSource.connect(bgMusicGain);
-  bgMusicSource.start();
+
+  // Phase 3: Check if resource is AudioBuffer or Blob URL string
+  if (audioResource instanceof AudioBuffer) {
+    // Original path: Full decode in memory
+    bgMusicGain  = ctx.createGain();
+    bgMusicGain.gain.value = 0.5;
+    bgMusicGain.connect(ctx.destination);
+    bgMusicSource = ctx.createBufferSource();
+    bgMusicSource.buffer = audioResource;
+    bgMusicSource.loop   = true;
+    bgMusicSource.connect(bgMusicGain);
+    bgMusicSource.start();
+  } else if (typeof audioResource === 'string') {
+    // Phase 3: Streaming path via Blob URL
+    bgMusicGain = ctx.createGain();
+    bgMusicGain.gain.value = 0.5;
+    bgMusicGain.connect(ctx.destination);
+
+    // Create audio element for streaming
+    bgMusicElement = new Audio(audioResource);
+    bgMusicElement.loop = true;
+    bgMusicElement.volume = 0.5;
+
+    // Connect audio element to Web Audio API for effects/control
+    // Note: Direct connection requires CORS. Fallback: use element's native volume
+    try {
+      const source = ctx.createMediaElementAudioSource(bgMusicElement);
+      source.connect(bgMusicGain);
+    } catch (e) {
+      // Fallback: use element volume control directly
+      bgMusicElement.volume = 0.5;
+    }
+
+    bgMusicElement.play().catch(() => {
+      // Autoplay may be blocked, ignore
+    });
+  }
 }
 
 export function toggleMusic(): void {

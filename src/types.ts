@@ -79,10 +79,12 @@ export interface GameState {
 
 export interface FPTResources {
   textures: Record<string, THREE.Texture>;
-  sounds:   Record<string, AudioBuffer>;
+  // Phase 3: Support both AudioBuffer (full decode) and string (Blob URL for streaming)
+  sounds:   Record<string, AudioBuffer | string>;
   playfield:   THREE.Texture | null;
   script:      string | null;
-  musicTrack?: AudioBuffer;
+  // Phase 3: musicTrack can be AudioBuffer or Blob URL string
+  musicTrack?: AudioBuffer | string;
   models?: Map<string, THREE.Mesh | null>;  // Phase 7: MS3D models
   animations?: Map<string, any>;  // Phase 13: BAM animation sequences
   mapped: {
