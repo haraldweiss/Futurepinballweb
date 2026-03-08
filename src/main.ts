@@ -81,6 +81,7 @@ import {
   LibraryCache, initializeLibraryCache, getLibraryCache, resetLibraryCache,
 } from './library-cache';
 import { integrationTesting } from './integration-testing';
+import { getPerformanceReportGenerator, generatePerformanceReport } from './performance-report-generator';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -3058,6 +3059,20 @@ function installPWA() {
 (window as any).benchmark = integrationTesting.benchmark;
 (window as any).memoryProfiler = integrationTesting.memory;
 
+// ─── Performance Report Generator ───────────────────────────────────────────
+// Public API for comprehensive performance analysis and reporting
+(window as any).generatePerformanceReport = async () => {
+  const report = await generatePerformanceReport();
+  const generator = getPerformanceReportGenerator();
+  generator.printReport(report);
+  return report;
+};
+(window as any).getPerformanceReportGenerator = getPerformanceReportGenerator;
+(window as any).comparePerformanceReports = (report1: any, report2: any) => {
+  const generator = getPerformanceReportGenerator();
+  return generator.compareReports(report1, report2);
+};
+
 // TypeScript: globale Funktionen
 declare global {
   interface Window {
@@ -3104,6 +3119,9 @@ declare global {
     runIntegrationTests:   () => Promise<any>;
     benchmark:             any;
     memoryProfiler:        any;
+    generatePerformanceReport: () => Promise<any>;
+    getPerformanceReportGenerator: () => any;
+    comparePerformanceReports: (report1: any, report2: any) => any;
   }
 }
 
