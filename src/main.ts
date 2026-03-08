@@ -877,7 +877,7 @@ async function loadTableWithPhysicsWorker(tableConfig: any, sceneTarget: THREE.S
   // Build the table geometry and physics
   (window as any).BUILD_TABLE_START = Date.now();
   console.log('[loadTableWithPhysicsWorker] Building table...');
-  buildTable(tableConfig, sceneTarget, library);
+  buildTable(tableConfig, sceneTarget, library, playgroundGroup);
   (window as any).BUILD_TABLE_OK = Date.now();
   (window as any).BUILD_TABLE_TIME_MS = (window as any).BUILD_TABLE_OK - (window as any).BUILD_TABLE_START;
   console.log('[loadTableWithPhysicsWorker] Table built in', (window as any).BUILD_TABLE_TIME_MS, 'ms');

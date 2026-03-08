@@ -1457,7 +1457,7 @@ export function buildPhysicsTable(config: TableConfig, phys: any): void {
 }
 
 // ─── Tisch bauen ─────────────────────────────────────────────────────────────
-export function buildTable(config: TableConfig, scene: THREE.Scene, library?: any): void {
+export function buildTable(config: TableConfig, scene: THREE.Scene, library?: any, playgroundGroup?: THREE.Group): void {
   console.log('[buildTable] START - config:', config.name);
   // Merge library resources if provided
   if (library) {
@@ -1499,7 +1499,12 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   bumpers.length = 0; targets.length = 0;
   const tg = new THREE.Group();
   setTableGroup(tg);
-  scene.add(tg);
+  // Add tableGroup to playgroundGroup if provided (for rotation support), otherwise to scene
+  if (playgroundGroup) {
+    playgroundGroup.add(tg);
+  } else {
+    scene.add(tg);
+  }
 
   // Spielfeld (mit verbesserter Texture-Anwendung)
   const tableGeom = geomPool?.getBox(6, 12, 0.25) ?? new THREE.BoxGeometry(6, 12, 0.25);
