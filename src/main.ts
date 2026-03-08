@@ -72,6 +72,10 @@ import {
   FileSystemBrowser, FileInfo, FileOverview, formatFileSize, formatDate, createFileOverview,
   getFileSystemBrowser, resetFileSystemBrowser,
 } from './file-browser';
+import {
+  ResourceManager, initializeResourceManager, getResourceManager, resetResourceManager,
+  type ResourceBudgets,
+} from './resource-manager';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -344,6 +348,10 @@ let enhancedAudioSystem = initializeAudioSystem();
 let cabinetSystem = initializeCabinetSystem();
 const activeCabinetProfile = cabinetSystem.autoDetectProfile();
 console.log(`🎮 Cabinet profile auto-detected: ${activeCabinetProfile.name}`);
+
+// ─── Phase 4: Resource Manager (Memory Budget Management) ──────────────────────
+let resourceManager = initializeResourceManager();
+logMsg(`💾 ResourceManager initialized with default budgets (50MB textures, 20MB audio, 50MB models, 150MB total)`, 'ok');
 
 const aspectRatio = innerWidth / innerHeight;
 const responsiveZoom = calculateResponsiveZoom(aspectRatio);
@@ -2980,6 +2988,23 @@ function installPWA() {
 (window as any).getMaterialFactory = () => getGraphicsPipeline()?.getMaterialFactory?.();
 (window as any).getLightManager = () => getGraphicsPipeline()?.getLightManager?.();
 
+// ─── Phase 4: Resource Manager System Exports ───────────────────────────────────
+// Public API for memory budget and resource tracking
+(window as any).getResourceManager = getResourceManager;
+(window as any).getResourceStats = () => {
+  const mgr = getResourceManager();
+  return mgr.getStats();
+};
+(window as any).logResourceStats = () => {
+  const mgr = getResourceManager();
+  mgr.logStats();
+};
+(window as any).resetResourceManager = () => {
+  resetResourceManager();
+  resourceManager = initializeResourceManager();
+  logMsg(`💾 ResourceManager reset with fresh budget`, 'ok');
+};
+
 // TypeScript: globale Funktionen
 declare global {
   interface Window {
@@ -3011,6 +3036,10 @@ declare global {
     browseTableDirectory:  () => Promise<void>;
     browseLibraryDirectory: () => Promise<void>;
     loadSelectedTable:     () => Promise<void>;
+    getResourceManager:    () => any;
+    getResourceStats:      () => any;
+    logResourceStats:      () => void;
+    resetResourceManager:  () => void;
   }
 }
 
