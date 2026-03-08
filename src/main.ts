@@ -68,6 +68,10 @@ import {
 import {
   GraphicsPipeline, initializeGraphicsPipeline, getGraphicsPipeline, QUALITY_PRESETS,
 } from './graphics/graphics-pipeline';
+import {
+  FileSystemBrowser, FileInfo, FileOverview, formatFileSize, formatDate, createFileOverview,
+  getFileSystemBrowser, resetFileSystemBrowser,
+} from './file-browser';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -2097,7 +2101,7 @@ function initViewSettings(): void {
 
 // ─── Global UI Callbacks ───────────────────────────────────────────────────────
 window.switchTab = (tab: string) => {
-  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['demo','import','info','script'][i]===tab));
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['demo','import','browser','info','script'][i]===tab));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   (document.getElementById('tab-'+tab) as HTMLElement)?.classList.add('active');
 };
@@ -2133,6 +2137,178 @@ window.closeLoader = async function closeLoader() {
 (document.getElementById('open-loader') as HTMLElement).onclick = () => {
   (document.getElementById('loader-modal') as HTMLElement).style.display='flex';
 };
+
+// ─── Phase 7: File Browser Integration ──────────────────────────────────────────
+let fileBrowserState = {
+  selectedTableFile: null as FileInfo | null,
+  selectedLibraryFiles: [] as FileInfo[],
+  tableDirectory: null as FileSystemDirectoryHandle | null,
+  libraryDirectory: null as FileSystemDirectoryHandle | null,
+};
+
+function updateFileBrowserUI(): void {
+  const tableDir = fileBrowserState.tableDirectory;
+  const libDir = fileBrowserState.libraryDirectory;
+
+  // Update status
+  const tableCount = fileBrowserState.selectedTableFile ? 1 : 0;
+  const libCount = fileBrowserState.selectedLibraryFiles.length;
+
+  const statusEl = document.getElementById('browser-status')!;
+  statusEl.innerHTML = `
+    <div>📚 Tische: <span style="color:#00ff88;">${tableCount}</span></div>
+    <div>📦 Bibliotheken: <span style="color:#0088ff;">${libCount}</span></div>
+  `;
+
+  // Show/hide load button
+  const loadBtn = document.getElementById('load-selected-btn')!;
+  loadBtn.style.display = fileBrowserState.selectedTableFile ? 'block' : 'none';
+}
+
+window.browseTableDirectory = async function() {
+  try {
+    const browser = getFileSystemBrowser();
+    const tables = await browser.selectTableDirectory();
+
+    fileBrowserState.tableDirectory = browser.getSelectedDirectories().tableDirectory;
+    fileBrowserState.selectedTableFile = null;
+    fileBrowserState.selectedLibraryFiles = [];
+
+    // Update table list UI
+    const tablesList = document.getElementById('tables-list')!;
+    const tablesEmpty = document.getElementById('tables-empty')!;
+
+    if (tables.length === 0) {
+      tablesList.style.display = 'none';
+      return;
+    }
+
+    tablesList.style.display = 'block';
+    tablesList.innerHTML = '';
+
+    for (const table of tables) {
+      const row = document.createElement('div');
+      row.style.cssText = 'padding:6px;border-bottom:1px solid #223;cursor:pointer;transition:all 0.2s;';
+      row.onmouseover = () => row.style.background = 'rgba(0,150,100,0.15)';
+      row.onmouseout = () => row.style.background = '';
+      row.onclick = () => selectTableFile(table);
+
+      row.innerHTML = `
+        <div style="color:#00ff88;font-size:11px;margin-bottom:2px;">${table.name}</div>
+        <div style="color:#556;font-size:9px;">${formatFileSize(table.size)} • ${formatDate(table.modified)}</div>
+      `;
+      tablesList.appendChild(row);
+    }
+
+    updateFileBrowserUI();
+  } catch (error) {
+    console.error('❌ Failed to browse table directory:', error);
+  }
+};
+
+window.browseLibraryDirectory = async function() {
+  try {
+    const browser = getFileSystemBrowser();
+    const libraries = await browser.selectLibraryDirectory();
+
+    fileBrowserState.libraryDirectory = browser.getSelectedDirectories().libraryDirectory;
+    fileBrowserState.selectedLibraryFiles = libraries;
+
+    // Update library list UI
+    const libsList = document.getElementById('libraries-list')!;
+    const libsEmpty = document.getElementById('libraries-empty')!;
+
+    if (libraries.length === 0) {
+      libsList.style.display = 'none';
+      return;
+    }
+
+    libsList.style.display = 'block';
+    libsList.innerHTML = '';
+
+    for (const lib of libraries) {
+      const row = document.createElement('div');
+      row.style.cssText = 'padding:6px;border-bottom:1px solid #223;';
+
+      row.innerHTML = `
+        <div style="color:#0088ff;font-size:11px;margin-bottom:2px;">✓ ${lib.name}</div>
+        <div style="color:#556;font-size:9px;">${formatFileSize(lib.size)}</div>
+      `;
+      libsList.appendChild(row);
+    }
+
+    updateFileBrowserUI();
+  } catch (error) {
+    console.error('❌ Failed to browse library directory:', error);
+  }
+};
+
+function selectTableFile(fileInfo: FileInfo): void {
+  fileBrowserState.selectedTableFile = fileInfo;
+
+  // Update visual selection
+  const tablesList = document.getElementById('tables-list')!;
+  for (const row of tablesList.querySelectorAll('div[style*="border-bottom"]')) {
+    row.style.background = '';
+  }
+
+  // Find and highlight selected row
+  for (const row of tablesList.querySelectorAll('div[style*="border-bottom"]')) {
+    const nameEl = row.querySelector('div') as HTMLElement;
+    if (nameEl && nameEl.textContent?.includes(fileInfo.name)) {
+      row.style.background = 'rgba(0,200,100,0.2)';
+      row.style.borderLeft = '3px solid #00ff88';
+    }
+  }
+
+  updateFileBrowserUI();
+}
+
+window.loadSelectedTable = async function() {
+  if (!fileBrowserState.selectedTableFile) {
+    console.warn('⚠️ No table file selected');
+    return;
+  }
+
+  try {
+    const browser = getFileSystemBrowser();
+    const fileHandle = fileBrowserState.selectedTableFile.handle as FileSystemFileHandle;
+    const file = await browser.getFile(fileHandle);
+
+    logMsg(`Loading FPT: ${file.name} (${formatFileSize(file.size)})...`);
+
+    // Parse the FPT file
+    resetGameState();
+    const fptData = await parseFPTFile(file);
+
+    if (fptData && fptData.config) {
+      // Load with physics
+      await loadTableWithPhysicsWorker(fptData.config, scene);
+      setupBackglassForTable();
+
+      logMsg(`✓ Loaded: ${file.name}`, 'log-ok');
+
+      // Close loader modal
+      window.closeLoader();
+    } else {
+      logMsg('❌ Failed to parse FPT file', 'log-error');
+    }
+  } catch (error) {
+    console.error('❌ Error loading table:', error);
+    logMsg(`❌ Error: ${error instanceof Error ? error.message : String(error)}`, 'log-error');
+  }
+};
+
+function logMsg(msg: string, className: string = 'log-info'): void {
+  const parseLog = document.getElementById('parse-log');
+  if (parseLog) {
+    const span = document.createElement('span');
+    span.className = className;
+    span.textContent = msg + '\n';
+    parseLog.appendChild(span);
+    parseLog.scrollTop = parseLog.scrollHeight;
+  }
+}
 
 window.toggleFullscreen = () => {
   if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(()=>{});
@@ -2726,6 +2902,9 @@ declare global {
     getGeometryPool:       () => any;
     getMaterialFactory:    () => any;
     getLightManager:       () => any;
+    browseTableDirectory:  () => Promise<void>;
+    browseLibraryDirectory: () => Promise<void>;
+    loadSelectedTable:     () => Promise<void>;
   }
 }
 

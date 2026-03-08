@@ -155,7 +155,7 @@ async function extractSoundFromBytes(bytes: Uint8Array): Promise<AudioBuffer | n
   return null;
 }
 
-// ─── CFB Ressourcen-Extraktion (Enhanced mit Stream-Explorer) ────────────────
+// ─── Phase 1: CFB Ressourcen-Extraktion mit Parallel Loading ───────────────────
 export async function parseCFBResources(arrayBuffer: ArrayBuffer): Promise<{ textureCount: number; soundCount: number; streamCount: number }> {
   fptResources.textures  = {};
   fptResources.sounds    = {};
@@ -184,46 +184,93 @@ export async function parseCFBResources(arrayBuffer: ArrayBuffer): Promise<{ tex
     logMsg(`  • ${type}: ${count} stream${count>1?'s':''}`);
   });
 
-  let largestTexSize = 0;
+  // ─── Phase 1A: Separate streams by type for parallel processing ───
+  const textureEntries: Array<{ name: string; bytes: Uint8Array }> = [];
+  const soundEntries: Array<{ name: string; bytes: Uint8Array }> = [];
+  const scriptEntries: Array<{ name: string; bytes: Uint8Array }> = [];
+  const otherEntries: Array<{ name: string; bytes: Uint8Array }> = [];
 
   for (const entry of entries) {
     const name: string = entry.name || '';
     const bytes: Uint8Array = entry.content;
     const nameL = name.toLowerCase();
 
-    // VBScript
-    if (!fptResources.script && (/script|code|vbs/i.test(nameL) || name === 'TableScript' || name === 'Script')) {
+    // Classify entry
+    if (/script|code|vbs/i.test(nameL) || name === 'TableScript' || name === 'Script') {
+      scriptEntries.push({ name, bytes });
+    } else if (/image|texture|playfield|table|backdrop|translite/i.test(nameL)) {
+      textureEntries.push({ name, bytes });
+    } else if (/sound|music|sfx|wav|ogg|audio/i.test(nameL)) {
+      soundEntries.push({ name, bytes });
+    } else {
+      otherEntries.push({ name, bytes });
+    }
+  }
+
+  // ─── Phase 1B: Parallel decoding by type using Promise.all() ───
+  const startTime = performance.now();
+
+  // Decode all textures in parallel
+  const textureDecodes = Promise.all(
+    textureEntries.map(async (entry) => {
+      const tex = await extractImageFromBytes(entry.bytes);
+      return { name: entry.name, tex };
+    })
+  );
+
+  // Decode all sounds in parallel
+  const soundDecodes = Promise.all(
+    soundEntries.map(async (entry) => {
+      const buf = await extractSoundFromBytes(entry.bytes);
+      return { name: entry.name, buf, bytes: entry.bytes };
+    })
+  );
+
+  // Wait for both texture and sound decoding to complete
+  const [textureResults, soundResults] = await Promise.all([textureDecodes, soundDecodes]);
+
+  // Process decoded textures
+  let largestTexSize = 0;
+  for (const { name, tex } of textureResults) {
+    if (tex) {
+      fptResources.textures[name] = tex;
+      const bytes = textureEntries.find(e => e.name === name)?.bytes;
+      if (bytes) {
+        logMsg(`  Textur: "${name}" (${(bytes.length/1024).toFixed(0)} KB)`, 'ok');
+        if (bytes.length > largestTexSize) {
+          largestTexSize = bytes.length;
+          fptResources.playfield = tex;
+        }
+      }
+    }
+  }
+
+  // Process decoded sounds
+  for (const { name, buf, bytes } of soundResults) {
+    if (buf) {
+      if (buf.duration > 8 || name.toLowerCase().includes('music')) {
+        if (!fptResources.musicTrack) fptResources.musicTrack = buf;
+        logMsg(`  Musik: "${name}" (${buf.duration.toFixed(1)}s)`, 'ok');
+      } else {
+        fptResources.sounds[name] = buf;
+        logMsg(`  Sound: "${name}" (${buf.duration.toFixed(2)}s)`, 'ok');
+      }
+    }
+  }
+
+  // ─── Phase 1C: Sequential non-critical resources (VBScript, models, animations) ───
+
+  // Script extraction (usually only 1 script)
+  if (!fptResources.script) {
+    for (const { name, bytes } of scriptEntries) {
       try {
         const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
         if (/\bSub\s+\w+/i.test(text) && /\bEnd\s+Sub\b/i.test(text)) {
           fptResources.script = text;
           logMsg(`  Script: "${name}" (${text.split('\n').length} Zeilen VBScript)`, 'ok');
+          break;
         }
       } catch { /* ignore */ }
-    }
-
-    // Texturen
-    if (/image|texture|playfield|table|backdrop|translite/i.test(nameL)) {
-      const tex = await extractImageFromBytes(bytes);
-      if (tex) {
-        fptResources.textures[name] = tex;
-        logMsg(`  Textur: "${name}" (${(bytes.length/1024).toFixed(0)} KB)`, 'ok');
-        if (bytes.length > largestTexSize) { largestTexSize = bytes.length; fptResources.playfield = tex; }
-      }
-    }
-
-    // Sounds
-    if (/sound|music|sfx|wav|ogg|audio/i.test(nameL)) {
-      const buf = await extractSoundFromBytes(bytes);
-      if (buf) {
-        if (buf.duration > 8 || nameL.includes('music')) {
-          if (!fptResources.musicTrack) fptResources.musicTrack = buf;
-          logMsg(`  Musik: "${name}" (${buf.duration.toFixed(1)}s)`, 'ok');
-        } else {
-          fptResources.sounds[name] = buf;
-          logMsg(`  Sound: "${name}" (${buf.duration.toFixed(2)}s)`, 'ok');
-        }
-      }
     }
   }
 
@@ -268,6 +315,9 @@ export async function parseCFBResources(arrayBuffer: ArrayBuffer): Promise<{ tex
       if (fptResources.script) break;
     }
   }
+
+  const elapsedMs = performance.now() - startTime;
+  logMsg(`⏱️ Phase 1 Parallel Loading: ${elapsedMs.toFixed(0)}ms (Textures: ${textureResults.length}, Sounds: ${soundResults.length})`, 'ok');
 
   return {
     textureCount: Object.keys(fptResources.textures).length,

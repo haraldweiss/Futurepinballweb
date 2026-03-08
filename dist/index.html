@@ -174,11 +174,11 @@
 
     body.show-bg-panel #backglass-canvas { display: block; position: fixed; right: 0; top: 0; width: 30vw; height: 100vh; z-index: 95; border-left: 1px solid rgba(255,200,0,0.25); inset: unset; }
   </style>
-  <script type="module" crossorigin src="/assets/main-vQWkg3rW.js"></script>
+  <script type="module" crossorigin src="/assets/main-Dx2R6puB.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-B5Qt9EMX.js">
   <link rel="modulepreload" crossorigin href="/assets/vendor-three-BswaKljp.js">
-  <link rel="modulepreload" crossorigin href="/assets/module-script-DH0OrmWs.js">
-  <link rel="modulepreload" crossorigin href="/assets/module-fpt-BseeF0Lg.js">
+  <link rel="modulepreload" crossorigin href="/assets/module-script-BRqehyp7.js">
+  <link rel="modulepreload" crossorigin href="/assets/module-fpt-DBDKbo7E.js">
   <link rel="modulepreload" crossorigin href="/assets/vendor-rapier-CD32UM7e.js">
 </head>
 <body>
@@ -208,6 +208,7 @@
       <div class="tab-bar">
         <button class="tab-btn active" onclick="switchTab('demo')">🎮 DEMO TISCHE</button>
         <button class="tab-btn" onclick="switchTab('import')">📂 FP IMPORT</button>
+        <button class="tab-btn" onclick="switchTab('browser')">📁 DATEIBROWSER</button>
         <button class="tab-btn" onclick="switchTab('info')">ℹ️ FORMAT INFO</button>
         <button class="tab-btn" onclick="switchTab('script')">📜 SCRIPT</button>
       </div>
@@ -288,6 +289,46 @@
         </style>
 
         <div id="parse-log"><span class="log-info">> Parser bereit. Datei laden um zu beginnen...</span></div>
+      </div>
+
+      <div class="tab-content" id="tab-browser">
+        <div style="color:#667;font-size:12px;line-height:1.8;margin-bottom:16px;">
+          <p style="color:#00ff88;margin-bottom:10px;">📁 DATEIBROWSER — Lokale Tische und Bibliotheken durchsuchen</p>
+          <p>Wählen Sie Verzeichnisse mit FPT-Tischen und FPL/LIB-Bibliotheken aus Ihrem lokalen System.</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+          <div>
+            <h4 style="color:#00ff88;font-size:11px;margin-bottom:8px;letter-spacing:1px;">📚 TISCHVERZEICHNIS</h4>
+            <button id="browse-tables-btn" onclick="window.browseTableDirectory()" style="width:100%;padding:8px;background:rgba(0,150,80,0.2);border:1px solid #00ff88;border-radius:6px;color:#00ff88;cursor:pointer;font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;transition:all 0.2s;">
+              🔍 Verzeichnis wählen
+            </button>
+            <div id="tables-list" style="margin-top:10px;max-height:200px;overflow-y:auto;border:1px solid #334;border-radius:4px;background:rgba(0,20,40,0.3);padding:8px;display:none;">
+              <div id="tables-empty" style="color:#556;font-size:10px;text-align:center;padding:10px;">Noch kein Verzeichnis ausgewählt</div>
+            </div>
+          </div>
+
+          <div>
+            <h4 style="color:#0088ff;font-size:11px;margin-bottom:8px;letter-spacing:1px;">📦 BIBLIOTHEKEN</h4>
+            <button id="browse-libs-btn" onclick="window.browseLibraryDirectory()" style="width:100%;padding:8px;background:rgba(0,100,180,0.2);border:1px solid #0088ff;border-radius:6px;color:#0088ff;cursor:pointer;font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;transition:all 0.2s;">
+              🔍 Verzeichnis wählen
+            </button>
+            <div id="libraries-list" style="margin-top:10px;max-height:200px;overflow-y:auto;border:1px solid #334;border-radius:4px;background:rgba(0,20,40,0.3);padding:8px;display:none;">
+              <div id="libraries-empty" style="color:#556;font-size:10px;text-align:center;padding:10px;">Noch kein Verzeichnis ausgewählt</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #334;padding-top:14px;">
+          <h4 style="color:#ffcc00;font-size:11px;margin-bottom:10px;letter-spacing:1px;">⚙️ AKTUELLE AUSWAHL</h4>
+          <div id="browser-status" style="color:#556;font-size:11px;margin-bottom:8px;line-height:1.6;">
+            <div>📚 Tische: <span style="color:#00ff88;">-</span></div>
+            <div>📦 Bibliotheken: <span style="color:#0088ff;">-</span></div>
+          </div>
+          <button id="load-selected-btn" onclick="window.loadSelectedTable()" style="width:100%;padding:10px;margin-top:8px;background:linear-gradient(135deg,#004499,#003366);border:1px solid #0088ff;border-radius:6px;color:#0088ff;cursor:pointer;font-family:'Courier New',monospace;font-size:12px;letter-spacing:1px;transition:all 0.2s;display:none;">
+            ▶ AUSGEWÄHLTEN TISCH LADEN
+          </button>
+        </div>
       </div>
 
       <div class="tab-content" id="tab-info">
