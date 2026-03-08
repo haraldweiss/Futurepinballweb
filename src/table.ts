@@ -1419,6 +1419,27 @@ export function buildPhysicsTable(config: TableConfig, phys: any): void {
     rightSlingshotWall
   );
 
+  // ─── DRAIN LANE WALLS (Guide ball straight down between flippers) ───
+  // Left side of drain lane - prevents ball from escaping left
+  const drainLeftWall = world.createRigidBody(
+    RAPIER.RigidBodyDesc.fixed().setTranslation(-1.15, -5.05)
+  );
+  phys.tableBodies.push(drainLeftWall);
+  world.createCollider(
+    RAPIER.ColliderDesc.cuboid(0.1, 1.0).setFriction(0.2),
+    drainLeftWall
+  );
+
+  // Right side of drain lane - prevents ball from escaping right
+  const drainRightWall = world.createRigidBody(
+    RAPIER.RigidBodyDesc.fixed().setTranslation(1.15, -5.05)
+  );
+  phys.tableBodies.push(drainRightWall);
+  world.createCollider(
+    RAPIER.ColliderDesc.cuboid(0.1, 1.0).setFriction(0.2),
+    drainRightWall
+  );
+
   // ─── DRAIN ZONE BOTTOM (Detects ball loss) ───
   // Extends below drain level to catch any escaping balls
   const drainBottom = world.createRigidBody(
