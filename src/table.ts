@@ -1361,6 +1361,69 @@ export function buildPhysicsTable(config: TableConfig, phys: any): void {
     world.createCollider(RAPIER.ColliderDesc.cuboid(len/2, 0.07).setRestitution(rest).setFriction(fric), body);
   });
 
+  // ─── PERIMETER WALLS (Main Enclosure) ───
+  // Top wall
+  const topWall = world.createRigidBody(
+    RAPIER.RigidBodyDesc.fixed().setTranslation(0, 6.2)
+  );
+  phys.tableBodies.push(topWall);
+  world.createCollider(
+    RAPIER.ColliderDesc.cuboid(3.2, 0.15).setFriction(0.2),
+    topWall
+  );
+
+  // Left wall
+  const leftWall = world.createRigidBody(
+    RAPIER.RigidBodyDesc.fixed().setTranslation(-3.1, 0)
+  );
+  phys.tableBodies.push(leftWall);
+  world.createCollider(
+    RAPIER.ColliderDesc.cuboid(0.15, 6.5).setFriction(0.2),
+    leftWall
+  );
+
+  // Right wall
+  const rightWall = world.createRigidBody(
+    RAPIER.RigidBodyDesc.fixed().setTranslation(3.1, 0)
+  );
+  phys.tableBodies.push(rightWall);
+  world.createCollider(
+    RAPIER.ColliderDesc.cuboid(0.15, 6.5).setFriction(0.2),
+    rightWall
+  );
+
+  // ─── SLINGSHOT WALLS (Prevent escape between flippers) ───
+  // Left slingshot barrier (at angle)
+  const leftSlingshotWall = world.createRigidBody(
+    RAPIER.RigidBodyDesc.fixed().setTranslation(-1.95, -1.8).setRotation(-0.4)
+  );
+  phys.tableBodies.push(leftSlingshotWall);
+  world.createCollider(
+    RAPIER.ColliderDesc.cuboid(0.15, 1.0).setFriction(0.3),
+    leftSlingshotWall
+  );
+
+  // Right slingshot barrier (at angle)
+  const rightSlingshotWall = world.createRigidBody(
+    RAPIER.RigidBodyDesc.fixed().setTranslation(1.95, -1.8).setRotation(0.4)
+  );
+  phys.tableBodies.push(rightSlingshotWall);
+  world.createCollider(
+    RAPIER.ColliderDesc.cuboid(0.15, 1.0).setFriction(0.3),
+    rightSlingshotWall
+  );
+
+  // ─── FLIPPER SAFETY BARRIER (Prevent drain between flippers) ───
+  // Creates a small wall between the flippers at drain level
+  const flipperSafetyBar = world.createRigidBody(
+    RAPIER.RigidBodyDesc.fixed().setTranslation(0, -4.9)
+  );
+  phys.tableBodies.push(flipperSafetyBar);
+  world.createCollider(
+    RAPIER.ColliderDesc.cuboid(0.3, 0.08).setFriction(0.4),
+    flipperSafetyBar
+  );
+
   // ─── Phase 1: PLUNGER PHYSICS ───
   // Left wall of plunger lane
   const plungerLaneLeft = world.createRigidBody(
