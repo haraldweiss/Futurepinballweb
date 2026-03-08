@@ -1392,27 +1392,11 @@ export function buildPhysicsTable(config: TableConfig, phys: any): void {
     rightWall
   );
 
-  // ─── LEFT FLIPPER GUIDE RAIL (from flipper base toward drain) ───
-  // Guides ball from left flipper toward center drain gap
-  const leftFlipperRail = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(-0.75, -4.5).setRotation(0.3)
-  );
-  phys.tableBodies.push(leftFlipperRail);
-  world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.08, 0.8).setFriction(0.4),
-    leftFlipperRail
-  );
-
-  // ─── RIGHT FLIPPER GUIDE RAIL (from flipper base toward drain) ───
-  // Guides ball from right flipper toward center drain gap
-  const rightFlipperRail = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(0.75, -4.5).setRotation(-0.3)
-  );
-  phys.tableBodies.push(rightFlipperRail);
-  world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.08, 0.8).setFriction(0.4),
-    rightFlipperRail
-  );
+  // ─── CLEAR DRAIN GAP (between flippers) ───
+  // Ball radius: 0.22 (diameter 0.44)
+  // Flipper gap: 3.0 units wide (from -1.5 to +1.5)
+  // Clearance: 3.0 - 0.44 = 2.56 units (plenty of space for ball to drain)
+  // NO barriers in drain zone - ball falls straight through via gravity
 
   // ─── SLINGSHOT WALLS (Outer side barriers) ───
   // Left slingshot barrier (at angle, guards left flipper side)
