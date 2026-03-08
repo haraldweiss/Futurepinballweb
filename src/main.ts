@@ -89,6 +89,7 @@ import {
 } from './library-cache';
 import { integrationTesting } from './integration-testing';
 import { getPerformanceReportGenerator, generatePerformanceReport } from './performance-report-generator';
+import { getTestSuite, resetTestSuite } from './test-suite';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -2588,6 +2589,12 @@ window.sortTableFiles = function(field: string, files?: FileInfo[]): FileInfo[] 
   return advancedMgr.sortFiles(filesToSort, field);
 };
 
+// ─── Option B: Testing & Validation ────────────────────────────────────────────
+window.runFullTestSuite = async function(): Promise<any> {
+  const testSuite = getTestSuite();
+  return await testSuite.runAllTests();
+};
+
 window.toggleFullscreen = () => {
   if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(()=>{});
   else document.exitFullscreen?.();
@@ -3279,6 +3286,7 @@ declare global {
     getBatchJobStatus: (jobId: string) => any;
     setupTableDragDrop: () => void;
     sortTableFiles: (field: string, files?: any[]) => any[];
+    runFullTestSuite: () => Promise<any>;
   }
 }
 
