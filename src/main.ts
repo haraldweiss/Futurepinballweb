@@ -2138,6 +2138,88 @@ window.closeLoader = async function closeLoader() {
   (document.getElementById('loader-modal') as HTMLElement).style.display='flex';
 };
 
+// ─── Phase 2: Loading Overlay Management ─────────────────────────────────────────
+let currentLoadingState = {
+  isLoading: false,
+  resourcesLoaded: 0,
+  totalResources: 0,
+  currentPhase: '',
+};
+
+function showLoadingOverlay(): void {
+  const overlay = document.getElementById('loading-overlay')!;
+  overlay.style.display = 'flex';
+  currentLoadingState.isLoading = true;
+
+  // Setup ESC to cancel
+  const handleEsc = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      hideLoadingOverlay();
+      document.removeEventListener('keydown', handleEsc);
+    }
+  };
+  document.addEventListener('keydown', handleEsc);
+}
+
+function hideLoadingOverlay(): void {
+  const overlay = document.getElementById('loading-overlay')!;
+  overlay.style.display = 'none';
+  currentLoadingState.isLoading = false;
+  currentLoadingState.resourcesLoaded = 0;
+  currentLoadingState.totalResources = 0;
+}
+
+function updateLoadingProgress(phase: string, current: number, total: number): void {
+  if (!currentLoadingState.isLoading) return;
+
+  currentLoadingState.resourcesLoaded = current;
+  currentLoadingState.totalResources = total;
+  currentLoadingState.currentPhase = phase;
+
+  // Update phase name
+  const phaseNameEl = document.getElementById('phase-name')!;
+  const phaseText = phase === 'images' ? '🖼️ Loading Textures'
+                   : phase === 'audio' ? '🎵 Loading Audio'
+                   : phase === 'scripts' ? '📜 Loading Scripts'
+                   : 'Processing...';
+  phaseNameEl.textContent = phaseText;
+  phaseNameEl.style.color = phase === 'images' ? '#00ff88'
+                           : phase === 'audio' ? '#ffaa00'
+                           : '#0088ff';
+
+  // Calculate total progress (weighted: textures 40%, audio 40%, scripts 20%)
+  const imageWeight = 0.4;
+  const audioWeight = 0.4;
+  const scriptWeight = 0.2;
+
+  let totalProgress = 0;
+  if (currentLoadingState.currentPhase === 'images' && total > 0) {
+    totalProgress = (current / total) * imageWeight * 100;
+  } else if (currentLoadingState.currentPhase === 'audio' && total > 0) {
+    totalProgress = imageWeight * 100 + (current / total) * audioWeight * 100;
+  } else if (currentLoadingState.currentPhase === 'scripts') {
+    totalProgress = (imageWeight + audioWeight) * 100;
+  }
+
+  // Update progress bar
+  const progressBar = document.getElementById('progress-bar')!;
+  progressBar.style.width = Math.min(totalProgress, 100) + '%';
+
+  // Update progress text
+  const progressText = document.getElementById('progress-text')!;
+  progressText.textContent = Math.floor(Math.min(totalProgress, 100)) + '%';
+
+  // Update details
+  const detailsEl = document.getElementById('loading-details')!;
+  detailsEl.innerHTML = `
+    <div style="color:#00ff88;">🖼️ Textures:</div>
+    <div style="margin-left:10px;color:#556;margin-bottom:8px;">${currentLoadingState.currentPhase === 'images' ? currentLoadingState.resourcesLoaded : currentLoadingState.totalResources} / ${currentLoadingState.totalResources} loaded</div>
+    <div style="color:#ffaa00;">🎵 Audio:</div>
+    <div style="margin-left:10px;color:#556;margin-bottom:8px;">${currentLoadingState.currentPhase === 'audio' ? currentLoadingState.resourcesLoaded : currentLoadingState.totalResources} / ${currentLoadingState.totalResources} loaded</div>
+    <div style="color:#0088ff;">⏱️ Phase: ${currentLoadingState.currentPhase}</div>
+  `;
+}
+
 // ─── Phase 7: File Browser Integration ──────────────────────────────────────────
 let fileBrowserState = {
   selectedTableFile: null as FileInfo | null,
@@ -2277,25 +2359,49 @@ window.loadSelectedTable = async function() {
 
     logMsg(`Loading FPT: ${file.name} (${formatFileSize(file.size)})...`);
 
-    // Parse the FPT file
+    // Show loading overlay
+    showLoadingOverlay();
+
+    // Phase 2: Create progress callbacks
+    const loadingCallbacks = {
+      onPhaseStart: (phase: string) => {
+        updateLoadingProgress(phase, 0, 1);
+      },
+      onResourceLoaded: (type: string, name: string, progress: { current: number; total: number }) => {
+        updateLoadingProgress(type, progress.current, progress.total);
+      },
+      onPhaseComplete: (phase: string, duration: number) => {
+        logMsg(`✓ ${phase.toUpperCase()} phase complete: ${duration.toFixed(0)}ms`);
+      }
+    };
+
+    // Parse the FPT file with loading callbacks
     resetGameState();
-    const fptData = await parseFPTFile(file);
+    await parseFPTFile(
+      file,
+      async (cfg: any) => {
+        // Build table callback
+        await loadTableWithPhysicsWorker(cfg, scene);
+        setupBackglassForTable();
+      },
+      () => {
+        // Close loader callback
+        hideLoadingOverlay();
+        window.closeLoader();
+      },
+      (tab: string) => {
+        // Switch tab callback
+        window.switchTab(tab);
+      },
+      loadingCallbacks  // Phase 2: Pass callbacks
+    );
 
-    if (fptData && fptData.config) {
-      // Load with physics
-      await loadTableWithPhysicsWorker(fptData.config, scene);
-      setupBackglassForTable();
-
-      logMsg(`✓ Loaded: ${file.name}`, 'log-ok');
-
-      // Close loader modal
-      window.closeLoader();
-    } else {
-      logMsg('❌ Failed to parse FPT file', 'log-error');
-    }
+    logMsg(`✓ Loaded: ${file.name}`, 'ok');
+    hideLoadingOverlay();
   } catch (error) {
     console.error('❌ Error loading table:', error);
-    logMsg(`❌ Error: ${error instanceof Error ? error.message : String(error)}`, 'log-error');
+    hideLoadingOverlay();
+    logMsg(`❌ Error: ${error instanceof Error ? error.message : String(error)}`, 'error');
   }
 };
 

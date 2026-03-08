@@ -426,6 +426,35 @@
     </div>
   </div>
 
+  <!-- Phase 2: Loading Overlay with Progress -->
+  <div id="loading-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:2000;flex-direction:column;gap:20px;">
+    <div style="background:rgba(0,30,60,0.9);border:2px solid #00aaff;border-radius:12px;padding:40px;width:90%;max-width:400px;box-shadow:0 0 40px rgba(0,170,255,0.4);">
+      <h3 style="color:#00aaff;font-size:16px;text-align:center;margin-bottom:20px;text-shadow:0 0 10px #00aaff;letter-spacing:2px;">⏳ LOADING TABLE</h3>
+
+      <div id="loading-phase" style="color:#667;font-size:12px;margin-bottom:12px;letter-spacing:1px;text-align:center;">
+        <span id="phase-name" style="color:#00ff88;">Initializing...</span>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span style="color:#556;font-size:11px;">Progress</span>
+          <span id="progress-text" style="color:#00aaff;font-size:11px;">0%</span>
+        </div>
+        <div style="width:100%;height:8px;background:rgba(0,20,40,0.8);border:1px solid #334;border-radius:4px;overflow:hidden;">
+          <div id="progress-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#0088ff,#00ff88);transition:width 0.3s;"></div>
+        </div>
+      </div>
+
+      <div id="loading-details" style="color:#556;font-size:11px;line-height:1.8;max-height:120px;overflow-y:auto;padding:10px;background:rgba(0,20,40,0.5);border-radius:6px;border:1px solid #334;">
+        <span style="color:#667;">Loading resources...</span>
+      </div>
+    </div>
+
+    <div style="text-align:center;font-size:11px;color:#556;letter-spacing:1px;">
+      Press <span style="color:#00aaff;">ESC</span> to cancel
+    </div>
+  </div>
+
   <canvas id="backglass-canvas"></canvas>
   <div id="touch-left"    class="touch-btn">◀</div>
   <div id="touch-right"   class="touch-btn">▶</div>

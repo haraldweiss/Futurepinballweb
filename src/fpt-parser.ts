@@ -7,6 +7,13 @@ import { fptResources } from './game';
 import { getAudioCtx, playFPTMusic } from './audio';
 import { runFPScript } from './script-engine';
 
+// ─── Phase 2: Resource Loading Progress Callbacks ──────────────────────────────
+export interface ResourceLoadingCallbacks {
+  onPhaseStart?: (phase: 'images' | 'audio' | 'scripts') => void;
+  onResourceLoaded?: (type: string, name: string, progress: { current: number; total: number }) => void;
+  onPhaseComplete?: (phase: string, duration: number) => void;
+}
+
 // ─── Log ──────────────────────────────────────────────────────────────────────
 export function logMsg(msg: string, type = 'info'): void {
   const parseLog = document.getElementById('parse-log');
@@ -156,7 +163,10 @@ async function extractSoundFromBytes(bytes: Uint8Array): Promise<AudioBuffer | n
 }
 
 // ─── Phase 1: CFB Ressourcen-Extraktion mit Parallel Loading ───────────────────
-export async function parseCFBResources(arrayBuffer: ArrayBuffer): Promise<{ textureCount: number; soundCount: number; streamCount: number }> {
+export async function parseCFBResources(
+  arrayBuffer: ArrayBuffer,
+  callbacks?: ResourceLoadingCallbacks
+): Promise<{ textureCount: number; soundCount: number; streamCount: number }> {
   fptResources.textures  = {};
   fptResources.sounds    = {};
   fptResources.playfield = null;
@@ -210,24 +220,44 @@ export async function parseCFBResources(arrayBuffer: ArrayBuffer): Promise<{ tex
   // ─── Phase 1B: Parallel decoding by type using Promise.all() ───
   const startTime = performance.now();
 
+  // Phase 2: Notify phase start
+  callbacks?.onPhaseStart?.('images');
+
   // Decode all textures in parallel
   const textureDecodes = Promise.all(
-    textureEntries.map(async (entry) => {
+    textureEntries.map(async (entry, idx) => {
       const tex = await extractImageFromBytes(entry.bytes);
+      // Phase 2: Notify resource loaded
+      callbacks?.onResourceLoaded?.('image', entry.name, {
+        current: idx + 1,
+        total: textureEntries.length
+      });
       return { name: entry.name, tex };
     })
   );
 
+  // Notify audio phase start
+  callbacks?.onPhaseStart?.('audio');
+
   // Decode all sounds in parallel
   const soundDecodes = Promise.all(
-    soundEntries.map(async (entry) => {
+    soundEntries.map(async (entry, idx) => {
       const buf = await extractSoundFromBytes(entry.bytes);
+      // Phase 2: Notify resource loaded
+      callbacks?.onResourceLoaded?.('audio', entry.name, {
+        current: idx + 1,
+        total: soundEntries.length
+      });
       return { name: entry.name, buf, bytes: entry.bytes };
     })
   );
 
   // Wait for both texture and sound decoding to complete
   const [textureResults, soundResults] = await Promise.all([textureDecodes, soundDecodes]);
+
+  // Phase 2: Notify phases complete
+  const imageTime = performance.now() - startTime;
+  callbacks?.onPhaseComplete?.('images', imageTime);
 
   // Process decoded textures
   let largestTexSize = 0;
@@ -257,6 +287,9 @@ export async function parseCFBResources(arrayBuffer: ArrayBuffer): Promise<{ tex
       }
     }
   }
+
+  const audioTime = performance.now() - imageTime - startTime;
+  callbacks?.onPhaseComplete?.('audio', audioTime);
 
   // ─── Phase 1C: Sequential non-critical resources (VBScript, models, animations) ───
 
@@ -921,9 +954,10 @@ function calcConfidence(sig: string|null, stringCount: number, coordCount: numbe
 // ─── Haupt-Parser ─────────────────────────────────────────────────────────────
 export async function parseFPTFile(
   file: File,
-  buildTableFn: (cfg: any) => void,
-  closeLoaderFn: () => void,
-  switchTabFn: (t: string) => void,
+  buildTableFn?: (cfg: any) => void,
+  closeLoaderFn?: () => void,
+  switchTabFn?: (t: string) => void,
+  callbacks?: ResourceLoadingCallbacks,
 ): Promise<void> {
   const parseLog = document.getElementById('parse-log');
   if (parseLog) parseLog.innerHTML = '';
@@ -949,7 +983,7 @@ export async function parseFPTFile(
   // CFB/OLE2
   if (typeof CFB !== 'undefined') {
     logMsg('🔍 Analysiere CFB/OLE2-Struktur...', 'info');
-    const { textureCount, soundCount, streamCount } = await parseCFBResources(buffer);
+    const { textureCount, soundCount, streamCount } = await parseCFBResources(buffer, callbacks);
 
     if (textureCount > 0 || soundCount > 0) {
       logMsg(`✓ CFB erfolgreich: ${textureCount} Textur(en), ${soundCount} Sound(s), ${streamCount} Stream(s) total`, 'ok');
@@ -959,7 +993,7 @@ export async function parseFPTFile(
       if (fptResources.script) {
         logMsg(`📝 VBScript gefunden (${fptResources.script.split('\n').length} Zeilen)`, 'ok');
         runFPScript(fptResources.script);
-        switchTabFn('script');
+        if (switchTabFn) switchTabFn('script');
       }
 
       // Phase 7: Extract MS3D models from FPT
@@ -1101,7 +1135,7 @@ export async function parseFPTFile(
         }
       }
 
-      buildTableFn({
+      const config = {
         name: tableName, tableColor: 0x111111, accentColor: 0xff8800,
         bumpers,
         targets,
@@ -1111,8 +1145,11 @@ export async function parseFPTFile(
           { color:0x442200, intensity:0.5, dist:8, x:-2, y:-2, z:3 },
         ],
         elementPhysics: Object.keys(elementPhysics.bumpers).length > 0 ? elementPhysics : undefined
-      });
-      closeLoaderFn();
+      };
+
+      // Phase 2: Call callbacks if provided
+      if (buildTableFn) buildTableFn(config);
+      if (closeLoaderFn) closeLoaderFn();
 
       if (fptResources.playfield) logMsg('🖼️ Spielfeld-Textur angewendet', 'ok');
       if (fptResources.musicTrack) {
