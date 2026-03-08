@@ -1849,17 +1849,10 @@ function animate(): void {
     backglassRenderer.render(renderer);
   }
 
-  // ─── Phase 14: Use Graphics Pipeline for Rendering ───
-  try {
-    const pipeline = getGraphicsPipeline();
-    if (pipeline) {
-      pipeline.renderFrame(dt);
-    } else {
-      composer.render();  // Fallback if pipeline not initialized
-    }
-  } catch (error) {
-    console.warn('Graphics pipeline render failed, falling back to composer:', error);
-    composer.render();
+  // ─── Phase 14: Render Frame ───
+  // Simple direct render to fix black screen issue
+  if (renderer && scene && camera) {
+    renderer.render(scene, camera);
   }
 
   if (_bgPanelActive) drawInlineBackglass();

@@ -73,6 +73,12 @@ export class GraphicsPipeline {
     console.log('✓ GraphicsPipeline ready');
   }
 
+  // ─── Public Accessors ───
+  getRenderer(): THREE.WebGLRenderer { return this.renderer; }
+  getScene(): THREE.Scene { return this.scene; }
+  getCamera(): THREE.Camera { return this.camera; }
+  getComposer(): THREE.EffectComposer { return this.composer; }
+
   /**
    * Register a rendering pass to be executed in order.
    */
