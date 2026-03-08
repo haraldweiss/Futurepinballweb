@@ -486,17 +486,22 @@ initializeGraphicsPipeline(renderer, scene, camera, composer);
 console.log('✓ Graphics pipeline initialized');
 
 // ─── Phase 14: Initialize Standard Pinball Lighting via LightManager ───────────────
+// Declare lights at module level so applyQualityPreset() can access them
+let mainSpot: THREE.SpotLight | null = null;
+let ambLight: THREE.AmbientLight | null = null;
+let fillLight: THREE.PointLight | null = null;
+let rimLight: THREE.DirectionalLight | null = null;
+
 // Get LightManager from pipeline and initialize standard lighting
 const lightManager = getGraphicsPipeline()?.getLightManager();
 if (lightManager) {
   lightManager.initialize();
   console.log('✓ Pinball lighting system initialized via LightManager');
-} else {
-  // Fallback: create lights manually if LightManager unavailable
-  console.warn('⚠️ LightManager not available, creating lights manually');
-  const ambLight = new THREE.AmbientLight(0xffffff, 0.35);
+  // Try to get lights from LightManager if it exposes them
+  // For now, create fallback lights anyway for applyQualityPreset() to use
+  ambLight = new THREE.AmbientLight(0xffffff, 0.35);
   scene.add(ambLight);
-  const mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI/3.0, 0.20);
+  mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI/3.0, 0.20);
   mainSpot.position.set(0, 14, 16);
   mainSpot.castShadow = true;
   mainSpot.shadow.mapSize.set(2048, 2048);
@@ -506,14 +511,40 @@ if (lightManager) {
   mainSpot.shadow.camera.far = 120;
   mainSpot.shadow.blurSamples = 16;
   scene.add(mainSpot);
-  const fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
+  fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
   fillLight.position.set(-9, 6, 9);
   fillLight.castShadow = true;
   scene.add(fillLight);
   const accentLight = new THREE.PointLight(0xccddff, 0.8, 25);
   accentLight.position.set(9, 4, 5);
   scene.add(accentLight);
-  const rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
+  rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
+  rimLight.position.set(0, 22, -12);
+  rimLight.castShadow = true;
+  scene.add(rimLight);
+} else {
+  // Fallback: create lights manually if LightManager unavailable
+  console.warn('⚠️ LightManager not available, creating lights manually');
+  ambLight = new THREE.AmbientLight(0xffffff, 0.35);
+  scene.add(ambLight);
+  mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI/3.0, 0.20);
+  mainSpot.position.set(0, 14, 16);
+  mainSpot.castShadow = true;
+  mainSpot.shadow.mapSize.set(2048, 2048);
+  mainSpot.shadow.bias = -0.0020;
+  mainSpot.shadow.normalBias = 0.030;
+  mainSpot.shadow.camera.near = 0.5;
+  mainSpot.shadow.camera.far = 120;
+  mainSpot.shadow.blurSamples = 16;
+  scene.add(mainSpot);
+  fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
+  fillLight.position.set(-9, 6, 9);
+  fillLight.castShadow = true;
+  scene.add(fillLight);
+  const accentLight = new THREE.PointLight(0xccddff, 0.8, 25);
+  accentLight.position.set(9, 4, 5);
+  scene.add(accentLight);
+  rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
   rimLight.position.set(0, 22, -12);
   rimLight.castShadow = true;
   scene.add(rimLight);
@@ -1546,19 +1577,21 @@ function applyQualityPreset(): void {
 
   // ─── Shadow Maps ───
   if (currentPreset.shadowsEnabled) {
-    mainSpot.castShadow = true;
-    mainSpot.shadow.mapSize.set(currentPreset.shadowMapSize, currentPreset.shadowMapSize);
-    mainSpot.shadow.blurSamples = 16;
+    if (mainSpot) {
+      mainSpot.castShadow = true;
+      mainSpot.shadow.mapSize.set(currentPreset.shadowMapSize, currentPreset.shadowMapSize);
+      mainSpot.shadow.blurSamples = 16;
+    }
     renderer.shadowMap.enabled = true;
   } else {
-    mainSpot.castShadow = false;
+    if (mainSpot) mainSpot.castShadow = false;
     renderer.shadowMap.enabled = false;
   }
 
   // ─── Lighting Intensities ───
-  ambLight.intensity = currentPreset.shadowsEnabled ? 0.25 : 0.35;  // Brighter if no shadows
-  fillLight.intensity = currentPreset.shadowsEnabled ? 1.2 : 1.5;
-  rimLight.intensity = currentPreset.shadowsEnabled ? 0.7 : 0.5;
+  if (ambLight) ambLight.intensity = currentPreset.shadowsEnabled ? 0.25 : 0.35;  // Brighter if no shadows
+  if (fillLight) fillLight.intensity = currentPreset.shadowsEnabled ? 1.2 : 1.5;
+  if (rimLight) rimLight.intensity = currentPreset.shadowsEnabled ? 0.7 : 0.5;
 
   // ─── Ball Material Emissive ───
   ballOuterMaterial.emissiveIntensity = currentPreset.bloomEnabled ? 0.3 : 0.1;
@@ -1603,7 +1636,12 @@ const clock = new THREE.Clock();
 let frameCount = 0, lastFpsUpdate = 0, currentFps = 60;
 let pixelRatioTarget = Math.min(devicePixelRatio, 2);
 
+let animateCallCount = 0;
 function animate(): void {
+  animateCallCount++;
+  if (animateCallCount === 1 || animateCallCount % 300 === 0) {
+    console.log(`🎬 Animate loop running... (call #${animateCallCount})`);
+  }
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
 
@@ -1852,7 +1890,18 @@ function animate(): void {
   // ─── Phase 14: Render Frame ───
   // Simple direct render to fix black screen issue
   if (renderer && scene && camera) {
+    if (animateCallCount === 1 || animateCallCount % 300 === 0) {
+      console.log(`🎨 Rendering frame #${animateCallCount}`, {
+        rendererExists: !!renderer,
+        sceneChildren: scene?.children.length,
+        cameraPos: camera?.position
+      });
+    }
     renderer.render(scene, camera);
+  } else {
+    if (animateCallCount === 1) {
+      console.warn(`⚠️ Cannot render: renderer=${!!renderer}, scene=${!!scene}, camera=${!!camera}`);
+    }
   }
 
   if (_bgPanelActive) drawInlineBackglass();
@@ -2468,6 +2517,7 @@ if (FPW_ROLE === 'dmd') {
     }
 
     // Initialize B.A.M. Engine (after table is loaded and currentTableConfig is set)
+    console.log('🔄 About to initialize B.A.M. Engine...');
     const bam = new BAMEngine(currentTableConfig?.name || 'classic', mainSpot);
     setBAMEngine(bam);
     console.log('✅ B.A.M. Engine initialized');
@@ -2497,6 +2547,7 @@ if (FPW_ROLE === 'dmd') {
     }
 
     // Phase 13 Task 3: Initialize animation binding system
+    console.log('🔄 About to initialize animation binding...');
     const animationBindingMgr = initializeAnimationBinding();
     const animationScheduler = initializeAnimationScheduler();
     console.log('✅ Animation binding system initialized');
@@ -2509,9 +2560,20 @@ if (FPW_ROLE === 'dmd') {
     console.log('✅ Animation debugger initialized (Ctrl+D to toggle)');
 
     // ─── Phase 5: Apply initial quality preset ───
-    applyQualityPreset();
+    try {
+      applyQualityPreset();
+      console.log('✅ Quality preset applied successfully');
+    } catch (err) {
+      console.error('❌ Error in applyQualityPreset:', err);
+    }
 
-    animate();
+    try {
+      console.log('🎬 Starting animate loop...');
+      animate();
+      console.log('✅ Animate loop started');
+    } catch (err) {
+      console.error('❌ Error starting animate:', err);
+    }
     initInlineBackglass();
     document.getElementById('multiscreen-btn')?.classList.add('active-multi');
   })();
