@@ -77,6 +77,10 @@ import {
   FileBrowserUIManager, getFileBrowserUIManager, resetFileBrowserUIManager,
 } from './file-browser-ui';
 import {
+  AdvancedFileBrowserManager, getAdvancedFileBrowserManager, resetAdvancedFileBrowserManager,
+  type FavoriteEntry, type BatchJob, type FilePreview,
+} from './file-browser-advanced';
+import {
   ResourceManager, initializeResourceManager, getResourceManager, resetResourceManager,
   type ResourceBudgets,
 } from './resource-manager';
@@ -2526,6 +2530,64 @@ function logMsg(msg: string, className: string = 'log-info'): void {
   }
 }
 
+// ─── Advanced File Browser Features (Option A) ──────────────────────────────────
+window.addToFavorites = function(filename: string, type: 'table' | 'library') {
+  const advancedMgr = getAdvancedFileBrowserManager();
+  const targetList = type === 'table' ? fileBrowserState.selectedTableFile : fileBrowserState.selectedLibraryFiles.find(f => f.name === filename);
+
+  if (targetList) {
+    advancedMgr.addFavorite(targetList, type);
+    logMsg(`⭐ Added to favorites: ${filename}`, 'log-ok');
+  } else {
+    console.warn('File not found in current selection');
+  }
+};
+
+window.getAdvancedFavoritesCount = function(): number {
+  const advancedMgr = getAdvancedFileBrowserManager();
+  return advancedMgr.getFavorites().length;
+};
+
+window.getRecentTables = function(): FileInfo[] {
+  const advancedMgr = getAdvancedFileBrowserManager();
+  return advancedMgr.getRecent();
+};
+
+window.createBatchLoadJob = function(tableNames: string[]): string {
+  const advancedMgr = getAdvancedFileBrowserManager();
+  const files = fileBrowserState.selectedTableFile
+    ? [fileBrowserState.selectedTableFile]
+    : [];
+
+  const job = advancedMgr.createBatchJob(files, fileBrowserState.selectedLibraryFiles);
+  logMsg(`📋 Created batch job: ${job.id}`, 'log-info');
+  return job.id;
+};
+
+window.getBatchJobStatus = function(jobId: string): BatchJob | undefined {
+  const advancedMgr = getAdvancedFileBrowserManager();
+  return advancedMgr.getBatchJob(jobId);
+};
+
+window.setupTableDragDrop = function() {
+  const advancedMgr = getAdvancedFileBrowserManager();
+  const dropZone = document.getElementById('game-canvas');
+
+  if (dropZone) {
+    advancedMgr.setupDragDrop(dropZone, async (files: File[], type: 'table' | 'library') => {
+      logMsg(`📂 Dropped ${files.length} ${type} file${files.length !== 1 ? 's' : ''}`, 'log-info');
+      // Files can be handled here (would need File to FileInfo conversion)
+    });
+    logMsg('✓ Drag & drop enabled for game canvas', 'log-ok');
+  }
+};
+
+window.sortTableFiles = function(field: string, files?: FileInfo[]): FileInfo[] {
+  const advancedMgr = getAdvancedFileBrowserManager();
+  const filesToSort = files || (fileBrowserState.selectedTableFile ? [fileBrowserState.selectedTableFile] : []);
+  return advancedMgr.sortFiles(filesToSort, field);
+};
+
 window.toggleFullscreen = () => {
   if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(()=>{});
   else document.exitFullscreen?.();
@@ -3210,6 +3272,13 @@ declare global {
     generatePerformanceReport: () => Promise<any>;
     getPerformanceReportGenerator: () => any;
     comparePerformanceReports: (report1: any, report2: any) => any;
+    addToFavorites: (filename: string, type: 'table' | 'library') => void;
+    getAdvancedFavoritesCount: () => number;
+    getRecentTables: () => any[];
+    createBatchLoadJob: (tableNames: string[]) => string;
+    getBatchJobStatus: (jobId: string) => any;
+    setupTableDragDrop: () => void;
+    sortTableFiles: (field: string, files?: any[]) => any[];
   }
 }
 
