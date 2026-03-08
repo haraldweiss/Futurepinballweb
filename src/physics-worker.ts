@@ -47,7 +47,8 @@ function initializePhysics(config: any): void {
     .setGravityScale(1.0, true)
     .setCanSleep(false)
     .setLinearDamping(0.002)
-    .setAngularDamping(0.1);
+    .setAngularDamping(0.1)
+    .enabledContinuousCollisionDetection(true);  // Enable CCD for fast-moving ball
 
   ballBody = world.createRigidBody(ballDesc);
 
