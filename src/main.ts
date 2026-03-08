@@ -1512,16 +1512,16 @@ document.addEventListener('keydown', e => {
 
   // Q/E for quick rotation in either direction
   if (e.key === 'q' || e.key === 'Q') {
-    const currentRotation = playgroundGroup.rotation.z * (180 / Math.PI);
-    const normalizedRot = ((currentRotation % 360) + 360) % 360;
-    const nextRotation = (normalizedRot + 90) % 360;
+    const rotEngine = getRotationEngine();
+    const currentRotation = rotEngine?.getCurrentRotation() ?? 0;
+    const nextRotation = (currentRotation + 90) % 360;
     rotateAndRedraw(nextRotation as any, 400);
     showNotification(`🎮 Rotated to ${nextRotation}°`);
   }
   if (e.key === 'e' || e.key === 'E') {
-    const currentRotation = playgroundGroup.rotation.z * (180 / Math.PI);
-    const normalizedRot = ((currentRotation % 360) + 360) % 360;
-    const nextRotation = (normalizedRot - 90 + 360) % 360;
+    const rotEngine = getRotationEngine();
+    const currentRotation = rotEngine?.getCurrentRotation() ?? 0;
+    const nextRotation = (currentRotation - 90 + 360) % 360;
     rotateAndRedraw(nextRotation as any, 400);
     showNotification(`🎮 Rotated to ${nextRotation}°`);
   }
