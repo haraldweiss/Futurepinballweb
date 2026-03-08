@@ -124,6 +124,14 @@ export class GraphicsPipeline {
     }
     this.metrics.bloomTime = performance.now() - passStartTime;
 
+    // Render the frame through the EffectComposer (post-processing pipeline)
+    try {
+      this.composer.render();
+    } catch (error) {
+      console.warn('EffectComposer render failed, falling back to direct renderer:', error);
+      this.renderer.render(this.scene, this.camera);
+    }
+
     // Update metrics
     this.updateMetrics();
   }
