@@ -80,6 +80,7 @@ import {
 import {
   LibraryCache, initializeLibraryCache, getLibraryCache, resetLibraryCache,
 } from './library-cache';
+import { integrationTesting } from './integration-testing';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -3051,6 +3052,12 @@ function installPWA() {
   pool.logStats();
 };
 
+// ─── Integration Testing Framework ──────────────────────────────────────────
+// Public API for testing all optimization phases
+(window as any).runIntegrationTests = () => integrationTesting.runTests();
+(window as any).benchmark = integrationTesting.benchmark;
+(window as any).memoryProfiler = integrationTesting.memory;
+
 // TypeScript: globale Funktionen
 declare global {
   interface Window {
@@ -3094,6 +3101,9 @@ declare global {
     getAudioSourcePool:    () => any;
     getAudioSourcePoolStats: () => any;
     logAudioSourcePoolStats: () => void;
+    runIntegrationTests:   () => Promise<any>;
+    benchmark:             any;
+    memoryProfiler:        any;
   }
 }
 
