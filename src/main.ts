@@ -1578,15 +1578,18 @@ document.addEventListener('keyup', e => {
     // Phase 15: Launch ball via physics worker
     try {
       const bridge = getPhysicsWorker();
-      const vy = 16.0 + charge * 14.0;  // Min 16, max 30 m/s for playfield reach
+      const vy = 16.0 + charge * 14.0;  // Min 16, max 30 m/s upward (playfield reach)
+      const vx = -8.0 - charge * 4.0;   // Min -8, max -12 m/s leftward (into playfield)
       bridge.setBallGravityScale(1.0);
-      bridge.updateBallPosition(2.65, -5.0, 0, vy);
+      bridge.updateBallPosition(2.65, -5.0, vx, vy);
     } catch {
       // Fallback: Direct physics access (single-threaded)
       if (physics) {
+        const vy = 16.0 + charge * 14.0;
+        const vx = -8.0 - charge * 4.0;
         physics.ballBody.setGravityScale(1.0, true);
         physics.ballBody.setTranslation({ x:2.65, y:-5.0 }, true);
-        physics.ballBody.setLinvel({ x:0, y:16.0+charge*14.0 }, true);  // Min 16, max 30 m/s for playfield reach
+        physics.ballBody.setLinvel({ x:vx, y:vy }, true);
       }
     }
     playSound('bumper'); startBGMusic();
