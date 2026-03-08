@@ -849,12 +849,19 @@ function handlePhysicsFrame(frame: PhysicsFrameData): void {
 // ─── Phase 15: Helper function to load table with physics worker ────────────────
 async function loadTableWithPhysicsWorker(tableConfig: any, sceneTarget: THREE.Scene, library?: any): Promise<void> {
   // Build the table geometry and physics
+  (window as any).BUILD_TABLE_START = Date.now();
   buildTable(tableConfig, sceneTarget, library);
+  (window as any).BUILD_TABLE_OK = Date.now();
+  (window as any).BUILD_TABLE_TIME_MS = (window as any).BUILD_TABLE_OK - (window as any).BUILD_TABLE_START;
 
   // Initialize physics worker after table is built
+  (window as any).PHYSICS_WORKER_START = Date.now();
   try {
     await setupPhysicsWorker();
+    (window as any).PHYSICS_WORKER_OK = Date.now();
+    (window as any).PHYSICS_WORKER_TIME_MS = (window as any).PHYSICS_WORKER_OK - (window as any).PHYSICS_WORKER_START;
   } catch (error) {
+    (window as any).PHYSICS_WORKER_ERROR = error?.message;
     console.error('Physics worker setup failed:', error);
     // Continue with single-threaded physics fallback
   }
