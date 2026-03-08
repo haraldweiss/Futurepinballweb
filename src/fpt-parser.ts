@@ -1383,8 +1383,8 @@ export async function parseFPTFile(
 // ─── FPL Library Parser (Enhanced) ───────────────────────────────────────────
 export type { FPLLibrary } from './types';
 
-// Global library cache to reuse resources across tables
-const globalLibraryCache = new Map<string, any>();
+// Phase 5: Import library cache with TTL support
+import { getLibraryCache, getLibraryByName } from './library-cache';
 
 export async function parseFPLFile(
   file: File,
@@ -1517,8 +1517,8 @@ export async function parseFPLFile(
 
     logMsg(`✅ Library loaded: ${summary}`, 'ok');
 
-    // Cache globally
-    globalLibraryCache.set(libName, library);
+    // Phase 5: Cache globally with TTL support
+    getLibraryCache().set(libName, library);
     onLoaded(library);
   } catch (err: any) {
     logMsg(`❌ FPL Parse Error: ${err.message}`, 'error');
@@ -1526,9 +1526,9 @@ export async function parseFPLFile(
   }
 }
 
-// Get cached library by name
+// Get cached library by name (Phase 5: now uses TTL-enabled cache)
 export function getLibraryByName(name: string): any | null {
-  return globalLibraryCache.get(name) || null;
+  return getLibraryCache().get(name) || null;
 }
 
 // ─── Library Dependency Detection ──────────────────────────────────────────
@@ -1567,7 +1567,8 @@ export function detectLibraryDependencies(tableName: string, script: string | nu
         if (libName && libName.length > 0 && !libName.endsWith('.')) {
           const key = libName.toLowerCase();
           if (!dependencies.has(key)) {
-            const loaded = globalLibraryCache.has(libName) || globalLibraryCache.has(key);
+            // Phase 5: Check TTL-enabled cache
+            const loaded = getLibraryCache().has(libName) || getLibraryCache().has(key);
             dependencies.set(key, {
               name: libName,
               type,
@@ -1606,7 +1607,8 @@ export function detectLibraryDependencies(tableName: string, script: string | nu
             ? 'font'
             : 'graphics';
 
-          const loaded = globalLibraryCache.has(libName) || globalLibraryCache.has(key);
+          // Phase 5: Check TTL-enabled cache
+          const loaded = getLibraryCache().has(libName) || getLibraryCache().has(key);
           dependencies.set(key, {
             name: libName,
             type,

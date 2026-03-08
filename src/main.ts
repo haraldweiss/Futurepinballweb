@@ -76,6 +76,9 @@ import {
   ResourceManager, initializeResourceManager, getResourceManager, resetResourceManager,
   type ResourceBudgets,
 } from './resource-manager';
+import {
+  LibraryCache, initializeLibraryCache, getLibraryCache, resetLibraryCache,
+} from './library-cache';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -352,6 +355,10 @@ console.log(`🎮 Cabinet profile auto-detected: ${activeCabinetProfile.name}`);
 // ─── Phase 4: Resource Manager (Memory Budget Management) ──────────────────────
 let resourceManager = initializeResourceManager();
 logMsg(`💾 ResourceManager initialized with default budgets (50MB textures, 20MB audio, 50MB models, 150MB total)`, 'ok');
+
+// ─── Phase 5: Library Cache with TTL & Cleanup ───────────────────────────────────
+let libraryCache = initializeLibraryCache();
+logMsg(`📚 LibraryCache initialized with 1-hour TTL and 5-minute cleanup interval`, 'ok');
 
 const aspectRatio = innerWidth / innerHeight;
 const responsiveZoom = calculateResponsiveZoom(aspectRatio);
@@ -3005,6 +3012,28 @@ function installPWA() {
   logMsg(`💾 ResourceManager reset with fresh budget`, 'ok');
 };
 
+// ─── Phase 5: Library Cache System Exports ──────────────────────────────────────
+// Public API for library caching with TTL and validation
+(window as any).getLibraryCache = getLibraryCache;
+(window as any).getLibraryCacheStats = () => {
+  const cache = getLibraryCache();
+  return cache.getStats();
+};
+(window as any).logLibraryCacheStats = () => {
+  const cache = getLibraryCache();
+  cache.logStats();
+};
+(window as any).cleanupLibraryCache = () => {
+  const cache = getLibraryCache();
+  const removed = cache.cleanup();
+  logMsg(`🧹 Manual cache cleanup: removed ${removed} expired entries`, 'ok');
+};
+(window as any).resetLibraryCache = () => {
+  resetLibraryCache();
+  libraryCache = initializeLibraryCache();
+  logMsg(`📚 LibraryCache reset with fresh TTL`, 'ok');
+};
+
 // TypeScript: globale Funktionen
 declare global {
   interface Window {
@@ -3040,6 +3069,11 @@ declare global {
     getResourceStats:      () => any;
     logResourceStats:      () => void;
     resetResourceManager:  () => void;
+    getLibraryCache:       () => any;
+    getLibraryCacheStats:  () => any;
+    logLibraryCacheStats:  () => void;
+    cleanupLibraryCache:   () => void;
+    resetLibraryCache:     () => void;
   }
 }
 
