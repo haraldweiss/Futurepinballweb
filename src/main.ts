@@ -269,6 +269,7 @@ function detectDeviceType(): 'mobile' | 'tablet' | 'desktop' {
 }
 
 // ─── Role Detection ───────────────────────────────────────────────────────────
+(window as any).FPW_MODULE_LOADED = true;  // Flag to confirm main.ts loaded
 const FPW_ROLE = new URLSearchParams(location.search).get('role');
 if (FPW_ROLE) document.body.classList.add('role-' + FPW_ROLE);
 (window as any).FPW_DEVICE = detectDeviceType();
@@ -689,11 +690,11 @@ async function initPhysics(): Promise<void> {
   );
 
   const lFlipperBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(-1.15, -4.6));
-  const lFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13).setTranslation(1.05, 0.0).setRestitution(0.5).setFriction(0.6).setCcdEnabled(true), lFlipperBody);
+  const lFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13).setTranslation(1.05, 0.0).setRestitution(0.5).setFriction(0.6), lFlipperBody);
   leftFlipperColliderHandle = lFlipperCollider.handle;  // Phase 5: Save handle
 
   const rFlipperBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(1.15, -4.6));
-  const rFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13).setTranslation(-1.05, 0.0).setRestitution(0.5).setFriction(0.6).setCcdEnabled(true), rFlipperBody);
+  const rFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13).setTranslation(-1.05, 0.0).setRestitution(0.5).setFriction(0.6), rFlipperBody);
   rightFlipperColliderHandle = rFlipperCollider.handle;  // Phase 5: Save handle
 
   const addFixedBox = (x:number,y:number,hw:number,hh:number,angle=0,restitution=0.75) => {
@@ -2498,9 +2499,19 @@ if (FPW_ROLE === 'dmd') {
   renderer.domElement.remove();
   setupBackglassWindow();
 } else {
+  (window as any).INIT_ASYNC_IIFE_STARTED = true;
   (async () => {
-    try { await initPhysics(); } catch(e) { console.warn('Rapier init fehlgeschlagen:', e); }
+    (window as any).INIT_IN_ASYNC_IIFE = true;
+    try {
+      (window as any).INIT_PHYSICS_START = true;
+      await initPhysics();
+      (window as any).INIT_PHYSICS_OK = true;
+    } catch(e) {
+      (window as any).INIT_PHYSICS_ERROR = e.message;
+      console.warn('Rapier init fehlgeschlagen:', e);
+    }
 
+    (window as any).INIT_TABLE_LOAD_START = true;
     // Custom-Tisch aus Editor laden (wenn ?load=custom gesetzt)
     const loadCustom = new URLSearchParams(location.search).get('load') === 'custom';
     if (loadCustom) {
@@ -2515,18 +2526,24 @@ if (FPW_ROLE === 'dmd') {
     } else {
       await loadTableWithPhysicsWorker(TABLE_CONFIGS['classic'], scene);
     }
+    (window as any).INIT_TABLE_LOAD_OK = true;
 
     // Initialize B.A.M. Engine (after table is loaded and currentTableConfig is set)
+    (window as any).INIT_BAM_ENGINE_START = true;
     console.log('🔄 About to initialize B.A.M. Engine...');
     const bam = new BAMEngine(currentTableConfig?.name || 'classic', mainSpot);
     setBAMEngine(bam);
     console.log('✅ B.A.M. Engine initialized');
+    (window as any).INIT_BAM_ENGINE_OK = true;
 
     // Phase 13 Task 2: Initialize BAM Bridge (connects VBScript to BAMEngine)
+    (window as any).INIT_BAM_BRIDGE_START = true;
     const bamBridge = initializeBamBridge(bam);
     console.log('✅ B.A.M. Bridge initialized');
+    (window as any).INIT_BAM_BRIDGE_OK = true;
 
     // Phase 13: Load animations from FPT resources into BAM engine
+    (window as any).INIT_ANIM_LOAD_START = true;
     if (fptResources.animations && fptResources.animations.size > 0) {
       const bamSequencer = bam.getAnimationSequencer();
       let loadedCount = 0;
@@ -2545,34 +2562,45 @@ if (FPW_ROLE === 'dmd') {
         console.log(`✅ ${loadedCount} animation(s) loaded into BAM engine`);
       }
     }
+    (window as any).INIT_ANIM_LOAD_OK = true;
 
     // Phase 13 Task 3: Initialize animation binding system
+    (window as any).INIT_ANIM_BINDING_START = true;
     console.log('🔄 About to initialize animation binding...');
     const animationBindingMgr = initializeAnimationBinding();
     const animationScheduler = initializeAnimationScheduler();
     console.log('✅ Animation binding system initialized');
+    (window as any).INIT_ANIM_BINDING_OK = true;
 
     // Phase 13 Task 5: Initialize animation debugger (Ctrl+D to toggle)
+    (window as any).INIT_ANIM_DEBUGGER_START = true;
     const animationDebugger = initializeAnimationDebugger();
     if (bamEngine) {
       animationDebugger.setBamEngine(bamEngine);
     }
     console.log('✅ Animation debugger initialized (Ctrl+D to toggle)');
+    (window as any).INIT_ANIM_DEBUGGER_OK = true;
 
     // ─── Phase 5: Apply initial quality preset ───
+    (window as any).INIT_BEFORE_QUALITY_PRESET = true;
     try {
       applyQualityPreset();
       console.log('✅ Quality preset applied successfully');
+      (window as any).INIT_QUALITY_PRESET_OK = true;
     } catch (err) {
       console.error('❌ Error in applyQualityPreset:', err);
+      (window as any).INIT_QUALITY_PRESET_ERROR = err.message;
     }
 
+    (window as any).INIT_BEFORE_ANIMATE_CALL = true;
     try {
       console.log('🎬 Starting animate loop...');
       animate();
+      (window as any).INIT_ANIMATE_CALLED = true;
       console.log('✅ Animate loop started');
     } catch (err) {
       console.error('❌ Error starting animate:', err);
+      (window as any).INIT_ANIMATE_ERROR = err.message;
     }
     initInlineBackglass();
     document.getElementById('multiscreen-btn')?.classList.add('active-multi');
