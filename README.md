@@ -1,11 +1,13 @@
 # 🎮 Future Pinball Web
 
-**Modern cross-platform browser-based 3D pinball game with VPX-competitive graphics and physics**
+**Modern cross-platform 3D pinball game in your browser — with VPX-competitive graphics, advanced physics, multi-screen arcade cabinet support, and comprehensive video editing**
 
-![Version](https://img.shields.io/badge/Version-0.16.0-blue)
+![Version](https://img.shields.io/badge/Version-0.18.0-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)
+![Modules](https://img.shields.io/badge/Modules-60-orange)
+![Code](https://img.shields.io/badge/Code-27.8K%20Lines-purple)
 
 ---
 
@@ -29,25 +31,25 @@ Click "📥 Install App" to add to your home screen, then play offline!
 ### 🖥️ Desktop Applications
 
 **Windows**
-- **[Download Installer](https://github.com/YOUR_USERNAME/future-pinball-web/releases/download/v0.16.0/Future%20Pinball%20Web%20Setup%200.16.0.exe)** (180 MB)
+- **[Download Installer](https://github.com/haraldweiss/Futurepinballweb/releases)** (180 MB)
   - Recommended: Auto-updates, Start menu shortcuts
   - Run installer → Follow wizard → Done!
 
-- **[Download Portable](https://github.com/YOUR_USERNAME/future-pinball-web/releases/download/v0.16.0/Future%20Pinball%20Web%200.16.0.exe)** (160 MB)
+- **[Download Portable](https://github.com/haraldweiss/Futurepinballweb/releases)** (160 MB)
   - No installation, run anywhere
   - Perfect for USB drives
 
 **macOS**
-- **[Download DMG](https://github.com/YOUR_USERNAME/future-pinball-web/releases/download/v0.16.0/Future%20Pinball%20Web-0.16.0.dmg)** (200 MB)
+- **[Download DMG](https://github.com/haraldweiss/Futurepinballweb/releases)** (200 MB)
   - Native M1/M2 support
   - Drag to Applications → Done!
 
 **Linux**
-- **[Download AppImage](https://github.com/YOUR_USERNAME/future-pinball-web/releases/download/v0.16.0/future-pinball-web-0.16.0.AppImage)** (170 MB)
+- **[Download AppImage](https://github.com/haraldweiss/Futurepinballweb/releases)** (170 MB)
   - `chmod +x future-pinball-web-*.AppImage && ./future-pinball-web-*.AppImage`
 
-- **[Download DEB](https://github.com/YOUR_USERNAME/future-pinball-web/releases/download/v0.16.0/future-pinball-web_0.16.0_amd64.deb)** (160 MB)
-  - `sudo apt install ./future-pinball-web_0.16.0_amd64.deb`
+- **[Download DEB](https://github.com/haraldweiss/Futurepinballweb/releases)** (160 MB)
+  - `sudo apt install ./future-pinball-web_*.deb`
 
 ---
 
@@ -63,11 +65,17 @@ Click "📥 Install App" to add to your home screen, then play offline!
   - 🌿 Jungle Expedition — Adventure jungle
 
 ### Graphics & Physics
-- **VPX-Competitive Visuals**
+- **VPX-Competitive Visuals** 🎨
+  - 🆕 **Volumetric lighting** with quality-based intensity scaling
+  - 🆕 **Cascaded shadow mapping** for detailed real-time shadows
+  - 🆕 **Depth of Field (DOF)** with dynamic focus
+  - 🆕 **Film effects** — Chromatic aberration, vignette, grain
+  - 🆕 **Advanced particle system** with custom emitters
+  - 🆕 **Per-light bloom** for dramatic lighting
+  - 🆕 **Motion blur** for dynamic scenes
   - Screen-Space Ambient Occlusion (SSAO)
   - Physically-Based Rendering (PBR)
   - Advanced lighting & shadows
-  - Particle effects & post-processing
   - ACES tone mapping
 
 - **Advanced Physics**
@@ -95,16 +103,23 @@ Click "📥 Install App" to add to your home screen, then play offline!
   - 🔲 DMD Editor — Customize LED display colors & effects
   - 🎬 Video Manager — Add videos for game events
 
-### Display Modes
+### Display Modes & Multi-Screen Features
 - **DMD (Dot Matrix Display)**
   - 128×32 authentic LED display
   - Attract, Playing, Event, Game Over modes
   - Top-5 highscores
+  - 🆕 **Drag-to-resize with corner handles** — Custom sizing per screen
+  - 🆕 **Responsive scaling** — Auto-adjusts to screen size
+  - 🆕 **Persistent custom sizes** — Saved per screen in localStorage
 
-- **Multi-Screen Support**
+- **Multi-Screen & Cabinet Support** 🆕
   - Single screen, 2-screen, 3-screen layouts
-  - Separate backglass & DMD windows
-  - Cross-browser synchronization
+  - 🆕 **Flexible role assignment** — Assign playfield, backglass, or DMD to any screen
+  - 🆕 **Per-screen resolution configuration** — Customize resolution for each screen
+  - 🆕 **Cabinet rotation modes** — Vertical, Horizontal, Wide, Inverted (0°/90°/180°/270°)
+  - 🆕 **Auto-detection system** — Detects screen count and orientation on startup
+  - 🆕 **Cross-window synchronization** — Real-time state sync via BroadcastChannel
+  - 🆕 **Startup scripts** — Auto-launch on Windows (.bat), macOS (.sh), Linux (.sh)
 
 ### Audio & Video
 - **Advanced Audio System**
@@ -150,14 +165,61 @@ npm run electron-dev
 
 ---
 
+## ⚡ Quick Reference
+
+### For Users 👥
+| Want | Link |
+|------|------|
+| 🚀 Get started in 5 mins | [QUICK_START.md](./QUICK_START.md) |
+| 🎮 Setup arcade cabinet (3 screens) | [MULTISCREEN_QUICK_REFERENCE.md](./MULTISCREEN_QUICK_REFERENCE.md) |
+| 🎬 Create & add videos | [VIDEO_EDITOR_QUICK_START.md](./VIDEO_EDITOR_QUICK_START.md) |
+| 💻 Setup desktop app | [DESKTOP_APP_QUICKSTART.md](./DESKTOP_APP_QUICKSTART.md) |
+| 🐛 Troubleshooting | [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) |
+
+### For Developers 👨‍💻
+| Want | Link |
+|------|------|
+| 📖 Architecture overview | [CODE_QUALITY_ARCHITECTURE_DIAGRAM.md](./CODE_QUALITY_ARCHITECTURE_DIAGRAM.md) |
+| 🔬 Video system internals | [EVENT_DRIVEN_VIDEO_SYSTEM.md](./EVENT_DRIVEN_VIDEO_SYSTEM.md) |
+| ⚙️ Multi-screen deep dive | [MULTISCREEN_LAYOUT_GUIDE.md](./MULTISCREEN_LAYOUT_GUIDE.md) |
+| 🎨 Graphics pipeline | [PHASE16_VISUAL_ENHANCEMENTS_SUMMARY.md](./PHASE16_VISUAL_ENHANCEMENTS_SUMMARY.md) |
+| 📊 Performance analysis | [EFFICIENCY_REVIEW_EXECUTIVE_SUMMARY.md](./EFFICIENCY_REVIEW_EXECUTIVE_SUMMARY.md) |
+
+---
+
 ## 📚 Documentation
 
-- **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** — Complete deployment guide for all platforms
-- **[DESKTOP_APP_QUICKSTART.md](./DESKTOP_APP_QUICKSTART.md)** — 5-minute quick start for desktop apps
-- **[PWA_ELECTRON_IMPLEMENTATION_COMPLETE.md](./PWA_ELECTRON_IMPLEMENTATION_COMPLETE.md)** — Technical implementation details
-- **[VIDEO_EDITOR_UI_IMPLEMENTATION.md](./VIDEO_EDITOR_UI_IMPLEMENTATION.md)** — Video editor documentation
+### Getting Started 🚀
+- **[QUICK_START.md](./QUICK_START.md)** — 5-minute setup guide
+- **[STARTUP_GUIDE.md](./STARTUP_GUIDE.md)** — Multi-screen startup & auto-detection
+- **[DESKTOP_APP_QUICKSTART.md](./DESKTOP_APP_QUICKSTART.md)** — Desktop app quick start
+
+### Features & Configuration ⚙️
+- **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** — Complete deployment for all platforms
+- **[MULTISCREEN_QUICK_REFERENCE.md](./MULTISCREEN_QUICK_REFERENCE.md)** — Quick reference for multi-screen setup
+- **[MULTISCREEN_LAYOUT_GUIDE.md](./MULTISCREEN_LAYOUT_GUIDE.md)** — Comprehensive multi-screen guide
+- **[MULTISCREEN_VERIFICATION.md](./MULTISCREEN_VERIFICATION.md)** — Testing & troubleshooting multi-screen
 - **[VIDEO_EDITOR_QUICK_START.md](./VIDEO_EDITOR_QUICK_START.md)** — Video editor quick start
-- **[VIDEO_CREATION_WORKFLOW.md](./VIDEO_CREATION_WORKFLOW.md)** — How to create videos for tables
+- **[VIDEO_CONFIGURATION_GUIDE.md](./VIDEO_CONFIGURATION_GUIDE.md)** — Video configuration reference
+
+### Technical Deep Dives 🔬
+- **[PWA_ELECTRON_IMPLEMENTATION_COMPLETE.md](./PWA_ELECTRON_IMPLEMENTATION_COMPLETE.md)** — PWA & Electron architecture
+- **[VIDEO_EDITOR_UI_IMPLEMENTATION.md](./VIDEO_EDITOR_UI_IMPLEMENTATION.md)** — Video editor UI internals
+- **[VIDEO_CREATION_WORKFLOW.md](./VIDEO_CREATION_WORKFLOW.md)** — Video creation workflow
+- **[EVENT_DRIVEN_VIDEO_SYSTEM.md](./EVENT_DRIVEN_VIDEO_SYSTEM.md)** — Event-driven video binding system
+- **[INTEGRATED_EDITOR_IMPLEMENTATION.md](./INTEGRATED_EDITOR_IMPLEMENTATION.md)** — Table editor architecture
+
+### Quality & Performance 📊
+- **[CODE_QUALITY_EXECUTIVE_SUMMARY.md](./CODE_QUALITY_EXECUTIVE_SUMMARY.md)** — Code quality overview
+- **[CODE_QUALITY_REVIEW_INDEX.md](./CODE_QUALITY_REVIEW_INDEX.md)** — Code review documentation
+- **[EFFICIENCY_REVIEW_EXECUTIVE_SUMMARY.md](./EFFICIENCY_REVIEW_EXECUTIVE_SUMMARY.md)** — Performance analysis
+- **[PHASE16_VISUAL_ENHANCEMENTS_SUMMARY.md](./PHASE16_VISUAL_ENHANCEMENTS_SUMMARY.md)** — Graphics phase details
+- **[PHASE17_VIDEO_SYSTEM_SUMMARY.md](./PHASE17_VIDEO_SYSTEM_SUMMARY.md)** — Video system phase details
+- **[PLAYFIELD_VISUAL_ENHANCEMENTS.md](./PLAYFIELD_VISUAL_ENHANCEMENTS.md)** — Playfield visual details
+
+### Production & Deployment 🚀
+- **[PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md)** — Production deployment checklist
+- **[FPT_DRAGDROP_SUPPORT.md](./FPT_DRAGDROP_SUPPORT.md)** — Drag & drop FPT table loading
 
 ---
 
@@ -248,18 +310,20 @@ public/
 ```
 
 ### Build Status
-- **Modules**: 78
-- **Build Time**: ~1.1 seconds
-- **TypeScript Errors**: 0
-- **Code Size**: ~28,000 lines
+- **Modules**: 60 (optimized)
+- **Build Time**: ~1.15 seconds
+- **TypeScript Errors**: 0 ✓
+- **Code Size**: ~27.8K lines
 - **VBScript Functions**: 179+
+- **Git Commits**: 470+
 
 ### Performance
-| Metric | Desktop | Mobile |
-|--------|---------|--------|
-| FPS | 60 | 50-60 |
-| Memory | 280-350 MB | 150-200 MB |
-| Bundle | ~850 KB gz | ~850 KB gz |
+| Metric | Desktop | Tablet | Mobile |
+|--------|---------|--------|--------|
+| FPS | 60 | 55-60 | 50-60 |
+| Memory | 280-350 MB | 200-280 MB | 150-200 MB |
+| Bundle | ~568 KB gz | ~568 KB gz | ~568 KB gz |
+| Build | 1.15s | — | — |
 
 ---
 
@@ -323,13 +387,17 @@ See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for detailed troubleshooting.
 
 ## 📊 Project Statistics
 
-- **Total Source Code**: ~28,000 lines
+- **Total Source Code**: ~27.8K lines (TypeScript + VBScript)
+- **TypeScript Modules**: 60 (optimized)
 - **TypeScript Files**: 50+
-- **VBScript Functions**: 179+
-- **Build Modules**: 78
-- **Supported Tables**: 6 demo tables
-- **Game Events**: 28+
-- **Development Time**: Multiple phases
+- **VBScript Functions**: 179+ (142+ game API functions)
+- **Graphics Modules**: 15+ (volumetric lighting, cascaded shadows, DOF, particle system, etc.)
+- **Supported Tables**: 6 demo tables (themed, progressive difficulty)
+- **Game Events**: 28+ (video-bindable)
+- **Video Events**: 28+ (bumper hit, target, ramp, multiball, drain, etc.)
+- **Git History**: 470+ commits
+- **Development Phases**: 18 completed phases
+- **Documentation Files**: 30+ guides & references
 
 ---
 
@@ -383,38 +451,55 @@ MIT License - See LICENSE file for details
 
 ---
 
-## 🎉 What's New in v0.16.0
+## 🎉 What's New in v0.18.0 (Phase 18)
 
-### Major Features
-- ✨ Progressive Web App (PWA) support
-- 🖥️ Electron desktop apps (Windows, macOS, Linux)
-- 🎬 Event-driven video system
-- 📝 Video editor UI in integrated editor
-- 🔄 Auto-update system for both PWA & Electron
-- ⚙️ GitHub Actions CI/CD pipeline
+### Core Features ⭐
+- 🎬 **Comprehensive Video System** — 28+ game events with video triggers
+- 🖼️ **Integrated Table Editor** — Playfield, Backglass, DMD, Video editors
+- 💾 **Multi-Screen Architecture** — True arcade cabinet support
+- 📺 **DMD Drag-to-Resize** — Interactive resizing with corner handles
+- 🎨 **Advanced Graphics Pipeline** — Volumetric lighting, cascaded shadows, DOF, film effects
 
-### Improvements
-- 📊 Enhanced playfield visuals (SSAO, PBR)
-- 🎨 Backglass customization
-- 🔲 DMD editor & customization
-- 🎯 Extended video event types (28 total)
-- 📱 Responsive PWA design
-- 🚀 Optimized build process
+### Multi-Screen & Cabinet Features 🆕
+- 🎮 **Flexible Screen Assignment** — Assign playfield, backglass, or DMD to any screen
+- ⚙️ **Per-Screen Resolution Config** — Configure resolution for each display
+- 📐 **Cabinet Rotation Modes** — Support for vertical/horizontal/wide/inverted layouts
+- 🔄 **Auto-Detection System** — Detects screen count, orientation, and physical layout
+- 🚀 **Startup Scripts** — Auto-launch multi-screen setup (Windows, macOS, Linux)
+- 📍 **Window Positioning** — Intelligent window placement across displays
+- 🔗 **Cross-Window Sync** — Real-time state synchronization via BroadcastChannel
 
-### Deployment
-- 🌐 Deploy to any web server (PWA)
-- 📦 Native installers for all platforms
+### Graphics Enhancements 🎨
+- ✨ **Volumetric Lighting** — Dynamic light rays with quality scaling
+- 🌑 **Cascaded Shadow Mapping** — Detailed real-time shadows
+- 🔍 **Depth of Field** — Dynamic focus & blur
+- 🎬 **Film Effects** — Chromatic aberration, vignette, film grain
+- 🌟 **Per-Light Bloom** — Individual light bloom control
+- 💫 **Advanced Particles** — Emitter system with custom effects
+- ⚡ **Motion Blur** — Dynamic scene blur
+
+### Quality & Documentation 📚
+- ✅ **Comprehensive Documentation** — 30+ guides & technical references
+- 📊 **Code Quality Reviews** — Architecture & efficiency analysis
+- 🔒 **CI/CD Pipeline** — GitHub Actions for automated builds
+- 📱 **Progressive Enhancement** — Mobile-first responsive design
+- 🎯 **Performance Optimization** — 60 FPS on desktop, 50+ on mobile
+
+### Deployment & Distribution 🚀
+- 🌐 Progressive Web App (PWA) with offline support
+- 📦 Native desktop apps (Windows, macOS, Linux)
 - 🤖 Automated releases via GitHub Actions
-- 📥 One-click installation for users
-- 🔄 Transparent auto-updates
+- 🔄 Transparent auto-updates for all platforms
+- 📥 One-click installation
 
 ---
 
 ## 🔗 Links
 
-- **GitHub**: [future-pinball-web](https://github.com/YOUR_USERNAME/future-pinball-web)
-- **Releases**: [Download Latest](https://github.com/YOUR_USERNAME/future-pinball-web/releases)
-- **PWA Web**: [Play Online](https://your-domain.com)
+- **GitHub Repository**: [haraldweiss/Futurepinballweb](https://github.com/haraldweiss/Futurepinballweb)
+- **Releases & Downloads**: [Latest Release](https://github.com/haraldweiss/Futurepinballweb/releases)
+- **Issues & Bug Reports**: [GitHub Issues](https://github.com/haraldweiss/Futurepinballweb/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/haraldweiss/Futurepinballweb/discussions)
 
 ---
 
@@ -430,4 +515,8 @@ MIT License - See LICENSE file for details
 
 **Made with ❤️ by Future Pinball Contributors**
 
-Last Updated: March 2026 | Version 0.16.0
+Last Updated: March 12, 2026 | Version 0.18.0 | Phase 18 Complete ✅
+
+---
+
+**🚀 Ready to contribute?** Check out [CONTRIBUTING.md](./CONTRIBUTING.md) or see [GitHub Issues](https://github.com/haraldweiss/Futurepinballweb/issues) for open tasks!
