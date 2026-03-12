@@ -8,10 +8,20 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass }     from 'three/addons/postprocessing/ShaderPass.js';
 import { FXAAShader }     from 'three/addons/shaders/FXAAShader.js';
 import { createVolumetricLightingPass } from './graphics/volumetric-lighting';
+import { SSRPass } from './graphics/ssr-pass';
+import { initializeMetallicMaterials, getMetallicMaterialFactory } from './graphics/metallic-materials';
+import { MotionBlurPass } from './graphics/motion-blur-pass';
+import { CascadedShadowMapper, initializeCascadedShadows } from './graphics/cascaded-shadows';
+import { PerLightBloomPass, initializePerLightBloom } from './graphics/per-light-bloom';
+import { AdvancedParticleSystem, initializeParticleSystem, getParticleSystem } from './graphics/advanced-particle-system';
+import { FilmEffectsPass, initializeFilmEffects, getFilmEffectsPass } from './graphics/film-effects-pass';
+import { DepthOfFieldPass, initializeDepthOfField, getDepthOfFieldPass } from './graphics/dof-pass';
+import { CascadedShadowCompositePass, initializeCascadedShadowComposite } from './graphics/cascaded-shadow-composite-pass';
+import { initializeGraphicsPass } from './graphics/pass-initializer';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
-  bumpers, extraBalls, partData,
+  bumpers, extraBalls, partData, tableGroup,
   setPhysics, setFpScriptHandlers, setLoadedLibrary, setBAMEngine, cb,
 } from './game';
 import { getAudioCtx, playSound, startBGMusic, stopBGMusic, playFPTMusic, toggleMusic, initializeAudioPooling } from './audio';
@@ -21,7 +31,7 @@ import { BamBridge, initializeBamBridge, getBamBridge } from './bam-bridge';
 import {
   dmdState, dmdUpdate, dmdEvent, dmdRenderAttract, dmdRenderPlaying,
   dmdRenderEvent, dmdRenderGameOver, dmdCanvas, DMD_W, DMD_H,
-  toggleDMDMode, dmdSolidMode,
+  toggleDMDMode, dmdSolidMode, initDMDResizing,
 } from './dmd';
 import { getTopScores, recordScore } from './highscore';
 import { TABLE_CONFIGS, buildTable, buildPhysicsTable, buildRealisticFlipper, scoreBumperHit, scoreTargetHit, scoreSlingshotHit, checkRolloverLanes, updateSpinnerPhysics, getAdvancedLighting } from './table';
@@ -35,6 +45,8 @@ import {
   TARGET_HIT, FLIPPER_ACTIVATE, RAMP_COMPLETE, BALL_DRAIN, MULTIBALL_START, MILESTONE_REACHED,
 } from './audio-enhanced';
 import { VisualPolishSystem, emitBallTrail, emitFlipperDust, emitMilestoneSparkles } from './visual-polish';
+import { getIntegratedEditor } from './integrated-editor';
+import { showTableSelector } from './table-selector';
 import {
   CabinetSystem, initializeCabinetSystem, getCabinetSystem, getActiveCabinetProfile,
   setActiveCabinetProfile, rotatePlayfieldTo, CABINET_VERTICAL, CABINET_HORIZONTAL,
@@ -48,6 +60,16 @@ import {
   UIRotationManager, initializeUIRotation, getUIRotationManager,
   applyUIRotation, resetUIRotation,
 } from './ui-rotation';
+import {
+  getPlayfieldCanvasSize, getDMDSize, getBackglassSize, applyRendererScaling,
+  onDisplayResize, getDisplayDimensions,
+} from './responsive-display';
+import {
+  initializeScreenRoleManager, getScreenRoleManager,
+} from './screen-role-manager';
+import {
+  initializeScreenResolutionManager, getScreenResolutionManager,
+} from './screen-resolution-manager';
 import {
   InputMappingManager, initializeInputMapping, getInputMappingManager,
   applyInputMapping, resetInputMapping,
@@ -70,6 +92,16 @@ import {
   GraphicsPipeline, initializeGraphicsPipeline, getGraphicsPipeline, QUALITY_PRESETS,
 } from './graphics/graphics-pipeline';
 import {
+  initializePlayfieldVisualEnhancement, getPlayfieldVisualEnhancement, disposePlayfieldVisualEnhancement,
+} from './graphics/playfield-visual-enhancement';
+import {
+  initializeVideoManager, getVideoManager, disposeVideoManager,
+  type VideoConfig, type VideoEvent,
+} from './video-manager';
+import {
+  initializeVideoBinding, getVideoBindingManager, disposeVideoBinding,
+} from './mechanics/video-binding';
+import {
   FileSystemBrowser, FileInfo, FileOverview, formatFileSize, formatDate, createFileOverview,
   getFileSystemBrowser, resetFileSystemBrowser, getFileStatistics, getCompatibleLibraries,
 } from './file-browser';
@@ -90,6 +122,7 @@ import {
 import { integrationTesting } from './integration-testing';
 import { getPerformanceReportGenerator, generatePerformanceReport } from './performance-report-generator';
 import { getTestSuite, resetTestSuite } from './test-suite';
+import { DirectoryPathManager } from './directory-path-manager';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -262,9 +295,27 @@ window.addEventListener('resize', () => {
   clearTimeout((window as any).resizeTimer);
   (window as any).resizeTimer = setTimeout(() => {
     applyOptimizedTableView();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // ─── Responsive Canvas Sizing on Window Resize ───
+    const canvasSize = getPlayfieldCanvasSize();
+    renderer.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
+
+    // Update camera aspect ratio
+    camera.aspect = canvasSize.displayWidth / canvasSize.displayHeight;
+    camera.updateProjectionMatrix();
+
+    // Update post-processing passes
     if (composer) {
-      composer.setSize(window.innerWidth, window.innerHeight);
+      composer.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
+    }
+    if (ssrPass) {
+      ssrPass.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
+    }
+    if (motionBlurPass) {
+      motionBlurPass.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
+    }
+    if (perLightBloomPass) {
+      perLightBloomPass.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
     }
   }, 250);
 });
@@ -293,8 +344,24 @@ function detectDeviceType(): 'mobile' | 'tablet' | 'desktop' {
 // ─── Role Detection ───────────────────────────────────────────────────────────
 (window as any).FPW_MODULE_LOADED = true;  // Flag to confirm main.ts loaded
 const FPW_ROLE = new URLSearchParams(location.search).get('role');
+const FPW_SCREEN_INDEX = new URLSearchParams(location.search).get('screen');
+
+// Store role info globally
+(window as any).FPW_ROLE = FPW_ROLE || 'playfield';
+(window as any).FPW_SCREEN_INDEX = FPW_SCREEN_INDEX || '0';
+
 if (FPW_ROLE) document.body.classList.add('role-' + FPW_ROLE);
 (window as any).FPW_DEVICE = detectDeviceType();
+
+console.log(`🎮 FPW Window Started - Role: ${(window as any).FPW_ROLE}, Screen: ${(window as any).FPW_SCREEN_INDEX}, Size: ${window.innerWidth}x${window.innerHeight}`);
+
+// ─── Screen Configuration from URL ────────────────────────────────────────────
+// Support for startup scripts: ?screens=1|2|3|auto
+const screenParam = new URLSearchParams(location.search).get('screens');
+if (screenParam && ['1', '2', '3', 'auto'].includes(screenParam)) {
+  const screenVal = screenParam === 'auto' ? 'auto' : parseInt(screenParam, 10);
+  (window as any)._startupScreenConfig = screenVal;
+}
 
 // ─── BroadcastChannel ────────────────────────────────────────────────────────
 const multiChannel: BroadcastChannel | null = typeof BroadcastChannel !== 'undefined'
@@ -340,8 +407,8 @@ let lastAppliedQualityPreset = '';  // Track quality changes for application
 
 // ─── THREE.js Scene ───────────────────────────────────────────────────────────
 const scene    = new THREE.Scene();
-scene.background = new THREE.Color(0x050508);
-scene.fog = new THREE.Fog(0x050508, 20, 50);
+scene.background = new THREE.Color(0x1a1a22);  // ─── Brightened from 0x050508: Much darker gray instead of near-black
+scene.fog = new THREE.Fog(0x1a1a22, 20, 50);   // ─── Match background color, still dark but not oppressive
 
 // ─── Phase 10+: Playground Rotation Group (für Cabinet-Rotation) ─────────────
 /**
@@ -367,6 +434,16 @@ let cabinetSystem = initializeCabinetSystem();
 const activeCabinetProfile = cabinetSystem.autoDetectProfile();
 console.log(`🎮 Cabinet profile auto-detected: ${activeCabinetProfile.name}`);
 
+// ─── Screen Role Manager (Multi-screen Assignment) ────────────────────────────
+const screenRoleManager = initializeScreenRoleManager();
+const screenLayout = screenRoleManager.getLayout();
+console.log(`🎮 Screen roles initialized: ${screenLayout.screens.map((s) => `${s.name}: ${s.role}`).join(', ')}`);
+
+// ─── Screen Resolution Manager (Resolution Configuration) ─────────────────────
+const screenResolutionManager = initializeScreenResolutionManager();
+const resolutionLayout = screenResolutionManager.getLayout();
+console.log(`📺 Screen resolutions initialized: ${resolutionLayout.screens.map((s) => `Screen ${s.screenIndex + 1}: ${s.width}x${s.height}`).join(', ')}`);
+
 // ─── Phase 4: Resource Manager (Memory Budget Management) ──────────────────────
 let resourceManager = initializeResourceManager();
 logMsg(`💾 ResourceManager initialized with default budgets (50MB textures, 20MB audio, 50MB models, 150MB total)`, 'ok');
@@ -384,13 +461,25 @@ const camera = new THREE.PerspectiveCamera(responsiveFOV, aspectRatio, 0.1, 200)
 camera.position.set(0, responsiveTilt, responsiveZoom);  // Auto-zoom + tilt based on aspect ratio
 camera.lookAt(0, 0.5, 0);
 
+// DEBUG: Log camera setup for diagnostics
+console.log('📷 Camera Configuration:', {
+  fov: responsiveFOV,
+  aspect: aspectRatio.toFixed(2),
+  near: 0.1, far: 200,
+  position: { x: 0, y: responsiveTilt.toFixed(2), z: responsiveZoom.toFixed(2) },
+  lookAt: { x: 0, y: 0.5, z: 0 }
+});
+
 const renderer = new THREE.WebGLRenderer({ antialias: true, precision: 'highp' });
-renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(getOptimalPixelRatio());
+// ─── Responsive Canvas Sizing ───
+const initialCanvasSize = getPlayfieldCanvasSize();
+renderer.setSize(initialCanvasSize.canvasWidth, initialCanvasSize.canvasHeight);
+renderer.setPixelRatio(1); // We handle pixel ratio in responsive sizing
+renderer.setPixelRatio(getOptimalPixelRatio()); // Use optimal ratio if available
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
 renderer.toneMapping       = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;  // ─── Phase 2: Enhanced for better color vibrancy
+renderer.toneMappingExposure = 1.35;  // ─── Phase 2: Increased from 1.15 to compensate for SSAO, fog, and dark background
 
 // ─── Phase 2: Output Encoding for better color accuracy ───
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -451,9 +540,10 @@ advancedLightingSystem = getAdvancedLighting(scene);
 console.log('✓ Advanced lighting system initialized');
 
 // ─── Phase 4: Initialize Backglass Renderer ────────────────────────────────────
-// Create backglass with dimensions matching the aspect ratio
-const backglassWidth = 400;
-const backglassHeight = 600;
+// Create backglass with responsive dimensions
+const backglassSize = getBackglassSize();
+const backglassWidth = backglassSize.displayWidth;
+const backglassHeight = backglassSize.displayHeight;
 backglassRenderer = getBackglassRenderer(backglassWidth, backglassHeight);
 console.log('✓ Backglass renderer initialized');
 
@@ -496,17 +586,149 @@ console.log(`✓ Input mapping manager initialized`);
 // Improved glow on ball, bumpers, and emissive surfaces
 // Increased strength for more dramatic visual impact
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.8, 0.8, 0.20);
-bloomPass.threshold = 0.15;  // Lower threshold for more bloom (more surfaces glow)
-bloomPass.strength = 1.6;    // Increased from 1.1 for more dramatic effect
-bloomPass.radius = 0.75;     // Wider glow falloff for softer bloom edges
+bloomPass.threshold = 0.25;  // Higher threshold to reduce glow on dimmer surfaces
+bloomPass.strength = 0.9;    // Reduced from 1.6 for less intense bloom
+bloomPass.radius = 0.6;      // Slightly narrower glow falloff for more defined edges
 composer.addPass(bloomPass);
 
+// ─── Polish Suite Initialization (Phases 18-23) ─────────────────────────────
+// Get quality preset once at initialization
+const initPreset = profiler.getQualityPreset();
+
+// ─── Phase 18: Screen Space Reflections (SSR) ────────────────────────────
+let ssrPass: SSRPass | null = initializeGraphicsPass(
+  'SSRPass',
+  initPreset.ssrEnabled,
+  () => new SSRPass(renderer, scene, camera, innerWidth, innerHeight),
+  (pass) => {
+    pass.setIntensity(initPreset.ssrIntensity);
+    pass.setParameters(initPreset.ssrSamples, initPreset.ssrMaxDistance, 0.1);
+    pass.setEnabled(true);
+    // Add SSR to composer as ShaderPass
+    const ssrShaderPass = new ShaderPass(pass.getShaderMaterial());
+    composer.addPass(ssrShaderPass);
+  }
+);
+
+// ─── Phase 19: Motion Blur (Velocity-Based Blur) ────────────────────────
+let motionBlurPass: MotionBlurPass | null = initializeGraphicsPass(
+  'MotionBlurPass',
+  initPreset.motionBlurEnabled,
+  () => new MotionBlurPass(renderer, innerWidth, innerHeight),
+  (pass) => {
+    pass.setIntensity(initPreset.motionBlurStrength);
+    pass.setSamples(initPreset.motionBlurSamples);
+    pass.setEnabled(true);
+    // Add Motion Blur to composer as ShaderPass
+    const motionBlurShaderPass = new ShaderPass(pass.getShaderMaterial());
+    composer.addPass(motionBlurShaderPass);
+  }
+);
+
+// ─── Phase 20: Cascaded Shadows ────────────────────────────────────────
+let cascadedShadowMapper: CascadedShadowMapper | null = initializeGraphicsPass(
+  'CascadedShadows',
+  initPreset.cascadeShadowsEnabled,
+  () =>
+    initializeCascadedShadows(renderer, scene, camera as THREE.PerspectiveCamera, {
+      cascadeCount: initPreset.cascadeCount,
+      shadowMapSize: initPreset.cascadeShadowMapSize,
+      lightDirection: new THREE.Vector3(0.5, -1, 0.5).normalize(),
+      lightIntensity: 1.0,
+    })
+);
+
+// ─── Phase 20: Cascaded Shadow Composite (Apply Shadows to Scene) ──────
+let cascadedShadowCompositePass: CascadedShadowCompositePass | null = initializeGraphicsPass(
+  'CascadedShadowComposite',
+  initPreset.cascadeShadowsEnabled && cascadedShadowMapper !== null,
+  () => initializeCascadedShadowComposite(innerWidth, innerHeight),
+  (pass) => {
+    // Wire cascade shadow maps to composite pass
+    if (cascadedShadowMapper) {
+      const cascadeInfo = cascadedShadowMapper.getCascadeInfo();
+      const shadowMaps = cascadeInfo.cascades.map(c => c.shadowMap.texture);
+      pass.setShadowMaps(shadowMaps);
+      pass.setCascadeCount(cascadeInfo.count);
+
+      // Set quality-based parameters
+      const qualityConfig = {
+        low: { intensity: 0.3, samples: 2 },
+        medium: { intensity: 0.5, samples: 4 },
+        high: { intensity: 0.7, samples: 8 },
+        ultra: { intensity: 0.9, samples: 16 },
+      };
+      const config = qualityConfig[initPreset.name as 'low' | 'medium' | 'high' | 'ultra'];
+      pass.setShadowIntensity(config.intensity);
+      pass.setPCFSamples(config.samples);
+      pass.setCameraFar((camera as THREE.PerspectiveCamera).far);
+    }
+
+    // Add to composer after blur passes, before volumetric
+    if (pass) {
+      composer.addPass(pass);
+    }
+  }
+);
+
+// ─── Phase 20: Per-Light Bloom ──────────────────────────────────────────
+let perLightBloomPass: PerLightBloomPass | null = initializeGraphicsPass(
+  'PerLightBloom',
+  initPreset.perLightBloomEnabled,
+  () => initializePerLightBloom(renderer, innerWidth, innerHeight),
+  (pass) => {
+    pass.setBloomStrength(initPreset.perLightBloomStrength);
+    pass.setBloomThreshold(initPreset.perLightBloomThreshold);
+    // Add Per-Light Bloom to composer as ShaderPass
+    const perLightBloomShaderPass = new ShaderPass(pass.getShaderMaterial());
+    composer.addPass(perLightBloomShaderPass);
+  }
+);
+
+// ─── Phase 21: Advanced Particle System ────────────────────────────────
+let particleSystem: AdvancedParticleSystem | null = initializeGraphicsPass(
+  'ParticleSystem',
+  initPreset.advancedParticlesEnabled,
+  () => initializeParticleSystem(scene, initPreset.maxParticles),
+  (pass) => {
+    pass.setQualityPreset(initPreset.name as 'low' | 'medium' | 'high' | 'ultra');
+  }
+);
+
 // ─── Phase 15: Volumetric Lighting (God Rays) ──────────────────────────
-// Add atmospheric volumetric lighting effect between bloom and FXAA
 const volumetricPass = createVolumetricLightingPass(renderer);
-volumetricPass.setExposure(0.6);  // Default intensity
-volumetricPass.setParameters(0.8, 0.4, 0.95, 32);  // density, weight, decay, samples
+volumetricPass.setExposure(1.2);  // ─── Increased from 0.6: Was darkening scene by 40%
+volumetricPass.setParameters(0.5, 0.4, 0.95, 32);  // ─── Reduced decay from 0.8 to 0.5: Less aggressive falloff
 composer.addPass((volumetricPass as any).pass || volumetricPass);
+
+// ─── Phase 22: Film Effects (Grain + Aberration + Distortion) ──────────
+let filmEffectsPass: FilmEffectsPass | null = initializeGraphicsPass(
+  'FilmEffects',
+  initPreset.filmEffectsEnabled,
+  () => initializeFilmEffects(renderer),
+  (pass) => {
+    pass.setQualityPreset(initPreset.name as 'low' | 'medium' | 'high' | 'ultra');
+    const shaderPass = new ShaderPass(pass.getShaderMaterial());
+    composer.addPass(shaderPass);
+  }
+);
+
+// ─── Phase 23: Depth of Field (Optional, Ultra-Only) ──────────────────
+let dofPass: DepthOfFieldPass | null = initializeGraphicsPass(
+  'DepthOfField',
+  initPreset.depthOfFieldEnabled,
+  () => initializeDepthOfField(renderer, camera as THREE.PerspectiveCamera),
+  (pass) => {
+    if (pass.isDeviceSupported?.()) {
+      pass.setQualityPreset(initPreset.name as 'low' | 'medium' | 'high' | 'ultra');
+      pass.setAperture(initPreset.dofAperture);
+      pass.setSamples(initPreset.dofSamples);
+      pass.setEnabled(true);
+      const shaderPass = new ShaderPass(pass.getShaderMaterial());
+      composer.addPass(shaderPass);
+    }
+  }
+);
 
 // FXAA: smoother edges at high DPI, performance-friendly alternative to MSAA
 const fxaaPass = new ShaderPass(FXAAShader);
@@ -519,6 +741,22 @@ composer.addPass(fxaaPass);
 // Initialize the modular graphics pipeline system (geometry pooling, material factory, lighting)
 initializeGraphicsPipeline(renderer, scene, camera, composer);
 console.log('✓ Graphics pipeline initialized');
+
+// ─── Phase 16+: Initialize Playfield Visual Enhancements ─────────────────────────
+// SSAO, Enhanced Materials, Color Grading, Improved Shadows
+initializePlayfieldVisualEnhancement(scene, camera, renderer, composer);
+console.log('✓ Playfield visual enhancements initialized');
+
+// ─── Phase 18+: Initialize Enhanced Metallic Materials ──────────────────────────
+// Metallic materials for ball, flippers, bumpers optimized for SSR
+initializeMetallicMaterials();
+console.log('✓ Enhanced metallic materials initialized');
+
+// ─── Phase 17+: Initialize Event-Driven Video System ─────────────────────────────
+// Support for backglass and DMD video playback triggered by game events
+initializeVideoManager();
+initializeVideoBinding();
+console.log('✓ Video playback system initialized');
 
 // ─── Phase 14: Initialize Standard Pinball Lighting via LightManager ───────────────
 // Declare lights at module level so applyQualityPreset() can access them
@@ -534,7 +772,7 @@ if (lightManager) {
   console.log('✓ Pinball lighting system initialized via LightManager');
   // Try to get lights from LightManager if it exposes them
   // For now, create fallback lights anyway for applyQualityPreset() to use
-  ambLight = new THREE.AmbientLight(0xffffff, 0.35);
+  ambLight = new THREE.AmbientLight(0xffffff, 0.55);  // ─── Increased from 0.35: Critical for overall scene brightness
   scene.add(ambLight);
   mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI/3.0, 0.20);
   mainSpot.position.set(0, 14, 16);
@@ -560,7 +798,7 @@ if (lightManager) {
 } else {
   // Fallback: create lights manually if LightManager unavailable
   console.warn('⚠️ LightManager not available, creating lights manually');
-  ambLight = new THREE.AmbientLight(0xffffff, 0.35);
+  ambLight = new THREE.AmbientLight(0xffffff, 0.55);  // ─── Increased from 0.35: Critical for overall scene brightness
   scene.add(ambLight);
   mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI/3.0, 0.20);
   mainSpot.position.set(0, 14, 16);
@@ -675,6 +913,14 @@ function spawnParticles(wx: number, wy: number, hexColor: number, count = 14): v
   // Adaptive spawn: reduce particles on low FPS
   const adaptCount = currentFps < 45 ? Math.floor(count * 0.5) : count;
 
+  // Use advanced particle system if enabled
+  if (particleSystem && currentPreset.advancedParticlesEnabled) {
+    const color = new THREE.Color(hexColor);
+    particleSystem.emit(new THREE.Vector3(wx, wy, 0.55), 'generic', adaptCount, color);
+    return;
+  }
+
+  // Fallback: Basic particle system
   const r = ((hexColor >> 16) & 0xff) / 255;
   const g = ((hexColor >>  8) & 0xff) / 255;
   const b = ( hexColor        & 0xff) / 255;
@@ -720,15 +966,15 @@ async function initPhysics(): Promise<void> {
     RAPIER.RigidBodyDesc.dynamic().setTranslation(2.55, -5.0).setGravityScale(0.0).setLinearDamping(0.0).setAngularDamping(0.9)
   );
   const ballCollider = world.createCollider(
-    RAPIER.ColliderDesc.ball(0.22).setRestitution(0.5).setFriction(0.3), ballBody
+    RAPIER.ColliderDesc.ball(0.22).setRestitution(0.5).setFriction(0.3).setEnabledCCD(true), ballBody
   );
 
   const lFlipperBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(-1.15, -4.6));
-  const lFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13).setTranslation(1.05, 0.0).setRestitution(0.5).setFriction(0.6), lFlipperBody);
+  const lFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13).setTranslation(1.05, 0.0).setRestitution(0.5).setFriction(0.6).setEnabledCCD(true), lFlipperBody);
   leftFlipperColliderHandle = lFlipperCollider.handle;  // Phase 5: Save handle
 
   const rFlipperBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(1.15, -4.6));
-  const rFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13).setTranslation(-1.05, 0.0).setRestitution(0.5).setFriction(0.6), rFlipperBody);
+  const rFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13).setTranslation(-1.05, 0.0).setRestitution(0.5).setFriction(0.6).setEnabledCCD(true), rFlipperBody);
   rightFlipperColliderHandle = rFlipperCollider.handle;  // Phase 5: Save handle
 
   const addFixedBox = (x:number,y:number,hw:number,hh:number,angle=0,restitution=0.75) => {
@@ -808,6 +1054,13 @@ function resetGameState(): void {
   state.ballSavesRemaining = 1;
   state.ballSaveMode = 'none';
   state.lastRank = 0;
+
+  // ─── Arcade Mode: Initialize player/coin system ───
+  state.credits = 0;
+  state.numPlayers = 0;
+  state.currentPlayer = 0;
+  state.playerScores = [0, 0, 0, 0];
+
   resetBall();
   cb.updateHUD();
 }
@@ -905,6 +1158,37 @@ function handlePhysicsFrame(frame: PhysicsFrameData): void {
   }
 }
 
+// ─── Phase 16+: Helper function to apply enhanced visuals to playfield ────────
+function applyEnhancedVisualsToTable(sceneTarget: THREE.Scene): void {
+  const enhancement = getPlayfieldVisualEnhancement();
+  if (!enhancement) return;
+
+  // Traverse scene and apply enhanced materials to identified playfield elements
+  sceneTarget.traverse((obj: THREE.Object3D) => {
+    if (!(obj instanceof THREE.Mesh)) return;
+
+    const mesh = obj as THREE.Mesh;
+    const name = mesh.name.toLowerCase();
+
+    // Identify element type and apply appropriate enhanced material
+    if (name.includes('bumper')) {
+      enhancement.applyEnhancedMaterial(mesh, 'bumper', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as any).color : '#ff6600');
+    } else if (name.includes('target')) {
+      enhancement.applyEnhancedMaterial(mesh, 'target', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as any).color : '#00ff00');
+    } else if (name.includes('ramp')) {
+      enhancement.applyEnhancedMaterial(mesh, 'ramp', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as any).color : '#ccb366');
+    } else if (name.includes('flipper')) {
+      enhancement.applyEnhancedMaterial(mesh, 'flipper', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as any).color : '#ff6600');
+    } else if (name.includes('ball')) {
+      enhancement.applyEnhancedMaterial(mesh, 'ball', '#ffffff');
+    } else if (name.includes('playfield') || name.includes('table')) {
+      enhancement.applyEnhancedMaterial(mesh, 'playfield', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as any).color : '#8b7355');
+    }
+  });
+
+  console.log('✓ Enhanced visuals applied to table');
+}
+
 // ─── Phase 15: Helper function to load table with physics worker ────────────────
 async function loadTableWithPhysicsWorker(tableConfig: any, sceneTarget: THREE.Scene, library?: any): Promise<void> {
   console.log('[loadTableWithPhysicsWorker] START');
@@ -915,6 +1199,9 @@ async function loadTableWithPhysicsWorker(tableConfig: any, sceneTarget: THREE.S
   (window as any).BUILD_TABLE_OK = Date.now();
   (window as any).BUILD_TABLE_TIME_MS = (window as any).BUILD_TABLE_OK - (window as any).BUILD_TABLE_START;
   console.log('[loadTableWithPhysicsWorker] Table built in', (window as any).BUILD_TABLE_TIME_MS, 'ms');
+
+  // ─── Phase 16+: Apply enhanced visuals after table construction ─────────────────
+  applyEnhancedVisualsToTable(sceneTarget);
 
   // Initialize physics worker after table is built
   (window as any).PHYSICS_WORKER_START = Date.now();
@@ -931,6 +1218,67 @@ async function loadTableWithPhysicsWorker(tableConfig: any, sceneTarget: THREE.S
     // Continue with single-threaded physics fallback
   }
   console.log('[loadTableWithPhysicsWorker] COMPLETE');
+}
+
+// ─── Phase 17+: Video Event Trigger System ───────────────────────────────────
+// Helper functions to trigger videos based on game events
+function triggerVideoEvent(eventType: string): void {
+  const videoManager = getVideoManager();
+  const bindingManager = getVideoBindingManager();
+
+  if (!videoManager || !bindingManager) return;
+
+  // Find best binding for this event trigger
+  const binding = bindingManager.findBestBinding(eventType, state);
+
+  if (binding) {
+    videoManager.triggerVideoForEvent(eventType);
+  }
+}
+
+// Game event video triggers
+function onBumperHitVideo(): void {
+  triggerVideoEvent('bumper_hit');
+}
+
+function onTargetHitVideo(): void {
+  triggerVideoEvent('target_hit');
+}
+
+function onRampCompleteVideo(): void {
+  triggerVideoEvent('ramp_complete');
+}
+
+function onMultiballStartVideo(): void {
+  triggerVideoEvent('multiball_start');
+}
+
+function onBallDrainVideo(): void {
+  triggerVideoEvent('ball_drain');
+}
+
+function onFlipperHitVideo(): void {
+  triggerVideoEvent('flipper_hit');
+}
+
+function onSlingshotVideo(): void {
+  triggerVideoEvent('slingshot');
+}
+
+function onSpinnerVideo(): void {
+  triggerVideoEvent('spinner');
+}
+
+function onComboVideo(): void {
+  triggerVideoEvent('combo');
+}
+
+function onTiltVideo(): void {
+  triggerVideoEvent('tilt');
+}
+
+function onGameOverVideo(): void {
+  triggerVideoEvent('game_over');
 }
 
 // ─── Tilt ────────────────────────────────────────────────────────────────────
@@ -953,6 +1301,10 @@ function nudgeTable(direction: number): void {
     }
 
     dmdEvent('TILT!!!'); showNotification('⚠️ TILT!'); playSound('drain');
+
+    // ─── Phase 17+: Trigger tilt video ───
+    onTiltVideo();
+
     setTimeout(() => { state.tiltActive = false; }, 100);
   } else {
     const force = 1.8 + state.tiltWarnings * 0.6;
@@ -989,7 +1341,7 @@ function launchMultiBall(): void {
   let rapierBody = null;
   if (physics && RAPIER) {
     rapierBody = physics.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(startX,startY).setLinearDamping(0.0).setAngularDamping(0.9));
-    physics.world.createCollider(RAPIER.ColliderDesc.ball(0.22).setRestitution(0.5).setFriction(0.3), rapierBody);
+    physics.world.createCollider(RAPIER.ColliderDesc.ball(0.22).setRestitution(0.5).setFriction(0.3).setEnabledCCD(true), rapierBody);
     rapierBody.setLinvel({ x:-3+Math.random()*6, y:5+Math.random()*5 }, true);
   }
   extraBalls.push({ pos:new THREE.Vector3(startX,startY,0.5), vel:{x:0,y:0}, mesh, rapierBody });
@@ -1018,6 +1370,9 @@ function launchMultiBall(): void {
       }
     });
   }
+
+  // ─── Phase 17+: Trigger multiball video ───
+  onMultiballStartVideo();
 }
 
 function updateExtraBalls(dt: number): void {
@@ -1114,6 +1469,12 @@ function updateHUD(): void {
     seqProgress.textContent = `${state.targetsHitSequence.length}/${state.targetSequence.length}`;
   } else {
     seqDisplay.style.display = 'none';
+  }
+
+  // Show/hide editor button based on whether a table is loaded
+  const editorBtn = document.getElementById('editor-btn');
+  if (editorBtn) {
+    editorBtn.style.display = currentTableConfig ? 'inline-block' : 'none';
   }
 
   if (dmdState.mode !== 'event' && dmdState.mode !== 'gameover') dmdState.mode = 'playing';
@@ -1525,21 +1886,60 @@ document.addEventListener('keydown', e => {
     console.log(`📊 Performance profiler: ${showProfiler ? 'ON' : 'OFF'}`);
   }
 
-  // ─── Phase 13.2: Quick Rotation Controls for Cabinet Mode ───
-  // Number keys: 1=0°, 2=90°, 3=180°, 4=270°
-  if (e.key === '1') {
+  // ─── Arcade Mode: Player Start & Coin Input ───
+  // Key 1: 1-Player Start
+  if (e.key === '1' && !e.altKey && !e.ctrlKey && !e.shiftKey) {
+    if (state.credits > 0) {
+      state.credits--;
+      state.numPlayers = 1;
+      state.currentPlayer = 1;
+      state.playerScores = [0, 0, 0, 0];
+      state.score = 0;
+      state.ballNum = 1;
+      showNotification(`🎮 1-Player Game Started! Credits: ${state.credits}`);
+    } else {
+      showNotification('💰 Insert Coin');
+    }
+  }
+
+  // Key 2: 2-Player Start
+  if (e.key === '2' && !e.altKey && !e.ctrlKey && !e.shiftKey) {
+    if (state.credits >= 2) {
+      state.credits -= 2;
+      state.numPlayers = 2;
+      state.currentPlayer = 1;
+      state.playerScores = [0, 0, 0, 0];
+      state.score = 0;
+      state.ballNum = 1;
+      showNotification(`🎮 2-Player Game Started! Credits: ${state.credits}`);
+    } else if (state.credits === 1) {
+      showNotification('💰 Need 1 more coin for 2-Player');
+    } else {
+      showNotification('💰 Insert Coins');
+    }
+  }
+
+  // Key 5: Coin Up
+  if (e.key === '5') {
+    state.credits++;
+    showNotification(`💰 Coin Inserted! Credits: ${state.credits}`);
+  }
+
+  // ─── Phase 13.2: Quick Rotation Controls for Cabinet Mode (Alt+Number) ───
+  // Alt+1=0°, Alt+2=90°, Alt+3=180°, Alt+4=270°
+  if (e.altKey && e.key === '1') {
     rotateAndRedraw(0, 400);
     showNotification('🎮 Rotated to 0°');
   }
-  if (e.key === '2') {
+  if (e.altKey && e.key === '2') {
     rotateAndRedraw(90, 400);
     showNotification('🎮 Rotated to 90°');
   }
-  if (e.key === '3') {
+  if (e.altKey && e.key === '3') {
     rotateAndRedraw(180, 400);
     showNotification('🎮 Rotated to 180°');
   }
-  if (e.key === '4') {
+  if (e.altKey && e.key === '4') {
     rotateAndRedraw(270, 400);
     showNotification('🎮 Rotated to 270°');
   }
@@ -1633,79 +2033,91 @@ document.addEventListener('keyup', e => {
 // ─── Phase 5: Apply Quality Preset Settings ───────────────────────────────────
 // This function applies the profiler's quality preset to actual rendering systems
 function applyQualityPreset(): void {
-  const currentPreset = profiler.getQualityPreset();
-  const presetName = currentPreset.name;
+  try {
+    const currentPreset = profiler.getQualityPreset();
+    const presetName = currentPreset.name;
 
-  // Skip if no change
-  if (lastAppliedQualityPreset === presetName) return;
-  lastAppliedQualityPreset = presetName;
+    // Skip if no change
+    if (lastAppliedQualityPreset === presetName) return;
+    lastAppliedQualityPreset = presetName;
 
-  console.log(`⚙️ Applying quality preset: ${currentPreset.label}`);
+    logMsg(`⚙️ Applying quality preset: ${currentPreset.label}`, 'ok');
 
-  // ─── Bloom Pass ───
-  if (currentPreset.bloomEnabled) {
-    bloomPass.enabled = true;
-    bloomPass.strength = currentPreset.bloomStrength;
-    bloomPass.radius = currentPreset.bloomRadius;
-    bloomPass.threshold = 0.25;  // Fixed threshold
-  } else {
-    bloomPass.enabled = false;
-  }
-
-  // ─── Shadow Maps ───
-  if (currentPreset.shadowsEnabled) {
-    if (mainSpot) {
-      mainSpot.castShadow = true;
-      mainSpot.shadow.mapSize.set(currentPreset.shadowMapSize, currentPreset.shadowMapSize);
-      mainSpot.shadow.blurSamples = 16;
+    // ─── Bloom Pass ───
+    bloomPass?.setEnabled?.(currentPreset.bloomEnabled);
+    if (currentPreset.bloomEnabled && bloomPass) {
+      bloomPass.strength = currentPreset.bloomStrength;
+      bloomPass.radius = currentPreset.bloomRadius;
+      bloomPass.threshold = 0.25;
     }
-    renderer.shadowMap.enabled = true;
-  } else {
-    if (mainSpot) mainSpot.castShadow = false;
-    renderer.shadowMap.enabled = false;
+
+    // ─── Shadow Maps ───
+    if (currentPreset.shadowsEnabled) {
+      mainSpot?.setProperty?.('castShadow', true);
+      mainSpot?.shadow?.mapSize.set(currentPreset.shadowMapSize, currentPreset.shadowMapSize);
+      renderer.shadowMap.enabled = true;
+    } else {
+      mainSpot?.setProperty?.('castShadow', false);
+      renderer.shadowMap.enabled = false;
+    }
+
+    // ─── Lighting Intensities ───
+    if (ambLight) ambLight.intensity = currentPreset.shadowsEnabled ? 0.25 : 0.35;
+    if (fillLight) fillLight.intensity = currentPreset.shadowsEnabled ? 1.2 : 1.5;
+    if (rimLight) rimLight.intensity = currentPreset.shadowsEnabled ? 0.7 : 0.5;
+
+    // ─── Ball Material Emissive ───
+    if (ballOuterMaterial) {
+      ballOuterMaterial.emissiveIntensity = currentPreset.bloomEnabled ? 0.3 : 0.1;
+    }
+    if (ballGlowMaterial) {
+      ballGlowMaterial.emissiveIntensity = currentPreset.bloomEnabled ? 0.6 : 0.2;
+      ballGlowMaterial.opacity = currentPreset.bloomEnabled ? 0.12 : 0.06;
+    }
+
+    // ─── Particle System ───
+    MAX_PARTS = currentPreset.particleCount;
+    logMsg(`  └─ Particles: ${MAX_PARTS} max`, 'ok');
+
+    // ─── Backglass Mode ───
+    if (backglassRenderer) {
+      if (currentPreset.backglassEnabled) {
+        backglassRenderer.setEnabled(true);
+        backglassRenderer.setRenderMode(currentPreset.backglass3D);
+        logMsg(`  └─ Backglass: ${currentPreset.backglass3D ? '3D' : '2D'}`, 'ok');
+      } else {
+        backglassRenderer.setEnabled(false);
+      }
+    }
+
+    // ─── Volumetric Lighting ───
+    if (volumetricPass) {
+      volumetricPass.enabled = currentPreset.volumetricEnabled;
+      if (currentPreset.volumetricEnabled) {
+        volumetricPass.setExposure(currentPreset.volumetricIntensity);
+        logMsg(`  └─ Volumetric: ${(currentPreset.volumetricIntensity * 100).toFixed(0)}%`, 'ok');
+      }
+    }
+
+    // ─── Phase 16+: Playfield Visual Enhancements ───
+    const enhancement = getPlayfieldVisualEnhancement();
+    if (enhancement) {
+      enhancement.setQualityPreset(currentPreset.name as 'low' | 'medium' | 'high' | 'ultra');
+      logMsg(`  └─ Visual Enhancement: ${currentPreset.name}`, 'ok');
+    }
+
+    // ─── DMD Resolution ───
+    if (currentPreset.dmdResolution) {
+      (window as any).setDMDResolutionOption?.(currentPreset.dmdResolution);
+      (window as any).setDMDGlow?.(currentPreset.dmdGlowEnabled, currentPreset.dmdGlowIntensity);
+      logMsg(`  └─ DMD: ${currentPreset.dmdResolution} (glow: ${currentPreset.dmdGlowEnabled})`, 'ok');
+    }
+
+    // ─── Tone Mapping Exposure ───
+    renderer.toneMappingExposure = currentPreset.bloomEnabled ? 1.35 : 1.30;  // ─── Increased from 1.15/1.05 to combat SSAO/fog darkening
+  } catch (err) {
+    logMsg(`❌ Error in applyQualityPreset: ${err instanceof Error ? err.message : String(err)}`, 'error');
   }
-
-  // ─── Lighting Intensities ───
-  if (ambLight) ambLight.intensity = currentPreset.shadowsEnabled ? 0.25 : 0.35;  // Brighter if no shadows
-  if (fillLight) fillLight.intensity = currentPreset.shadowsEnabled ? 1.2 : 1.5;
-  if (rimLight) rimLight.intensity = currentPreset.shadowsEnabled ? 0.7 : 0.5;
-
-  // ─── Ball Material Emissive ───
-  ballOuterMaterial.emissiveIntensity = currentPreset.bloomEnabled ? 0.3 : 0.1;
-  ballGlowMaterial.emissiveIntensity = currentPreset.bloomEnabled ? 0.6 : 0.2;
-  ballGlowMaterial.opacity = currentPreset.bloomEnabled ? 0.12 : 0.06;
-
-  // ─── Particle System ───
-  MAX_PARTS = currentPreset.particleCount;
-  console.log(`  └─ Particles: ${MAX_PARTS} max`);
-
-  // ─── Backglass Mode ───
-  if (backglassRenderer && currentPreset.backglassEnabled) {
-    backglassRenderer.setEnabled(true);
-    backglassRenderer.setRenderMode(currentPreset.backglass3D);
-    console.log(`  └─ Backglass: ${currentPreset.backglass3D ? '3D' : '2D'}`);
-  } else if (backglassRenderer) {
-    backglassRenderer.setEnabled(false);
-  }
-
-  // ─── Volumetric Lighting ───
-  volumetricPass.enabled = currentPreset.volumetricEnabled;
-  if (currentPreset.volumetricEnabled) {
-    volumetricPass.setExposure(currentPreset.volumetricIntensity);
-    console.log(`  └─ Volumetric: ${(currentPreset.volumetricIntensity * 100).toFixed(0)}%`);
-  }
-
-  // ─── DMD Resolution ───
-  if (currentPreset.dmdResolution) {
-    const dmdConfig = { resolution: currentPreset.dmdResolution, glowIntensity: currentPreset.dmdGlowIntensity };
-    (window as any).setDMDResolutionOption?.(currentPreset.dmdResolution);
-    (window as any).setDMDGlow?.(currentPreset.dmdGlowEnabled, currentPreset.dmdGlowIntensity);
-    console.log(`  └─ DMD: ${currentPreset.dmdResolution} (glow: ${currentPreset.dmdGlowEnabled})`);
-  }
-
-  // ─── Tone Mapping Exposure ───
-  // Increase exposure slightly for low quality (darker scenes), reduce for high quality
-  renderer.toneMappingExposure = currentPreset.bloomEnabled ? 1.15 : 1.05;
 }
 
 // ─── Game Loop ────────────────────────────────────────────────────────────────
@@ -1915,6 +2327,37 @@ function animate(): void {
   ball.rotation.x += state.ballVel.y*dt*0.6;
   ball.rotation.z -= state.ballVel.x*dt*0.6;
 
+  // ─── Phase 19: Update Motion Blur Velocity Buffer ───
+  // Track ball velocity for motion blur effect
+  if (motionBlurPass) {
+    motionBlurPass.updateVelocityBuffer(dt);
+    motionBlurPass.trackObject(ball);
+  }
+
+  // ─── Phase 20: Update Cascaded Shadow Maps ───
+  // Update cascade frustums based on camera position
+  if (cascadedShadowMapper) {
+    cascadedShadowMapper.updateCascades(camera as THREE.PerspectiveCamera);
+  }
+
+  // ─── Phase 21: Update Advanced Particle System ───
+  // Physics update for all active particles
+  if (particleSystem) {
+    particleSystem.update(dt);
+  }
+
+  // ─── Phase 22: Update Film Effects ───
+  // Update grain animation and decay aberration/distortion
+  if (filmEffectsPass) {
+    filmEffectsPass.update(dt);
+  }
+
+  // ─── Phase 23: Update Depth of Field ───
+  // Update focus tracking on ball
+  if (dofPass) {
+    dofPass.setBallPosition(ball.position);
+  }
+
   // ─── Phase 7: Ball Save Countdown with Extended Saves ───
   if (state.ballSaveTimer > 0) {
     const prev = state.ballSaveTimer; state.ballSaveTimer -= dt;
@@ -1934,6 +2377,12 @@ function animate(): void {
   updatePlunger(dt);
   updateExtraBalls(dt);
   updateParticles(dt);
+
+  // ─── Phase 21: Update Advanced Particle System (Polish Suite) ───
+  if (particleSystem) {
+    particleSystem.update(dt, tableGroup || scene);
+  }
+
   dmdUpdate();
 
   // ─── Phase 2: Update Advanced Lighting ───
@@ -1965,7 +2414,7 @@ function animate(): void {
   }
 
   // ─── Phase 14: Render Frame ───
-  // Simple direct render to fix black screen issue
+  // Render through graphics pipeline (EffectComposer) to enable Polish Suite post-processing
   if (renderer && scene && camera) {
     if (animateCallCount === 1 || animateCallCount % 300 === 0) {
       console.log(`🎨 Rendering frame #${animateCallCount}`, {
@@ -1974,7 +2423,30 @@ function animate(): void {
         cameraPos: camera?.position
       });
     }
-    renderer.render(scene, camera);
+
+    // ─── Phase 20: Update and Render Cascaded Shadows (Polish Suite) ───
+    if (cascadedShadowMapper && camera instanceof THREE.PerspectiveCamera) {
+      cascadedShadowMapper.updateCascades(camera);
+      cascadedShadowMapper.renderShadowMaps();
+    }
+
+    // Render through graphics pipeline for post-processing (SSR, Motion Blur, Shadows, Bloom, Film Effects, DoF)
+    try {
+      const pipeline = getGraphicsPipeline();
+      if (animateCallCount === 1) {
+        console.log('🔄 Pipeline status:', { exists: !!pipeline, type: pipeline?.constructor.name });
+      }
+      if (pipeline) {
+        pipeline.renderFrame(dt);  // Use graphics pipeline for Polish Suite post-processing
+      } else {
+        // Fallback: direct render if pipeline unavailable
+        if (animateCallCount === 1) console.warn('⚠️ Pipeline unavailable, using fallback renderer.render()');
+        renderer.render(scene, camera);
+      }
+    } catch (error) {
+      console.warn('Pipeline render failed, falling back to direct render:', error);
+      renderer.render(scene, camera);
+    }
   } else {
     if (animateCallCount === 1) {
       console.warn(`⚠️ Cannot render: renderer=${!!renderer}, scene=${!!scene}, camera=${!!camera}`);
@@ -2159,7 +2631,7 @@ window.loadDemoTable = async (key: string) => {
 window.closeLoader = async function closeLoader() {
   (document.getElementById('loader-modal') as HTMLElement).style.display='none';
   if (!currentTableConfig) {
-    await loadTableWithPhysicsWorker(TABLE_CONFIGS['classic'], scene);
+    await loadTableWithPhysicsWorker(TABLE_CONFIGS['pharaoh'], scene);
     setupBackglassForTable();
   }
 };
@@ -2603,12 +3075,48 @@ window.toggleFullscreen = () => {
 window.toggleDMDMode = toggleDMDMode;
 
 let _dmdHidden = false;
+
+// ─── Auto-hide DMD on playfield when using multi-screen mode ───
+// Check if we're in a multi-screen setup with dedicated DMD screen
+const initDMDVisibility = () => {
+  const screenRoleMgr = getScreenRoleManager();
+  const layout = screenRoleMgr.getLayout();
+  const hasDedicatedDMD = layout.screens.some(s => s.role === 'dmd');
+
+  // If multi-screen mode with dedicated DMD, and this is NOT the DMD window, hide it
+  if (layout.screenCount > 1 && hasDedicatedDMD && FPW_ROLE !== 'dmd') {
+    _dmdHidden = true;
+    console.log(`🎮 Multi-screen mode detected: DMD hidden on ${FPW_ROLE || 'playfield'} window`);
+  }
+};
+
 window.toggleHideDMD = () => {
   _dmdHidden = !_dmdHidden;
   const wrap=document.getElementById('dmd-wrap')!, btn=document.getElementById('hide-dmd-btn')!;
   wrap.style.display=_dmdHidden?'none':'';
   btn.classList.toggle('dmd-hidden',_dmdHidden);
 };
+
+// ─── Initialize DMD visibility based on multi-screen configuration ───
+document.addEventListener('DOMContentLoaded', () => {
+  initDMDVisibility();
+  // Apply DMD visibility to the UI
+  const wrap = document.getElementById('dmd-wrap');
+  const btn = document.getElementById('hide-dmd-btn');
+  if (wrap) wrap.style.display = _dmdHidden ? 'none' : '';
+  if (btn) btn.classList.toggle('dmd-hidden', _dmdHidden);
+}, { once: true });
+
+// Fallback for if DOMContentLoaded already fired
+setTimeout(() => {
+  if (!document.readyState.includes('loading')) {
+    initDMDVisibility();
+    const wrap = document.getElementById('dmd-wrap');
+    const btn = document.getElementById('hide-dmd-btn');
+    if (wrap) wrap.style.display = _dmdHidden ? 'none' : '';
+    if (btn) btn.classList.toggle('dmd-hidden', _dmdHidden);
+  }
+}, 100);
 
 // ─── Resize (with Responsive Adjustments) ─────────────────────────────────────
 window.addEventListener('resize', () => {
@@ -2698,12 +3206,121 @@ window.addEventListener('resize', () => {
 // ─── Multi-Screen ─────────────────────────────────────────────────────────────
 let _msLayout = 1;
 const _msWindows: Record<string,Window|null> = {};
+const _msWindowStatus: Record<string,{opened: boolean; verified: boolean}> = {};
 
 window.selectMsLayout = (n: number) => {
-  _msLayout=n; [1,2,3].forEach(i => document.getElementById('ms-card-'+i)?.classList.toggle('selected',i===n));
+  _msLayout=n;
+  [1,2,3].forEach(i => document.getElementById('ms-card-'+i)?.classList.toggle('selected',i===n));
+
+  // ─── Update Screen Role Configuration UI ───
+  const roleConfig = document.getElementById('screen-role-config')!;
+  const roleList = document.getElementById('screen-role-list')!;
+
+  if (n > 1) {
+    roleConfig.style.display = 'block';
+    roleList.innerHTML = '';
+
+    // Create role assignment controls for each screen
+    const mgr = getScreenRoleManager();
+    const layout = mgr.getLayout();
+
+    for (let i = 0; i < n; i++) {
+      const currentRole = layout.screens[i]?.role || 'none';
+      const screenDiv = document.createElement('div');
+      screenDiv.style.display = 'flex';
+      screenDiv.style.gap = '8px';
+      screenDiv.style.alignItems = 'center';
+
+      const label = document.createElement('label');
+      label.style.flex = '0 0 80px';
+      label.style.color = '#00aaff';
+      label.style.fontSize = '12px';
+      label.textContent = `Screen ${i + 1}:`;
+
+      const select = document.createElement('select');
+      select.style.flex = '1';
+      select.style.padding = '6px';
+      select.style.background = '#1a1a2e';
+      select.style.color = '#aaa';
+      select.style.border = '1px solid #667';
+      select.style.borderRadius = '4px';
+      select.onchange = (e: any) => {
+        mgr.setRoleForScreen(i, e.target.value);
+      };
+
+      const options = [
+        { value: 'playfield', text: '▶ Playfield (Main Game)' },
+        { value: 'backglass', text: '🎪 Backglass (Cabinet Art)' },
+        { value: 'dmd', text: '🔢 DMD (Score Display)' },
+      ];
+
+      options.forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.text;
+        option.selected = currentRole === opt.value;
+        select.appendChild(option);
+      });
+
+      screenDiv.appendChild(label);
+      screenDiv.appendChild(select);
+      roleList.appendChild(screenDiv);
+    }
+  } else {
+    roleConfig.style.display = 'none';
+  }
 };
 window.openMultiscreenModal  = () => document.getElementById('multiscreen-modal')!.classList.add('open');
 window.closeMultiscreenModal = () => document.getElementById('multiscreen-modal')!.classList.remove('open');
+
+// ─── Helper function to open windows with verification ───
+function openMultiScreenWindow(url: string, name: string, features: string, role: string): Window | null {
+  console.log(`🪟 Opening ${role} window: ${url}`);
+  try {
+    const win = window.open(url, name, features);
+    if (win) {
+      _msWindowStatus[role] = { opened: true, verified: false };
+      console.log(`✓ ${role} window opened successfully`);
+
+      // Verify window loaded after delay
+      setTimeout(() => {
+        try {
+          if (!win.closed && win.document && win.document.readyState === 'complete') {
+            _msWindowStatus[role].verified = true;
+            console.log(`✓ ${role} window verified - fully loaded`);
+          } else {
+            console.warn(`⚠ ${role} window opened but may not be fully loaded yet`);
+          }
+        } catch (e) {
+          console.warn(`⚠ Cannot verify ${role} window (cross-origin):`, e);
+        }
+      }, 2000);
+
+      return win;
+    } else {
+      _msWindowStatus[role] = { opened: false, verified: false };
+      console.error(`✗ ${role} window failed to open - likely blocked by browser`);
+      showNotification(`⚠ ${role} window blocked. Enable popups for localhost`);
+      return null;
+    }
+  } catch (err) {
+    _msWindowStatus[role] = { opened: false, verified: false };
+    console.error(`✗ ${role} window error:`, err);
+    return null;
+  }
+}
+
+// ─── Screen Role Management ───
+window.resetScreenRoles = (screenCount?: number) => {
+  const count = screenCount || _msLayout;
+  getScreenRoleManager().resetToDefault(count);
+  window.selectMsLayout?.(count);
+};
+
+window.swapScreenRoles = (screen1: number, screen2: number) => {
+  getScreenRoleManager().swapRoles(screen1, screen2);
+  window.selectMsLayout?.(_msLayout);
+};
 
 window.autoDetectScreens = async () => {
   const info=document.getElementById('ms-detect-info')!; info.classList.add('visible'); info.innerHTML='<span>Scanning...</span>';
@@ -2717,29 +3334,164 @@ window.autoDetectScreens = async () => {
   else {info.innerHTML=`<span>1 screen</span>`;window.selectMsLayout(1);}
 };
 
-function _winSpec(role: string, dw: number, dh: number): string {
+// ─── Apply startup screen configuration from URL parameter ───────────────────
+window.applyStartupScreenConfig = async () => {
+  const config = (window as any)._startupScreenConfig;
+  const tableParam = new URLSearchParams(location.search).get('table');
+
+  if (!config) return; // No startup config
+
+  // Auto-load first demo table if screen config is provided but no table is loaded yet
+  if (tableParam || !currentTableConfig) {
+    const demoTable = tableParam || 'pharaoh';
+    // Load the table first, then apply screen config
+    window.loadDemoTable?.(demoTable);
+    await new Promise(resolve => setTimeout(resolve, 500)); // Wait for table to load
+  }
+
+  if (config === 'auto') {
+    // Auto-detect and apply
+    await window.autoDetectScreens?.();
+    setTimeout(() => window.applyMsLayout?.(), 500);
+  } else if ([1, 2, 3].includes(config)) {
+    // Apply specific screen count
+    window.selectMsLayout?.(config);
+    setTimeout(() => window.applyMsLayout?.(), 300);
+  }
+};
+
+function _winSpec(role: string, dw: number, dh: number, screenIdx?: number): string {
+  // Try to use saved position first
   try { const s=JSON.parse(localStorage.getItem('fpw_winpos_'+role)??'null'); if(s?.w>100) return `width=${s.w},height=${s.h},left=${s.x},top=${s.y}`; } catch { /* ignore */ }
+
+  // If screen index provided, use that screen's position
+  if (screenIdx !== undefined) {
+    try {
+      if ('getScreenDetails' in window) {
+        const screens = (window as any).screens || [];
+        if (screens.length > screenIdx) {
+          const scr = screens[screenIdx];
+          return `width=${dw},height=${dh},left=${scr.availLeft},top=${scr.availTop}`;
+        }
+      }
+    } catch { /* fallback */ }
+  }
+
   return `width=${dw},height=${dh}`;
 }
 
-window.applyMsLayout = () => {
+window.applyMsLayout = async () => {
   window.closeMultiscreenModal?.();
   ['dmd','backglass'].forEach(role=>{ if(_msWindows[role]&&!(_msWindows[role] as Window).closed)(_msWindows[role] as Window).close(); delete _msWindows[role]; });
   stopInlineBackglass();
   const btn=document.getElementById('multiscreen-btn')!, hdBtn=document.getElementById('hide-dmd-btn')!;
   const base=location.origin+location.pathname, sw=screen.width, sh=screen.height;
+
+  // ─── Get screen role assignments ───
+  const screenRoleMgr = getScreenRoleManager();
+  const roleLayout = screenRoleMgr.getLayout();
+
+  // Try to get available screens
+  let screens: any[] = [];
+  try {
+    if ('getScreenDetails' in window) {
+      const details = await (window as any).getScreenDetails();
+      screens = details.screens || [];
+      console.log(`📺 Screen API detected: ${screens.length} screens found`);
+      screens.forEach((s, i) => {
+        console.log(`  Screen ${i}: ${s.availWidth}x${s.availHeight} @ (${s.availLeft},${s.availTop})`);
+      });
+    } else {
+      console.warn('⚠ getScreenDetails not available, screen positioning may not work');
+    }
+  } catch (e) {
+    console.error('⚠ Screen enumeration failed:', e);
+    /* Screen enumeration not available, fallback to manual positioning */
+  }
+
   if(_msLayout===1){
     initInlineBackglass(); btn.classList.add('active-multi');
   } else if(_msLayout===2){
-    _msWindows['backglass']=window.open(base+'?role=backglass','fpw_backglass',_winSpec('backglass',sw,sh)+',toolbar=no,menubar=no,scrollbars=no,resizable=yes');
+    // ─── 2-Screen: Use role assignments ───
+    // Find which screen should be backglass/dmd
+    const bgScreen = roleLayout.screens.find(s => s.role === 'backglass' || s.role === 'dmd');
+    const screenIdx = bgScreen?.screenIndex || 1; // Default to screen 2
+
+    if(screens.length > screenIdx) {
+      const screen2 = screens[screenIdx];
+      const x = screen2.availLeft, y = screen2.availTop, w = screen2.availWidth, h = screen2.availHeight;
+      const spec = `width=${w},height=${h},left=${x},top=${y},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
+      _msWindows['backglass']=window.open(base+'?role=backglass','fpw_backglass', spec);
+      showNotification(`2-Screen: Backglass auf Screen ${screenIdx + 1} geöffnet`);
+    } else {
+      _msWindows['backglass']=window.open(base+'?role=backglass','fpw_backglass',_winSpec('backglass',sw,sh)+',toolbar=no,menubar=no,scrollbars=no,resizable=yes');
+      showNotification('2-Screen: Bitte Backglass-Fenster auf zweiten Monitor ziehen');
+    }
     if(hdBtn){hdBtn.style.display='block';} btn.classList.add('active-multi');
-    showNotification('2-Screen: Backglass-Fenster auf zweiten Monitor ziehen');
   } else if(_msLayout===3){
-    _msWindows['backglass']=window.open(base+'?role=backglass&nodmd=1','fpw_backglass',_winSpec('backglass',Math.round(sw*0.75),Math.round(sh*0.75))+',toolbar=no,menubar=no,scrollbars=no,resizable=yes');
-    _msWindows['dmd']      =window.open(base+'?role=dmd','fpw_dmd',_winSpec('dmd',Math.round(sw*0.55),Math.round(sh*0.28))+',toolbar=no,menubar=no,scrollbars=no,resizable=yes');
+    // ─── 3-Screen: Use individual role assignments ───
+    const bgConfig = roleLayout.screens.find(s => s.role === 'backglass');
+    const dmdConfig = roleLayout.screens.find(s => s.role === 'dmd');
+
+    const bgScreenIdx = bgConfig?.screenIndex ?? 1;
+    const dmdScreenIdx = dmdConfig?.screenIndex ?? 2;
+
+    console.log(`🎮 3-Screen Mode: Backglass on screen ${bgScreenIdx + 1}, DMD on screen ${dmdScreenIdx + 1}. Detected ${screens.length} physical screens`);
+
+    if(screens.length >= 3) {
+      // Backglass on assigned screen
+      if (bgScreenIdx < screens.length) {
+        const bgScreen = screens[bgScreenIdx];
+        const xbg = bgScreen.availLeft, ybg = bgScreen.availTop, wbg = bgScreen.availWidth, hbg = bgScreen.availHeight;
+        const specBg = `width=${wbg},height=${hbg},left=${xbg},top=${ybg},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
+        _msWindows['backglass']=window.open(base+'?role=backglass&nodmd=1','fpw_backglass', specBg);
+      }
+
+      // DMD on assigned screen
+      if (dmdScreenIdx < screens.length) {
+        const dmdScreen = screens[dmdScreenIdx];
+        const xdmd = dmdScreen.availLeft, ydmd = dmdScreen.availTop, wdmd = dmdScreen.availWidth, hdmd = dmdScreen.availHeight;
+        const specDmd = `width=${wdmd},height=${hdmd},left=${xdmd},top=${ydmd},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
+        console.log(`✓ Opening DMD on Screen ${dmdScreenIdx + 1}: ${wdmd}x${hdmd} at (${xdmd},${ydmd})`);
+        _msWindows['dmd']=window.open(base+'?role=dmd','fpw_dmd', specDmd);
+        if (!_msWindows['dmd']) {
+          console.warn('⚠ Detailed positioning failed, trying basic window.open()');
+          _msWindows['dmd']=window.open(base+'?role=dmd','fpw_dmd', 'toolbar=no,menubar=no,scrollbars=no,resizable=yes,width=1024,height=256');
+        }
+        if (!_msWindows['dmd']) console.error('⚠ DMD window failed to open - may be blocked by browser or popups disabled');
+      } else {
+        console.warn(`⚠ DMD screen index ${dmdScreenIdx} >= total screens ${screens.length}, falling back`);
+      }
+
+      showNotification(`3-Screen: Backglass auf Screen ${bgScreenIdx + 1}, DMD auf Screen ${dmdScreenIdx + 1} geöffnet`);
+    } else if(screens.length === 2) {
+      // Fallback for 2 physical screens: backglass on screen 2, DMD on screen 2 (split layout)
+      console.warn('⚠ Only 2 screens detected, opening Backglass+DMD both on Screen 2');
+      const screen2 = screens[1];
+      const x = screen2.availLeft, y = screen2.availTop, w = screen2.availWidth, h = screen2.availHeight;
+      const spec = `width=${w},height=${h},left=${x},top=${y},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
+      _msWindows['backglass']=window.open(base+'?role=backglass&nodmd=1','fpw_backglass', spec);
+      console.log(`✓ Backglass opened on Screen 2`);
+      _msWindows['dmd']=window.open(base+'?role=dmd','fpw_dmd', spec);
+      console.log(`✓ DMD opened on Screen 2`);
+      showNotification('3-Screen-Modus mit 2 Bildschirmen: Backglass+DMD auf Screen 2');
+    } else {
+      // Fallback for single screen: manual arrangement
+      _msWindows['backglass']=window.open(base+'?role=backglass&nodmd=1','fpw_backglass',_winSpec('backglass',Math.round(sw*0.75),Math.round(sh*0.75))+',toolbar=no,menubar=no,scrollbars=no,resizable=yes');
+      _msWindows['dmd']=window.open(base+'?role=dmd','fpw_dmd',_winSpec('dmd',Math.round(sw*0.55),Math.round(sh*0.28))+',toolbar=no,menubar=no,scrollbars=no,resizable=yes');
+      showNotification('3-Screen: Fenster auf gewünschte Bildschirme ziehen');
+    }
     if(hdBtn) hdBtn.style.display='block'; btn.classList.add('active-multi');
-    showNotification('3-Screen: Fenster auf gewünschte Bildschirme ziehen');
   }
+
+  // Re-apply DMD visibility based on the new multi-screen layout
+  setTimeout(() => {
+    initDMDVisibility();
+    const wrap = document.getElementById('dmd-wrap');
+    const btn = document.getElementById('hide-dmd-btn');
+    if (wrap) wrap.style.display = _dmdHidden ? 'none' : '';
+    if (btn) btn.classList.toggle('dmd-hidden', _dmdHidden);
+  }, 200);
 };
 
 // ─── Secondary Windows ────────────────────────────────────────────────────────
@@ -2750,8 +3502,29 @@ function setupDMDWindow(): void {
     disposePhysicsWorker();
   });
   const wrap=document.getElementById('dmd-wrap')!, canvas=document.getElementById('dmd') as HTMLCanvasElement;
-  const resizeDMD=()=>{const a=DMD_W/DMD_H,ww=innerWidth-60,wh=innerHeight-40;let w=ww,h=ww/a;if(h>wh){h=wh;w=h*a;}canvas.style.width=w+'px';canvas.style.height=h+'px';};
-  resizeDMD(); window.addEventListener('resize',resizeDMD);
+
+  // ─── Responsive DMD sizing ───
+  const resizeDMD=()=>{
+    const a=DMD_W/DMD_H;
+    const ww=innerWidth-60, wh=innerHeight-40;
+    let w=ww, h=ww/a;
+    if(h>wh){h=wh;w=h*a;}
+    canvas.style.width=w+'px';
+    canvas.style.height=h+'px';
+
+    // Update DMD scale based on actual height
+    if((window as any).updateResponsiveDMDScale) {
+      (window as any).updateResponsiveDMDScale();
+    }
+  };
+
+  resizeDMD();
+  window.addEventListener('resize', resizeDMD);
+  window.addEventListener('orientationchange', resizeDMD);
+
+  // Initialize drag-to-resize functionality
+  initDMDResizing(canvas, wrap);
+
   const dmdLoop=()=>{requestAnimationFrame(dmdLoop);dmdState.animFrame++;
     switch(dmdState.mode){case'attract':dmdRenderAttract();break;case'playing':dmdRenderPlaying();break;case'event':dmdRenderEvent();break;case'gameover':dmdRenderGameOver();break;}
     if(dmdState.mode==='event'){dmdState.eventTimer--;if(dmdState.eventTimer<=0)dmdState.mode='playing';}
@@ -2836,41 +3609,70 @@ const handleFile = async (f: File) => {
 
 // ─── Table Directory Browser ────────────────────────────────────────────────────
 async function browseTableDirectory(): Promise<void> {
-  let files: File[] = [];
   const dirPathInput = document.getElementById('table-dir-path') as HTMLInputElement;
+  const tableInput = document.getElementById('table-dir-input') as HTMLInputElement;
+
+  logMsg('📂 Verzeichnis wird ausgewählt...', 'info');
 
   if ('showDirectoryPicker' in window) {
+    // Modern API: showDirectoryPicker (Chrome/Edge)
     try {
       const dirHandle = await (window as any).showDirectoryPicker();
-      dirPathInput.value = dirHandle.name;
+      dirPathInput.value = dirHandle.name || 'Tabellenverzeichnis';
+
+      // Pfad speichern
+      DirectoryPathManager.saveTablePath(dirHandle.name || 'Tabellenverzeichnis');
+      updateTablePathShortcuts();
+
+      let files: File[] = [];
       for await (const [name, handle] of dirHandle.entries()) {
         if (name.endsWith('.fpt') || name.endsWith('.fp')) {
-          files.push(await (handle as any).getFile());
+          try {
+            const file = await (handle as any).getFile();
+            files.push(file);
+          } catch (e) {
+            console.warn(`⚠ Fehler beim Lesen der Datei ${name}:`, e);
+          }
         }
       }
-    } catch (e) {
-      logMsg(`❌ Directory picker error: ${e}`, 'error');
+
+      logMsg(`✅ ${files.length} Tabellen-Dateien gefunden`, 'ok');
+      renderTableFileGrid(files);
+    } catch (e: any) {
+      if (e.name === 'AbortError') {
+        logMsg('❌ Verzeichnis-Auswahl abgebrochen', 'warn');
+      } else {
+        logMsg(`❌ Fehler beim Verzeichnis-Picker: ${e.message}`, 'error');
+      }
       return;
     }
-  } else {
-    // Fallback: use webkitdirectory
-    const tableInput = document.getElementById('table-dir-input') as HTMLInputElement;
+  } else if (tableInput) {
+    // Fallback: use webkitdirectory (Firefox/Safari)
     tableInput.onchange = (e) => {
       const input = e.target as HTMLInputElement;
-      if (input.files) {
+      if (input.files && input.files.length > 0) {
+        let files: File[] = [];
         Array.from(input.files).forEach(f => {
           if (f.name.endsWith('.fpt') || f.name.endsWith('.fp')) {
             files.push(f);
           }
         });
+
         dirPathInput.value = 'Tabellenverzeichnis';
+        DirectoryPathManager.saveTablePath('Tabellenverzeichnis');
+        updateTablePathShortcuts();
+
+        logMsg(`✅ ${files.length} Tabellen-Dateien gefunden`, 'ok');
         renderTableFileGrid(files);
+      } else {
+        logMsg('❌ Keine Dateien ausgewählt', 'warn');
       }
     };
     tableInput.click();
     return;
+  } else {
+    logMsg('❌ Verzeichnis-Auswahl wird in diesem Browser nicht unterstützt', 'error');
   }
-  renderTableFileGrid(files);
 }
 
 function renderTableFileGrid(files: File[]): void {
@@ -2902,41 +3704,70 @@ function renderTableFileGrid(files: File[]): void {
 
 // ─── Library Directory Browser ──────────────────────────────────────────────────
 async function browseLibraryDirectory(): Promise<void> {
-  let files: File[] = [];
   const dirPathInput = document.getElementById('lib-dir-path') as HTMLInputElement;
+  const libInput = document.getElementById('lib-dir-input') as HTMLInputElement;
+
+  logMsg('📚 Bibliotheksverzeichnis wird ausgewählt...', 'info');
 
   if ('showDirectoryPicker' in window) {
+    // Modern API: showDirectoryPicker (Chrome/Edge)
     try {
       const dirHandle = await (window as any).showDirectoryPicker();
-      dirPathInput.value = dirHandle.name;
+      dirPathInput.value = dirHandle.name || 'Bibliotheksverzeichnis';
+
+      // Pfad speichern
+      DirectoryPathManager.saveLibraryPath(dirHandle.name || 'Bibliotheksverzeichnis');
+      updateLibraryPathShortcuts();
+
+      let files: File[] = [];
       for await (const [name, handle] of dirHandle.entries()) {
         if (name.endsWith('.fpl')) {
-          files.push(await (handle as any).getFile());
+          try {
+            const file = await (handle as any).getFile();
+            files.push(file);
+          } catch (e) {
+            console.warn(`⚠ Fehler beim Lesen der Datei ${name}:`, e);
+          }
         }
       }
-    } catch (e) {
-      logMsg(`❌ Directory picker error: ${e}`, 'error');
+
+      logMsg(`✅ ${files.length} Bibliotheks-Dateien gefunden`, 'ok');
+      renderLibraryFileList(files);
+    } catch (e: any) {
+      if (e.name === 'AbortError') {
+        logMsg('❌ Verzeichnis-Auswahl abgebrochen', 'warn');
+      } else {
+        logMsg(`❌ Fehler beim Verzeichnis-Picker: ${e.message}`, 'error');
+      }
       return;
     }
-  } else {
-    // Fallback: use webkitdirectory
-    const libInput = document.getElementById('lib-dir-input') as HTMLInputElement;
+  } else if (libInput) {
+    // Fallback: use webkitdirectory (Firefox/Safari)
     libInput.onchange = (e) => {
       const input = e.target as HTMLInputElement;
-      if (input.files) {
+      if (input.files && input.files.length > 0) {
+        let files: File[] = [];
         Array.from(input.files).forEach(f => {
           if (f.name.endsWith('.fpl')) {
             files.push(f);
           }
         });
+
         dirPathInput.value = 'Bibliotheksverzeichnis';
+        DirectoryPathManager.saveLibraryPath('Bibliotheksverzeichnis');
+        updateLibraryPathShortcuts();
+
+        logMsg(`✅ ${files.length} Bibliotheks-Dateien gefunden`, 'ok');
         renderLibraryFileList(files);
+      } else {
+        logMsg('❌ Keine Dateien ausgewählt', 'warn');
       }
     };
     libInput.click();
     return;
+  } else {
+    logMsg('❌ Verzeichnis-Auswahl wird in diesem Browser nicht unterstützt', 'error');
   }
-  renderLibraryFileList(files);
 }
 
 function renderLibraryFileList(files: File[]): void {
@@ -2971,6 +3802,95 @@ function renderLibraryFileList(files: File[]): void {
   }
 }
 
+// ─── Path Shortcuts Manager ────────────────────────────────────────────────────
+/**
+ * Aktualisiert die Quick-Access-Buttons für zuletzt geöffnete Tabellen-Verzeichnisse
+ */
+function updateTablePathShortcuts(): void {
+  const container = document.getElementById('table-shortcuts-container');
+  if (!container) return;
+
+  const paths = DirectoryPathManager.getTablePaths();
+  if (paths.length === 0) {
+    container.innerHTML = '<p style="color:#999; font-size:11px;">Keine Verlauf</p>';
+    return;
+  }
+
+  container.innerHTML = '<p style="color:#667; font-size:10px; margin-bottom:4px;">📋 Zuletzt geöffnet:</p>';
+  paths.forEach((path, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn';
+    btn.style.fontSize = '11px';
+    btn.style.padding = '4px 8px';
+    btn.style.marginBottom = '3px';
+    btn.style.width = '100%';
+    btn.style.textAlign = 'left';
+    btn.style.opacity = (1 - idx * 0.1).toString();
+    btn.innerHTML = `🔄 ${path.name}`;
+    btn.title = new Date(path.timestamp).toLocaleDateString();
+    btn.onclick = () => browseTableDirectory();
+    container.appendChild(btn);
+  });
+
+  // Clear-Button
+  const clearBtn = document.createElement('button');
+  clearBtn.style.fontSize = '10px';
+  clearBtn.style.padding = '3px 6px';
+  clearBtn.style.marginTop = '6px';
+  clearBtn.style.color = '#999';
+  clearBtn.style.cursor = 'pointer';
+  clearBtn.textContent = '✕ Löschen';
+  clearBtn.onclick = () => {
+    DirectoryPathManager.clearAllPaths('table');
+    updateTablePathShortcuts();
+  };
+  container.appendChild(clearBtn);
+}
+
+/**
+ * Aktualisiert die Quick-Access-Buttons für zuletzt geöffnete Bibliotheks-Verzeichnisse
+ */
+function updateLibraryPathShortcuts(): void {
+  const container = document.getElementById('library-shortcuts-container');
+  if (!container) return;
+
+  const paths = DirectoryPathManager.getLibraryPaths();
+  if (paths.length === 0) {
+    container.innerHTML = '<p style="color:#999; font-size:11px;">Keine Verlauf</p>';
+    return;
+  }
+
+  container.innerHTML = '<p style="color:#667; font-size:10px; margin-bottom:4px;">📋 Zuletzt geöffnet:</p>';
+  paths.forEach((path, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn';
+    btn.style.fontSize = '11px';
+    btn.style.padding = '4px 8px';
+    btn.style.marginBottom = '3px';
+    btn.style.width = '100%';
+    btn.style.textAlign = 'left';
+    btn.style.opacity = (1 - idx * 0.1).toString();
+    btn.innerHTML = `🔄 ${path.name}`;
+    btn.title = new Date(path.timestamp).toLocaleDateString();
+    btn.onclick = () => browseLibraryDirectory();
+    container.appendChild(btn);
+  });
+
+  // Clear-Button
+  const clearBtn = document.createElement('button');
+  clearBtn.style.fontSize = '10px';
+  clearBtn.style.padding = '3px 6px';
+  clearBtn.style.marginTop = '6px';
+  clearBtn.style.color = '#999';
+  clearBtn.style.cursor = 'pointer';
+  clearBtn.textContent = '✕ Löschen';
+  clearBtn.onclick = () => {
+    DirectoryPathManager.clearAllPaths('library');
+    updateLibraryPathShortcuts();
+  };
+  container.appendChild(clearBtn);
+}
+
 fileInput.addEventListener('change', e => { const f=(e.target as HTMLInputElement).files?.[0]; if(f) handleFile(f); });
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
@@ -2987,11 +3907,68 @@ if (btnBrowseLibrary) btnBrowseLibrary.addEventListener('click', () => browseLib
 document.addEventListener('DOMContentLoaded',()=>{
   const btn=document.getElementById('dmd-mode-btn');
   if(btn) btn.textContent=dmdSolidMode?'SOLID':'DOT';
+
+  // Initialize path shortcuts
+  updateTablePathShortcuts();
+  updateLibraryPathShortcuts();
+
+  // Show table selector if no table is loaded
+  if (!currentTableConfig) {
+    showTableSelector((tableKey: string) => {
+      // Call existing loadDemoTable function
+      (window as any).loadDemoTable(tableKey);
+    });
+
+    // Apply startup screen configuration from URL parameter (if present)
+    setTimeout(() => window.applyStartupScreenConfig?.(), 100);
+  }
 });
 
 // ─── Phase 15: Cleanup Physics Worker on Exit ──────────────────────────────────
 window.addEventListener('beforeunload', () => {
   disposePhysicsWorker();
+});
+
+// ─── Integrated Editor: Open Editor Function ─────────────────────────────────
+(window as any).openIntegratedEditor = () => {
+  if (currentTableConfig) {
+    getIntegratedEditor().open(currentTableConfig);
+  } else {
+    showNotification('Load a table first!');
+  }
+};
+
+// ─── Integrated Editor: Apply Changes Event ──────────────────────────────────
+window.addEventListener('editor:apply-changes', (event: any) => {
+  const newConfig = event.detail;
+  if (!newConfig || !scene || !physics) return;
+
+  // Update current table config
+  const prevConfig = currentTableConfig;
+  if (currentTableConfig) {
+    currentTableConfig.name = newConfig.name;
+    currentTableConfig.tableColor = newConfig.tableColor;
+    currentTableConfig.accentColor = newConfig.accentColor;
+    currentTableConfig.bumpers = newConfig.bumpers || [];
+    currentTableConfig.targets = newConfig.targets || [];
+    currentTableConfig.ramps = newConfig.ramps || [];
+  }
+
+  // Rebuild the table in the scene
+  scene.children = scene.children.filter(child => {
+    if (child.userData && child.userData.isTableElement) {
+      return false;  // Remove old table elements
+    }
+    return true;
+  });
+
+  // Build new table
+  if (currentTableConfig) {
+    buildTable(currentTableConfig, scene, loadedLibrary, playgroundGroup);
+    // ─── Phase 16+: Apply enhanced visuals after table construction ─────────────────
+    applyEnhancedVisualsToTable(scene);
+    showNotification('✅ Table updated!');
+  }
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
@@ -3248,6 +4225,7 @@ declare global {
     autoDetectScreens:     () => Promise<void>;
     selectMsLayout:        (n: number) => void;
     applyMsLayout:         () => void;
+    applyStartupScreenConfig: () => Promise<void>;
     setQualityPreset:      (name: string) => void;
     getQualityPreset:      () => any;
     getAvailableQualityPresets: () => string[];

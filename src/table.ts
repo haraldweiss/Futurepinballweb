@@ -1136,27 +1136,32 @@ export function buildRealisticFlipper(side: 'left' | 'right', length: number = 2
 export function buildBumper(x: number, y: number, color: number, lod: 'high'|'med'|'low' = 'high', size: number = 1.0, lightCfg?: { intensity: number; distance: number }, geomPool?: any): THREE.Mesh | THREE.Group {
   // Phase 7: Try to use extracted MS3D model first
   const fptRes = fptResources as any;
-  if (fptRes.models && fptRes.models instanceof Map) {
+  if (fptRes.models && fptRes.models instanceof Map && fptRes.models.size > 0) {
     for (const [modelName, mesh] of fptRes.models) {
-      if (modelName.toLowerCase().includes('bumper') && mesh) {
-        const cloned = mesh.clone();
-        cloned.position.set(x, y, 0.125);
-        cloned.scale.setScalar(size);
-        cloned.castShadow = true;
-        cloned.receiveShadow = true;
+      // Verify mesh is a THREE.Mesh object (not binary data)
+      if (modelName.toLowerCase().includes('bumper') && mesh && mesh instanceof THREE.Mesh) {
+        try {
+          const cloned = mesh.clone();
+          cloned.position.set(x, y, 0.125);
+          cloned.scale.setScalar(size);
+          cloned.castShadow = true;
+          cloned.receiveShadow = true;
 
-        // Add light for aesthetic
-        const lightIntensity = lightCfg?.intensity ?? 0.9;
-        const lightDistance = lightCfg?.distance ?? 4.5;
-        const pl = new THREE.PointLight(color, lightIntensity, lightDistance);
-        pl.position.set(x, y, 0.625);
-        pl.castShadow = true;
+          // Add light for aesthetic
+          const lightIntensity = lightCfg?.intensity ?? 0.9;
+          const lightDistance = lightCfg?.distance ?? 4.5;
+          const pl = new THREE.PointLight(color, lightIntensity, lightDistance);
+          pl.position.set(x, y, 0.625);
+          pl.castShadow = true;
 
-        const group = new THREE.Group();
-        group.add(cloned);
-        group.add(pl);
-        group.userData = { light: pl, color, hit: false, lod, size, modelBased: true };
-        return group;
+          const group = new THREE.Group();
+          group.add(cloned);
+          group.add(pl);
+          group.userData = { light: pl, color, hit: false, lod, size, modelBased: true };
+          return group;
+        } catch (e) {
+          console.warn('[buildBumper] Failed to clone MS3D model:', e);
+        }
       }
     }
   }
@@ -1218,26 +1223,31 @@ export function buildBumper(x: number, y: number, color: number, lod: 'high'|'me
 export function buildTarget(x: number, y: number, color: number, lightCfg?: { intensity: number; distance: number }, geomPool?: any): THREE.Group {
   // Phase 7: Try to use extracted MS3D model first
   const fptRes = fptResources as any;
-  if (fptRes.models && fptRes.models instanceof Map) {
+  if (fptRes.models && fptRes.models instanceof Map && fptRes.models.size > 0) {
     for (const [modelName, mesh] of fptRes.models) {
-      if ((modelName.toLowerCase().includes('target') || modelName.toLowerCase().includes('drop')) && mesh) {
-        const cloned = mesh.clone();
-        cloned.position.set(x, y, 0.18);
-        cloned.castShadow = true;
-        cloned.receiveShadow = true;
+      // Verify mesh is a THREE.Mesh object (not binary data)
+      if ((modelName.toLowerCase().includes('target') || modelName.toLowerCase().includes('drop')) && mesh && mesh instanceof THREE.Mesh) {
+        try {
+          const cloned = mesh.clone();
+          cloned.position.set(x, y, 0.18);
+          cloned.castShadow = true;
+          cloned.receiveShadow = true;
 
-        // Add light for aesthetic
-        const lightIntensity = lightCfg?.intensity ?? 0.9;
-        const lightDistance = lightCfg?.distance ?? 4.5;
-        const pl = new THREE.PointLight(color, lightIntensity, lightDistance);
-        pl.position.set(x, y, 0.5);
-        pl.castShadow = true;
+          // Add light for aesthetic
+          const lightIntensity = lightCfg?.intensity ?? 0.9;
+          const lightDistance = lightCfg?.distance ?? 4.5;
+          const pl = new THREE.PointLight(color, lightIntensity, lightDistance);
+          pl.position.set(x, y, 0.5);
+          pl.castShadow = true;
 
-        const group = new THREE.Group();
-        group.add(cloned);
-        group.add(pl);
-        group.userData = { light: pl, color, hit: false, modelBased: true };
-        return group;
+          const group = new THREE.Group();
+          group.add(cloned);
+          group.add(pl);
+          group.userData = { light: pl, color, hit: false, modelBased: true };
+          return group;
+        } catch (e) {
+          console.warn('[buildTarget] Failed to clone MS3D model:', e);
+        }
       }
     }
   }
@@ -1650,27 +1660,43 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   // Bumper + Targets + Rampen (LOD basierend auf Entfernung)
   console.log('[buildTable] Building bumpers - count:', config.bumpers.length);
   config.bumpers.forEach(b => {
-    // LOD: weiter oben (höher y) = ferner von Kamera → weniger Polys
-    const lod = b.y > 3.5 ? 'low' : b.y > 2.0 ? 'med' : 'high';
-    const m = buildBumper(b.x, b.y, b.color, lod, b.size, b.light, geomPool);
-    (m as any).castShadow = true;
-    tg.add(m);
-    bumpers.push({ x:b.x, y:b.y, mesh:m as any });
+    try {
+      // LOD: weiter oben (höher y) = ferner von Kamera → weniger Polys
+      const lod = b.y > 3.5 ? 'low' : b.y > 2.0 ? 'med' : 'high';
+      const m = buildBumper(b.x, b.y, b.color, lod, b.size, b.light, geomPool);
+      if (m) {
+        (m as any).castShadow = true;
+        tg.add(m);
+        bumpers.push({ x:b.x, y:b.y, mesh:m as any });
+      } else {
+        console.warn('[buildTable] buildBumper returned null/undefined for bumper at', b.x, b.y);
+      }
+    } catch (e) {
+      console.error('[buildTable] Error building bumper at', b.x, b.y, e);
+    }
   });
   console.log('[buildTable] Bumpers complete');
 
   console.log('[buildTable] Building targets - count:', (config.targets || []).length);
   (config.targets || []).forEach(t => {
-    // Targets: simplify geometry for distant ones (y < -0.5)
-    const g = buildTarget(t.x, t.y, t.color, t.light, geomPool);
-    if (t.y < -0.5) {
-      // Low LOD: reduce material detail
-      g.traverse((obj: any) => {
-        if (obj.material?.emissiveIntensity) obj.material.emissiveIntensity *= 0.8;
-      });
+    try {
+      // Targets: simplify geometry for distant ones (y < -0.5)
+      const g = buildTarget(t.x, t.y, t.color, t.light, geomPool);
+      if (!g) {
+        console.warn('[buildTable] buildTarget returned null/undefined for target at', t.x, t.y);
+        return;
+      }
+      if (t.y < -0.5) {
+        // Low LOD: reduce material detail
+        g.traverse((obj: any) => {
+          if (obj.material?.emissiveIntensity) obj.material.emissiveIntensity *= 0.8;
+        });
+      }
+      tg.add(g);
+      targets.push({ x:t.x, y:t.y, mesh:g as any });
+    } catch (e) {
+      console.error('[buildTable] Error building target at', t.x, t.y, e);
     }
-    tg.add(g);
-    targets.push({ x:t.x, y:t.y, mesh:g as any });
   });
   console.log('[buildTable] Targets complete');
 
@@ -1699,6 +1725,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   const knobMat  = new THREE.MeshStandardMaterial({ color:0xcc3300, metalness:0.3, roughness:0.6, emissive:0x440000, emissiveIntensity:0.2 });
   const knob = new THREE.Mesh(geomPool?.getCylinder(0.16, 0.22, 16) ?? new THREE.CylinderGeometry(0.16, 0.18, 0.22, 16), knobMat);
   knob.rotation.x = Math.PI/2;
+  knob.position.y = 0.8;  // ← FIX: Initialize knob at local y=0.8 (rest position before charging)
   plungerGroup.add(knob);
   const rod  = new THREE.Mesh(geomPool?.getCylinder(0.06, 1.0, 10) ?? new THREE.CylinderGeometry(0.06, 0.06, 1.0, 10),
     new THREE.MeshStandardMaterial({ color:0xaaaacc, metalness:1.0, roughness:0.1 }));

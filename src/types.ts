@@ -17,6 +17,12 @@ export interface GameState {
   lastRank: number;
   lastScore: number;
 
+  // ─── Arcade Mode: Player & Coin System ───
+  credits: number;                    // Number of coins/credits available
+  numPlayers: number;                 // 1-4 players
+  currentPlayer: number;              // 1-4
+  playerScores: number[];            // Track each player's score
+
   // ─── Enhanced Physics & Game Mechanics ───
   // Phase 1: Bumper Combo
   bumperCombo: number;
@@ -134,6 +140,33 @@ export interface TableConfig {
   lights?:  Array<{ color: number; intensity: number; dist: number; x: number; y: number; z: number }>;
   physics?: PhysicsConfig;
   elementPhysics?: ElementPhysics;
+  // NEW: Backglass customization settings
+  backglassSettings?: {
+    cabinetColor?: number;           // Frame color (0xRRGGBB)
+    decorativeLights?: Array<{
+      color: number;                 // Light color (0xRRGGBB)
+      intensity: number;             // 0-1
+      x: number; y: number; z: number; // Position in world space
+    }>;
+    enableParallax?: boolean;        // Parallax effect enabled
+    artworkTexture?: string;         // Base64 or data URL for background
+    textOverlays?: Array<{           // Custom text labels
+      text: string;
+      color: number;                 // Text color (0xRRGGBB)
+      fontSize: number;              // Points
+      x: number; y: number;          // Position (0-1 normalized)
+      opacity: number;               // 0-1
+    }>;
+  };
+  // NEW: DMD customization settings
+  dmdSettings?: {
+    colorScheme?: 'amber' | 'green' | 'red' | 'white';
+    resolution?: 'standard' | 'hires' | 'uhires';
+    glowEnabled?: boolean;
+    glowIntensity?: number;          // 0-1
+    bloomRadius?: number;            // 0-2
+    renderMode?: 'dots' | 'solid';
+  };
 }
 
 export interface BumperMesh {

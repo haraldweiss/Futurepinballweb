@@ -1,12 +1,184 @@
 import { state, currentTableConfig } from './game';
 import { getTopScores } from './highscore';
+import { getDMDSize, getDMDDotSize, onDisplayResize } from './responsive-display';
 
 // ── DMD Konstanten ───────────────────────────────────────────────────────────
 // ─── Phase 3: Configurable Resolution ───
 export let DMD_W = 128, DMD_H = 32;
 let DMD_DOT = 4, DMD_GAP = 1;
 export let DMD_STEP = DMD_DOT + DMD_GAP;
-const DMD_SCALE = 2;
+let DMD_SCALE = 2;  // Dynamic scale based on screen size
+
+// ─── Responsive DMD Scaling ───
+function calculateResponsiveDMDScale(): number {
+  // Calculate scale based on window height
+  // Min 1x (small screens), max 6x (large screens)
+  const minHeight = 256;  // Minimum practical height
+  const maxHeight = 1080; // Maximum practical height
+
+  const availableHeight = window.innerHeight - 80;  // Account for UI chrome
+  const scale = Math.max(1, Math.min(6, Math.floor(availableHeight / 32))); // 32 = DMD_H
+
+  return scale;
+}
+
+function updateResponsiveDMDScale(): void {
+  const newScale = calculateResponsiveDMDScale();
+  if (newScale !== DMD_SCALE) {
+    DMD_SCALE = newScale;
+    DMD_STEP = DMD_DOT + DMD_GAP;
+    console.log(`📺 DMD scale adjusted to ${DMD_SCALE}x for ${window.innerHeight}px height`);
+    // Trigger re-render
+    dmdClear();
+  }
+}
+
+// ─── DMD Drag-to-Resize System ───
+let isDraggingDMD = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragStartWidth = 0;
+let dragStartHeight = 0;
+let currentDragHandle = '';
+
+const RESIZE_HANDLE_SIZE = 12;
+const MIN_DMD_WIDTH = 256;
+const MIN_DMD_HEIGHT = 64;
+const DMD_RESIZE_STORAGE_KEY = 'fpw_dmd_custom_size';
+
+export function initDMDResizing(canvas: HTMLCanvasElement, wrap: HTMLElement): void {
+  // Create resize handles
+  const createHandle = (position: string) => {
+    const handle = document.createElement('div');
+    handle.className = `dmd-resize-handle dmd-resize-${position}`;
+    handle.style.cssText = `
+      position: absolute;
+      width: ${RESIZE_HANDLE_SIZE}px;
+      height: ${RESIZE_HANDLE_SIZE}px;
+      background: rgba(255, 170, 0, 0.3);
+      border: 2px solid rgba(255, 170, 0, 0.8);
+      cursor: ${getCursorForHandle(position)};
+      z-index: 1000;
+    `;
+
+    // Position handle based on corner/edge
+    if (position.includes('top-left')) handle.style.top = '-6px';
+    else if (position.includes('top-right')) handle.style.top = '-6px';
+    else if (position.includes('bottom-left')) handle.style.bottom = '-6px';
+    else if (position.includes('bottom-right')) handle.style.bottom = '-6px';
+
+    if (position.includes('left')) handle.style.left = '-6px';
+    else if (position.includes('right')) handle.style.right = '-6px';
+
+    handle.addEventListener('mousedown', (e) => startDMDDrag(e, position, canvas, wrap));
+    return handle;
+  };
+
+  wrap.style.position = 'relative';
+  wrap.style.userSelect = 'none';
+
+  // Add corner handles
+  ['top-left', 'top-right', 'bottom-left', 'bottom-right'].forEach(pos => {
+    wrap.appendChild(createHandle(pos));
+  });
+
+  // Load custom size if saved
+  loadDMDCustomSize(canvas, wrap);
+
+  console.log('📺 DMD resize system initialized - drag corners to resize');
+}
+
+function getCursorForHandle(position: string): string {
+  if (position === 'top-left') return 'nwse-resize';
+  if (position === 'top-right') return 'nesw-resize';
+  if (position === 'bottom-left') return 'nesw-resize';
+  if (position === 'bottom-right') return 'nwse-resize';
+  return 'pointer';
+}
+
+function startDMDDrag(e: MouseEvent, handle: string, canvas: HTMLCanvasElement, wrap: HTMLElement): void {
+  isDraggingDMD = true;
+  currentDragHandle = handle;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  dragStartWidth = canvas.offsetWidth;
+  dragStartHeight = canvas.offsetHeight;
+
+  e.preventDefault();
+
+  const handleDMDDrag = (moveEvent: MouseEvent) => {
+    const deltaX = moveEvent.clientX - dragStartX;
+    const deltaY = moveEvent.clientY - dragStartY;
+
+    let newWidth = dragStartWidth;
+    let newHeight = dragStartHeight;
+
+    // Calculate new dimensions based on which corner is being dragged
+    if (handle.includes('right')) newWidth = Math.max(MIN_DMD_WIDTH, dragStartWidth + deltaX);
+    if (handle.includes('bottom')) newHeight = Math.max(MIN_DMD_HEIGHT, dragStartHeight + deltaY);
+    if (handle.includes('left')) newWidth = Math.max(MIN_DMD_WIDTH, dragStartWidth - deltaX);
+    if (handle.includes('top')) newHeight = Math.max(MIN_DMD_HEIGHT, dragStartHeight - deltaY);
+
+    // Maintain 4:1 aspect ratio (128:32)
+    const targetAspect = 128 / 32;
+    const currentAspect = newWidth / newHeight;
+
+    if (Math.abs(currentAspect - targetAspect) > 0.1) {
+      if (currentAspect > targetAspect) {
+        newHeight = newWidth / targetAspect;
+      } else {
+        newWidth = newHeight * targetAspect;
+      }
+    }
+
+    canvas.style.width = newWidth + 'px';
+    canvas.style.height = newHeight + 'px';
+
+    // Update DMD scale based on new size
+    const newScale = Math.max(1, Math.floor(newHeight / 32));
+    if (newScale !== DMD_SCALE) {
+      DMD_SCALE = newScale;
+      console.log(`📺 DMD resized to ${newWidth}x${newHeight}px (scale: ${DMD_SCALE}x)`);
+    }
+  };
+
+  const stopDMDDrag = () => {
+    isDraggingDMD = false;
+    window.removeEventListener('mousemove', handleDMDDrag);
+    window.removeEventListener('mouseup', stopDMDDrag);
+
+    // Save custom size
+    saveDMDCustomSize(canvas.offsetWidth, canvas.offsetHeight);
+  };
+
+  window.addEventListener('mousemove', handleDMDDrag);
+  window.addEventListener('mouseup', stopDMDDrag);
+}
+
+function saveDMDCustomSize(width: number, height: number): void {
+  try {
+    localStorage.setItem(DMD_RESIZE_STORAGE_KEY, JSON.stringify({ width, height }));
+    console.log(`✓ DMD size saved: ${width}x${height}px`);
+  } catch (e) {
+    console.warn('Could not save DMD size:', e);
+  }
+}
+
+function loadDMDCustomSize(canvas: HTMLCanvasElement, wrap: HTMLElement): void {
+  try {
+    const saved = localStorage.getItem(DMD_RESIZE_STORAGE_KEY);
+    if (saved) {
+      const { width, height } = JSON.parse(saved);
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      const newScale = Math.max(1, Math.floor(height / 32));
+      DMD_SCALE = newScale;
+      console.log(`📺 DMD restored to saved size: ${width}x${height}px (scale: ${DMD_SCALE}x)`);
+    }
+  } catch (e) {
+    console.warn('Could not load DMD size:', e);
+  }
+}
 
 // ─── Phase 3: Color Schemes ───────────────────────────────────────────────────
 export interface DMDColorScheme {
@@ -96,8 +268,21 @@ export function setDMDGlow(enabled: boolean): void {
 // ── Canvas-Setup ─────────────────────────────────────────────────────────────
 const dmdCanvas = document.getElementById('dmd') as HTMLCanvasElement;
 function updateCanvasSize() {
-  dmdCanvas.width  = DMD_W * DMD_STEP;
-  dmdCanvas.height = DMD_H * DMD_STEP;
+  // ─── Responsive DMD Sizing ───
+  const dmdSize = getDMDSize();
+  dmdCanvas.width = dmdSize.canvasWidth;
+  dmdCanvas.height = dmdSize.canvasHeight;
+  dmdCanvas.style.width = `${dmdSize.displayWidth}px`;
+  dmdCanvas.style.height = `${dmdSize.displayHeight}px`;
+
+  // Scale canvas context if needed
+  const scale = dmdSize.scale;
+  if (scale && scale !== 1) {
+    const ctx = dmdCanvas.getContext('2d');
+    if (ctx) {
+      ctx.scale(scale, scale);
+    }
+  }
 }
 updateCanvasSize();
 const dmdCtx = dmdCanvas.getContext('2d')!;
@@ -120,6 +305,14 @@ export function toggleDMDMode(): void {
   const btn = document.getElementById('dmd-mode-btn');
   if (btn) btn.textContent = dmdSolidMode ? 'SOLID' : 'DOT';
 }
+
+// ─── Responsive DMD Resize Handler ───────────────────────────────────────────
+window.addEventListener('resize', () => {
+  clearTimeout((window as any).dmdResizeTimer);
+  (window as any).dmdResizeTimer = setTimeout(() => {
+    updateCanvasSize();
+  }, 150);
+});
 
 // ─── Phase 3: Dirty Rectangle Tracking ───────────────────────────────────────
 interface DirtyRect {
@@ -333,7 +526,7 @@ export function dmdFlush(): void {
 // ── Render-Funktionen ────────────────────────────────────────────────────────
 export function dmdRenderAttract(): void {
   dmdClear();
-  const phase = Math.floor(dmdState.animFrame / 150) % 3;
+  const phase = Math.floor(dmdState.animFrame / 150) % 4;
   if (phase === 1) {
     const scores = getTopScores();
     dmdDrawText('HIGH SCORES', DMD_W / 2, 9, 9);
@@ -343,6 +536,12 @@ export function dmdRenderAttract(): void {
     dmdDrawText('ENTER HALTEN = PLUNGER',      DMD_W / 2, 10, 7);
     dmdDrawText('Z / X = TILT   M = MUSIK',    DMD_W / 2, 22, 7);
     dmdDrawText('LEFT/RIGHT SHIFT = FLIPPER',  DMD_W / 2, 30, 6);
+  } else if (phase === 3) {
+    // ─── Show Credits/Coins ───
+    const creditsText = `CREDITS: ${state.credits}`;
+    const instructionText = state.credits > 0 ? 'PRESS 1 OR 2 TO START' : 'INSERT COIN (KEY 5)';
+    dmdDrawText(creditsText, DMD_W / 2, 12, 10);
+    dmdDrawText(instructionText, DMD_W / 2, 26, 7);
   } else {
     const S   = DMD_SCALE;
     const msg = '  FUTURE PINBALL WEB  \u2014 INSERT COIN \u2014  ';
@@ -366,7 +565,14 @@ export function dmdRenderPlaying(): void {
   const scoreStr = state.score.toLocaleString().padStart(12, ' ');
   dmdDrawText(scoreStr, DMD_W / 2, 14, 14);
   const tname = (currentTableConfig ? currentTableConfig.name : 'FUTURE PINBALL').toUpperCase();
-  dmdDrawText(`BALL ${state.ballNum}/3   \u00d7${state.multiplier}   ${tname}`, DMD_W / 2, 28, 7);
+
+  // Show player info if multiplayer
+  let playerInfo = '';
+  if (state.numPlayers > 1) {
+    playerInfo = `P${state.currentPlayer} `;
+  }
+
+  dmdDrawText(`${playerInfo}BALL ${state.ballNum}/3   \u00d7${state.multiplier}   ${tname}`, DMD_W / 2, 28, 7);
   dmdFlush();
 }
 

@@ -419,6 +419,20 @@
         </div>
       </div>
       <div id="ms-detect-info"></div>
+
+      <!-- Screen Role Configuration -->
+      <div id="screen-role-config" style="display:none;margin:20px 0;padding:20px;background:rgba(0,30,60,0.4);border:1px solid #00aaff;border-radius:8px;">
+        <h3 style="margin-top:0;color:#00aaff;">🎮 SCREEN ASSIGNMENT</h3>
+        <p style="font-size:12px;color:#667;margin:10px 0;">Assign components to each screen:</p>
+        <div id="screen-role-list" style="display:flex;flex-direction:column;gap:8px;">
+          <!-- Dynamically populated -->
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button onclick="resetScreenRoles()" style="flex:1;padding:8px;background:#333;border:1px solid #667;color:#aaa;cursor:pointer;border-radius:4px;">↻ Reset</button>
+          <button onclick="swapScreenRoles(0,1)" style="flex:1;padding:8px;background:#333;border:1px solid #667;color:#aaa;cursor:pointer;border-radius:4px;">⇄ Swap 1↔2</button>
+        </div>
+      </div>
+
       <div class="ms-btn-row">
         <button id="ms-autodetect" onclick="autoDetectScreens()">⚡ AUTO-DETECT</button>
         <button id="ms-apply" onclick="applyMsLayout()">▶ APPLY LAYOUT</button>

@@ -47,8 +47,8 @@ function initializePhysics(config: any): void {
     .setGravityScale(1.0, true)
     .setCanSleep(false)
     .setLinearDamping(0.002)
-    .setAngularDamping(0.1)
-    .enabledContinuousCollisionDetection(true);  // Enable CCD for fast-moving ball
+    .setAngularDamping(0.1);
+    // Note: CCD is enabled via collider creation, not on RigidBodyDesc
 
   ballBody = world.createRigidBody(ballDesc);
 
@@ -56,7 +56,8 @@ function initializePhysics(config: any): void {
     RAPIER.ColliderDesc.ball(0.22)
       .setRestitution(config.ballRestitution ?? 0.5)
       .setFriction(config.ballFriction ?? 0.3)
-      .setDensity(1.0),
+      .setDensity(1.0)
+      .setEnabledCCD(true),  // Enable CCD to prevent ball tunneling through walls
     ballBody
   );
 

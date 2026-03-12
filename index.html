@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Modern cross-platform browser-based 3D pinball game with VPX-competitive graphics and physics">
+  <meta name="theme-color" content="#00aaff">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Future Pinball">
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-config" content="/browserconfig.xml">
+
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/icons/icon-180x180.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+
   <title>Future Pinball Web</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -477,6 +493,1045 @@
       border-left: 1px solid rgba(255,200,0,0.25);
       inset: unset;
     }
+
+    /* ── Table Selector Modal ──────────────────────────────────────────── */
+    .table-selector-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.95);
+      backdrop-filter: blur(4px);
+    }
+
+    .table-selector-modal.hidden {
+      display: none;
+    }
+
+    .table-selector-overlay {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .table-selector-container {
+      background: linear-gradient(135deg, #0a0a14 0%, #1a1a2e 100%);
+      border: 2px solid #00aaff;
+      border-radius: 12px;
+      padding: 40px;
+      max-width: 1000px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 0 40px rgba(0, 170, 255, 0.3), inset 0 0 40px rgba(0, 170, 255, 0.1);
+    }
+
+    .table-selector-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .table-selector-header h1 {
+      font-size: 32px;
+      color: #00ffff;
+      margin: 0 0 10px 0;
+      text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+    }
+
+    .table-selector-header p {
+      color: #888;
+      font-size: 14px;
+      margin: 0;
+      letter-spacing: 1px;
+    }
+
+    .table-selector-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .table-card {
+      background: linear-gradient(135deg, #0d0d1a 0%, #1a0a2e 100%);
+      border: 2px solid #224;
+      border-radius: 8px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .table-card:hover,
+    .table-card.active {
+      border-color: #00ff88;
+      box-shadow: 0 0 20px rgba(0, 255, 136, 0.3), inset 0 0 20px rgba(0, 255, 136, 0.05);
+      transform: translateY(-4px);
+    }
+
+    .table-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .table-card-header h3 {
+      color: #00ffff;
+      font-size: 16px;
+      margin: 0;
+      flex: 1;
+    }
+
+    .difficulty {
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .difficulty-easy {
+      background: rgba(0, 255, 136, 0.2);
+      color: #00ff88;
+    }
+
+    .difficulty-medium {
+      background: rgba(255, 200, 0, 0.2);
+      color: #ffcc00;
+    }
+
+    .difficulty-hard {
+      background: rgba(255, 50, 50, 0.2);
+      color: #ff3333;
+    }
+
+    .table-card-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 12px;
+      background: rgba(0, 100, 150, 0.1);
+      border-radius: 4px;
+      border-left: 3px solid #00aaff;
+    }
+
+    .table-card-stats .stat {
+      color: #aaa;
+      font-size: 12px;
+      font-family: monospace;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .table-card-btn {
+      background: linear-gradient(135deg, #00ff88 0%, #00dd66 100%);
+      border: none;
+      color: #000;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+
+    .table-card-btn:hover {
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
+      transform: scale(1.05);
+    }
+
+    .table-card-btn:active {
+      transform: scale(0.95);
+    }
+
+    .table-selector-footer {
+      text-align: center;
+      color: #666;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      border-top: 1px solid #224;
+      padding-top: 20px;
+    }
+
+    /* ── Integrated Table Editor Modal ──────────────────────────────────── */
+    .editor-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.92);
+      display: flex;
+      flex-direction: column;
+      z-index: 9000;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+      color: #ccc;
+    }
+
+    .editor-modal.hidden {
+      display: none !important;
+    }
+
+    .editor-modal-header {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #224;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .editor-modal-header h2 {
+      color: #00aaff;
+      text-shadow: 0 0 10px #00aaff;
+      font-size: 18px;
+      letter-spacing: 2px;
+    }
+
+    .modal-close {
+      background: #222;
+      border: 1px solid #444;
+      color: #888;
+      padding: 4px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+
+    .modal-close:hover {
+      border-color: #00aaff;
+      color: #00aaff;
+      background: #333;
+    }
+
+    /* Tab Navigation */
+    .tab-navigation {
+      display: flex;
+      gap: 8px;
+      border-bottom: 2px solid #224;
+      padding-bottom: 8px;
+    }
+
+    .tab-btn {
+      background: rgba(0, 30, 60, 0.4);
+      border: 1px solid #224;
+      color: #668;
+      padding: 6px 16px;
+      cursor: pointer;
+      border-radius: 4px 4px 0 0;
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      transition: all 0.2s ease;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab-btn:hover {
+      border-color: #00aaff;
+      background: rgba(0, 60, 130, 0.3);
+      color: #00aaff;
+    }
+
+    .tab-btn.active {
+      border-color: #00aaff;
+      border-bottom-color: #00ff88;
+      background: rgba(0, 100, 200, 0.2);
+      color: #00aaff;
+      box-shadow: 0 0 10px rgba(0, 170, 255, 0.3);
+    }
+
+    /* Editor Tabs */
+    .editor-tab {
+      display: flex;
+      gap: 12px;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .editor-tab.hidden {
+      display: none !important;
+    }
+
+    /* Backglass & DMD Editor Containers */
+    .backglass-editor-container,
+    .dmd-editor-container {
+      display: flex;
+      gap: 20px;
+      padding: 20px;
+      flex: 1;
+      overflow-y: auto;
+      background: linear-gradient(135deg, #0a0a14 0%, #0d0d1a 100%);
+      border: 1px solid #224;
+      border-radius: 6px;
+    }
+
+    .backglass-editor {
+      display: flex;
+      gap: 20px;
+      flex: 1;
+      width: 100%;
+    }
+
+    .dmd-editor {
+      display: flex;
+      gap: 20px;
+      flex: 1;
+      width: 100%;
+    }
+
+    .backglass-preview-panel,
+    .dmd-preview-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-basis: 40%;
+      min-width: 300px;
+    }
+
+    .backglass-controls-panel,
+    .dmd-controls-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex-basis: 60%;
+      overflow-y: auto;
+      max-height: 100%;
+    }
+
+    .preview-title {
+      color: #00aaff;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    #backglass-preview-canvas,
+    #dmd-preview-canvas {
+      border: 2px solid #224;
+      border-radius: 4px;
+      background: #000;
+      flex: 1;
+      max-height: 400px;
+    }
+
+    .control-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+      background: rgba(0, 50, 100, 0.1);
+      border-left: 3px solid #00aaff;
+      border-radius: 4px;
+    }
+
+    .control-label {
+      color: #668;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .control-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: #aaa;
+      font-size: 12px;
+    }
+
+    .control-checkbox input {
+      cursor: pointer;
+    }
+
+    input[type="color"] {
+      width: 100%;
+      height: 36px;
+      border: 1px solid #334;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      cursor: pointer;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      background: rgba(0, 30, 60, 0.5);
+      border: 1px solid #334;
+      color: #aaa;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+    }
+
+    .editor-modal-content {
+      display: flex;
+      gap: 12px;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .editor-2d-panel,
+    .editor-3d-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #0a0a14;
+      border: 1px solid #224;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .editor-toolbar {
+      display: flex;
+      gap: 4px;
+      padding: 8px;
+      background: #0d0d1a;
+      border-bottom: 1px solid #224;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .tool-btn {
+      background: rgba(0, 20, 50, 0.6);
+      border: 1px solid #1a2a40;
+      color: #445;
+      padding: 4px 8px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 14px;
+      transition: all 0.2s;
+      font-family: monospace;
+    }
+
+    .tool-btn:hover {
+      border-color: #00aaff;
+      color: #00aaff;
+      background: rgba(0, 60, 130, 0.3);
+    }
+
+    .tool-btn.active {
+      border-color: #00aaff;
+      color: #00aaff;
+      background: rgba(0, 100, 200, 0.25);
+      box-shadow: 0 0 10px rgba(0, 150, 255, 0.3);
+    }
+
+    .editor-toolbar hr {
+      border: none;
+      border-left: 1px solid #224;
+      height: 24px;
+      margin: 0 4px;
+    }
+
+    .load-fpt-btn {
+      background: rgba(0, 100, 150, 0.6) !important;
+      border-color: #00aaff !important;
+      color: #00aaff !important;
+    }
+
+    .load-fpt-btn:hover {
+      background: rgba(0, 120, 180, 0.8) !important;
+      border-color: #00ccff !important;
+    }
+
+    .editor-canvas-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      background: #0a0a14;
+      overflow: auto;
+    }
+
+    #integrated-editor-canvas,
+    #editor-3d-canvas {
+      max-width: 100%;
+      max-height: 100%;
+      border: 1px solid #224;
+      border-radius: 4px;
+    }
+
+    /* Drag-and-drop visual feedback */
+    #integrated-editor-canvas.drag-over {
+      border: 2px solid #00ff88;
+      background-color: rgba(0, 255, 136, 0.1);
+      box-shadow: 0 0 12px rgba(0, 255, 136, 0.3);
+    }
+
+    .editor-modal.drag-over-modal {
+      background: rgba(0, 0, 0, 0.94);
+      box-shadow: inset 0 0 40px rgba(0, 255, 136, 0.2);
+    }
+
+    .editor-properties {
+      padding: 12px;
+      background: #0d0d1a;
+      border-top: 1px solid #224;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    .prop-group {
+      margin-bottom: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .prop-group label {
+      font-size: 11px;
+      color: #668;
+      letter-spacing: 0.5px;
+    }
+
+    .prop-input {
+      background: rgba(0, 30, 60, 0.5);
+      border: 1px solid #225;
+      color: #ccc;
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 11px;
+    }
+
+    .prop-color {
+      width: 100%;
+      height: 28px;
+      border: 1px solid #225;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .prop-group small {
+      font-size: 10px;
+      color: #556;
+    }
+
+    .preview-label {
+      padding: 8px;
+      background: #0d0d1a;
+      border-bottom: 1px solid #224;
+      font-size: 12px;
+      color: #668;
+      letter-spacing: 1px;
+    }
+
+    .preview-info {
+      padding: 6px 8px;
+      background: #0d0d1a;
+      border-top: 1px solid #224;
+      font-size: 10px;
+      color: #556;
+      text-align: center;
+    }
+
+    .editor-modal-footer {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #224;
+      justify-content: flex-end;
+    }
+
+    .btn-apply,
+    .btn-discard,
+    .btn-switch-table {
+      padding: 8px 20px;
+      border: 1px solid;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+
+    .btn-apply {
+      background: linear-gradient(135deg, rgba(0, 150, 0, 0.4), rgba(0, 100, 0, 0.3));
+      border-color: #00cc66;
+      color: #00cc66;
+      text-shadow: 0 0 8px rgba(0, 200, 100, 0.3);
+    }
+
+    .btn-apply:hover {
+      background: linear-gradient(135deg, rgba(0, 180, 0, 0.5), rgba(0, 120, 0, 0.4));
+      box-shadow: 0 0 14px rgba(0, 200, 100, 0.4);
+    }
+
+    .btn-switch-table {
+      background: rgba(0, 100, 150, 0.3);
+      border-color: #00aaff;
+      color: #00aaff;
+      margin-right: auto;
+    }
+
+    .btn-switch-table:hover {
+      background: rgba(0, 150, 200, 0.4);
+      box-shadow: 0 0 12px rgba(0, 170, 255, 0.3);
+    }
+
+    .btn-discard {
+      background: rgba(100, 0, 0, 0.3);
+      border-color: #885;
+      color: #b77;
+    }
+
+    .btn-discard:hover {
+      background: rgba(120, 0, 0, 0.4);
+      border-color: #cc6;
+      color: #ff9;
+    }
+
+    /* VIDEO EDITOR STYLES */
+    .video-editor-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: #0a0a14;
+      border: 1px solid #224;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .video-editor-header {
+      padding: 16px;
+      background: linear-gradient(180deg, rgba(0,50,100,0.3) 0%, transparent 100%);
+      border-bottom: 1px solid #224;
+    }
+
+    .video-editor-header h3 {
+      color: #00aaff;
+      font-size: 16px;
+      margin-bottom: 4px;
+      text-shadow: 0 0 8px #00aaff;
+    }
+
+    .video-editor-subtitle {
+      color: #668;
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+
+    .video-editor-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      flex: 1;
+      padding: 12px;
+      overflow: hidden;
+    }
+
+    .video-library-section,
+    .video-details-section,
+    .video-bindings-section {
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #223;
+      border-radius: 4px;
+      background: rgba(10,10,20,0.5);
+      overflow: hidden;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background: rgba(0,50,100,0.2);
+      border-bottom: 1px solid #223;
+      flex-shrink: 0;
+    }
+
+    .section-header h4 {
+      color: #00aaff;
+      font-size: 13px;
+      margin: 0;
+      text-shadow: 0 0 6px #00aaff;
+    }
+
+    .video-library-list,
+    .video-bindings-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      gap: 8px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .video-item,
+    .binding-item {
+      padding: 10px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid #334;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .video-item:hover,
+    .binding-item:hover {
+      background: rgba(0,50,100,0.2);
+      border-color: #00aaff;
+    }
+
+    .video-item.active,
+    .binding-item.active {
+      background: rgba(0,170,255,0.1);
+      border-color: #00aaff;
+      box-shadow: 0 0 8px rgba(0,170,255,0.2);
+    }
+
+    .video-item-header,
+    .binding-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .video-item-header strong {
+      color: #aab;
+      font-size: 12px;
+    }
+
+    .binding-item-header {
+      margin-bottom: 6px;
+    }
+
+    .trigger-badge {
+      background: rgba(0,170,255,0.2);
+      color: #00aaff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: bold;
+    }
+
+    .video-name {
+      color: #aab;
+      font-size: 11px;
+      margin-left: 8px;
+    }
+
+    .video-type-badge {
+      background: rgba(100,150,0,0.3);
+      color: #abd;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+    }
+
+    .video-item-meta,
+    .binding-item-meta {
+      display: flex;
+      gap: 10px;
+      font-size: 10px;
+      color: #668;
+    }
+
+    .video-duration,
+    .video-volume,
+    .priority,
+    .delay,
+    .interrupt {
+      color: #789;
+    }
+
+    .video-item-url {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid #223;
+    }
+
+    .video-item-url small {
+      color: #556;
+      word-break: break-all;
+    }
+
+    .empty-state {
+      color: #556;
+      font-size: 11px;
+      text-align: center;
+      padding: 20px 10px;
+      font-style: italic;
+    }
+
+    .video-library-actions,
+    .video-editor-footer {
+      display: flex;
+      gap: 6px;
+      padding: 8px;
+      background: rgba(0,0,0,0.3);
+      border-top: 1px solid #223;
+      flex-shrink: 0;
+    }
+
+    .video-details-panel,
+    .binding-details-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      font-size: 12px;
+    }
+
+    .video-details-content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .detail-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .detail-row label {
+      color: #789;
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+
+    .detail-row input[type="text"],
+    .detail-row input[type="number"],
+    .detail-row select {
+      background: rgba(0,0,0,0.5);
+      border: 1px solid #334;
+      color: #aab;
+      padding: 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+    }
+
+    .detail-row input[type="range"] {
+      flex: 1;
+    }
+
+    .volume-value {
+      color: #00aaff;
+      font-weight: bold;
+    }
+
+    .detail-preview {
+      padding-top: 12px;
+      border-top: 1px solid #223;
+    }
+
+    .detail-preview strong {
+      color: #00aaff;
+    }
+
+    .detail-preview ul {
+      list-style: none;
+      margin: 8px 0 0 0;
+      padding: 0;
+    }
+
+    .detail-preview li {
+      color: #789;
+      font-size: 10px;
+      padding: 4px 0;
+    }
+
+    /* DIALOGS */
+    .video-upload-dialog,
+    .video-template-dialog,
+    .video-binding-dialog {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .dialog-content {
+      background: linear-gradient(145deg, #1a1a2e, #16213e);
+      border: 2px solid #00aaff;
+      border-radius: 8px;
+      padding: 24px;
+      width: 500px;
+      max-width: 90vw;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 0 40px rgba(0,170,255,0.3);
+    }
+
+    .dialog-content h4 {
+      color: #00aaff;
+      font-size: 16px;
+      margin-bottom: 4px;
+      text-shadow: 0 0 8px #00aaff;
+    }
+
+    .dialog-subtitle {
+      color: #668;
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      color: #789;
+      font-size: 11px;
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group input[type="file"],
+    .form-group input[type="range"],
+    .form-group select {
+      width: 100%;
+      background: rgba(0,0,0,0.5);
+      border: 1px solid #334;
+      color: #aab;
+      padding: 8px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+
+    .form-group input[type="range"] {
+      width: calc(100% - 40px);
+      margin-right: 8px;
+    }
+
+    .form-group.checkbox label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-group.checkbox input[type="checkbox"] {
+      width: auto;
+    }
+
+    .template-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .template-card {
+      padding: 12px;
+      background: rgba(0,50,100,0.2);
+      border: 1px solid #334;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 4px;
+    }
+
+    .template-card:hover {
+      background: rgba(0,100,200,0.3);
+      border-color: #00aaff;
+    }
+
+    .template-card strong {
+      color: #aab;
+      font-size: 12px;
+    }
+
+    .template-card small {
+      color: #668;
+      font-size: 10px;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .form-actions button {
+      flex: 1;
+    }
+
+    .binding-status {
+      color: #789;
+      font-size: 11px;
+      flex: 1;
+      text-align: right;
+    }
+
+    .btn-small {
+      padding: 6px 12px;
+      background: rgba(0,50,100,0.5);
+      border: 1px solid #446;
+      border-radius: 4px;
+      color: #aab;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-small:hover {
+      background: rgba(0,100,200,0.5);
+      border-color: #00aaff;
+      color: #00aaff;
+      text-shadow: 0 0 6px #00aaff;
+    }
+
+    .btn-small.btn-primary {
+      background: rgba(0,170,255,0.2);
+      border-color: #00aaff;
+      color: #00aaff;
+    }
+
+    .btn-small.btn-primary:hover {
+      background: rgba(0,170,255,0.3);
+      box-shadow: 0 0 8px rgba(0,170,255,0.3);
+    }
+
+    .btn-small.btn-danger {
+      background: rgba(200,50,0,0.2);
+      border-color: #cc6655;
+      color: #cc8877;
+    }
+
+    .btn-small.btn-danger:hover {
+      background: rgba(200,70,0,0.3);
+      border-color: #ff8877;
+      color: #ffaa99;
+    }
   </style>
 </head>
 <body>
@@ -610,6 +1665,9 @@
           <div id="table-file-grid" class="table-grid" style="margin-top:12px;">
             <p style="color:#667; font-size:12px; text-align:center;">Wähle ein Verzeichnis, um verfügbare Tabellen zu laden...</p>
           </div>
+          <div id="table-shortcuts-container" style="margin-top:12px; padding:8px; background:rgba(0,30,60,0.3); border:1px solid #223; border-radius:6px;">
+            <p style="color:#999; font-size:11px;">Keine Verlauf</p>
+          </div>
         </div>
       </div>
 
@@ -623,6 +1681,9 @@
           </div>
           <div id="lib-status" class="log-info" style="margin-top:12px; color:#667;">Keine Bibliothek geladen.</div>
           <div id="lib-file-list" style="margin-top:12px;">
+          </div>
+          <div id="library-shortcuts-container" style="margin-top:12px; padding:8px; background:rgba(0,30,60,0.3); border:1px solid #223; border-radius:6px;">
+            <p style="color:#999; font-size:11px;">Keine Verlauf</p>
           </div>
         </div>
       </div>
@@ -665,6 +1726,7 @@
   </div>
 
   <button id="fullscreen-btn"  title="Vollbild"            onclick="toggleFullscreen()">⛶</button>
+  <button id="editor-btn"      title="Tisch Editor"        onclick="openIntegratedEditor()" style="display:none">📝</button>
   <button id="multiscreen-btn" title="Multi-Screen Setup"  onclick="openMultiscreenModal()">⊞</button>
   <button id="view-btn"        title="Ansicht anpassen"    onclick="toggleViewPanel()">⚙</button>
   <button id="hide-dmd-btn"    title="DMD ausblenden"      onclick="toggleHideDMD()">DMD</button>
@@ -4241,5 +5303,68 @@ if (FPW_ROLE === 'dmd') {
   })();
 }
 </script>
+
+<!-- Integrated Table Editor Modal -->
+<div id="editor-modal" class="editor-modal hidden">
+  <div class="editor-modal-header">
+    <h2>📝 Table Editor</h2>
+    <button class="modal-close" onclick="getIntegratedEditor().discardChanges()" title="Close editor">✕</button>
+  </div>
+
+  <div class="editor-modal-content">
+    <!-- 2D Editor Canvas (left) -->
+    <div class="editor-2d-panel">
+      <div class="editor-toolbar">
+        <button class="tool-btn active" data-tool="select" title="Select (S)">⊹</button>
+        <button class="tool-btn" data-tool="bumper" title="Bumper (B)">●</button>
+        <button class="tool-btn" data-tool="target" title="Target (T)">▪</button>
+        <button class="tool-btn" data-tool="ramp" title="Ramp (R)">╱</button>
+        <hr>
+        <button class="tool-btn snap-btn active" title="Toggle snap to grid">⊞ SNAP</button>
+        <button class="tool-btn clear-btn" title="Clear all elements">🗑</button>
+      </div>
+
+      <div class="editor-canvas-wrap">
+        <canvas id="integrated-editor-canvas" width="400" height="800"></canvas>
+      </div>
+
+      <div class="editor-properties">
+        <div class="prop-group">
+          <label>Table Name:</label>
+          <input type="text" id="prop-name" class="prop-input" placeholder="Table name">
+        </div>
+        <div class="prop-group">
+          <label>Table Color:</label>
+          <input type="color" id="prop-color" class="prop-color">
+        </div>
+        <div class="prop-group">
+          <label>Accent Color:</label>
+          <input type="color" id="prop-accent" class="prop-color">
+        </div>
+        <div class="prop-group">
+          <small id="elem-count">Elements: 0</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3D Preview (right) -->
+    <div class="editor-3d-panel">
+      <div class="preview-label">3D Preview (Top-Down)</div>
+      <canvas id="editor-3d-canvas" width="400" height="800"></canvas>
+      <div class="preview-info">
+        <small>Real-time preview updates as you edit</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="editor-modal-footer">
+    <button class="btn-apply" onclick="getIntegratedEditor().applyChanges()">✓ Apply & Save</button>
+    <button class="btn-discard" onclick="getIntegratedEditor().discardChanges()">✕ Discard</button>
+  </div>
+</div>
+
+<!-- PWA Support -->
+<script src="/pwa.js" defer></script>
+
 </body>
 </html>

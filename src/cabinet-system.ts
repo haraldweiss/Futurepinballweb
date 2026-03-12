@@ -142,24 +142,32 @@ export class CabinetSystem {
 
   /**
    * Auto-detect cabinet profile based on viewport dimensions
+   * Default to HORIZONTAL (0° rotation) - safest option
    */
   autoDetectProfile(): CabinetProfile {
     const aspectRatio = window.innerWidth / window.innerHeight;
     const width = window.innerWidth;
+    const height = window.innerHeight;
 
-    // Ultra-wide: 21:9 or wider (>2.3)
+    console.log(`🎮 Cabinet auto-detect: ${width}x${height} (aspect: ${aspectRatio.toFixed(2)})`);
+
+    // Ultra-wide: 21:9 or wider (>2.3) - best for ultrawide monitors
     if (aspectRatio > 2.3) {
+      console.log(`🎮 → Ultrawide detected (>2.3), using WIDE profile (0°)`);
       this.setProfile(CABINET_WIDE);
       return CABINET_WIDE;
     }
 
-    // Vertical portrait: < 0.8 ratio
-    if (aspectRatio < 0.8) {
+    // Vertical portrait: < 0.8 ratio - true portrait displays
+    if (aspectRatio < 0.75) {
+      console.log(`🎮 → Vertical/Portrait detected (<0.75), using VERTICAL profile (90°)`);
       this.setProfile(CABINET_VERTICAL);
       return CABINET_VERTICAL;
     }
 
-    // Standard horizontal (0.8-2.3)
+    // DEFAULT: Standard horizontal (0.75-2.3) - NO ROTATION
+    // This is the safest default for most displays
+    console.log(`🎮 → Standard horizontal detected, using HORIZONTAL profile (0° - NO ROTATION)`);
     this.setProfile(CABINET_HORIZONTAL);
     return CABINET_HORIZONTAL;
   }

@@ -97,6 +97,7 @@ export const fptResources: FPTResources = {
   playfield: null,
   script:    null,
   animations: new Map(),  // Phase 13: BAM animations
+  models: new Map(),      // Phase 7: MS3D models (initialize empty)
   mapped: { bumper: null, flipper: null, drain: null },
 };
 

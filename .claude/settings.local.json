@@ -37,7 +37,19 @@
       "Bash(/tmp/line_by_line_details.md:*)",
       "Bash(/tmp/implementation_checklist.md:*)",
       "Bash(/tmp/geometry_pool_report.md:*)",
-      "Bash(curl -s http://localhost:5173/)"
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(/tmp/final_summary.txt:*)",
+      "Bash(ls -lh CODE_QUALITY_*.md)",
+      "Bash(xargs -I {} basename {})",
+      "Bash(du -sh CODE_QUALITY_*.md)",
+      "Bash(du -sh *)",
+      "Bash(/tmp/polish_suite_fixes_summary.md:*)",
+      "Bash(/tmp/cascaded_shadows_integration.md:*)",
+      "Bash(/tmp/polish_suite_complete_summary.md:*)",
+      "Bash(/tmp/csm_implementation_complete.md:*)",
+      "Bash(netstat -tlnp)",
+      "Bash(lsof -i -P -n)",
+      "Bash(gh repo:*)"
     ]
   }
 }

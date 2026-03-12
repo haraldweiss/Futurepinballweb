@@ -410,8 +410,7 @@ export class BackglassRenderer {
       // ─── 2D Canvas Fallback: Simplified for mobile ───
       // For now, render 3D but with lower resolution on mobile
       // In future, this could switch to canvas-based rendering
-      const originalSize = this.renderTarget.getSize(new THREE.Vector2());
-      if (this.config.deviceType === 'mobile' && originalSize.x > 200) {
+      if (this.config.deviceType === 'mobile' && this.width > 200) {
         // Reduce resolution for mobile by rendering to smaller target
         this.renderTarget.setSize(200, 300);
       }

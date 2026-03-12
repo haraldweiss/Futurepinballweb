@@ -174,11 +174,11 @@
 
     body.show-bg-panel #backglass-canvas { display: block; position: fixed; right: 0; top: 0; width: 30vw; height: 100vh; z-index: 95; border-left: 1px solid rgba(255,200,0,0.25); inset: unset; }
   </style>
-  <script type="module" crossorigin src="/assets/main-B5c52nUF.js"></script>
+  <script type="module" crossorigin src="/assets/main-rz8DDc9w.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-B5Qt9EMX.js">
-  <link rel="modulepreload" crossorigin href="/assets/vendor-three-BswaKljp.js">
-  <link rel="modulepreload" crossorigin href="/assets/module-script-BKL7sZPj.js">
-  <link rel="modulepreload" crossorigin href="/assets/module-fpt-CzLKrhZu.js">
+  <link rel="modulepreload" crossorigin href="/assets/vendor-three-C5mI6eFv.js">
+  <link rel="modulepreload" crossorigin href="/assets/module-script-pVLhq7SD.js">
+  <link rel="modulepreload" crossorigin href="/assets/module-fpt-Dw_v1pLh.js">
   <link rel="modulepreload" crossorigin href="/assets/vendor-rapier-CD32UM7e.js">
 </head>
 <body>
@@ -425,6 +425,20 @@
         </div>
       </div>
       <div id="ms-detect-info"></div>
+
+      <!-- Screen Role Configuration -->
+      <div id="screen-role-config" style="display:none;margin:20px 0;padding:20px;background:rgba(0,30,60,0.4);border:1px solid #00aaff;border-radius:8px;">
+        <h3 style="margin-top:0;color:#00aaff;">🎮 SCREEN ASSIGNMENT</h3>
+        <p style="font-size:12px;color:#667;margin:10px 0;">Assign components to each screen:</p>
+        <div id="screen-role-list" style="display:flex;flex-direction:column;gap:8px;">
+          <!-- Dynamically populated -->
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button onclick="resetScreenRoles()" style="flex:1;padding:8px;background:#333;border:1px solid #667;color:#aaa;cursor:pointer;border-radius:4px;">↻ Reset</button>
+          <button onclick="swapScreenRoles(0,1)" style="flex:1;padding:8px;background:#333;border:1px solid #667;color:#aaa;cursor:pointer;border-radius:4px;">⇄ Swap 1↔2</button>
+        </div>
+      </div>
+
       <div class="ms-btn-row">
         <button id="ms-autodetect" onclick="autoDetectScreens()">⚡ AUTO-DETECT</button>
         <button id="ms-apply" onclick="applyMsLayout()">▶ APPLY LAYOUT</button>

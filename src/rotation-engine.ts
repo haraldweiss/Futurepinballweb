@@ -106,7 +106,8 @@ export class RotationEngine {
           ? 2 * progress * progress
           : -1 + (4 - 2 * progress) * progress;
 
-        THREE.Quaternion.slerp(startQuat, targetQuat, easeProgress, this.playgroundGroup.quaternion);
+        // FIX: Use instance method slerpQuaternions instead of static slerp
+        this.playgroundGroup.quaternion.slerpQuaternions(startQuat, targetQuat, easeProgress);
 
         if (progress < 1) {
           requestAnimationFrame(animate);
