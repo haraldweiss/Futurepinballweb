@@ -166,19 +166,49 @@
     body.role-backglass #touch-right, body.role-backglass #touch-plunger
     { display: none !important; }
 
-    body.role-dmd { background: #000 !important; overflow: hidden !important; }
+    body.role-dmd {
+      background: #000 !important;
+      overflow: hidden !important;
+    }
+    /* Hide ALL elements in DMD mode */
+    body.role-dmd > * {
+      display: none !important;
+    }
+    /* Show only DMD wrap */
     body.role-dmd #dmd-wrap {
       position: fixed; top: 50% !important; left: 50% !important;
       transform: translate(-50%,-50%) !important;
       padding: 20px 30px; border-width: 3px;
       box-shadow: 0 0 60px rgba(255,100,0,0.5), 0 0 20px rgba(255,80,0,0.3), inset 0 0 30px rgba(0,0,0,0.9);
-      display: block !important;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
     }
-    body.role-dmd #dmd-wrap canvas { display: block !important; }
+    body.role-dmd #dmd-wrap canvas {
+      display: block !important;
+      max-width: 90vw;
+      max-height: 90vh;
+    }
+    /* Explicit hide for other elements that might show */
+    body.role-dmd #hud { display: none !important; }
     body.role-dmd #loader-modal { display: none !important; }
     body.role-dmd #open-loader { display: none !important; }
     body.role-dmd #controls { display: none !important; }
     body.role-dmd #notification { display: none !important; }
+    body.role-dmd #touch-left { display: none !important; }
+    body.role-dmd #touch-right { display: none !important; }
+    body.role-dmd #touch-plunger { display: none !important; }
+    body.role-dmd #backglass-canvas { display: none !important; }
+    body.role-dmd #install-btn { display: none !important; }
+    body.role-dmd #editor-btn { display: none !important; }
+    body.role-dmd #fullscreen-btn { display: none !important; }
+    body.role-dmd #view-btn { display: none !important; }
+    body.role-dmd #multiscreen-btn { display: none !important; }
+    body.role-dmd #hide-dmd-btn { display: none !important; }
+    body.role-dmd #view-panel { display: none !important; }
+    body.role-dmd #multiscreen-modal { display: none !important; }
+    body.role-dmd #loading-overlay { display: none !important; }
 
     #backglass-canvas { display: none; position: fixed; inset: 0; width: 100%; height: 100%; }
     body.role-backglass #backglass-canvas { display: block; }
