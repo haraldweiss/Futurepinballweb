@@ -2010,23 +2010,32 @@ document.addEventListener('keyup', e => {
     state.plungerCharge = 0; state.ballSaveTimer = 3.5;
 
     // Phase 15: Launch ball via physics worker
+    const vy = 16.0 + charge * 14.0;  // Min 16, max 30 m/s upward (playfield reach)
+    const vx = -8.0 - charge * 4.0;   // Min -8, max -12 m/s leftward (into playfield)
+
+    console.log(`🎯 PLUNGER LAUNCH: charge=${charge.toFixed(2)}, vx=${vx.toFixed(2)}, vy=${vy.toFixed(2)}`);
+
     try {
       const bridge = getPhysicsWorker();
-      const vy = 16.0 + charge * 14.0;  // Min 16, max 30 m/s upward (playfield reach)
-      const vx = -8.0 - charge * 4.0;   // Min -8, max -12 m/s leftward (into playfield)
       bridge.setBallGravityScale(1.0);
       bridge.updateBallPosition(2.65, -5.0, vx, vy);
-    } catch {
+      console.log('✅ Ball launched via physics worker');
+    } catch (e) {
       // Fallback: Direct physics access (single-threaded)
+      console.warn('⚠️ Physics worker error, using fallback:', e);
       if (physics) {
-        const vy = 16.0 + charge * 14.0;
-        const vx = -8.0 - charge * 4.0;
         physics.ballBody.setGravityScale(1.0, true);
         physics.ballBody.setTranslation({ x:2.65, y:-5.0 }, true);
         physics.ballBody.setLinvel({ x:vx, y:vy }, true);
+        console.log('✅ Ball launched via fallback (main thread physics)');
+      } else {
+        console.error('❌ No physics system available!');
+        state.ballVel.x = vx;
+        state.ballVel.y = vy;
       }
     }
     playSound('bumper'); startBGMusic();
+    showNotification(`⚡ LAUNCHED! (${(charge*100).toFixed(0)}%)`);
   }
 });
 

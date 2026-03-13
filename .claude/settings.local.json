@@ -49,7 +49,8 @@
       "Bash(/tmp/csm_implementation_complete.md:*)",
       "Bash(netstat -tlnp)",
       "Bash(lsof -i -P -n)",
-      "Bash(gh repo:*)"
+      "Bash(gh repo:*)",
+      "Bash(gh run:*)"
     ]
   }
 }
