@@ -35,7 +35,7 @@
     #multiplier    { color: #ffcc00; font-size: 20px; text-shadow: 0 0 10px #ffcc00; }
 
     /* TABLE LOADER MODAL */
-    #loader-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    #loader-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: none; align-items: center; justify-content: center; z-index: 1000; }
     #loader-box {
       background: linear-gradient(145deg, #1a1a2e, #16213e, #0f3460);
       border: 2px solid #00aaff; border-radius: 12px; padding: 30px;
@@ -215,6 +215,26 @@
     body.role-backglass #dmd-wrap { display: none !important; }
 
     body.show-bg-panel #backglass-canvas { display: block; position: fixed; right: 0; top: 0; width: 30vw; height: 100vh; z-index: 95; border-left: 1px solid rgba(255,200,0,0.25); inset: unset; }
+
+    /* ─── QUICK MENU (kompaktes Popup für Demo-Tische) ─── */
+    #quick-menu { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 950; }
+    #quick-menu.open { display: flex; }
+    #quick-menu-box { background: linear-gradient(145deg,#1a1a2e,#16213e,#0f3460); border: 2px solid #00aaff; border-radius: 16px; padding: 30px; width: 90%; max-width: 800px; box-shadow: 0 0 40px rgba(0,170,255,0.4), inset 0 0 40px rgba(0,0,50,0.5); }
+    #quick-menu-box h2 { color: #00aaff; font-size: 24px; text-align: center; margin-bottom: 8px; text-shadow: 0 0 15px #00aaff; letter-spacing: 3px; }
+    #quick-menu-box p { color: #667; font-size: 12px; text-align: center; margin-bottom: 24px; letter-spacing: 1px; }
+
+    .quick-tables { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; max-height: 320px; overflow-y: auto; }
+    .quick-table-card { background: rgba(0,30,60,0.6); border: 2px solid #223; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.25s; }
+    .quick-table-card:hover { border-color: #00aaff; background: rgba(0,80,160,0.3); transform: translateY(-4px); box-shadow: 0 4px 20px rgba(0,170,255,0.2); }
+    .quick-table-card .emoji { font-size: 40px; margin-bottom: 8px; }
+    .quick-table-card h3 { color: #eee; font-size: 12px; margin: 0; line-height: 1.4; }
+
+    .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; border-top: 1px solid #334; padding-top: 16px; }
+    .quick-action-btn { padding: 12px; background: rgba(0,50,100,0.5); border: 1px solid #446; border-radius: 8px; color: #aab; cursor: pointer; font-family: 'Courier New',monospace; font-size: 12px; letter-spacing: 1px; transition: all 0.2s; }
+    .quick-action-btn:hover { background: rgba(0,100,150,0.6); border-color: #00aaff; color: #00aaff; }
+
+    #menu-close-btn { position: absolute; top: 16px; right: 20px; background: none; border: none; color: #00aaff; font-size: 28px; cursor: pointer; padding: 8px; transition: all 0.2s; }
+    #menu-close-btn:hover { color: #00ff88; transform: scale(1.2); }
   </style>
 </head>
 <body>
@@ -228,11 +248,53 @@
     <div id="ball-display">BALL <span id="ballnum">1</span>/3</div>
   </div>
 
-  <button id="open-loader">📂 TISCH LADEN</button>
+  <button id="open-loader">📂 TISCH</button>
   <div id="notification"></div>
 
   <div id="dmd-wrap">
     <canvas id="dmd"></canvas>
+  </div>
+
+  <!-- QUICK MENU (Kompaktes Popup) -->
+  <div id="quick-menu">
+    <div id="quick-menu-box" style="position:relative">
+      <button id="menu-close-btn" onclick="closeQuickMenu()">✕</button>
+      <h2>🎮 DEMO TISCHE</h2>
+      <p>Wählen Sie einen Tisch zum Spielen</p>
+
+      <div class="quick-tables">
+        <div class="quick-table-card" onclick="loadDemoTable('pharaoh');closeQuickMenu()">
+          <div class="emoji">🏛️</div>
+          <h3>Pharaoh's Gold</h3>
+        </div>
+        <div class="quick-table-card" onclick="loadDemoTable('dragon');closeQuickMenu()">
+          <div class="emoji">🐉</div>
+          <h3>Dragon's Castle</h3>
+        </div>
+        <div class="quick-table-card" onclick="loadDemoTable('knight');closeQuickMenu()">
+          <div class="emoji">⚔️</div>
+          <h3>Knight's Quest</h3>
+        </div>
+        <div class="quick-table-card" onclick="loadDemoTable('cyber');closeQuickMenu()">
+          <div class="emoji">🤖</div>
+          <h3>Cyber Nexus</h3>
+        </div>
+        <div class="quick-table-card" onclick="loadDemoTable('neon');closeQuickMenu()">
+          <div class="emoji">💻</div>
+          <h3>Neon City</h3>
+        </div>
+        <div class="quick-table-card" onclick="loadDemoTable('jungle');closeQuickMenu()">
+          <div class="emoji">🌴</div>
+          <h3>Jungle Expedition</h3>
+        </div>
+      </div>
+
+      <div class="quick-actions">
+        <button class="quick-action-btn" onclick="switchTab('import');document.getElementById('loader-modal').style.display='flex';">📂 Importieren</button>
+        <button class="quick-action-btn" onclick="switchTab('browser');document.getElementById('loader-modal').style.display='flex';">📁 Browser</button>
+        <button class="quick-action-btn" onclick="switchTab('info');document.getElementById('loader-modal').style.display='flex';">ℹ️ Info</button>
+      </div>
+    </div>
   </div>
 
   <!-- TABLE LOADER MODAL -->
@@ -515,6 +577,37 @@
   <div id="touch-left"    class="touch-btn">◀</div>
   <div id="touch-right"   class="touch-btn">▶</div>
   <div id="touch-plunger" class="touch-btn">↑</div>
+
+  <script>
+    // Quick Menu Functions
+    function openQuickMenu() {
+      document.getElementById('quick-menu').classList.add('open');
+    }
+    function closeQuickMenu() {
+      document.getElementById('quick-menu').classList.remove('open');
+    }
+
+    // Close menu when clicking outside
+    document.getElementById('quick-menu').addEventListener('click', (e) => {
+      if (e.target.id === 'quick-menu') closeQuickMenu();
+    });
+
+    // Show quick menu on startup
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const modal = document.getElementById('loader-modal');
+        if (modal && modal.style.display !== 'none') {
+          // Loader modal is showing, don't show quick menu
+        } else {
+          // No table loaded yet, show quick menu
+          openQuickMenu();
+        }
+      }, 500);
+    });
+
+    // Button to open quick menu from game
+    document.getElementById('open-loader').addEventListener('click', openQuickMenu);
+  </script>
 
   <script type="module" src="./main.ts"></script>
 </body>
