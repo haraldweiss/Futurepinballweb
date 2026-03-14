@@ -296,33 +296,99 @@ async function rotateAndRedraw(targetDegrees: 0 | 90 | 180 | 270, duration: numb
     }
   });
 }
-// Auto-apply when window resizes
+// ─── COMPREHENSIVE RESPONSIVE RESIZE HANDLER ───
+// Adjusts all UI elements to fit the current browser window size
 window.addEventListener('resize', () => {
-  // Throttle resize events
+  // Throttle resize events to avoid performance issues
   clearTimeout((window as any).resizeTimer);
   (window as any).resizeTimer = setTimeout(() => {
-    applyOptimizedTableView();
+    try {
+      // Apply optimized table view
+      applyOptimizedTableView();
 
-    // ─── Responsive Canvas Sizing on Window Resize ───
-    const canvasSize = getPlayfieldCanvasSize();
-    renderer.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
+      // ─── Canvas Sizing ───
+      const canvasSize = getPlayfieldCanvasSize();
+      renderer.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
 
-    // Update camera aspect ratio
-    camera.aspect = canvasSize.displayWidth / canvasSize.displayHeight;
-    camera.updateProjectionMatrix();
+      // Update camera aspect ratio
+      camera.aspect = canvasSize.displayWidth / canvasSize.displayHeight;
+      camera.updateProjectionMatrix();
 
-    // Update post-processing passes
-    if (composer) {
-      composer.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
-    }
-    if (ssrPass) {
-      ssrPass.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
-    }
-    if (motionBlurPass) {
-      motionBlurPass.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
-    }
-    if (perLightBloomPass) {
-      perLightBloomPass.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
+      // ─── Update Post-Processing Passes ───
+      if (composer) {
+        composer.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
+      }
+      if (ssrPass) {
+        ssrPass.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
+      }
+      if (motionBlurPass) {
+        motionBlurPass.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
+      }
+      if (perLightBloomPass) {
+        perLightBloomPass.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
+      }
+
+      // ─── Reposition UI Elements for Different Viewport Sizes ───
+      const isMobile = window.innerWidth < 768;
+      const isSmallMobile = window.innerWidth < 480;
+      const isPortrait = window.innerHeight > window.innerWidth;
+
+      const hud = document.getElementById('hud');
+      const buttons = [
+        'open-loader', 'editor-btn', 'fullscreen-btn', 'multiscreen-btn',
+        'hide-dmd-btn', 'install-btn', 'view-btn', 'dmd-mode-btn'
+      ];
+
+      // Adjust HUD for small screens
+      if (hud && isSmallMobile) {
+        hud.style.flexDirection = 'column';
+        hud.style.gap = '4px';
+      } else if (hud) {
+        hud.style.flexDirection = 'row';
+        hud.style.gap = 'clamp(8px, 2vw, 20px)';
+      }
+
+      // Hide/show buttons based on screen size
+      buttons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+          if (isSmallMobile && ['editor-btn', 'multiscreen-btn'].includes(btnId)) {
+            btn.style.display = 'none';
+          } else {
+            btn.style.display = btn.classList.contains('hidden') ? 'none' : 'block';
+          }
+        }
+      });
+
+      // Adjust dmd-wrap positioning
+      const dmdWrap = document.getElementById('dmd-wrap');
+      if (dmdWrap) {
+        if (isPortrait) {
+          dmdWrap.style.maxHeight = '60vh';
+          dmdWrap.style.maxWidth = '90vw';
+        } else {
+          dmdWrap.style.maxHeight = '80vh';
+          dmdWrap.style.maxWidth = '95vw';
+        }
+      }
+
+      // Adjust modal max-height for small viewports
+      const loaderModal = document.getElementById('loader-modal');
+      if (loaderModal) {
+        loaderModal.style.maxHeight = '100vh';
+      }
+
+      const loaderBox = document.getElementById('loader-box');
+      if (loaderBox) {
+        loaderBox.style.maxHeight = `${Math.min(90, window.innerHeight / 10)}vh`;
+      }
+
+      // Log resize info in debug mode
+      if (process.env.DEBUG) {
+        console.log(`📐 Window Resized: ${window.innerWidth}x${window.innerHeight} (DPR: ${window.devicePixelRatio})`);
+      }
+    } catch (error) {
+      console.error('Error during resize handler:', error);
     }
   }, 250);
 });
