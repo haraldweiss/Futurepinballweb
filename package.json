@@ -21,7 +21,11 @@
     "electron-dist": "npm run build && electron-builder --publish never",
     "electron-win": "npm run build && electron-builder --win",
     "electron-mac": "npm run build && electron-builder --mac",
-    "electron-linux": "npm run build && electron-builder --linux"
+    "electron-linux": "npm run build && electron-builder --linux",
+    "test:security": "tsx src/test-security.ts",
+    "lint:security": "eslint src --config .eslintrc.security.json --fix",
+    "audit:dependencies": "npm audit --audit-level=moderate",
+    "security:check": "npm run lint:security && npm run test:security && npm run audit:dependencies"
   },
   "dependencies": {
     "@dimforge/rapier2d-compat": "0.12.0",
@@ -29,10 +33,16 @@
     "three": "0.162.0"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.50.0",
+    "eslint-plugin-no-unsanitized": "^4.0.2",
+    "eslint-plugin-security": "^2.1.0",
     "electron": "latest",
     "electron-builder": "latest",
     "electron-is-dev": "latest",
     "electron-updater": "latest",
+    "tsx": "^4.6.0",
     "typescript": "^5.4.0",
     "vite": "^7.3.1"
   },
