@@ -138,7 +138,7 @@ export function updateCoinDisplay(): void {
 
 /**
  * Fallback rendering directly to canvas if DMD module not available
- * Responsive text sizing based on canvas dimensions
+ * Uses DMD_SCALE for consistent sizing with main DMD display
  */
 function renderCoinScreenFallback(): void {
   const dmdElement = document.getElementById('dmd') as HTMLCanvasElement;
@@ -147,26 +147,27 @@ function renderCoinScreenFallback(): void {
   const ctx = dmdElement.getContext('2d');
   if (!ctx) return;
 
-  // Get canvas dimensions and calculate scale
+  // Get canvas dimensions
   const width = dmdElement.width;
   const height = dmdElement.height;
 
-  // Calculate optimal scale based on canvas dimensions
-  // Standard DMD is 128x32, so we scale text proportionally
+  // Calculate scale factor based on canvas vs standard DMD size
+  // Standard DMD is 128x32
   const baseWidth = 128;
   const baseHeight = 32;
   const scaleX = width / baseWidth;
   const scaleY = height / baseHeight;
   const scale = Math.min(scaleX, scaleY);  // Use minimum to ensure fit
 
-  // Dark amber background
+  // Dark amber background (matching #1a1400 standard DMD color)
   ctx.fillStyle = '#1a1400';
   ctx.fillRect(0, 0, width, height);
 
-  // Calculate responsive font sizes (in DMD "units" before scaling)
-  const titleFontSize = Math.max(10, Math.min(24, 14 * scale));      // 8-24px range
-  const statusFontSize = Math.max(8, Math.min(18, 10 * scale));      // 6-18px range
-  const hintFontSize = Math.max(6, Math.min(12, 7 * scale));         // 4-12px range
+  // Font sizes: Use smaller base sizes (6-8px for "1x" DMD, scaled up by canvas scale)
+  // This matches the sizing used in dmd.ts for consistency
+  const titleFontSize = Math.max(6, 8 * scale);        // 8px base at 1x scale
+  const statusFontSize = Math.max(5, 6 * scale);       // 6px base at 1x scale
+  const hintFontSize = Math.max(4, 5 * scale);         // 5px base at 1x scale
 
   // Ensure minimum readability
   if (width < 200 || height < 50) {
@@ -193,7 +194,7 @@ function renderCoinScreenFallback(): void {
   // Draw coin icons - Visual feedback
   if (coinSystemState.coinsInserted > 0) {
     const iconY = Math.round(height * 0.75);
-    const iconRadius = Math.max(3, Math.round(5 * scale));
+    const iconRadius = Math.max(2, Math.round(3 * scale));  // Reduced from 5 to 3 for better proportions
     const iconSpacing = Math.round(width / (coinSystemState.coinsInserted + 1));
 
     ctx.fillStyle = '#ffff00';
@@ -209,23 +210,26 @@ function renderCoinScreenFallback(): void {
   if (coinSystemState.coinsInserted > 0) {
     ctx.fillStyle = '#00ff88';
     ctx.font = `${hintFontSize}px "Courier New", monospace`;
-    ctx.fillText('PRESS ENTER TO START', width / 2, height - Math.round(8 * scale));
+    ctx.fillText('PRESS ENTER TO START', width / 2, height - Math.round(6 * scale));
   }
 }
 
 /**
- * Simplified rendering for very small displays
+ * Simplified rendering for very small displays (< 200x50 pixels)
  */
 function renderCoinScreenSimplified(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+  // Calculate scale for tiny display
+  const scale = Math.min(width / 128, height / 32);
+
   // Simple text-only rendering for tiny screens
   ctx.fillStyle = '#ffaa00';
-  ctx.font = '10px monospace';
+  ctx.font = `${Math.max(4, 6 * scale)}px monospace`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('INSERT COIN', width / 2, height / 3);
 
   ctx.fillStyle = '#00ff88';
-  ctx.font = '8px monospace';
+  ctx.font = `${Math.max(3, 4 * scale)}px monospace`;
   const line2 = coinSystemState.coinsInserted > 0
     ? `COINS: ${coinSystemState.coinsInserted} PLAYERS: ${coinSystemState.currentPlayers}`
     : 'PRESS C';
