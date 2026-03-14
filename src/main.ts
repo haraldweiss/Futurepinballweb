@@ -83,6 +83,9 @@ import {
   isCoinScreenVisible, isGameStarted, getPlayerCount, resetCoinSystem, updateCoinDisplay,
 } from './coin-system';
 import {
+  initializeKeyBindings, getKeyBindingManager, checkKeyBinding,
+} from './keybindings';
+import {
   AnimationScheduler, initializeAnimationScheduler, getAnimationScheduler,
 } from './mechanics/animation-scheduler';
 import {
@@ -436,6 +439,10 @@ logMsg(`🎵 AudioSourcePool initialized (16 pre-allocated sources)`, 'ok');
 // ─── Coin System (Arcade Insert Coin) ────────────────────────────────────────
 initializeCoinSystem();
 logMsg(`💰 Coin system initialized`, 'ok');
+
+// ─── Key Binding Manager (Configurable Controls) ────────────────────────────
+initializeKeyBindings();
+logMsg(`🔑 Key Bindings initialized (VPX Standard)`, 'ok');
 
 // ─── Phase 10+: Cabinet System (Rotation & Profiles) ──────────────────────────
 let cabinetSystem = initializeCabinetSystem();
@@ -1933,15 +1940,15 @@ document.addEventListener('keydown', e => {
     showNotification(`💰 Coin Inserted! Credits: ${state.credits}`);
   }
 
-  // ─── Coin System Controls ────────────────────────────────────────────────────
-  // C: Add Coin (arcade-style)
-  if ((e.key === 'c' || e.key === 'C') && isCoinScreenVisible() && !isGameStarted()) {
+  // ─── Coin System Controls (Configurable) ─────────────────────────────────────
+  // Insert Coin
+  if (checkKeyBinding(e, 'insertCoin') && isCoinScreenVisible() && !isGameStarted()) {
     addCoin();
     return;
   }
 
-  // Enter: Start Game if coin screen is showing
-  if (e.key === 'Enter' && isCoinScreenVisible() && !isGameStarted()) {
+  // Start Game if coin screen is showing
+  if (checkKeyBinding(e, 'startGame') && isCoinScreenVisible() && !isGameStarted()) {
     startGame();
     return;
   }
