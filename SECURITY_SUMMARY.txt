@@ -1,0 +1,185 @@
+═══════════════════════════════════════════════════════════════════════════════
+🔒 SECURITY REVIEW SUMMARY — Future Pinball Web v0.19.0
+═══════════════════════════════════════════════════════════════════════════════
+
+Review Date: 2026-03-13
+Reviewer: Security Analysis Agent
+Status: 🟡 MEDIUM RISK — REQUIRES REMEDIATION
+
+───────────────────────────────────────────────────────────────────────────────
+CRITICAL FINDINGS (7 Issues)
+───────────────────────────────────────────────────────────────────────────────
+
+🔴 ISSUE #1: DOM XSS via Unvalidated File Names (HIGH)
+   Location: src/main.ts lines 2776, 3700, etc.
+   Risk: User can craft file name with HTML/JavaScript to execute arbitrary code
+   Example: "Poker<img onerror=\"alert('xss')\"/>.fpt"
+   Fix: Use escapeHtml() for all file name insertions
+   Effort: 2-3 hours | Impact: CRITICAL
+
+🔴 ISSUE #2: Inline Event Handlers (MEDIUM)
+   Location: src/index.html lines 261-295
+   Risk: Violates CSP best practices; harder to maintain security
+   Pattern: onclick="loadDemoTable('pharaoh');closeQuickMenu()"
+   Fix: Replace with event listeners and data-* attributes
+   Effort: 3-4 hours | Impact: MEDIUM
+
+🔴 ISSUE #3: Missing CSP Headers (MEDIUM)
+   Location: Server configuration (nginx/express)
+   Risk: No Content Security Policy reduces XSS protection
+   Impact: Allows inline scripts, unsandboxed iframes, external scripts
+   Fix: Configure CSP header with proper directives
+   Effort: 1-2 hours | Impact: MEDIUM
+
+🟡 ISSUE #4: localStorage Without Validation (LOW-MEDIUM)
+   Location: src/highscore.ts
+   Risk: Malformed data could cause crashes; no quota management
+   Fix: Validate JSON structure, check types, set quota limits
+   Effort: 1 hour | Impact: LOW
+
+🟡 ISSUE #5: Physics Worker Message Validation (LOW)
+   Location: src/physics-worker-bridge.ts line 198
+   Risk: No validation of worker message structure
+   Fix: Add validatePhysicsFrame() type guard
+   Effort: 2 hours | Impact: LOW
+
+🟡 ISSUE #6: File Type Validation Missing (LOW)
+   Location: src/fpt-parser.ts, file-browser.ts
+   Risk: No file size limit or type verification
+   Fix: Add magic byte checking, size validation
+   Effort: 1-2 hours | Impact: LOW
+
+🟡 ISSUE #7: VBScript Transpilation Pattern (LOW)
+   Location: src/script-engine.ts line 43
+   Risk: Dynamic RegExp could be exploited if pattern source changes
+   Fix: Use pre-compiled regex objects instead of string patterns
+   Effort: 1 hour | Impact: LOW
+
+───────────────────────────────────────────────────────────────────────────────
+POSITIVE SECURITY FINDINGS (7 Strengths)
+───────────────────────────────────────────────────────────────────────────────
+
+✅ No eval() usage — VBScript uses safe string replacement
+✅ Proper error handling — Try-catch in storage/worker operations
+✅ Type safety — TypeScript prevents many runtime vulnerabilities
+✅ Worker sandboxing — Physics worker in isolated context
+✅ File System Access API — User-controlled file selection
+✅ Input bounds checking — Physics values properly clamped
+✅ No direct code execution — Script engine sandboxed
+
+───────────────────────────────────────────────────────────────────────────────
+REMEDIATION ROADMAP
+───────────────────────────────────────────────────────────────────────────────
+
+PHASE 1 (THIS WEEK) — CRITICAL
+  [ ] Create src/utils/html-escape.ts utility
+  [ ] Update all innerHTML assignments with HTML escaping
+  [ ] Test XSS payloads to verify fixes
+  Effort: 2-3 hours
+
+PHASE 2 (NEXT 2 WEEKS) — HIGH
+  [ ] Create src/quick-menu-handlers.ts for event delegation
+  [ ] Update index.html to use data-* attributes
+  [ ] Configure CSP headers on server
+  [ ] Validate localStorage data in highscore.ts
+  Effort: 5-6 hours
+
+PHASE 3 (NEXT SPRINT) — MEDIUM
+  [ ] Validate physics worker messages
+  [ ] Add file size/type validation
+  [ ] Update VBScript transpiler with pre-compiled regexes
+  [ ] Security testing and penetration testing
+  Effort: 4-5 hours
+
+───────────────────────────────────────────────────────────────────────────────
+IMPACT ANALYSIS
+───────────────────────────────────────────────────────────────────────────────
+
+Severity Distribution:
+  🔴 High:   1 issue (Issue #1 - DOM XSS)
+  🟡 Medium: 2 issues (Issues #2, #3 - Event handlers, CSP)
+  🟡 Low:    4 issues (Issues #4-7 - Validation, patterns)
+
+User Impact:
+  ❌ Users with crafted table file names could trigger XSS
+  ⚠️  Can execute arbitrary JavaScript in game context
+  ⚠️  Access to localStorage, session storage, cookies
+  ⚠️  Potential to extract/modify game state or highscores
+
+Attack Vector:
+  1. User shares malicious .fpt file with XSS payload in name
+  2. Another user imports file via file browser
+  3. File name with payload is displayed in grid/list
+  4. JavaScript payload executes in game context
+  5. Attacker gains access to highscores, game state, etc.
+
+Likelihood: MEDIUM (requires user to import specially-crafted file)
+Impact: HIGH (arbitrary code execution in game context)
+
+───────────────────────────────────────────────────────────────────────────────
+COMPLIANCE CHECKLIST
+───────────────────────────────────────────────────────────────────────────────
+
+[ ] OWASP Top 10 (A03:2021 – Injection)
+    - XSS prevention via HTML escaping
+    - Input validation on user-controlled data
+
+[ ] OWASP Top 10 (A05:2021 – Access Control)
+    - File System Access API (user-controlled)
+    - No privilege escalation vectors
+
+[ ] OWASP Top 10 (A09:2021 – Security Logging)
+    - Worker errors logged with context
+    - Script transpilation events logged
+
+[ ] NIST Cybersecurity Framework
+    - Identify: Code review completed ✅
+    - Protect: Mitigations documented ✅
+    - Detect: Monitoring plan in place ✅
+    - Respond: Rollback plan documented ✅
+    - Recover: Git history preserved ✅
+
+───────────────────────────────────────────────────────────────────────────────
+TESTING STRATEGY
+───────────────────────────────────────────────────────────────────────────────
+
+XSS Testing:
+  ✓ File name: "Test<img src=x onerror=\"alert('xss')\">.fpt"
+  ✓ File name: "Test\"><script>alert(1)</script>.fpt"
+  ✓ File name: "Test' onmouseover='alert(1).fpt"
+  ✓ File name: "Test\\x00Test.fpt"
+
+localStorage Testing:
+  ✓ Inject: localStorage.setItem('fpw_highscores_v1', 'not-json')
+  ✓ Inject: localStorage.setItem('fpw_highscores_v1', '[1, "string", 2]')
+  ✓ Verify: App handles gracefully
+
+Worker Message Testing:
+  ✓ Send malformed frame data
+  ✓ Send invalid message types
+  ✓ Verify validation catches errors
+
+───────────────────────────────────────────────────────────────────────────────
+RESOURCES
+───────────────────────────────────────────────────────────────────────────────
+
+📖 Full Technical Review:  SECURITY_REVIEW.md
+📋 Implementation Guide:   SECURITY_REMEDIATION_GUIDE.md
+🔗 References:
+   - OWASP XSS Prevention Cheat Sheet
+   - MDN Content Security Policy
+   - OWASP Top 10 2021 (A03, A05, A09)
+   - CWE-79: Improper Neutralization of Input During Web Page Generation
+
+───────────────────────────────────────────────────────────────────────────────
+SIGN-OFF
+───────────────────────────────────────────────────────────────────────────────
+
+Review Status: ✅ COMPLETE
+Risk Assessment: 🟡 MEDIUM (Requires remediation before production)
+Recommendation: Implement Phase 1 fixes IMMEDIATELY
+Timeline: 2.5-3 hours to fix all critical issues
+
+Next Action: Create src/utils/html-escape.ts and update main.ts
+
+═══════════════════════════════════════════════════════════════════════════════
