@@ -138,6 +138,7 @@ export function updateCoinDisplay(): void {
 
 /**
  * Fallback rendering directly to canvas if DMD module not available
+ * Responsive text sizing based on canvas dimensions
  */
 function renderCoinScreenFallback(): void {
   const dmdElement = document.getElementById('dmd') as HTMLCanvasElement;
@@ -146,39 +147,60 @@ function renderCoinScreenFallback(): void {
   const ctx = dmdElement.getContext('2d');
   if (!ctx) return;
 
-  // Get canvas dimensions
+  // Get canvas dimensions and calculate scale
   const width = dmdElement.width;
   const height = dmdElement.height;
-  const scale = Math.max(1, width / 128);  // Estimate scale from canvas width
+
+  // Calculate optimal scale based on canvas dimensions
+  // Standard DMD is 128x32, so we scale text proportionally
+  const baseWidth = 128;
+  const baseHeight = 32;
+  const scaleX = width / baseWidth;
+  const scaleY = height / baseHeight;
+  const scale = Math.min(scaleX, scaleY);  // Use minimum to ensure fit
 
   // Dark amber background
   ctx.fillStyle = '#1a1400';
   ctx.fillRect(0, 0, width, height);
 
-  // Draw "INSERT COIN" text
+  // Calculate responsive font sizes (in DMD "units" before scaling)
+  const titleFontSize = Math.max(10, Math.min(24, 14 * scale));      // 8-24px range
+  const statusFontSize = Math.max(8, Math.min(18, 10 * scale));      // 6-18px range
+  const hintFontSize = Math.max(6, Math.min(12, 7 * scale));         // 4-12px range
+
+  // Ensure minimum readability
+  if (width < 200 || height < 50) {
+    // Extra small display - simplified rendering
+    renderCoinScreenSimplified(ctx, width, height);
+    return;
+  }
+
+  // Draw "INSERT COIN" text - Large and bold
   ctx.fillStyle = '#ffaa00';
-  ctx.font = `bold ${Math.round(20 * scale)}px monospace`;
+  ctx.font = `bold ${titleFontSize}px "Courier New", monospace`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('INSERT COIN', width / 2, height / 3);
+  ctx.fillText('INSERT COIN', width / 2, Math.round(height * 0.25));
 
-  // Draw current coins and players
-  ctx.font = `${Math.round(14 * scale)}px monospace`;
+  // Draw current coins and players - Status line
+  ctx.font = `${statusFontSize}px "Courier New", monospace`;
   ctx.fillStyle = '#00ff88';
-  const playerDisplay = `COINS: ${coinSystemState.coinsInserted}  PLAYERS: ${coinSystemState.currentPlayers}`;
-  ctx.fillText(playerDisplay, width / 2, (height * 2) / 3);
+  const playerDisplay = coinSystemState.coinsInserted > 0
+    ? `COINS: ${coinSystemState.coinsInserted}/4  PLAYERS: ${coinSystemState.currentPlayers}`
+    : 'PRESS C FOR COIN';
+  ctx.fillText(playerDisplay, width / 2, Math.round(height * 0.55));
 
-  // Draw coin icons
+  // Draw coin icons - Visual feedback
   if (coinSystemState.coinsInserted > 0) {
-    const iconY = height - Math.round(15 * scale);
-    const iconSpacing = Math.round(30 * scale);
-    const startX = width / 2 - ((coinSystemState.coinsInserted - 1) * iconSpacing) / 2;
+    const iconY = Math.round(height * 0.75);
+    const iconRadius = Math.max(3, Math.round(5 * scale));
+    const iconSpacing = Math.round(width / (coinSystemState.coinsInserted + 1));
 
+    ctx.fillStyle = '#ffff00';
     for (let i = 0; i < coinSystemState.coinsInserted; i++) {
-      const x = startX + i * iconSpacing;
-      ctx.fillStyle = '#ffff00';
+      const x = iconSpacing * (i + 1);
       ctx.beginPath();
-      ctx.arc(x, iconY, 6 * scale, 0, Math.PI * 2);
+      ctx.arc(x, iconY, iconRadius, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -186,9 +208,28 @@ function renderCoinScreenFallback(): void {
   // Draw START button hint if coins inserted
   if (coinSystemState.coinsInserted > 0) {
     ctx.fillStyle = '#00ff88';
-    ctx.font = `${Math.round(10 * scale)}px monospace`;
-    ctx.fillText('PRESS ENTER TO START', width / 2, height - Math.round(3 * scale));
+    ctx.font = `${hintFontSize}px "Courier New", monospace`;
+    ctx.fillText('PRESS ENTER TO START', width / 2, height - Math.round(8 * scale));
   }
+}
+
+/**
+ * Simplified rendering for very small displays
+ */
+function renderCoinScreenSimplified(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+  // Simple text-only rendering for tiny screens
+  ctx.fillStyle = '#ffaa00';
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('INSERT COIN', width / 2, height / 3);
+
+  ctx.fillStyle = '#00ff88';
+  ctx.font = '8px monospace';
+  const line2 = coinSystemState.coinsInserted > 0
+    ? `COINS: ${coinSystemState.coinsInserted} PLAYERS: ${coinSystemState.currentPlayers}`
+    : 'PRESS C';
+  ctx.fillText(line2, width / 2, (height * 2) / 3);
 }
 
 // ─── Reset Coin System ───────────────────────────────────────────────────────
