@@ -2639,10 +2639,7 @@ window.loadDemoTable = async (key: string) => {
 
 window.closeLoader = async function closeLoader() {
   (document.getElementById('loader-modal') as HTMLElement).style.display='none';
-  if (!currentTableConfig) {
-    await loadTableWithPhysicsWorker(TABLE_CONFIGS['pharaoh'], scene);
-    setupBackglassForTable();
-  }
+  // Don't auto-load a table - user should select one from Quick Menu or Loader Modal
 };
 
 (document.getElementById('open-loader') as HTMLElement).onclick = () => {
@@ -3350,13 +3347,14 @@ window.applyStartupScreenConfig = async () => {
 
   if (!config) return; // No startup config
 
-  // Auto-load first demo table if screen config is provided but no table is loaded yet
-  if (tableParam || !currentTableConfig) {
-    const demoTable = tableParam || 'pharaoh';
+  // Load table ONLY if explicitly passed as URL parameter, otherwise show Quick Menu
+  if (tableParam) {
+    const demoTable = tableParam;
     // Load the table first, then apply screen config
     window.loadDemoTable?.(demoTable);
     await new Promise(resolve => setTimeout(resolve, 500)); // Wait for table to load
   }
+  // Otherwise: Let Quick Menu be shown by HTML window.load event
 
   if (config === 'auto') {
     // Auto-detect and apply

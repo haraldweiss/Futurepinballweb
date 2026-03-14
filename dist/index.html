@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Future Pinball Web</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#00aaff">
@@ -236,7 +237,7 @@
     #menu-close-btn { position: absolute; top: 16px; right: 20px; background: none; border: none; color: #00aaff; font-size: 28px; cursor: pointer; padding: 8px; transition: all 0.2s; }
     #menu-close-btn:hover { color: #00ff88; transform: scale(1.2); }
   </style>
-  <script type="module" crossorigin src="/assets/main-D146_e4S.js"></script>
+  <script type="module" crossorigin src="/assets/main-BwQ0XgB7.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-B5Qt9EMX.js">
   <link rel="modulepreload" crossorigin href="/assets/vendor-three-C5mI6eFv.js">
   <link rel="modulepreload" crossorigin href="/assets/module-script-pVLhq7SD.js">
@@ -599,20 +600,30 @@
     });
 
     // Show quick menu on startup
-    window.addEventListener('load', () => {
+    window.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         const modal = document.getElementById('loader-modal');
-        if (modal && modal.style.display !== 'none') {
-          // Loader modal is showing, don't show quick menu
-        } else {
-          // No table loaded yet, show quick menu
+        const computed = modal ? window.getComputedStyle(modal).display : 'none';
+        // If loader modal is not showing, open quick menu
+        if (computed === 'none') {
           openQuickMenu();
+          console.log('✅ Quick Menu auto-opened on startup');
         }
-      }, 500);
+      }, 300);
+    });
+
+    // Also handle window load event as fallback
+    window.addEventListener('load', () => {
+      const quickMenu = document.getElementById('quick-menu');
+      if (quickMenu && !quickMenu.classList.contains('open')) {
+        openQuickMenu();
+        console.log('✅ Quick Menu auto-opened on load event');
+      }
     });
 
     // Button to open quick menu from game
-    document.getElementById('open-loader').addEventListener('click', openQuickMenu);
+    const openLoaderBtn = document.getElementById('open-loader');
+    if (openLoaderBtn) openLoaderBtn.addEventListener('click', openQuickMenu);
   </script>
 
 </body>
