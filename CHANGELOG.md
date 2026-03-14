@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.20.0] - 2026-03-14
+
+### 🐛 Bug Fixes
+
+#### ✅ Quick Menu Auto-Display Fix
+- **Issue**: Quick Menu was not showing on startup; demo tables could not be selected
+- **Fix**:
+  - Added UTF-8 charset to HTML for proper emoji rendering (🏛️ 🐉 ⚔️ 🤖 💻 🌴)
+  - Implemented auto-open on `DOMContentLoaded` event with `getComputedStyle()` detection
+  - Added fallback auto-open on `load` event
+  - Removed auto-load of 'pharaoh' table on startup
+  - Fixed `closeLoader()` to not auto-load a default table
+- **Result**: Quick Menu now displays on first load with all 6 demo tables, proper emoji icons, and working table selection
+
+### 📝 Changes
+- **src/main.ts**:
+  - Removed forced auto-load of pharaoh table from `applyStartupScreenConfig()`
+  - Simplified `closeLoader()` to only close modal, no auto-load
+- **src/index.html**:
+  - Added `<meta charset="UTF-8">` for proper Unicode/emoji support
+  - Improved Quick Menu auto-open logic using `DOMContentLoaded` and `getComputedStyle()`
+  - Added console logging for debugging Quick Menu state
+
+---
+
 ## [0.19.0] - 2026-03-12
 
 ### 🎉 Major Features Added
