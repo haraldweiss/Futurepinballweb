@@ -33,31 +33,140 @@ export class FileSystemBrowser {
   private libraryDirectory: FileSystemDirectoryHandle | null = null;
 
   /**
-   * Let user select FPT table directory via browser picker
+   * Let user select FPT table directory via browser picker (with fallback)
    */
   async selectTableDirectory(): Promise<FileInfo[]> {
-    try {
-      this.tableDirectory = await window.showDirectoryPicker();
-      console.log('✓ Table directory selected:', this.tableDirectory.name);
-      return this.scanDirectory(this.tableDirectory, '.fpt');
-    } catch (error) {
-      console.error('❌ Table directory selection cancelled or failed:', error);
-      return [];
+    // Try modern File System Access API first
+    if ('showDirectoryPicker' in window) {
+      try {
+        this.tableDirectory = await (window as any).showDirectoryPicker();
+        console.log('✓ Table directory selected (FSA):', this.tableDirectory.name);
+        return this.scanDirectory(this.tableDirectory, '.fpt');
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.warn(`⚠️ FSA failed: ${errMsg}, trying fallback...`);
+      }
+    } else {
+      console.warn('⚠️ File System Access API not available, using fallback');
     }
+
+    // Fallback: use webkitdirectory input
+    return this.selectTableDirectoryFallback();
   }
 
   /**
-   * Let user select library directory via browser picker
+   * Let user select library directory via browser picker (with fallback)
    */
   async selectLibraryDirectory(): Promise<FileInfo[]> {
-    try {
-      this.libraryDirectory = await window.showDirectoryPicker();
-      console.log('✓ Library directory selected:', this.libraryDirectory.name);
-      return this.scanDirectory(this.libraryDirectory, ['.fpl', '.lib']);
-    } catch (error) {
-      console.error('❌ Library directory selection cancelled or failed:', error);
-      return [];
+    // Try modern File System Access API first
+    if ('showDirectoryPicker' in window) {
+      try {
+        this.libraryDirectory = await (window as any).showDirectoryPicker();
+        console.log('✓ Library directory selected (FSA):', this.libraryDirectory.name);
+        return this.scanDirectory(this.libraryDirectory, ['.fpl', '.lib']);
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.warn(`⚠️ FSA failed: ${errMsg}, trying fallback...`);
+      }
+    } else {
+      console.warn('⚠️ File System Access API not available, using fallback');
     }
+
+    // Fallback: use webkitdirectory input
+    return this.selectLibraryDirectoryFallback();
+  }
+
+  /**
+   * Fallback for table directory selection using webkitdirectory input
+   */
+  private async selectTableDirectoryFallback(): Promise<FileInfo[]> {
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      (input as any).webkitdirectory = true;
+      input.multiple = true;
+
+      input.onchange = () => {
+        const files = input.files;
+        if (!files) {
+          console.warn('❌ No files selected');
+          resolve([]);
+          return;
+        }
+
+        const fileInfos: FileInfo[] = [];
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          if (file.name.toLowerCase().endsWith('.fpt')) {
+            fileInfos.push({
+              name: file.name,
+              size: file.size,
+              modified: file.lastModified,
+              handle: file as any,
+              type: 'fpt'
+            });
+          }
+        }
+
+        fileInfos.sort((a, b) => a.name.localeCompare(b.name));
+        console.log(`✓ Table directory selected (fallback): found ${fileInfos.length} .fpt files`);
+        resolve(fileInfos);
+      };
+
+      input.onerror = () => {
+        console.error('❌ Directory selection cancelled');
+        resolve([]);
+      };
+
+      input.click();
+    });
+  }
+
+  /**
+   * Fallback for library directory selection using webkitdirectory input
+   */
+  private async selectLibraryDirectoryFallback(): Promise<FileInfo[]> {
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      (input as any).webkitdirectory = true;
+      input.multiple = true;
+
+      input.onchange = () => {
+        const files = input.files;
+        if (!files) {
+          console.warn('❌ No files selected');
+          resolve([]);
+          return;
+        }
+
+        const fileInfos: FileInfo[] = [];
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const name = file.name.toLowerCase();
+          if (name.endsWith('.fpl') || name.endsWith('.lib')) {
+            fileInfos.push({
+              name: file.name,
+              size: file.size,
+              modified: file.lastModified,
+              handle: file as any,
+              type: name.endsWith('.fpl') ? 'fpl' : 'lib'
+            });
+          }
+        }
+
+        fileInfos.sort((a, b) => a.name.localeCompare(b.name));
+        console.log(`✓ Library directory selected (fallback): found ${fileInfos.length} library files`);
+        resolve(fileInfos);
+      };
+
+      input.onerror = () => {
+        console.error('❌ Directory selection cancelled');
+        resolve([]);
+      };
+
+      input.click();
+    });
   }
 
   /**
