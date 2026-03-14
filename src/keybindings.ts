@@ -42,31 +42,33 @@ export interface KeyBindingConfig {
   rotateSwap: KeyBinding;
 }
 
-// ─── Default Key Bindings ────────────────────────────────────────────────────
+// ─── Default Key Bindings (VPX Standard Compatible) ──────────────────────────
+// Compatible with Visual Pinball (VPX) standard controls
+// https://github.com/vpinball/vpinball/wiki/Controls
 export const DEFAULT_KEYBINDINGS: KeyBindingConfig = {
-  // Gameplay (Original Future Pinball controls)
-  flipperLeft: { key: 'Shift', shift: true },          // LEFT SHIFT
-  flipperRight: { key: 'Shift', shift: true },         // RIGHT SHIFT (location 2)
-  plunger: { key: 'Enter' },                           // ENTER
-  tiltLeft: { key: 'z' },                              // Z
-  tiltRight: { key: 'x' },                             // X
-  resetBall: { key: 'r' },                             // R
-  toggleMusic: { key: 'm' },                           // M
+  // ─── Gameplay (VPX Standard Controls) ───
+  flipperLeft: { key: 'Shift', shift: true },          // LEFT SHIFT - Left Flipper
+  flipperRight: { key: 'Shift', shift: true },         // RIGHT SHIFT - Right Flipper (location: 2)
+  plunger: { key: 'Enter' },                           // ENTER - Plunger Launch
+  tiltLeft: { key: 'z' },                              // Z - Nudge Left
+  tiltRight: { key: 'x' },                             // X - Nudge Right
+  resetBall: { key: 'r' },                             // R - Reset Ball
+  toggleMusic: { key: 'm' },                           // M - Toggle Music (VPX uses M)
 
-  // Arcade Coin System
-  insertCoin: { key: 'c' },                            // C
-  startGame: { key: 'Enter' },                         // ENTER
+  // ─── Arcade Coin System (Common Arcade Buttons) ───
+  insertCoin: { key: 'c' },                            // C - Insert Coin
+  startGame: { key: 'Enter' },                         // ENTER - Start Game
 
-  // UI & Debug
-  toggleSettings: { key: 'Escape' },                   // ESC
-  toggleProfiler: { key: 'p' },                        // P
-  toggleDMDMode: { key: 'd' },                         // D (future)
-  fullscreen: { key: 'f' },                            // F (future)
+  // ─── UI & Debug Controls ───
+  toggleSettings: { key: 'Escape' },                   // ESC - Settings/Menu
+  toggleProfiler: { key: 'p' },                        // P - Performance Profiler
+  toggleDMDMode: { key: 'd' },                         // D - DMD Display Mode
+  fullscreen: { key: 'f' },                            // F - Fullscreen Mode
 
-  // Cabinet Mode
-  rotateClockwise: { key: 'e' },                       // E
-  rotateCounterClockwise: { key: 'q' },                // Q
-  rotateSwap: { key: 's', alt: true },                 // ALT+S
+  // ─── Cabinet Rotation Controls ───
+  rotateClockwise: { key: 'e' },                       // E - Rotate 90° CW
+  rotateCounterClockwise: { key: 'q' },                // Q - Rotate 90° CCW
+  rotateSwap: { key: 's', alt: true },                 // ALT+S - Swap Orientation
 };
 
 // ─── Key Binding Manager ─────────────────────────────────────────────────────
