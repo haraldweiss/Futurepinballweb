@@ -10,6 +10,7 @@
  */
 
 import { dmdTextRenderer, DMDTextLayout } from './dmd-text-renderer';
+import { dmdBoundsTracker } from './dmd-bounds-tracker';
 
 export interface CoinSystemState {
   coinsInserted: number;
@@ -140,7 +141,8 @@ export function updateCoinDisplay(): void {
 }
 
 /**
- * Intelligent DMD rendering with automatic text scaling
+ * Intelligent DMD rendering with automatic text scaling and bounds checking
+ * Ensures all text stays visible within DMD canvas boundaries
  * Calculates optimal font sizes and positions based on DMD dimensions
  */
 function renderCoinScreenFallback(): void {
@@ -156,6 +158,13 @@ function renderCoinScreenFallback(): void {
   const baseWidth = 128;
   const baseHeight = 32;
   const scale = Math.min(width / baseWidth, height / baseHeight);
+
+  // Get current DMD bounds from tracker
+  const bounds = dmdBoundsTracker.getBounds();
+  const debugInfo = dmdBoundsTracker.getDebugInfo();
+  if (bounds && !bounds.fullyVisible) {
+    console.warn(`⚠️ DMD partially visible: ${debugInfo}`);
+  }
 
   // Dark amber background
   ctx.fillStyle = '#1a1400';
@@ -185,11 +194,32 @@ function renderCoinScreenFallback(): void {
 
   const titleLine = titleLayout.lines[0];
   if (titleLine) {
+    // Check if title text fits within bounds
+    const titleCheckResult = dmdBoundsTracker.checkTextBounds(
+      titleLine.width,
+      titleLine.height,
+      titleLine.x,
+      titleLine.y
+    );
+
+    if (!titleCheckResult.fits && titleCheckResult.suggestions.reduceFont) {
+      console.warn('⚠️ Title text exceeds DMD bounds, adjusting');
+    }
+
+    // Adjust position if needed
+    const adjustedPos = dmdBoundsTracker.adjustTextPosition(
+      titleLine.x,
+      titleLine.y,
+      titleLine.width,
+      titleLine.height
+    );
+
     ctx.fillStyle = '#ffaa00';
     ctx.font = `bold ${titleLine.fontSize * scale}px "Courier New", monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText(titleLine.text, width / 2, paddingY + (titleLine.y * scale));
+    // Use adjusted position
+    ctx.fillText(titleLine.text, width / 2, paddingY + (adjustedPos.y * scale));
   }
 
   // ─── Line 2: Coin Status or Instructions ───
@@ -207,6 +237,18 @@ function renderCoinScreenFallback(): void {
 
   const statusLine = statusLayout.lines[0];
   if (statusLine) {
+    // Check if status text fits
+    const statusCheckResult = dmdBoundsTracker.checkTextBounds(
+      statusLine.width,
+      statusLine.height,
+      statusLine.x,
+      statusLine.y
+    );
+
+    if (statusCheckResult.visibleRatio < 1.0) {
+      console.warn(`⚠️ Status text ${Math.round(statusCheckResult.visibleRatio * 100)}% visible`);
+    }
+
     ctx.fillStyle = '#00ff88';
     ctx.font = `${statusLine.fontSize * scale}px "Courier New", monospace`;
     ctx.textAlign = 'center';
@@ -224,9 +266,13 @@ function renderCoinScreenFallback(): void {
     ctx.fillStyle = '#ffff00';
     for (let i = 0; i < coinSystemState.coinsInserted; i++) {
       const x = iconStartX + i * (iconRadius * 2 + 4 * scale) + iconRadius;
-      ctx.beginPath();
-      ctx.arc(x, iconY, iconRadius, 0, Math.PI * 2);
-      ctx.fill();
+
+      // Check if coin icon is within bounds
+      if (x - iconRadius >= 0 && x + iconRadius <= width) {
+        ctx.beginPath();
+        ctx.arc(x, iconY, iconRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 
@@ -243,11 +289,32 @@ function renderCoinScreenFallback(): void {
 
     const hintLine = hintLayout.lines[0];
     if (hintLine) {
+      // Check if hint text fits
+      const hintCheckResult = dmdBoundsTracker.checkTextBounds(
+        hintLine.width,
+        hintLine.height,
+        hintLine.x,
+        hintLine.y
+      );
+
+      if (!hintCheckResult.fits) {
+        console.warn('⚠️ Hint text exceeds DMD bounds');
+      }
+
+      // Adjust position if needed
+      const adjustedHintPos = dmdBoundsTracker.adjustTextPosition(
+        hintLine.x,
+        hintLine.y,
+        hintLine.width,
+        hintLine.height
+      );
+
       ctx.fillStyle = '#00ff88';
       ctx.font = `${hintLine.fontSize * scale}px "Courier New", monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
-      ctx.fillText(hintLine.text, width / 2, height - paddingY);
+      // Use adjusted position
+      ctx.fillText(hintLine.text, width / 2, height - paddingY - (adjustedHintPos.y * scale));
     }
   }
 }

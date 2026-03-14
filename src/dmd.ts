@@ -1,6 +1,7 @@
 import { state, currentTableConfig } from './game';
 import { getTopScores } from './highscore';
 import { getDMDSize, getDMDDotSize, onDisplayResize } from './responsive-display';
+import { dmdBoundsTracker } from './dmd-bounds-tracker';
 
 // ── DMD Konstanten ───────────────────────────────────────────────────────────
 // ─── Phase 3: Configurable Resolution ───
@@ -285,6 +286,14 @@ function updateCanvasSize() {
   }
 }
 updateCanvasSize();
+
+// ─── Initialize DMD Bounds Tracker ──
+const dmdWrap = document.getElementById('dmd-wrap');
+if (dmdCanvas && dmdWrap) {
+  dmdBoundsTracker.initialize(dmdCanvas, dmdWrap);
+  console.log('📍 DMD bounds tracker initialized');
+}
+
 const dmdCtx = dmdCanvas.getContext('2d')!;
 
 const dmdOff = document.createElement('canvas');
