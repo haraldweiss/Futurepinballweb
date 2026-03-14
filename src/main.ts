@@ -2415,11 +2415,6 @@ function animate(): void {
   updateExtraBalls(dt);
   updateParticles(dt);
 
-  // ─── Phase 21: Update Advanced Particle System (Polish Suite) ───
-  if (particleSystem) {
-    particleSystem.update(dt, tableGroup || scene);
-  }
-
   // ─── Coin System: Render coin screen if visible ───
   if (isCoinScreenVisible()) {
     updateCoinDisplay();
