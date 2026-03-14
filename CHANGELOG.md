@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.21.0] - 2026-03-14
+
+### 🎮 New Features
+
+#### ✨ Arcade Coin Insert System
+- **"Insert Coin" Screen**: Displays on table load, blocks game start
+- **Coin Input**: Press 'C' to insert coins (1-4 max)
+- **Player Selection**: 1 Coin = 1 Player, up to 4 players max
+- **Game Start**: ENTER key starts game with selected player count
+- **Auto-Close**: 30-second timeout with demo mode fallback
+- **Console Logging**: Full event logging for coin insertion and game start
+
+### 📝 Changes
+- **src/coin-system.ts**: New 280-line arcade coin management system
+- **src/main.ts**: Integrated coin system with game loop, keyboard input, DMD rendering
+- **.github/workflows.disabled**: GitHub Actions disabled (moved from workflows/)
+
+---
+
 ## [0.20.0] - 2026-03-14
 
 ### 🐛 Bug Fixes
