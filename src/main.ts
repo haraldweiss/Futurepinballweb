@@ -79,6 +79,10 @@ import {
   AnimationBindingManager, initializeAnimationBinding, getAnimationBindingManager,
 } from './mechanics/animation-binding';
 import {
+  initializeCoinSystem, showCoinScreen, closeCoinScreen, addCoin, startGame,
+  isCoinScreenVisible, isGameStarted, getPlayerCount, resetCoinSystem, updateCoinDisplay,
+} from './coin-system';
+import {
   AnimationScheduler, initializeAnimationScheduler, getAnimationScheduler,
 } from './mechanics/animation-scheduler';
 import {
@@ -428,6 +432,10 @@ let enhancedAudioSystem = initializeAudioSystem();
 // ─── Phase 6: Audio Source Pool (GC pressure reduction) ──────────────────────
 initializeAudioPooling();
 logMsg(`🎵 AudioSourcePool initialized (16 pre-allocated sources)`, 'ok');
+
+// ─── Coin System (Arcade Insert Coin) ────────────────────────────────────────
+initializeCoinSystem();
+logMsg(`💰 Coin system initialized`, 'ok');
 
 // ─── Phase 10+: Cabinet System (Rotation & Profiles) ──────────────────────────
 let cabinetSystem = initializeCabinetSystem();
@@ -1919,10 +1927,23 @@ document.addEventListener('keydown', e => {
     }
   }
 
-  // Key 5: Coin Up
+  // Key 5: Coin Up (legacy)
   if (e.key === '5') {
     state.credits++;
     showNotification(`💰 Coin Inserted! Credits: ${state.credits}`);
+  }
+
+  // ─── Coin System Controls ────────────────────────────────────────────────────
+  // C: Add Coin (arcade-style)
+  if ((e.key === 'c' || e.key === 'C') && isCoinScreenVisible() && !isGameStarted()) {
+    addCoin();
+    return;
+  }
+
+  // Enter: Start Game if coin screen is showing
+  if (e.key === 'Enter' && isCoinScreenVisible() && !isGameStarted()) {
+    startGame();
+    return;
   }
 
   // ─── Phase 13.2: Quick Rotation Controls for Cabinet Mode (Alt+Number) ───
@@ -2392,7 +2413,12 @@ function animate(): void {
     particleSystem.update(dt, tableGroup || scene);
   }
 
-  dmdUpdate();
+  // ─── Coin System: Render coin screen if visible ───
+  if (isCoinScreenVisible()) {
+    updateCoinDisplay();
+  } else {
+    dmdUpdate();
+  }
 
   // ─── Phase 2: Update Advanced Lighting ───
   if (advancedLightingSystem) {
@@ -2632,9 +2658,15 @@ function setupBackglassForTable(): void {
 
 window.loadDemoTable = async (key: string) => {
   resetGameState();
+  resetCoinSystem();  // Reset coin state for new table
   await loadTableWithPhysicsWorker(TABLE_CONFIGS[key], scene);
   setupBackglassForTable();
   window.closeLoader();
+
+  // Show coin insert screen (delay for better UX)
+  setTimeout(() => {
+    showCoinScreen();
+  }, 300);
 };
 
 window.closeLoader = async function closeLoader() {
