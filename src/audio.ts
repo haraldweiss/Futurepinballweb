@@ -20,10 +20,10 @@ const isMobile = /iPhone|iPad|Android|Mobile/.test(navigator.userAgent);
 const audioSuppressFlipped = isMobile && window.innerWidth < 600;  // Mute on small mobile
 
 // ─── Sound Effects (optimized for mobile) ────────────────────────────────────
-export function playSound(type: 'bumper' | 'flipper' | 'drain' | string): void {
+export function playSound(type: 'bumper' | 'flipper' | 'drain' | 'coin' | string): void {
   try {
     // Skip audio on very low-end mobile (battery saver)
-    if (audioSuppressFlipped && type !== 'bumper') return;
+    if (audioSuppressFlipped && type !== 'bumper' && type !== 'coin') return;
 
     const ctx = getAudioCtx();
 
@@ -44,33 +44,67 @@ export function playSound(type: 'bumper' | 'flipper' | 'drain' | string): void {
     }
 
     // Synthesizer-Fallback (simplified on mobile)
-    const osc  = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
     const now = ctx.currentTime;
     const volScale = isMobile ? 0.7 : 1.0;  // Mobile: 30% quieter
 
-    if (type === 'bumper') {
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(880, now);
-      osc.frequency.exponentialRampToValueAtTime(220, now + 0.12);
-      gain.gain.setValueAtTime(0.18 * volScale, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-      osc.start(now); osc.stop(now + 0.15);
-    } else if (type === 'flipper') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(200, now);
-      osc.frequency.exponentialRampToValueAtTime(80, now + 0.06);
-      gain.gain.setValueAtTime(0.08 * volScale, now);  // Quieter flipper on mobile
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
-      osc.start(now); osc.stop(now + 0.08);
-    } else if (type === 'drain') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, now);
-      osc.frequency.exponentialRampToValueAtTime(55, now + 0.6);
-      gain.gain.setValueAtTime(0.15 * volScale, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
-      osc.start(now); osc.stop(now + 0.7);
+    if (type === 'coin') {
+      // ─── Arcade Coin Sound (metallic ding) ────────────────────────────────
+      // High-pitched resonant tone characteristic of coin insertion
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      const gain2 = ctx.createGain();
+      const masterGain = ctx.createGain();
+
+      // First oscillator: high frequency bright tone
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(800, now);
+      osc1.frequency.exponentialRampToValueAtTime(600, now + 0.35);
+      gain1.gain.setValueAtTime(0.12 * volScale, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+      // Second oscillator: harmonic resonance (creates metallic timbre)
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1200, now);
+      osc2.frequency.exponentialRampToValueAtTime(800, now + 0.25);
+      gain2.gain.setValueAtTime(0.08 * volScale, now);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+      masterGain.gain.value = 1.0;
+
+      osc1.connect(gain1); gain1.connect(masterGain);
+      osc2.connect(gain2); gain2.connect(masterGain);
+      masterGain.connect(ctx.destination);
+
+      osc1.start(now); osc1.stop(now + 0.35);
+      osc2.start(now); osc2.stop(now + 0.25);
+    } else {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+
+      if (type === 'bumper') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(220, now + 0.12);
+        gain.gain.setValueAtTime(0.18 * volScale, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.start(now); osc.stop(now + 0.15);
+      } else if (type === 'flipper') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.06);
+        gain.gain.setValueAtTime(0.08 * volScale, now);  // Quieter flipper on mobile
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+        osc.start(now); osc.stop(now + 0.08);
+      } else if (type === 'drain') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(55, now + 0.6);
+        gain.gain.setValueAtTime(0.15 * volScale, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+        osc.start(now); osc.stop(now + 0.7);
+      }
     }
   } catch { /* Audio nicht verfügbar */ }
 }
