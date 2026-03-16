@@ -2291,9 +2291,10 @@ function animate(): void {
       }
     } else {
       // Phase 15: Step physics via worker (non-blocking!)
+      // ─── Phase 24 Enhancement: Increased Physics Substeps for Better Accuracy ───
       try {
         const bridge = getPhysicsWorker();
-        const substeps = currentFps > 55 ? 5 : (currentFps > 45 ? 4 : 3);
+        const substeps = currentFps > 55 ? 6 : (currentFps > 45 ? 5 : 4);
         bridge.step(dt, substeps);
         // Physics results arrive async via callback (handlePhysicsFrame)
       } catch {
@@ -2304,7 +2305,8 @@ function animate(): void {
         if (bamEngine) {
           // Adaptive substeps: More steps at higher FPS for smoother physics
           // This matches Newton's approach: more accurate simulation = better feel
-          const substeps = currentFps > 55 ? 5 : (currentFps > 45 ? 4 : 3);
+          // ─── Phase 24 Enhancement: Increased Physics Substeps for Better Accuracy ───
+          const substeps = currentFps > 55 ? 6 : (currentFps > 45 ? 5 : 4);
           bamEngine.step(dt, substeps);
         }
         const pos = physics.ballBody.translation(), vel = physics.ballBody.linvel();
