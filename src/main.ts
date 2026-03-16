@@ -135,6 +135,7 @@ import { initializeEventHandlers } from './event-handlers-init';
 import { getDefaultPhysicsConfig, logPhysicsConfig, validatePhysicsConfig } from './physics-config-enhancer';
 import { getInputOptimizer, disposeInputOptimizer } from './input-optimizer';
 import { getPerformanceDashboard } from './performance-dashboard';
+import { getSoundManager, disposeSoundManager } from './sound-manager';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -453,6 +454,10 @@ let lastRightFlipperPower = 0.75;  // Default power level (0.5-1.0)
 let leftFlipperColliderHandle: number = -1;   // Saved for collision detection
 let rightFlipperColliderHandle: number = -1;  // Saved for collision detection
 
+// ─── Phase 25: Flipper sound tracking ───
+let _lastLeftFlipperPressed = false;
+let _lastRightFlipperPressed = false;
+
 // ─── Phase 6: Flipper Power Curve (Skill-based Gameplay) ───────────────────────
 // S-curve for more realistic flipper response: quick start, smooth acceleration, plateau
 // This mimics Newton physics where longer button press = more flipper power
@@ -646,8 +651,19 @@ requestAnimationFrame(function initViewSettingsAndVisuals() {
   initViewSettings();
   
   // ─── Phase 1 Security: Initialize Event Handlers (CSP-compliant) ───
-  setTimeout(() => {
+  setTimeout(async () => {
     initializeEventHandlers();
+    
+    // ─── Phase 25: Initialize Sound Manager for audio feedback ───
+    try {
+      const soundMgr = await getSoundManager();
+      console.log('[Sound Manager] ✓ Initialized');
+      if (soundMgr.isEnabled()) {
+        setTimeout(() => soundMgr.playSound('scoreUp'), 100);
+      }
+    } catch (e) {
+      console.warn('[Sound Manager] Failed to initialize:', e);
+    }
   }, 100);  // Brief delay to ensure all DOM elements are ready
 });
 
@@ -1239,16 +1255,26 @@ function handlePhysicsFrame(frame: PhysicsFrameData): void {
     switch (collision.type) {
       case 'bumper': {
         const bumperData = physics?.bumperMap.get(collision.data.index);
-        if (bumperData) scoreBumperHit(bumperData);
+        if (bumperData) {
+          scoreBumperHit(bumperData);
+          // ─── Phase 25: Play bumper sound ───
+          getSoundManager().then((sm) => sm.playBumperHit()).catch(() => {});
+        }
         break;
       }
       case 'target': {
         const targetData = physics?.targetMap.get(collision.data.index);
-        if (targetData) scoreTargetHit(targetData);
+        if (targetData) {
+          scoreTargetHit(targetData);
+          // ─── Phase 25: Play target sound ───
+          getSoundManager().then((sm) => sm.playTargetHit()).catch(() => {});
+        }
         break;
       }
       case 'slingshot': {
         scoreSlingshotHit(collision.data.side);
+        // ─── Phase 25: Play slingshot sound ───
+        getSoundManager().then((sm) => sm.playSlingshot()).catch(() => {});
         break;
       }
       case 'flipper_left':
@@ -1357,6 +1383,8 @@ function onMultiballStartVideo(): void {
 
 function onBallDrainVideo(): void {
   triggerVideoEvent('ball_drain');
+  // ─── Phase 25: Play ball drain sound ───
+  getSoundManager().then((sm) => sm.playBallDrain()).catch(() => {});
 }
 
 function onFlipperHitVideo(): void {
@@ -1381,6 +1409,8 @@ function onTiltVideo(): void {
 
 function onGameOverVideo(): void {
   triggerVideoEvent('game_over');
+  // ─── Phase 25: Play game over sound ───
+  getSoundManager().then((sm) => sm.playGameOver()).catch(() => {});
 }
 
 // ─── Tilt ────────────────────────────────────────────────────────────────────
@@ -1513,6 +1543,25 @@ function updateFlippers(): void {
   const rAngle = keys.right ? THREE.MathUtils.degToRad(-35) : THREE.MathUtils.degToRad(28);
   leftFlipperGroup.rotation.z  += (lAngle - leftFlipperGroup.rotation.z)  * 0.35;
   rightFlipperGroup.rotation.z += (rAngle - rightFlipperGroup.rotation.z) * 0.35;
+
+  // ─── Phase 25: Play flipper sound on activation ───
+  if (keys.left || keys.right) {
+    getSoundManager().then((soundMgr) => {
+      if (keys.left && !_lastLeftFlipperPressed) {
+        soundMgr.playFlipperHit(0.8);
+      }
+      if (keys.right && !_lastRightFlipperPressed) {
+        soundMgr.playFlipperHit(0.8);
+      }
+    }).catch(() => {
+      // Sound unavailable, continue silently
+    });
+    _lastLeftFlipperPressed = keys.left;
+    _lastRightFlipperPressed = keys.right;
+  } else {
+    _lastLeftFlipperPressed = false;
+    _lastRightFlipperPressed = false;
+  }
 
   // Phase 15: Update physics worker with flipper rotations
   try {
