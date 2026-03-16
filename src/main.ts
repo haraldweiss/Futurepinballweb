@@ -131,6 +131,7 @@ import { getPerformanceReportGenerator, generatePerformanceReport } from './perf
 import { getTestSuite, resetTestSuite } from './test-suite';
 import { DirectoryPathManager } from './directory-path-manager';
 import { escapeHtml, setInnerHTMLSafe } from './utils/html-escape';
+import { initializeEventHandlers } from './event-handlers-init';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -640,6 +641,11 @@ requestAnimationFrame(function initViewSettingsAndVisuals() {
   visualPolishSystem = new VisualPolishSystem(scene, camera);
   console.log('✓ Visual polish system initialized');
   initViewSettings();
+  
+  // ─── Phase 1 Security: Initialize Event Handlers (CSP-compliant) ───
+  setTimeout(() => {
+    initializeEventHandlers();
+  }, 100);  // Brief delay to ensure all DOM elements are ready
 });
 
 const composer = new EffectComposer(renderer);
