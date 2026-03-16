@@ -138,6 +138,7 @@ import { getPerformanceDashboard } from './performance-dashboard';
 import { getSoundManager, disposeSoundManager } from './sound-manager';
 import { getMusicManager, disposeMusicManager } from './music-manager';
 import { initBallTrailManager, getBallTrailManager, disposeBallTrailManager } from './ball-trail-manager';
+import { initScoreAnimationManager, getScoreAnimationManager, disposeScoreAnimationManager } from './score-animation-manager';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -507,6 +508,10 @@ scene.add(playgroundGroup);
 // ─── Phase 27: Ball Trail Visualization ──────────────────────────────────────
 initBallTrailManager(scene);
 console.log('[Ball Trail] ✓ Initialized');
+
+// ─── Phase 28: Score Animation Manager ───────────────────────────────────────
+initScoreAnimationManager(scene);
+console.log('[Score Animation] ✓ Initialized');
 
 // ─── Phase 9: Score Display Manager ──────────────────────────────────────────
 let scoreDisplayManager: ScoreDisplayManager | null = null;
@@ -2546,6 +2551,12 @@ function animate(): void {
   // Physics update for all active particles
   if (particleSystem) {
     particleSystem.update(dt);
+  }
+
+  // ─── Phase 28: Update Score Animations ───
+  const scoreAnimMgr = getScoreAnimationManager();
+  if (scoreAnimMgr) {
+    scoreAnimMgr.update(dt);
   }
 
   // ─── Phase 22: Update Film Effects ───

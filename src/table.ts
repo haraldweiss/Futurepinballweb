@@ -18,6 +18,7 @@ import { getAnimationBindingManager } from './mechanics/animation-binding';
 import { getAnimationScheduler } from './mechanics/animation-scheduler';
 import { getBamBridge } from './bam-bridge';
 import { getGraphicsPipeline } from './main';
+import { getScoreAnimationManager } from './score-animation-manager';
 // Phase 15: Future imports (modules not yet integrated to main)
 // import { PlayfieldMeshBuilder, BumperPosition, TargetPosition } from './geometry/playfield-mesh-builder';
 // import { TextureAnalyzer } from './graphics/texture-analyzer';
@@ -712,6 +713,13 @@ export function scoreBumperHit(bumperData: { x:number; y:number; mesh:any; index
   // ─── Phase 4: Trigger backglass score animation ───
   cb.animateBackglassScore(totalScore);
 
+  // ─── Phase 28: Show floating score animation ───
+  const scoreAnimMgr = getScoreAnimationManager();
+  if (scoreAnimMgr) {
+    const scorePos = new THREE.Vector3(bumperData.x, bumperData.y, 0.5);
+    scoreAnimMgr.addBumperHit(scorePos, totalScore);
+  }
+
   // ─── PHASE 9 TASK 2: Show Floating Score Text ───────────────────────────────
   // Display "+points" text floating up from bumper impact location
   const scorePosition = new THREE.Vector3(bumperData.x, bumperData.y, 0.5);
@@ -882,6 +890,13 @@ export function scoreTargetHit(targetData: { x:number; y:number; mesh:any; index
 
   const baseScore = 200 * state.multiplier;
   state.score += baseScore;
+
+  // ─── Phase 28: Show floating score animation ───
+  const scoreAnimMgr = getScoreAnimationManager();
+  if (scoreAnimMgr) {
+    const scorePos = new THREE.Vector3(targetData.x, targetData.y, 0.5);
+    scoreAnimMgr.addTargetHit(scorePos, baseScore);
+  }
 
   // ─── PHASE 12 TASK 1: Progressive Target System ───
   if (state.progressiveTargetMode !== 'none') {
@@ -1079,6 +1094,13 @@ export function scoreSlingshotHit(side: string): void {
   physics!.ballBody.applyImpulse({ x: dir * 3.0, y: 2.5 }, true);
   const slingshotScore = 50 * state.multiplier;
   state.score += slingshotScore;
+
+  // ─── Phase 28: Show floating score animation ───
+  const scoreAnimMgr = getScoreAnimationManager();
+  if (scoreAnimMgr) {
+    const slingshotPos = new THREE.Vector3(dir * 2.5, -2.0, 0.5);
+    scoreAnimMgr.addSlingshotHit(slingshotPos, slingshotScore);
+  }
 
   // ─── PHASE 9 TASK 2: Show Floating Score for Slingshots ────────────────────
   const slingshotPos = new THREE.Vector3(dir * 2.5, -2.0, 0.5);
