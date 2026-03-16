@@ -136,6 +136,7 @@ import { getDefaultPhysicsConfig, logPhysicsConfig, validatePhysicsConfig } from
 import { getInputOptimizer, disposeInputOptimizer } from './input-optimizer';
 import { getPerformanceDashboard } from './performance-dashboard';
 import { getSoundManager, disposeSoundManager } from './sound-manager';
+import { getMusicManager, disposeMusicManager } from './music-manager';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -2027,7 +2028,15 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === 'Enter' && state.inLane && !state.plungerCharging) state.plungerCharging = true;
   if (e.key === 'r' || e.key === 'R') resetBall();
-  if (e.key === 'm' || e.key === 'M') toggleMusic();
+  if (e.key === 'm' || e.key === 'M') {
+    // ─── Phase 26: Toggle background music ───
+    getMusicManager().then((musicMgr) => {
+      musicMgr.toggle();
+      const status = musicMgr.isPlaying() ? '🎵 Music ON' : '🔇 Music OFF';
+      showNotification(status);
+      console.log('[Music]', status);
+    }).catch((e) => console.warn('[Music] Error:', e));
+  }
   if (e.key === 'z' || e.key === 'Z') nudgeTable(-1);
   if (e.key === 'x' || e.key === 'X') nudgeTable( 1);
   if (e.key === 'p' || e.key === 'P') {

@@ -11,6 +11,7 @@
     "dev": "vite src",
     "build": "vite build",
     "preview": "vite preview --outDir dist",
+    "serve": "node server.js",
     "start": "node start-game.js",
     "start:1": "node start-game.js 1",
     "start:2": "node start-game.js 2",
