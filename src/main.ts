@@ -137,6 +137,7 @@ import { getInputOptimizer, disposeInputOptimizer } from './input-optimizer';
 import { getPerformanceDashboard } from './performance-dashboard';
 import { getSoundManager, disposeSoundManager } from './sound-manager';
 import { getMusicManager, disposeMusicManager } from './music-manager';
+import { initBallTrailManager, getBallTrailManager, disposeBallTrailManager } from './ball-trail-manager';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -502,6 +503,10 @@ scene.fog = new THREE.Fog(0x1a1a22, 20, 50);   // ─── Match background col
 const playgroundGroup = new THREE.Group();
 playgroundGroup.name = 'playground';
 scene.add(playgroundGroup);
+
+// ─── Phase 27: Ball Trail Visualization ──────────────────────────────────────
+initBallTrailManager(scene);
+console.log('[Ball Trail] ✓ Initialized');
 
 // ─── Phase 9: Score Display Manager ──────────────────────────────────────────
 let scoreDisplayManager: ScoreDisplayManager | null = null;
@@ -2514,6 +2519,15 @@ function animate(): void {
   ball.position.set(state.ballPos.x, state.ballPos.y, state.ballPos.z);
   ball.rotation.x += state.ballVel.y*dt*0.6;
   ball.rotation.z -= state.ballVel.x*dt*0.6;
+
+  // ─── Phase 27: Update Ball Trail ───
+  const trailMgr = getBallTrailManager();
+  if (trailMgr && !state.inLane) {
+    trailMgr.update(ball.position);
+  } else if (trailMgr && state.inLane) {
+    // Clear trail when ball in lane
+    trailMgr.clear();
+  }
 
   // ─── Phase 19: Update Motion Blur Velocity Buffer ───
   // Track ball velocity for motion blur effect
