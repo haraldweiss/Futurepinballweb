@@ -132,6 +132,7 @@ import { getTestSuite, resetTestSuite } from './test-suite';
 import { DirectoryPathManager } from './directory-path-manager';
 import { escapeHtml, setInnerHTMLSafe } from './utils/html-escape';
 import { initializeEventHandlers } from './event-handlers-init';
+import { getDefaultPhysicsConfig, logPhysicsConfig, validatePhysicsConfig } from './physics-config-enhancer';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -1166,6 +1167,17 @@ async function setupPhysicsWorker(): Promise<void> {
     if (physics) {
       (window as any).SETUP_WORKER_CONFIG_START = Date.now();
 
+      // ─── Phase 24: Use Enhanced Physics Configuration ───
+      const physicsConfig = getDefaultPhysicsConfig();
+      const validation = validatePhysicsConfig(physicsConfig);
+      if (!validation.valid) {
+        console.warn('[Physics] Config validation errors:', validation.errors);
+      }
+      if (validation.warnings.length > 0) {
+        console.warn('[Physics] Config warnings:', validation.warnings);
+      }
+      logPhysicsConfig(physicsConfig, 'Table Load');
+
       // Clean maps to remove non-serializable data (mesh objects, functions)
       const cleanBumperMap = new Map();
       physics.bumperMap.forEach((value: any, key: any) => {
@@ -1179,13 +1191,13 @@ async function setupPhysicsWorker(): Promise<void> {
 
       bridge.initializePhysicsWorld({
         ballInitialPos: { x: 2.65, y: -5.2 },
-        ballRestitution: 0.5,
-        ballFriction: 0.3,
+        ballRestitution: physicsConfig.ball.restitution,
+        ballFriction: physicsConfig.ball.friction,
         leftFlipperPos: { x: -getResponsiveFlipperX(innerWidth / innerHeight), y: -4.6 },
         rightFlipperPos: { x: getResponsiveFlipperX(innerWidth / innerHeight), y: -4.6 },
-        flipperLength: 2.1,
-        flipperRestitution: 0.5,
-        flipperFriction: 0.6,
+        flipperLength: physicsConfig.flipper.length,
+        flipperRestitution: physicsConfig.flipper.restitution,
+        flipperFriction: physicsConfig.flipper.friction,
         tableBodies: [],
         bumperMap: cleanBumperMap,
         targetMap: cleanTargetMap,
