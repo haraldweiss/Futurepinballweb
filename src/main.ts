@@ -139,6 +139,7 @@ import { getSoundManager, disposeSoundManager } from './sound-manager';
 import { getMusicManager, disposeMusicManager } from './music-manager';
 import { initBallTrailManager, getBallTrailManager, disposeBallTrailManager } from './ball-trail-manager';
 import { initScoreAnimationManager, getScoreAnimationManager, disposeScoreAnimationManager } from './score-animation-manager';
+import { initTouchControlsManager, getTouchControlsManager, disposeTouchControlsManager } from './touch-controls-manager';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -674,6 +675,45 @@ requestAnimationFrame(function initViewSettingsAndVisuals() {
       }
     } catch (e) {
       console.warn('[Sound Manager] Failed to initialize:', e);
+    }
+
+    // ─── Phase 29: Initialize Touch Controls for Mobile Devices ───
+    if (typeof window !== 'undefined' && 'ontouchstart' in window) {
+      try {
+        const touchCtrl = initTouchControlsManager();
+        
+        // Register flipper callbacks
+        touchCtrl.onLeftFlipperPressCallback(() => {
+          keys.left = true;
+          getSoundManager().then((sm) => sm.playFlipperHit(0.8)).catch(() => {});
+        });
+        touchCtrl.onLeftFlipperReleaseCallback(() => {
+          keys.left = false;
+        });
+        
+        touchCtrl.onRightFlipperPressCallback(() => {
+          keys.right = true;
+          getSoundManager().then((sm) => sm.playFlipperHit(0.8)).catch(() => {});
+        });
+        touchCtrl.onRightFlipperReleaseCallback(() => {
+          keys.right = false;
+        });
+        
+        // Register plunger callback
+        touchCtrl.onPlungerChangeCallback((power: number) => {
+          if (power > 0) {
+            state.plungerCharging = true;
+            state.plungerCharge = power;
+          } else {
+            state.plungerCharging = false;
+          }
+        });
+        
+        console.log('[Touch Controls] ✓ Initialized & bound to game');
+        showNotification('📱 Touch controls enabled');
+      } catch (e) {
+        console.warn('[Touch Controls] Initialization failed:', e);
+      }
     }
   }, 100);  // Brief delay to ensure all DOM elements are ready
 });
