@@ -134,6 +134,7 @@ import { escapeHtml, setInnerHTMLSafe } from './utils/html-escape';
 import { initializeEventHandlers } from './event-handlers-init';
 import { getDefaultPhysicsConfig, logPhysicsConfig, validatePhysicsConfig } from './physics-config-enhancer';
 import { getInputOptimizer, disposeInputOptimizer } from './input-optimizer';
+import { getPerformanceDashboard } from './performance-dashboard';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -2583,6 +2584,16 @@ function animate(): void {
   }
 
   if (_bgPanelActive) drawInlineBackglass();
+
+  // ─── Phase 24: Record performance metrics ───
+  const dashboard = getPerformanceDashboard();
+  const inputMetrics = inputOptimizer.getMetrics();
+  dashboard.recordFrame({
+    frameTime: dt * 1000,
+    inputLatency: inputMetrics.keyDownLatency,
+    ballVelocity: state.ballPos ? Math.hypot(state.ballVel.x, state.ballVel.y) : 0,
+    flipperResponse: 0,  // Updated by flipper handler
+  });
 
   if (multiChannel) {
     multiChannel.postMessage({
