@@ -133,6 +133,7 @@ import { DirectoryPathManager } from './directory-path-manager';
 import { escapeHtml, setInnerHTMLSafe } from './utils/html-escape';
 import { initializeEventHandlers } from './event-handlers-init';
 import { getDefaultPhysicsConfig, logPhysicsConfig, validatePhysicsConfig } from './physics-config-enhancer';
+import { getInputOptimizer, disposeInputOptimizer } from './input-optimizer';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -2285,6 +2286,10 @@ function animate(): void {
       console.log(`🎮 ${profiler.getMetricsDisplay()}`);
     }
   }
+
+  // ─── Phase 24: Process low-latency input ───
+  const inputOptimizer = getInputOptimizer();
+  inputOptimizer.processInputQueue();
 
   updateFlippers();
 
