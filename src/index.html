@@ -304,41 +304,41 @@
   <!-- QUICK MENU (Kompaktes Popup) -->
   <div id="quick-menu">
     <div id="quick-menu-box" style="position:relative">
-      <button id="menu-close-btn" onclick="closeQuickMenu()">✕</button>
+      <button id="menu-close-btn">✕</button>
       <h2>🎮 DEMO TISCHE</h2>
       <p>Wählen Sie einen Tisch zum Spielen</p>
 
       <div class="quick-tables">
-        <div class="quick-table-card" onclick="loadDemoTable('pharaoh');closeQuickMenu()">
+        <div class="quick-table-card">
           <div class="emoji">🏛️</div>
           <h3>Pharaoh's Gold</h3>
         </div>
-        <div class="quick-table-card" onclick="loadDemoTable('dragon');closeQuickMenu()">
+        <div class="quick-table-card">
           <div class="emoji">🐉</div>
           <h3>Dragon's Castle</h3>
         </div>
-        <div class="quick-table-card" onclick="loadDemoTable('knight');closeQuickMenu()">
+        <div class="quick-table-card">
           <div class="emoji">⚔️</div>
           <h3>Knight's Quest</h3>
         </div>
-        <div class="quick-table-card" onclick="loadDemoTable('cyber');closeQuickMenu()">
+        <div class="quick-table-card">
           <div class="emoji">🤖</div>
           <h3>Cyber Nexus</h3>
         </div>
-        <div class="quick-table-card" onclick="loadDemoTable('neon');closeQuickMenu()">
+        <div class="quick-table-card">
           <div class="emoji">💻</div>
           <h3>Neon City</h3>
         </div>
-        <div class="quick-table-card" onclick="loadDemoTable('jungle');closeQuickMenu()">
+        <div class="quick-table-card">
           <div class="emoji">🌴</div>
           <h3>Jungle Expedition</h3>
         </div>
       </div>
 
       <div class="quick-actions">
-        <button class="quick-action-btn" onclick="switchTab('import');document.getElementById('loader-modal').style.display='flex';">📂 Importieren</button>
-        <button class="quick-action-btn" onclick="switchTab('browser');document.getElementById('loader-modal').style.display='flex';">📁 Browser</button>
-        <button class="quick-action-btn" onclick="switchTab('info');document.getElementById('loader-modal').style.display='flex';">ℹ️ Info</button>
+        <button class="quick-action-btn">📂 Importieren</button>
+        <button class="quick-action-btn">📁 Browser</button>
+        <button class="quick-action-btn">ℹ️ Info</button>
       </div>
     </div>
   </div>
@@ -350,41 +350,41 @@
       <p class="subtitle">TABLE LOADER v1.0 — SELECT OR IMPORT A TABLE</p>
 
       <div class="tab-bar">
-        <button class="tab-btn active" onclick="switchTab('demo')">🎮 DEMO TISCHE</button>
-        <button class="tab-btn" onclick="switchTab('import')">📂 FP IMPORT</button>
-        <button class="tab-btn" onclick="switchTab('browser')">📁 DATEIBROWSER</button>
-        <button class="tab-btn" onclick="switchTab('info')">ℹ️ FORMAT INFO</button>
-        <button class="tab-btn" onclick="switchTab('script')">📜 SCRIPT</button>
+        <button class="tab-btn active">🎮 DEMO TISCHE</button>
+        <button class="tab-btn">📂 FP IMPORT</button>
+        <button class="tab-btn">📁 DATEIBROWSER</button>
+        <button class="tab-btn">ℹ️ FORMAT INFO</button>
+        <button class="tab-btn">📜 SCRIPT</button>
       </div>
 
       <div class="tab-content active" id="tab-demo">
         <div class="table-grid">
-          <div class="table-card" onclick="loadDemoTable('pharaoh')">
+          <div class="table-card">
             <div class="preview" style="background:linear-gradient(135deg,#2d1810,#1a0f00)">🏛️</div>
             <h3>Pharaoh's Gold</h3><span>3 Bumper • 3 Target</span><br>
             <span class="badge badge-medium">MEDIUM</span>
           </div>
-          <div class="table-card" onclick="loadDemoTable('dragon')">
+          <div class="table-card">
             <div class="preview" style="background:linear-gradient(135deg,#3a0000,#1a0000)">🐉</div>
             <h3>Dragon's Castle</h3><span>5 Bumper • 4 Target</span><br>
             <span class="badge badge-hard">COMPLEX</span>
           </div>
-          <div class="table-card" onclick="loadDemoTable('knight')">
+          <div class="table-card">
             <div class="preview" style="background:linear-gradient(135deg,#2d2416,#1a1410)">⚔️</div>
             <h3>Knight's Quest</h3><span>2 Bumper • 3 Target</span><br>
             <span class="badge badge-easy">SIMPLE</span>
           </div>
-          <div class="table-card" onclick="loadDemoTable('cyber')">
+          <div class="table-card">
             <div class="preview" style="background:linear-gradient(135deg,#0a0a1a,#1a0a2a)">🤖</div>
             <h3>Cyber Nexus</h3><span>5 Bumper • 4 Target</span><br>
             <span class="badge badge-hard">COMPLEX</span>
           </div>
-          <div class="table-card" onclick="loadDemoTable('neon')">
+          <div class="table-card">
             <div class="preview" style="background:linear-gradient(135deg,#1a0a2e,#2a0a3e)">💻</div>
             <h3>Neon City</h3><span>3 Bumper • 3 Target</span><br>
             <span class="badge badge-medium">MEDIUM</span>
           </div>
-          <div class="table-card" onclick="loadDemoTable('jungle')">
+          <div class="table-card">
             <div class="preview" style="background:linear-gradient(135deg,#1a2d1a,#0a1a0a)">🌴</div>
             <h3>Jungle Expedition</h3><span>4 Bumper • 3 Target</span><br>
             <span class="badge badge-medium">MEDIUM</span>
@@ -393,7 +393,7 @@
       </div>
 
       <div class="tab-content" id="tab-import">
-        <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <div id="drop-zone">
           <div class="icon">📁</div>
           <p><strong>Klicken oder .fpt Datei hier reinziehen</strong><br>
           Future Pinball Table Dateien (.fpt)<br>
@@ -444,7 +444,7 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
           <div>
             <h4 style="color:#00ff88;font-size:11px;margin-bottom:8px;letter-spacing:1px;">📚 TISCHVERZEICHNIS</h4>
-            <button id="browse-tables-btn" onclick="window.browseTableDirectory()" style="width:100%;padding:8px;background:rgba(0,150,80,0.2);border:1px solid #00ff88;border-radius:6px;color:#00ff88;cursor:pointer;font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;transition:all 0.2s;">
+            <button id="browse-tables-btn" style="width:100%;padding:8px;background:rgba(0,150,80,0.2);border:1px solid #00ff88;border-radius:6px;color:#00ff88;cursor:pointer;font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;transition:all 0.2s;">
               🔍 Verzeichnis wählen
             </button>
             <div id="tables-list" style="margin-top:10px;max-height:200px;overflow-y:auto;border:1px solid #334;border-radius:4px;background:rgba(0,20,40,0.3);padding:8px;display:none;">
@@ -454,7 +454,7 @@
 
           <div>
             <h4 style="color:#0088ff;font-size:11px;margin-bottom:8px;letter-spacing:1px;">📦 BIBLIOTHEKEN</h4>
-            <button id="browse-libs-btn" onclick="window.browseLibraryDirectory()" style="width:100%;padding:8px;background:rgba(0,100,180,0.2);border:1px solid #0088ff;border-radius:6px;color:#0088ff;cursor:pointer;font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;transition:all 0.2s;">
+            <button id="browse-libs-btn" style="width:100%;padding:8px;background:rgba(0,100,180,0.2);border:1px solid #0088ff;border-radius:6px;color:#0088ff;cursor:pointer;font-family:'Courier New',monospace;font-size:11px;letter-spacing:1px;transition:all 0.2s;">
               🔍 Verzeichnis wählen
             </button>
             <div id="libraries-list" style="margin-top:10px;max-height:200px;overflow-y:auto;border:1px solid #334;border-radius:4px;background:rgba(0,20,40,0.3);padding:8px;display:none;">
@@ -469,7 +469,7 @@
             <div>📚 Tische: <span style="color:#00ff88;">-</span></div>
             <div>📦 Bibliotheken: <span style="color:#0088ff;">-</span></div>
           </div>
-          <button id="load-selected-btn" onclick="window.loadSelectedTable()" style="width:100%;padding:10px;margin-top:8px;background:linear-gradient(135deg,#004499,#003366);border:1px solid #0088ff;border-radius:6px;color:#0088ff;cursor:pointer;font-family:'Courier New',monospace;font-size:12px;letter-spacing:1px;transition:all 0.2s;display:none;">
+          <button id="load-selected-btn" style="width:100%;padding:10px;margin-top:8px;background:linear-gradient(135deg,#004499,#003366);border:1px solid #0088ff;border-radius:6px;color:#0088ff;cursor:pointer;font-family:'Courier New',monospace;font-size:12px;letter-spacing:1px;transition:all 0.2s;display:none;">
             ▶ AUSGEWÄHLTEN TISCH LADEN
           </button>
         </div>
@@ -518,7 +518,7 @@
         </div>
       </div>
 
-      <button class="btn-primary" onclick="closeLoader()">▶ SPIELEN</button>
+      <button class="btn-primary">▶ SPIELEN</button>
     </div>
   </div>
 
@@ -527,13 +527,13 @@
     &nbsp;|&nbsp; <span>ENTER halten</span> Plunger &nbsp;|&nbsp; <span>Z/X</span> Tilt &nbsp;|&nbsp; <span>M</span> Musik &nbsp;|&nbsp; <span>R</span> Reset
   </div>
 
-  <button id="install-btn" title="App installieren" onclick="installPWA()">INSTALL</button>
+  <button id="install-btn" title="App installieren">INSTALL</button>
   <a id="editor-btn" href="editor.html" target="_blank" title="Tisch-Editor">✏️</a>
-  <button id="fullscreen-btn"  title="Vollbild"           onclick="toggleFullscreen()">FULL</button>
-  <button id="multiscreen-btn" title="Multi-Screen Setup" onclick="openMultiscreenModal()">SCREENS</button>
-  <button id="view-btn"        title="Ansicht anpassen"   onclick="toggleViewPanel()">VIEW</button>
-  <button id="hide-dmd-btn"    title="DMD ausblenden"     onclick="toggleHideDMD()">DMD</button>
-  <button id="dmd-mode-btn"    title="DMD: Dot / Solid"   onclick="toggleDMDMode()">DOT</button>
+  <button id="fullscreen-btn"  title="Vollbild"          >FULL</button>
+  <button id="multiscreen-btn" title="Multi-Screen Setup">SCREENS</button>
+  <button id="view-btn"        title="Ansicht anpassen"  >VIEW</button>
+  <button id="hide-dmd-btn"    title="DMD ausblenden"    >DMD</button>
+  <button id="dmd-mode-btn"    title="DMD: Dot / Solid"  >DOT</button>
 
   <div id="view-panel">
     <h4>⚙ ANSICHT</h4>
@@ -549,22 +549,22 @@
       <label>BLICKWINKEL <span id="vp-fov-val">58</span></label>
       <input type="range" id="vp-fov" min="35" max="85" step="1" value="58" oninput="applyViewSettings()">
     </div>
-    <button onclick="resetViewSettings()">↺ RESET</button>
+    <button>↺ RESET</button>
   </div>
 
   <div id="multiscreen-modal">
     <div id="ms-box" style="position:relative">
-      <button id="ms-close" onclick="closeMultiscreenModal()">✕</button>
+      <button id="ms-close">✕</button>
       <h2>⊞ MULTI-SCREEN SETUP</h2>
       <p class="ms-sub">CHOOSE YOUR DISPLAY CONFIGURATION</p>
       <div class="ms-layout-grid">
-        <div class="ms-layout-card selected" id="ms-card-1" onclick="selectMsLayout(1)">
+        <div class="ms-layout-card selected" id="ms-card-1">
           <div class="ms-icon">🖥️</div><h3>1 SCREEN</h3><p>Spielfeld + Backglass-Panel im Hauptfenster</p>
         </div>
-        <div class="ms-layout-card" id="ms-card-2" onclick="selectMsLayout(2)">
+        <div class="ms-layout-card" id="ms-card-2">
           <div class="ms-icon">🖥️🖥️</div><h3>2 SCREENS</h3><p>Spielfeld | Backglass + DMD gestapelt</p>
         </div>
-        <div class="ms-layout-card" id="ms-card-3" onclick="selectMsLayout(3)">
+        <div class="ms-layout-card" id="ms-card-3">
           <div class="ms-icon">🖥️🖥️🖥️</div><h3>3 SCREENS</h3><p>Spielfeld | Backglass | DMD — frei platzierbar</p>
         </div>
       </div>
@@ -578,14 +578,14 @@
           <!-- Dynamically populated -->
         </div>
         <div style="margin-top:12px;display:flex;gap:8px;">
-          <button onclick="resetScreenRoles()" style="flex:1;padding:8px;background:#333;border:1px solid #667;color:#aaa;cursor:pointer;border-radius:4px;">↻ Reset</button>
-          <button onclick="swapScreenRoles(0,1)" style="flex:1;padding:8px;background:#333;border:1px solid #667;color:#aaa;cursor:pointer;border-radius:4px;">⇄ Swap 1↔2</button>
+          <button style="flex:1;padding:8px;background:#333;border:1px solid #667;color:#aaa;cursor:pointer;border-radius:4px;">↻ Reset</button>
+          <button style="flex:1;padding:8px;background:#333;border:1px solid #667;color:#aaa;cursor:pointer;border-radius:4px;">⇄ Swap 1↔2</button>
         </div>
       </div>
 
       <div class="ms-btn-row">
-        <button id="ms-autodetect" onclick="autoDetectScreens()">⚡ AUTO-DETECT</button>
-        <button id="ms-apply" onclick="applyMsLayout()">▶ APPLY LAYOUT</button>
+        <button id="ms-autodetect">⚡ AUTO-DETECT</button>
+        <button id="ms-apply">▶ APPLY LAYOUT</button>
       </div>
     </div>
   </div>
@@ -623,47 +623,6 @@
   <div id="touch-left"    class="touch-btn">◀</div>
   <div id="touch-right"   class="touch-btn">▶</div>
   <div id="touch-plunger" class="touch-btn">↑</div>
-
-  <script>
-    // Quick Menu Functions
-    function openQuickMenu() {
-      document.getElementById('quick-menu').classList.add('open');
-    }
-    function closeQuickMenu() {
-      document.getElementById('quick-menu').classList.remove('open');
-    }
-
-    // Close menu when clicking outside
-    document.getElementById('quick-menu').addEventListener('click', (e) => {
-      if (e.target.id === 'quick-menu') closeQuickMenu();
-    });
-
-    // Show quick menu on startup
-    window.addEventListener('DOMContentLoaded', () => {
-      setTimeout(() => {
-        const modal = document.getElementById('loader-modal');
-        const computed = modal ? window.getComputedStyle(modal).display : 'none';
-        // If loader modal is not showing, open quick menu
-        if (computed === 'none') {
-          openQuickMenu();
-          console.log('✅ Quick Menu auto-opened on startup');
-        }
-      }, 300);
-    });
-
-    // Also handle window load event as fallback
-    window.addEventListener('load', () => {
-      const quickMenu = document.getElementById('quick-menu');
-      if (quickMenu && !quickMenu.classList.contains('open')) {
-        openQuickMenu();
-        console.log('✅ Quick Menu auto-opened on load event');
-      }
-    });
-
-    // Button to open quick menu from game
-    const openLoaderBtn = document.getElementById('open-loader');
-    if (openLoaderBtn) openLoaderBtn.addEventListener('click', openQuickMenu);
-  </script>
 
   <script type="module" src="./main.ts"></script>
 </body>

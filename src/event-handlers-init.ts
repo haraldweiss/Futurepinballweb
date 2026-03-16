@@ -29,6 +29,32 @@ export function initializeEventHandlers(): void {
   initializeViewControlHandlers();
   
   console.log('[Event Handlers] ✓ All handlers initialized');
+  
+  // ─── Phase 24 Enhancement: Auto-open Quick Menu on startup ───
+  setTimeout(() => {
+    const modal = document.getElementById('loader-modal');
+    const quickMenu = document.getElementById('quick-menu');
+    if (modal && quickMenu) {
+      const isModalHidden = window.getComputedStyle(modal).display === 'none';
+      if (isModalHidden && !quickMenu.classList.contains('open')) {
+        openQuickMenu();
+        console.log('[Event Handlers] ✅ Quick Menu auto-opened on startup');
+      }
+    }
+  }, 100);
+}
+
+/**
+ * Quick Menu Helpers (exported for global access)
+ */
+export function openQuickMenu(): void {
+  const quickMenu = document.getElementById('quick-menu');
+  if (quickMenu) quickMenu.classList.add('open');
+}
+
+export function closeQuickMenu(): void {
+  const quickMenu = document.getElementById('quick-menu');
+  if (quickMenu) quickMenu.classList.remove('open');
 }
 
 /**
@@ -42,7 +68,7 @@ function initializeQuickMenuHandlers(): void {
   
   if (closeBtn) {
     closeBtn.addEventListener('click', () => {
-      quickMenu?.classList.remove('open');
+      closeQuickMenu();
     });
   }
   
