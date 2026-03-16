@@ -130,6 +130,7 @@ import { integrationTesting } from './integration-testing';
 import { getPerformanceReportGenerator, generatePerformanceReport } from './performance-report-generator';
 import { getTestSuite, resetTestSuite } from './test-suite';
 import { DirectoryPathManager } from './directory-path-manager';
+import { escapeHtml, setInnerHTMLSafe } from './utils/html-escape';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -2870,7 +2871,7 @@ function updateFileBrowserUI(): void {
   const loadBtn = document.getElementById('load-selected-btn')!;
   if (fileBrowserState.selectedTableFile) {
     loadBtn.style.display = 'block';
-    loadBtn.innerHTML = `▶ ${fileBrowserState.selectedTableFile.name} LADEN`;
+    loadBtn.innerHTML = `▶ ${escapeHtml(fileBrowserState.selectedTableFile.name)} LADEN`;
   } else {
     loadBtn.style.display = 'none';
   }
@@ -3795,7 +3796,8 @@ function renderTableFileGrid(files: File[]): void {
     const card = document.createElement('div');
     card.className = 'table-card';
     const sizeMB = (f.size / 1024 / 1024).toFixed(2);
-    card.innerHTML = `<div class="preview">🎱</div><h3>${f.name.replace(/\.fpt$/i, '')}</h3><span>${sizeMB} MB</span>`;
+    const displayName = escapeHtml(f.name.replace(/\.fpt$/i, ''));
+    card.innerHTML = `<div class="preview">🎱</div><h3>${displayName}</h3><span>${sizeMB} MB</span>`;
     card.style.cursor = 'pointer';
     card.onclick = () => {
       resetGameState();
@@ -3933,7 +3935,7 @@ function updateTablePathShortcuts(): void {
     btn.style.width = '100%';
     btn.style.textAlign = 'left';
     btn.style.opacity = (1 - idx * 0.1).toString();
-    btn.innerHTML = `🔄 ${path.name}`;
+    btn.innerHTML = `🔄 ${escapeHtml(path.name)}`;
     btn.title = new Date(path.timestamp).toLocaleDateString();
     btn.onclick = () => browseTableDirectory();
     container.appendChild(btn);
@@ -3977,7 +3979,7 @@ function updateLibraryPathShortcuts(): void {
     btn.style.width = '100%';
     btn.style.textAlign = 'left';
     btn.style.opacity = (1 - idx * 0.1).toString();
-    btn.innerHTML = `🔄 ${path.name}`;
+    btn.innerHTML = `🔄 ${escapeHtml(path.name)}`;
     btn.title = new Date(path.timestamp).toLocaleDateString();
     btn.onclick = () => browseLibraryDirectory();
     container.appendChild(btn);
