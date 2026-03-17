@@ -141,15 +141,28 @@ export class CabinetSystem {
   }
 
   /**
-   * Auto-detect cabinet profile based on viewport dimensions
+   * Auto-detect cabinet profile based on actual monitor dimensions
+   * Uses window.screen (physical monitor) not window.inner (browser window)
    * Default to HORIZONTAL (0° rotation) - safest option
    */
   autoDetectProfile(): CabinetProfile {
-    const aspectRatio = window.innerWidth / window.innerHeight;
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    // Use actual monitor resolution (window.screen)
+    // Not browser window size (window.inner)
+    const screenWidth = window.screen.width;
+    const screenHeight = window.screen.height;
 
-    console.log(`🎮 Cabinet auto-detect: ${width}x${height} (aspect: ${aspectRatio.toFixed(2)})`);
+    // Also try to get the actual available screen area (excludes taskbars, etc.)
+    const availWidth = window.screen.availWidth || screenWidth;
+    const availHeight = window.screen.availHeight || screenHeight;
+
+    // Use available dimensions for more accurate detection
+    const width = availWidth > 0 ? availWidth : screenWidth;
+    const height = availHeight > 0 ? availHeight : screenHeight;
+
+    const aspectRatio = width / height;
+
+    console.log(`🎮 Cabinet auto-detect:`);
+    console.log(`   Monitor: ${screenWidth}x${screenHeight} | Available: ${width}x${height} | Aspect: ${aspectRatio.toFixed(2)}`);
 
     // Ultra-wide: 21:9 or wider (>2.3) - best for ultrawide monitors
     if (aspectRatio > 2.3) {
@@ -158,7 +171,7 @@ export class CabinetSystem {
       return CABINET_WIDE;
     }
 
-    // Vertical portrait: < 0.8 ratio - true portrait displays
+    // Vertical portrait: < 0.75 ratio - true portrait displays
     if (aspectRatio < 0.75) {
       console.log(`🎮 → Vertical/Portrait detected (<0.75), using VERTICAL profile (90°)`);
       this.setProfile(CABINET_VERTICAL);
@@ -266,6 +279,35 @@ export class CabinetSystem {
     const profiles = this.getAllProfiles();
     return profiles.find(p => p.id === id) || null;
   }
+
+  /**
+   * Get diagnostic info for debugging display detection
+   */
+  getDiagnostics(): {
+    screenWidth: number;
+    screenHeight: number;
+    availWidth: number;
+    availHeight: number;
+    windowWidth: number;
+    windowHeight: number;
+    devicePixelRatio: number;
+    isFullscreen: boolean;
+    aspectRatio: string;
+    detectedProfile: string;
+  } {
+    return {
+      screenWidth: window.screen.width,
+      screenHeight: window.screen.height,
+      availWidth: window.screen.availWidth || window.screen.width,
+      availHeight: window.screen.availHeight || window.screen.height,
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      devicePixelRatio: window.devicePixelRatio,
+      isFullscreen: !!(document.fullscreenElement || (document as any).webkitFullscreenElement),
+      aspectRatio: (window.screen.availWidth / window.screen.availHeight).toFixed(2),
+      detectedProfile: this.currentProfile.id,
+    };
+  }
 }
 
 // ─── Public API ────────────────────────────────────────────────────────────
@@ -305,4 +347,11 @@ export function rotatePlayfieldTo(degrees: 0 | 90 | 180 | 270, duration?: number
     cabinetSystem = new CabinetSystem();
   }
   return cabinetSystem.rotatePlayfield(degrees, duration);
+}
+
+export function getCabinetDiagnostics() {
+  if (!cabinetSystem) {
+    cabinetSystem = new CabinetSystem();
+  }
+  return cabinetSystem.getDiagnostics();
 }

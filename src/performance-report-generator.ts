@@ -134,25 +134,75 @@ export class PerformanceReportGenerator {
     const cores = navigator.hardwareConcurrency || 2;
     profile.cpu = cores < 2 ? 'low' : cores < 4 ? 'mid' : 'high';
 
-    // GPU detection (via WebGL)
+    // GPU detection (via WebGL) - Windows multi-GPU aware
     try {
       const canvas = document.createElement('canvas');
-      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+
+      // Try WebGL 2 first (better support), fallback to WebGL 1
+      let gl = canvas.getContext('webgl2') as any;
+      if (!gl) {
+        gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      }
+
       if (gl) {
-        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-        if (debugInfo) {
-          const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) as string;
-          if (renderer.includes('Mali') || renderer.includes('Adreno')) {
-            profile.gpu = 'low';
-          } else if (renderer.includes('GeForce') || renderer.includes('Radeon')) {
-            profile.gpu = 'high';
-          } else {
-            profile.gpu = 'mid';
+        let rendererInfo = 'Unknown';
+        let vendorInfo = 'Unknown';
+
+        // Try to get renderer/vendor via debug extension (may be blocked on some systems)
+        try {
+          const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+          if (debugInfo) {
+            rendererInfo = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) as string;
+            vendorInfo = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) as string;
           }
+        } catch {
+          // Debug extension unavailable - use fallback
+          rendererInfo = gl.getParameter(gl.RENDERER) as string;
+          vendorInfo = gl.getParameter(gl.VENDOR) as string;
         }
+
+        // Determine GPU tier based on renderer/vendor info
+        const lowerRenderer = rendererInfo.toLowerCase();
+        const lowerVendor = vendorInfo.toLowerCase();
+
+        // High-end GPUs: NVIDIA RTX, AMD RDNA/RDNA2, Intel Arc, Apple GPU
+        if (lowerRenderer.includes('rtx') ||
+            lowerRenderer.includes('geforce') ||
+            lowerRenderer.includes('radeon') ||
+            lowerRenderer.includes('rdna') ||
+            lowerRenderer.includes('arc') ||
+            lowerRenderer.includes('apple') ||
+            lowerRenderer.includes('metal') ||
+            lowerVendor.includes('nvidia') ||
+            lowerVendor.includes('amd')) {
+          profile.gpu = 'high';
+        }
+        // Low-end GPUs: Mobile chips, Intel iGPU
+        else if (lowerRenderer.includes('mali') ||
+                 lowerRenderer.includes('adreno') ||
+                 lowerRenderer.includes('powervr') ||
+                 lowerRenderer.includes('intel') ||
+                 lowerRenderer.includes('iris') ||
+                 lowerVendor.includes('qualcomm')) {
+          profile.gpu = lowerRenderer.includes('intel') || lowerRenderer.includes('iris') ? 'mid' : 'low';
+        }
+        // Mid-range: Default for unknown GPUs (safer assumption)
+        else {
+          profile.gpu = 'mid';
+        }
+
+        // Log detected GPU for debugging
+        console.log(`🖥️ GPU Detection: Renderer="${rendererInfo}", Vendor="${vendorInfo}" → Tier: ${profile.gpu}`);
       }
     } catch (e) {
-      // GPU detection failed
+      console.warn(`⚠️ GPU detection failed:`, e);
+      // Fallback: Use device memory to estimate GPU capability
+      const memory = (performance as any).memory?.jsHeapSizeLimit;
+      if (memory && memory > 3 * 1024 * 1024 * 1024) {
+        profile.gpu = 'high'; // 3GB+ likely desktop with dedicated GPU
+      } else {
+        profile.gpu = 'mid'; // Conservative default
+      }
     }
 
     return profile;

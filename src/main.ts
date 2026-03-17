@@ -39,6 +39,7 @@ import { runFPScript, callScriptFlipper, callScriptDrain } from './script-engine
 import { parseFPTFile, parseFPLFile, logMsg, getBackglassArtwork } from './fpt-parser';
 import { getBackglassRenderer, disposeBackglass } from './backglass';
 import { getProfiler, QUALITY_PRESETS } from './profiler';
+import { initializeGPUDiagnostics } from './gpu-diagnostics';
 import { ScoreDisplayManager } from './score-display';
 import {
   initializeAudioSystem, getAudioSystem, AudioCategory,
@@ -523,6 +524,9 @@ let enhancedAudioSystem = initializeAudioSystem();
 // ─── Phase 6: Audio Source Pool (GC pressure reduction) ──────────────────────
 initializeAudioPooling();
 logMsg(`🎵 AudioSourcePool initialized (16 pre-allocated sources)`, 'ok');
+
+// ─── GPU Diagnostics (Windows multi-GPU support) ───────────────────────────────
+initializeGPUDiagnostics();
 
 // ─── Coin System (Arcade Insert Coin) ────────────────────────────────────────
 initializeCoinSystem();
