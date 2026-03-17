@@ -95,7 +95,7 @@ export class PerformanceDashboard {
   /**
    * Log audit event
    */
-  auditLog(type: string, message: string, severity: 'info' | 'warning' | 'error' = 'info', data?: any): void {
+  recordAuditEvent(type: string, message: string, severity: 'info' | 'warning' | 'error' = 'info', data?: any): void {
     if (!this.enabled) return;
 
     const event: GameAuditEvent = {
@@ -130,7 +130,7 @@ export class PerformanceDashboard {
 
     // Detect frame spike
     if (currentFrameTime > avgFrameTime * 2) {
-      this.auditLog(
+      this.recordAuditEvent(
         'performance',
         `Frame spike detected: ${currentFrameTime.toFixed(2)}ms (avg: ${avgFrameTime.toFixed(2)}ms)`,
         'warning',
@@ -140,7 +140,7 @@ export class PerformanceDashboard {
 
     // Detect low FPS
     if (this.metrics.fps < 30) {
-      this.auditLog(
+      this.recordAuditEvent(
         'performance',
         `Low FPS: ${this.metrics.fps}`,
         'warning',
@@ -150,7 +150,7 @@ export class PerformanceDashboard {
 
     // Detect input lag
     if (this.metrics.inputLatency > 50) {
-      this.auditLog(
+      this.recordAuditEvent(
         'input',
         `High input latency: ${this.metrics.inputLatency.toFixed(2)}ms`,
         'warning',
