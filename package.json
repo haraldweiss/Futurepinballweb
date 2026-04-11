@@ -1,6 +1,6 @@
 {
   "name": "futurepinball-web",
-  "version": "0.16.0",
+  "version": "0.20.0",
   "description": "Modern cross-platform browser-based 3D pinball game with VPX-competitive graphics and physics",
   "author": "Future Pinball Contributors",
   "license": "MIT",
@@ -26,6 +26,10 @@
     "electron-mac": "npm run build && electron-builder --mac",
     "electron-linux": "npm run build && electron-builder --linux",
     "test:security": "tsx src/test-security.ts",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "lint:security": "eslint src --config .eslintrc.security.json --fix",
     "audit:dependencies": "npm audit --audit-level=moderate",
     "security:check": "npm run lint:security && npm run test:security && npm run audit:dependencies"
@@ -38,18 +42,20 @@
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
-    "eslint": "^8.50.0",
-    "eslint-plugin-no-unsanitized": "^4.0.2",
-    "eslint-plugin-security": "^2.1.0",
+    "@vitest/ui": "^4.1.4",
     "electron": "latest",
     "electron-builder": "latest",
     "electron-is-dev": "latest",
     "electron-updater": "latest",
+    "eslint": "^8.50.0",
+    "eslint-plugin-no-unsanitized": "^4.0.2",
+    "eslint-plugin-security": "^2.1.0",
+    "happy-dom": "^20.8.9",
     "tsx": "^4.6.0",
     "typescript": "^5.4.0",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vitest": "^4.1.4"
   },
-
   "build": {
     "appId": "com.futurepinball.web",
     "productName": "Future Pinball Web",
@@ -64,23 +70,28 @@
       "buildResources": "public",
       "output": "release"
     },
-
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64", "ia32"]
+          "arch": [
+            "x64",
+            "ia32"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "certificateFile": null,
       "certificatePassword": null,
-      "signingHashAlgorithms": ["sha256"]
+      "signingHashAlgorithms": [
+        "sha256"
+      ]
     },
-
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
@@ -90,7 +101,6 @@
       "installerIcon": "public/icons/icon-256x256.png",
       "uninstallerIcon": "public/icons/icon-256x256.png"
     },
-
     "mac": {
       "target": [
         "dmg",
@@ -100,7 +110,6 @@
       "hardenedRuntime": true,
       "gatekeeperAssess": false
     },
-
     "dmg": {
       "contents": [
         {
@@ -116,7 +125,6 @@
         }
       ]
     },
-
     "linux": {
       "target": [
         "AppImage",
@@ -124,11 +132,9 @@
       ],
       "category": "Game"
     },
-
     "appImage": {
       "artifactName": "${productName}-${version}.${ext}"
     },
-
     "deb": {
       "artifactName": "${productName}-${version}.${ext}"
     }

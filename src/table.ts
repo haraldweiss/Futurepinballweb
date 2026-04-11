@@ -13,11 +13,11 @@ import {
 import {
   callScriptBumper, callScriptTarget, callScriptSlingshot,
 } from './script-engine';
-import { playBumperSoundWithIntensity } from './audio';
+import { playBumperSoundWithIntensity } from './audio-system';
 import { getAnimationBindingManager } from './mechanics/animation-binding';
 import { getAnimationScheduler } from './mechanics/animation-scheduler';
 import { getBamBridge } from './bam-bridge';
-import { getGraphicsPipeline } from './main';
+import { getGraphicsPipeline } from './graphics/graphics-pipeline';
 import { getScoreAnimationManager } from './score-animation-manager';
 // Phase 15: Future imports (modules not yet integrated to main)
 // import { PlayfieldMeshBuilder, BumperPosition, TargetPosition } from './geometry/playfield-mesh-builder';

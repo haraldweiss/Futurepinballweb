@@ -2,7 +2,7 @@
  * script-engine.ts — VBScript → JavaScript Transpiler + FP Script API
  */
 import { state, fptResources, setFpScriptHandlers, bumpers, targets, cb } from './game';
-import { getAudioCtx, playSound, playFPTMusic, startBGMusic, stopBGMusic } from './audio';
+import { getAudioCtx, playSound, playFPTMusic, startBGMusic, stopBGMusic } from './audio-system';
 import { dmdEvent } from './dmd';
 import { getBamBridge } from './bam-bridge';
 

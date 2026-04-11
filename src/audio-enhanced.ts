@@ -9,7 +9,7 @@
  * - Background ambience (game hum, tension music)
  */
 
-import { getAudioCtx } from './audio';
+import { getAudioCtx } from './audio-system';
 
 // ─── Audio Category Definitions ───────────────────────────────────────────
 export enum AudioCategory {

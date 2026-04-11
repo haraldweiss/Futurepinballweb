@@ -14,7 +14,7 @@ import { getFileBrowserUIManager } from './file-browser-ui';
 import { getAdvancedFileBrowserManager } from './file-browser-advanced';
 import { getResourceManager } from './resource-manager';
 import { getLibraryCache } from './library-cache';
-import { getAudioSourcePool } from './audio-source-pool';
+import { getAudioSourcePool } from './audio-system';
 import { getPerformanceReportGenerator } from './performance-report-generator';
 
 /**

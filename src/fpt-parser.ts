@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import * as CFB from 'cfb';
 import { fptResources } from './game';
-import { getAudioCtx, playFPTMusic } from './audio';
+import { getAudioCtx, playFPTMusic } from './audio-system';
 import { runFPScript } from './script-engine';
 
 // ─── Phase 2: Resource Loading Progress Callbacks ──────────────────────────────

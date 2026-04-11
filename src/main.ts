@@ -24,8 +24,14 @@ import {
   bumpers, extraBalls, partData, tableGroup,
   setPhysics, setFpScriptHandlers, setLoadedLibrary, setBAMEngine, cb,
 } from './game';
-import { getAudioCtx, playSound, startBGMusic, stopBGMusic, playFPTMusic, toggleMusic, initializeAudioPooling } from './audio';
-import { getAudioSourcePool } from './audio-source-pool';
+import {
+  getAudioCtx, playSound, startBGMusic, stopBGMusic, playFPTMusic, toggleMusic, initializeAudioPooling,
+  getAudioSourcePool,
+  initializeAudioSystem, getAudioSystem, AudioCategory,
+  TARGET_HIT, FLIPPER_ACTIVATE, RAMP_COMPLETE, BALL_DRAIN, MULTIBALL_START, MILESTONE_REACHED,
+  getSoundManager, disposeSoundManager,
+  getMusicManager, disposeMusicManager,
+} from './audio-system';
 import { BAMEngine } from './bam-engine';
 import { BamBridge, initializeBamBridge, getBamBridge } from './bam-bridge';
 import {
@@ -41,10 +47,6 @@ import { getBackglassRenderer, disposeBackglass } from './backglass';
 import { getProfiler, QUALITY_PRESETS } from './profiler';
 import { initializeGPUDiagnostics } from './gpu-diagnostics';
 import { ScoreDisplayManager } from './score-display';
-import {
-  initializeAudioSystem, getAudioSystem, AudioCategory,
-  TARGET_HIT, FLIPPER_ACTIVATE, RAMP_COMPLETE, BALL_DRAIN, MULTIBALL_START, MILESTONE_REACHED,
-} from './audio-enhanced';
 import { VisualPolishSystem, emitBallTrail, emitFlipperDust, emitMilestoneSparkles } from './visual-polish';
 import { getIntegratedEditor } from './integrated-editor';
 import { showTableSelector } from './table-selector';
@@ -136,9 +138,6 @@ import { initializeEventHandlers } from './event-handlers-init';
 import { getDefaultPhysicsConfig, logPhysicsConfig, validatePhysicsConfig } from './physics-config-enhancer';
 import { getInputOptimizer, disposeInputOptimizer } from './input-optimizer';
 import { getPerformanceDashboard } from './performance-dashboard';
-import { getSoundManager, disposeSoundManager } from './sound-manager';
-import { getMusicManager, disposeMusicManager } from './music-manager';
-import { initBallTrailManager, getBallTrailManager, disposeBallTrailManager } from './ball-trail-manager';
 import { initScoreAnimationManager, getScoreAnimationManager, disposeScoreAnimationManager } from './score-animation-manager';
 import { initTouchControlsManager, getTouchControlsManager, disposeTouchControlsManager } from './touch-controls-manager';
 
