@@ -78,7 +78,8 @@
       "Bash(sed -n '47p' src/main.ts)",
       "Bash(sed -n '139,140p' src/main.ts)",
       "Bash(sed -i '' '50,53d' src/main.ts)",
-      "Bash(sed -i '' '142,143d' src/main.ts)"
+      "Bash(sed -i '' '142,143d' src/main.ts)",
+      "Bash(npm test:*)"
     ]
   }
 }
