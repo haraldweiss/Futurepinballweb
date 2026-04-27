@@ -5,6 +5,7 @@ import { state, fptResources, setFpScriptHandlers, bumpers, targets, cb } from '
 import { getAudioCtx, playSound, playFPTMusic, startBGMusic, stopBGMusic } from './audio-system';
 import { dmdEvent } from './dmd';
 import { getBamBridge } from './bam-bridge';
+import { runSandboxed, ScriptSandboxError } from './utils/script-sandbox';
 
 // ─── VBScript → JS Transpiler ─────────────────────────────────────────────────
 
@@ -1812,10 +1813,13 @@ export function runFPScript(vbsCode: string): void {
   const collect   = fnNames.map(n => `if (typeof ${n} === 'function') __h__['${n}'] = ${n};`).join('\n');
 
   try {
-    const fn = new Function('__api__', '__h__', bindings + '\n' + jsCode + '\n' + collect);
-    fn(api, handlers);
+    runSandboxed(jsCode, bindings, collect, api, handlers);
   } catch(e: any) {
-    fpScriptLog('Script-Fehler: ' + e.message, 'error');
+    if (e instanceof ScriptSandboxError) {
+      fpScriptLog('Script blocked by sandbox: ' + e.message, 'error');
+    } else {
+      fpScriptLog('Script-Fehler: ' + e.message, 'error');
+    }
   }
 
   setFpScriptHandlers(handlers);
