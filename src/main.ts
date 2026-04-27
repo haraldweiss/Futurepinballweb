@@ -134,6 +134,7 @@ import { getPerformanceReportGenerator, generatePerformanceReport } from './perf
 import { getTestSuite, resetTestSuite } from './test-suite';
 import { DirectoryPathManager } from './directory-path-manager';
 import { escapeHtml, setInnerHTMLSafe } from './utils/html-escape';
+import { loadFpwConfig } from './utils/fpw-config';
 import { initializeEventHandlers } from './event-handlers-init';
 import { getDefaultPhysicsConfig, logPhysicsConfig, validatePhysicsConfig } from './physics-config-enhancer';
 import { getInputOptimizer, disposeInputOptimizer } from './input-optimizer';
@@ -492,6 +493,30 @@ const profiler = getProfiler();
 let showProfiler = localStorage.getItem('fpw_show_profiler') === 'true';
 let lastAppliedQualityPreset = '';  // Track quality changes for application
 
+// ─── Auto-Tuned Quality from Installer (.fpw-config.json) ─────────────────────
+// `installer.js` writes a quality preset based on detected RAM, GPU, and
+// resolution. Honour it on first boot — but never overwrite a preset the
+// user has already chosen (the profiler's loadQualityPreset() already restored
+// any saved value from localStorage by this point).
+(async () => {
+  const userPick = localStorage.getItem('fpw_quality_preset');
+  if (userPick) {
+    console.log(`[fpw-config] Using saved quality preset: ${userPick}`);
+    return;
+  }
+  const config = await loadFpwConfig();
+  if (!config) return;  // Installer hasn't run, or file is malformed — keep default.
+  console.log(
+    `[fpw-config] Applying installer-detected quality preset: ${config.qualityPreset} ` +
+    `(${config.system.osName}, ${config.system.totalMemoryGB}GB RAM, ` +
+    `${config.display.primaryResolution.width}x${config.display.primaryResolution.height})`
+  );
+  profiler.setQualityPreset(config.qualityPreset);
+  // The animate() loop calls applyQualityPreset() on its next FPS tick, which
+  // diff-checks against `lastAppliedQualityPreset` and reconfigures the
+  // renderer / bloom / shadow / DMD systems automatically.
+})();
+
 // ─── THREE.js Scene ───────────────────────────────────────────────────────────
 const scene    = new THREE.Scene();
 scene.background = new THREE.Color(0x1a1a22);  // ─── Brightened from 0x050508: Much darker gray instead of near-black
@@ -597,6 +622,19 @@ const gl = renderer.getContext()!;
  'WEBGL_compressed_texture_astc'].forEach(ext => gl.getExtension(ext));
 
 document.body.appendChild(renderer.domElement);
+
+// ─── WebGL context loss / restore ────────────────────────────────────────────
+// VPIN cabinets idle for hours and the GPU sometimes resets the WebGL context.
+// Without these listeners the canvas turns black until the user reloads.
+renderer.domElement.addEventListener('webglcontextlost', (e) => {
+  e.preventDefault();
+  console.warn('[fpw] WebGL context lost — rendering paused until restore');
+}, false);
+renderer.domElement.addEventListener('webglcontextrestored', () => {
+  console.warn('[fpw] WebGL context restored — re-uploading GPU resources');
+  // three.js automatically rebuilds program cache on next render; textures
+  // and geometry are re-uploaded lazily as they're used.
+}, false);
 
 // ─── Environment Mapping (Phase 1: PBR Enhancements) ───────────────────────────
 // Create a simple environment map for metallic surface reflections
