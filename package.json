@@ -111,8 +111,7 @@
         "zip"
       ],
       "category": "public.app-category.games",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false
+      "identity": null
     },
     "linux": {
       "target": [
