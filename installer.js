@@ -106,8 +106,19 @@ class RequirementChecker {
   async checkNodeJS() {
     try {
       const version = execSync('node -v', { encoding: 'utf8' }).trim().slice(1);
-      log.success(`Node.js ${version} installed`);
-      this.results.nodejs = { ok: true, version };
+      // Compare semver-ish: split major.minor.patch and lex-compare per part.
+      const cmp = (a, b) => {
+        const [aM, am = 0, ap = 0] = a.split('.').map(Number);
+        const [bM, bm = 0, bp = 0] = b.split('.').map(Number);
+        return (aM - bM) || (am - bm) || (ap - bp);
+      };
+      if (cmp(version, this.requirements.nodejs) < 0) {
+        log.warn(`Node.js ${version} installed (required: ${this.requirements.nodejs}+ — Vite 7 will fail to install on older versions)`);
+        this.results.nodejs = { ok: false, version, error: `Node ${this.requirements.nodejs}+ required` };
+      } else {
+        log.success(`Node.js ${version} installed`);
+        this.results.nodejs = { ok: true, version };
+      }
     } catch (error) {
       log.error('Node.js not found');
       this.results.nodejs = { ok: false, error: 'Node.js is required' };

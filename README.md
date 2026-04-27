@@ -157,10 +157,14 @@ npm run install:check           # detection only, no install
 npm run dev
 
 # Cross-platform launcher: starts dev server if needed, opens browser
-npm start                       # auto-detect screen layout
-npm run start:1                 # single-screen
-npm run start:2                 # dual-screen (playfield + backglass)
-npm run start:3                 # triple-screen (cabinet)
+npm start                       # auto-detect screen layout (recommended)
+npm run start:1                 # hint single-screen
+npm run start:2                 # hint dual-screen (playfield + backglass)
+npm run start:3                 # hint triple-screen (cabinet)
+
+# Stop the dev server cleanly
+npm run stop                    # SIGTERM (graceful)
+npm run stop:force              # SIGKILL (last resort)
 
 # Build for production
 npm run build
@@ -262,7 +266,7 @@ logs — silent by default in production.
 | Physics | Rapier2D | 0.12 |
 | Build Tool | Vite | 7.3 |
 | Language | TypeScript | 5.4 |
-| Desktop | Electron | ^32.0.0 |
+| Desktop | Electron | ^41.0.0 |
 | Audio | Web Audio API | Native |
 | PWA | Service Worker | Native |
 
@@ -276,9 +280,14 @@ logs — silent by default in production.
 - **Internet**: First load ~10 MB, then offline
 
 ### Desktop Apps
-- **Windows**: Windows 7+, 180-200 MB RAM
-- **macOS**: macOS 10.13+, 200-250 MB RAM (M1/M2 native)
-- **Linux**: 170-250 MB RAM, glibc 2.29+
+- **Windows**: Windows 10+, 180-200 MB RAM (Electron 41 dropped Win 7/8)
+- **macOS**: macOS 11+ (Big Sur), 200-250 MB RAM (M1/M2 native)
+- **Linux**: 170-250 MB RAM, glibc 2.31+
+
+### Build From Source
+- **Node.js**: 20.19+ or 22.12+ (Vite 7 requirement; `npm run install:setup` checks this)
+- **npm**: 9+
+- **Disk**: ~700 MB for `node_modules`, ~5 MB for the bundled `dist/`
 
 ---
 
