@@ -1,3 +1,9 @@
 .fpw-config.json
 .fpw-server.pid
 node_modules/
+dist/
+
+# OS / editor cruft
+.DS_Store
+*.log
+
