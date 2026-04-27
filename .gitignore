@@ -3,6 +3,11 @@
 node_modules/
 dist/
 
+# Per-user Claude Code settings (allowlist, etc.) — keep out of the
+# shared repo; checked-in policy lives in .claude/settings.json.
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
 # OS / editor cruft
 .DS_Store
 *.log
