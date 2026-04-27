@@ -29,9 +29,12 @@ export interface CabinetProfile {
   multiplierPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   ballCounterPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
-  // Input mapping
-  leftFlipperKey: string;
-  rightFlipperKey: string;
+  // Input mapping — values are KeyboardEvent.code (physical key, layout-
+  // independent). Use `.code` not `.key` to keep AZERTY/QWERTZ cabinets
+  // working without rebinding, and to actually distinguish left vs right
+  // Shift (which both produce `event.key === 'Shift'`).
+  leftFlipperKey: string;   // e.g. 'ShiftLeft'
+  rightFlipperKey: string;  // e.g. 'ShiftRight'
 }
 
 // ─── Cabinet Profiles ──────────────────────────────────────────────────────
@@ -55,8 +58,8 @@ export const CABINET_VERTICAL: CabinetProfile = {
   multiplierPosition: 'top-right',
   ballCounterPosition: 'bottom-right',
 
-  leftFlipperKey: 'Shift',  // Left shift key
-  rightFlipperKey: 'Shift',  // Right shift key
+  leftFlipperKey: 'ShiftLeft',
+  rightFlipperKey: 'ShiftRight',
 };
 
 /**
@@ -79,8 +82,8 @@ export const CABINET_HORIZONTAL: CabinetProfile = {
   multiplierPosition: 'top-right',
   ballCounterPosition: 'bottom-left',
 
-  leftFlipperKey: 'Shift',
-  rightFlipperKey: 'Shift',
+  leftFlipperKey: 'ShiftLeft',
+  rightFlipperKey: 'ShiftRight',
 };
 
 /**
@@ -103,8 +106,8 @@ export const CABINET_WIDE: CabinetProfile = {
   multiplierPosition: 'top-right',
   ballCounterPosition: 'top-left',
 
-  leftFlipperKey: 'Shift',
-  rightFlipperKey: 'Shift',
+  leftFlipperKey: 'ShiftLeft',
+  rightFlipperKey: 'ShiftRight',
 };
 
 /**
@@ -126,8 +129,8 @@ export const CABINET_INVERTED: CabinetProfile = {
   multiplierPosition: 'bottom-left',
   ballCounterPosition: 'top-right',
 
-  leftFlipperKey: 'Shift',
-  rightFlipperKey: 'Shift',
+  leftFlipperKey: 'ShiftLeft',
+  rightFlipperKey: 'ShiftRight',
 };
 
 // ─── Cabinet System ────────────────────────────────────────────────────────
