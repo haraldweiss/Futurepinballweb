@@ -302,27 +302,63 @@ npm run build
 **Cost**: $0 (GitHub Pages free)
 **Time**: Instant
 
-### Option 2: Desktop Apps
+### Option 2: Desktop Apps (local build)
 ```bash
-# The Electron toolchain is already in devDependencies (pinned)
+# Builds for the current platform; installers land in release/
 npm run electron-build
-# Installers in release/ folder
 ```
-**Cost**: $0–400 (code signing optional)
-**Time**: ~30 minutes
-**Note**: auto-update is not active until a `publish` target is configured
-in `package.json > build` plus code-signing certificates.
+**Cost**: $0 — code-signing certs optional (see Releases below).
+**Time**: ~30 minutes for first build, faster after that.
 
-### Option 3: Automated Releases (GitHub Actions)
+### Option 3: Automated Releases (GitHub Actions) ⭐
+The repo is wired to publish a release whenever you push a `v*` tag —
+`.github/workflows/build-release.yml` builds Electron for Linux,
+macOS, and Windows in parallel and lets `electron-builder` upload the
+binaries plus the `latest.yml` / `latest-mac.yml` / `latest-linux.yml`
+metadata that the in-app auto-updater consumes.
+
 ```bash
-git tag v0.16.1
-git push origin v0.16.1
-# GitHub Actions builds all platforms automatically
+# 1. Bump the version (uses semver; commits the change for you)
+npm version patch          # 0.20.0 → 0.20.1
+# 2. Push the tag
+git push origin main --follow-tags
+# 3. Watch the workflow at https://github.com/<owner>/<repo>/actions
+# 4. Once green, the GitHub Release exists and end-users get an
+#    update prompt next time they launch the app.
 ```
-**Cost**: $0
-**Time**: 10-15 minutes (automatic)
 
-See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for detailed instructions.
+**Cost**: $0 unsigned, $200–400/year for code-signing certs.
+**Time**: ~10–15 minutes per release (automatic).
+
+#### Auto-updater & code-signing
+
+The Electron app calls `autoUpdater.checkForUpdatesAndNotify()` on
+boot in production builds. It reads `package.json > build > publish`
+(currently set to `github` for `haraldweiss/Futurepinballweb`) and
+fetches the matching `latest*.yml` from the corresponding GitHub
+Release. To point this at a fork, change the `owner` / `repo` fields.
+
+**Without code signing**:
+- macOS: gatekeeper warns on first launch (`xattr -cr` clears it).
+  Auto-updates work because Apple allows unsigned `latest-mac.yml`
+  consumption when the existing app is also unsigned.
+- Windows: SmartScreen warns on the installer. The auto-updater on
+  Windows will **refuse** an update because the new binary's signature
+  doesn't match the running one. Either ship code-signed binaries or
+  set `verifyUpdateCodeSignature: false` in the `build > nsis` config
+  (less secure — only do this if you understand the trade-off).
+- Linux: no signing concept, AppImage/deb work fine.
+
+**With code signing** (recommended for >100 users): set the
+following GitHub Actions secrets and the workflow picks them up
+automatically — no other changes needed.
+
+| Secret | Purpose |
+|--------|---------|
+| `CSC_LINK` / `CSC_KEY_PASSWORD` | Windows + macOS signing certs |
+| `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | macOS notarization |
+
+See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for the full setup.
 
 ---
 

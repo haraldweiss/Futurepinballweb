@@ -72,6 +72,12 @@
       "buildResources": "public",
       "output": "release"
     },
+    "publish": {
+      "provider": "github",
+      "owner": "haraldweiss",
+      "repo": "Futurepinballweb",
+      "releaseType": "release"
+    },
     "win": {
       "target": [
         {

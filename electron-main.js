@@ -85,13 +85,22 @@ app.on('ready', () => {
   createWindow();
   createMenu();
 
-  // Auto-update is disabled until a `publish` target is configured in
-  // package.json `build`. Calling checkForUpdatesAndNotify() without one
-  // produces a noisy network failure on every launch. The IPC handlers and
-  // event listeners below remain wired so this can be re-enabled by adding
-  // `publish: github` (or similar) and uncommenting the call.
-  //
-  // if (!isDev) autoUpdater.checkForUpdatesAndNotify();
+  // Auto-update against GitHub Releases (config: package.json > build >
+  // publish). Skipped in dev. Wrapped because pre-1.0 the user may not
+  // have published any release yet — that should not produce a startup
+  // dialog. autoUpdater also emits an 'error' event we listen for below
+  // and forward to the renderer; that path stays silent for the user.
+  if (!isDev) {
+    try {
+      autoUpdater.autoDownload = true;
+      autoUpdater.allowPrerelease = false;
+      autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+        console.warn('[updater] check failed:', err.message);
+      });
+    } catch (err) {
+      console.warn('[updater] init failed:', err.message);
+    }
+  }
 });
 
 app.on('window-all-closed', () => {

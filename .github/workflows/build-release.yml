@@ -1,34 +1,47 @@
 name: Build & Release
 
+# Triggers on a version tag (e.g. v0.21.0). The job builds Electron
+# binaries for Linux/macOS/Windows and lets electron-builder upload
+# them — together with the latest.yml / latest-mac.yml / latest-linux.yml
+# files that electron-updater consumes — straight to the GitHub Release
+# matching the tag.
+#
+# Required secrets:
+#   - GITHUB_TOKEN (auto-provided by Actions; sufficient for uploading
+#     to the same repo's Releases).
+# Optional (for code-signed builds):
+#   - CSC_LINK / CSC_KEY_PASSWORD              — macOS / Windows code-signing
+#   - APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD   — macOS notarization
+#   - APPLE_TEAM_ID                            — macOS notarization
+#
+# Without signing certs the binaries are usable but trigger SmartScreen
+# (Windows) and Gatekeeper (macOS) warnings on first launch, and the
+# auto-updater on Windows will refuse the update due to signature
+# mismatch. See README "Releases" for details.
+
 on:
   push:
     tags:
       - 'v*'
 
+permissions:
+  contents: write   # required for electron-builder to create/edit Releases
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            artifact_name: Future\ Pinball\ Web
-            asset_name: future-pinball-web-linux
-          - os: windows-latest
-            artifact_name: Future Pinball Web.exe
-            asset_name: future-pinball-web-windows
-          - os: macos-latest
-            artifact_name: Future Pinball Web
-            asset_name: future-pinball-web-macos
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 22.x
           cache: 'npm'
 
       - name: Install dependencies
@@ -37,51 +50,13 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Build Electron (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: npm run electron-build
-
-      - name: Build Electron (Windows)
-        if: runner.os == 'Windows'
-        run: npm run electron-build
-
-      - name: Upload artifacts (Linux)
-        if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v3
-        with:
-          name: linux-builds
-          path: release/
-
-      - name: Upload artifacts (Windows)
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v3
-        with:
-          name: windows-builds
-          path: release/
-
-      - name: Upload artifacts (macOS)
-        if: runner.os == 'macOS'
-        uses: actions/upload-artifact@v3
-        with:
-          name: macos-builds
-          path: release/
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v3
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: |
-            linux-builds/*
-            windows-builds/*
-            macos-builds/*
+      - name: Build & publish Electron
+        run: npx electron-builder --publish always
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Code-signing — only used if the corresponding secrets are set.
+          CSC_LINK:                 ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD:         ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID:                 ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID:            ${{ secrets.APPLE_TEAM_ID }}
