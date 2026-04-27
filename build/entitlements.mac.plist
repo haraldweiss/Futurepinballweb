@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      Hardened Runtime entitlements required for an Electron app to run
+      under macOS notarization. V8 (the JavaScript engine inside Electron)
+      relies on JIT compilation, which means it allocates pages of memory
+      that get marked executable at runtime — exactly the pattern Apple's
+      Hardened Runtime blocks by default. The three keys below punch the
+      necessary holes:
+
+        allow-jit                          — V8 JIT codegen
+        allow-unsigned-executable-memory   — runtime-generated executable pages
+        allow-dyld-environment-variables   — DYLD_* vars Electron uses
+                                              for native module loading
+
+      Add narrower entitlements (e.g. com.apple.security.network.client)
+      only if the game needs them; the auto-updater works without
+      additional network entitlements because notarized macOS apps may
+      open outbound connections by default.
+    -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <true/>
+</dict>
+</plist>

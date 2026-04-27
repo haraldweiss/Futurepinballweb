@@ -111,7 +111,10 @@
         "zip"
       ],
       "category": "public.app-category.games",
-      "identity": null
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true
     },
     "linux": {
       "target": [

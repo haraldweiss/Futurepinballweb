@@ -51,12 +51,40 @@ jobs:
         run: npm run build
 
       - name: Build & publish Electron
-        run: npx electron-builder --publish always
+        shell: bash
+        # Three branches:
+        #   1. CSC_LINK + APPLE_ID set → signed AND notarized macOS build
+        #   2. CSC_LINK set, APPLE_ID empty → signed but not notarized
+        #      (Right-click → Open still required; useful for testing)
+        #   3. CSC_LINK empty → unsigned build, falls back to identity:null
+        #      and disables hardenedRuntime/notarize so the schema is happy
+        #      (this is the path that's been running so far)
+        # The conditional is in the shell rather than the YAML so it works
+        # uniformly on Linux/macOS/Windows runners.
+        run: |
+          if [ -n "$CSC_LINK" ]; then
+            if [ -n "$APPLE_ID" ]; then
+              echo "→ Code-signed + notarized build (CSC_LINK + APPLE_ID set)"
+              npx electron-builder --publish always
+            else
+              echo "→ Code-signed build (CSC_LINK set; notarization skipped, APPLE_ID not set)"
+              npx electron-builder --publish always --config.mac.notarize=false
+            fi
+          else
+            echo "→ Unsigned build (CSC_LINK not set; user needs 'xattr -cr' on macOS)"
+            npx electron-builder --publish always \
+              --config.mac.identity=null \
+              --config.mac.hardenedRuntime=false \
+              --config.mac.notarize=false
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Code-signing — only used if the corresponding secrets are set.
-          CSC_LINK:                 ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD:         ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_ID:                 ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID:            ${{ secrets.APPLE_TEAM_ID }}
+          # Apple Developer ID certificates are macOS-only — gate the env
+          # vars to the macOS runner so non-Mac runners don't trip on them.
+          # (Windows code-signing would use a separate Authenticode cert
+          # via WIN_CSC_LINK; not configured yet.)
+          CSC_LINK:                    ${{ runner.os == 'macOS' && secrets.CSC_LINK || '' }}
+          CSC_KEY_PASSWORD:            ${{ runner.os == 'macOS' && secrets.CSC_KEY_PASSWORD || '' }}
+          APPLE_ID:                    ${{ runner.os == 'macOS' && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          APPLE_TEAM_ID:               ${{ runner.os == 'macOS' && secrets.APPLE_TEAM_ID || '' }}
