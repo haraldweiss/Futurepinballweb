@@ -54,6 +54,12 @@ function fpwConfigAsset(): Plugin {
 
 export default defineConfig({
   root: 'src',
+  // Relative base paths in generated HTML/JS — required for the Electron
+  // production build, which loads `dist/index.html` via a `file://` URL.
+  // With Vite's default `'/'` base, asset hrefs like `/assets/main-X.js`
+  // get resolved to the filesystem root and 404 inside the .app bundle.
+  // `'./'` makes them resolve relative to the loading document.
+  base: './',
   plugins: [fpwConfigAsset()],
   build: {
     outDir: '../dist',

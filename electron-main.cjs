@@ -17,8 +17,16 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
-const isDev = require('electron-is-dev');
 const fs = require('fs');
+
+// Was previously `require('electron-is-dev')`. That package shipped a v3
+// release as ESM-only — under Electron 41's Node 22, `require()` of an ESM
+// returns a namespace object like { default: false }, which is truthy and
+// always took the dev branch below. Result: the packaged app loaded
+// http://localhost:5173 (whatever Vite dev server happened to be running)
+// instead of the bundled dist/index.html. `app.isPackaged` is built into
+// Electron and behaves correctly.
+const isDev = !app.isPackaged;
 
 // Keep a global reference of the window object
 let mainWindow;
