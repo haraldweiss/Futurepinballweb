@@ -110,8 +110,7 @@
         "dmg",
         "zip"
       ],
-      "category": "public.app-category.games",
-      "identity": null
+      "category": "public.app-category.games"
     },
     "linux": {
       "target": [
