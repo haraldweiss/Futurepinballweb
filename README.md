@@ -2,12 +2,13 @@
 
 **Modern cross-platform 3D pinball game in your browser — with VPX-competitive graphics, advanced physics, multi-screen arcade cabinet support, and comprehensive video editing**
 
-![Version](https://img.shields.io/badge/Version-0.19.0-blue)
+![Version](https://img.shields.io/badge/Version-0.20.0-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)
-![Modules](https://img.shields.io/badge/Modules-70-orange)
-![Code](https://img.shields.io/badge/Code-31.8K%20Lines-purple)
+![Modules](https://img.shields.io/badge/Modules-60-orange)
+![Code](https://img.shields.io/badge/Code-27.8K%20Lines-purple)
+![Tests](https://img.shields.io/badge/Tests-582%20passing-success)
 ![Parser](https://img.shields.io/badge/Enhanced_FPT_Parser-v1.0-success)
 
 ---
@@ -147,22 +148,46 @@ Click "📥 Install App" to add to your home screen, then play offline!
 
 ### Developers
 ```bash
-# Install dependencies
-npm install
+# One-shot setup: detects OS, GPU, screens, picks a quality preset,
+# writes .fpw-config.json that the runtime reads on boot
+npm run install:setup           # or `node installer.js`
+npm run install:check           # detection only, no install
 
-# Development with hot-reload
+# Development with hot-reload (port 5173)
 npm run dev
+
+# Cross-platform launcher: starts dev server if needed, opens browser
+npm start                       # auto-detect screen layout
+npm run start:1                 # single-screen
+npm run start:2                 # dual-screen (playfield + backglass)
+npm run start:3                 # triple-screen (cabinet)
 
 # Build for production
 npm run build
 
-# Build desktop apps (requires Electron)
-npm install -D electron electron-builder electron-is-dev electron-updater
-npm run electron-build
+# Production server with strict CSP + security headers (zero deps,
+# Node built-ins only). Serves dist/ on PORT or 3000.
+npm run serve
+
+# Tests (582 passing, vitest)
+npm run test:run
+
+# Security checks (eslint security plugin + audit + custom XSS tests)
+npm run security:check
+
+# Build desktop apps (Electron toolchain pinned in package.json)
+npm run electron-build          # current platform
+npm run electron-win            # Windows installer + portable
+npm run electron-mac            # macOS dmg + zip
+npm run electron-linux          # AppImage + deb
 
 # Run desktop app in development
 npm run electron-dev
 ```
+
+**Debug logging:** add `?debug=1` to the URL or run
+`localStorage.setItem('fpw.debug','1')` in DevTools to enable verbose
+logs — silent by default in production.
 
 ---
 
@@ -237,7 +262,7 @@ npm run electron-dev
 | Physics | Rapier2D | 0.12 |
 | Build Tool | Vite | 7.3 |
 | Language | TypeScript | 5.4 |
-| Desktop | Electron | Latest |
+| Desktop | Electron | ^32.0.0 |
 | Audio | Web Audio API | Native |
 | PWA | Service Worker | Native |
 
@@ -270,12 +295,14 @@ npm run build
 
 ### Option 2: Desktop Apps
 ```bash
-npm install -D electron electron-builder electron-is-dev electron-updater
+# The Electron toolchain is already in devDependencies (pinned)
 npm run electron-build
 # Installers in release/ folder
 ```
-**Cost**: $0-400 (code signing optional)
+**Cost**: $0–400 (code signing optional)
 **Time**: ~30 minutes
+**Note**: auto-update is not active until a `publish` target is configured
+in `package.json > build` plus code-signing certificates.
 
 ### Option 3: Automated Releases (GitHub Actions)
 ```bash
@@ -317,10 +344,11 @@ public/
 
 ### Build Status
 - **Modules**: 60 (optimized)
-- **Build Time**: ~1.15 seconds
+- **Build Time**: ~1.1 seconds
 - **TypeScript Errors**: 0 ✓
 - **Code Size**: ~27.8K lines
 - **VBScript Functions**: 179+
+- **Tests**: 582 passing across 20 vitest files
 - **Git Commits**: 470+
 
 ### Performance
@@ -388,6 +416,37 @@ Use the integrated editor:
 - Check GPU acceleration enabled
 
 See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for detailed troubleshooting.
+
+---
+
+## 🔒 Security
+
+User-supplied `.fpt` table files contain VBScript that the engine
+transpiles to JS and evaluates. To keep that surface safe:
+
+- **Sandboxed script execution** — every transpiled script runs inside
+  a `Proxy` scope that returns `undefined` for any identifier outside
+  an explicit allowlist (`Math`, `Date`, `JSON`, `console`,
+  `setTimeout`, …). A pre-execution scan rejects scripts that
+  reference `fetch`, `XMLHttpRequest`, `eval`, `localStorage`,
+  `electronAPI`, `window`, `document.cookie`, location redirects, etc.
+  See [src/utils/script-sandbox.ts](./src/utils/script-sandbox.ts).
+- **Strict CSP** — Content-Security-Policy is set both via
+  `<meta http-equiv>` in the bundled HTML (so it travels with
+  Electron `file://` and any static host) and as a response header
+  from the production `npm run serve`.
+- **Electron hardening** — `sandbox: true`, `webSecurity: true`,
+  default-deny permission handler, navigation pinned to the app
+  origin, all `window.open` denied.
+- **CI** — `.github/workflows/security.yml` runs ESLint security
+  plugins, `npm audit`, and a custom XSS test suite on every push.
+- **HTML escaping** — all user-controlled strings flowing into
+  `innerHTML` go through [src/utils/html-escape.ts](./src/utils/html-escape.ts).
+
+Run a local audit:
+```bash
+npm run security:check
+```
 
 ---
 
