@@ -1,2 +1,3 @@
 .fpw-config.json
+.fpw-server.pid
 node_modules/

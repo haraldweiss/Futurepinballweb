@@ -17,6 +17,8 @@
     "start:2": "node start-game.js 2",
     "start:3": "node start-game.js 3",
     "start:auto": "node start-game.js auto",
+    "stop": "node stop-game.js",
+    "stop:force": "node stop-game.js --force",
     "install:setup": "node installer.js",
     "install:check": "node installer.js --check-only",
     "electron-dev": "electron . --inspect",
