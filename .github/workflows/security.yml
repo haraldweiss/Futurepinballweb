@@ -71,27 +71,30 @@ jobs:
               testReport = 'Security tests passed';
             }
 
-            const comment = `## 🔒 Security Check Results
-
-### Dependency Audit
-\`\`\`
-${auditReport.slice(0, 500)}
-\`\`\`
-
-### Security Tests
-\`\`\`
-${testReport.slice(0, 500)}
-\`\`\`
-
-**Status**: ✅ Security check completed
-
-For full results, see the artifacts attached to this workflow run.`;
+            const fence = '```';
+            const comment = [
+              '## 🔒 Security Check Results',
+              '',
+              '### Dependency Audit',
+              fence,
+              auditReport.slice(0, 500),
+              fence,
+              '',
+              '### Security Tests',
+              fence,
+              testReport.slice(0, 500),
+              fence,
+              '',
+              '**Status**: ✅ Security check completed',
+              '',
+              'For full results, see the artifacts attached to this workflow run.',
+            ].join('\n');
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: comment
+              body: comment,
             });
 
   xss-scanner:
