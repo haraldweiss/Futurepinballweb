@@ -14,7 +14,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { exec, execSync, spawn } from 'child_process';
+import { exec, execSync, spawn, spawnSync } from 'child_process';
 import readline from 'readline';
 import { fileURLToPath } from 'url';
 
@@ -139,11 +139,23 @@ class RequirementChecker {
 
   async checkStorage() {
     try {
-      let cmd = 'df -h . | tail -1 | awk \'{print $(NF-2)}\'';
+      let available;
       if (this.system.osType === 'win32') {
-        cmd = 'wmic logicaldisk get freespace | tail -1';
+        // PowerShell: get free bytes on the drive containing the install dir
+        const psScript = '(Get-PSDrive -Name (Get-Location).Drive.Name).Free';
+        const result = spawnSync('powershell', ['-NoProfile', '-Command', psScript], { encoding: 'utf8' });
+        if (result.status !== 0 || !result.stdout) {
+          throw new Error(result.stderr || 'PowerShell storage query failed');
+        }
+        const freeBytes = parseInt(result.stdout.trim(), 10);
+        if (Number.isNaN(freeBytes)) {
+          throw new Error('Could not parse PowerShell free-space output');
+        }
+        available = `${(freeBytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
+      } else {
+        const cmd = 'df -h . | tail -1 | awk \'{print $(NF-2)}\'';
+        available = execSync(cmd, { encoding: 'utf8' }).trim();
       }
-      const available = execSync(cmd, { encoding: 'utf8' }).trim();
       log.success(`Storage: ${available} available (required: ${this.requirements.storage} GB)`);
       this.results.storage = { ok: true, available };
     } catch (error) {
@@ -163,7 +175,10 @@ class RequirementChecker {
         const gpu = execSync('lspci 2>/dev/null | grep -i "vga\\|3d" || true', { encoding: 'utf8' });
         hasGPU = gpu.length > 0;
       } else if (this.system.osType === 'win32') {
-        const gpu = execSync('wmic path win32_videocontroller get name 2>nul || true', { encoding: 'utf8' });
+        // PowerShell (CIM) replaces deprecated wmic; locale-independent.
+        const psScript = 'Get-CimInstance -ClassName Win32_VideoController | Select-Object -ExpandProperty Name';
+        const result = spawnSync('powershell', ['-NoProfile', '-Command', psScript], { encoding: 'utf8' });
+        const gpu = (result.status === 0 && result.stdout) ? result.stdout.trim() : '';
         hasGPU = gpu.length > 0;
       }
 
@@ -270,16 +285,27 @@ class ScreenDetector {
 
   detectWindows() {
     try {
-      const output = execSync('wmic desktopmonitor get screenheight,screenwidth 2>nul', { encoding: 'utf8' });
-      const lines = output.split('\n').filter((l) => l.trim() && l !== 'ScreenHeight  ScreenWidth');
+      // PowerShell + System.Windows.Forms.Screen — locale-independent, JSON output.
+      const psScript = 'Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Screen]::AllScreens | ForEach-Object { @{Width=$_.Bounds.Width; Height=$_.Bounds.Height} } | ConvertTo-Json';
+      const result = spawnSync('powershell', ['-NoProfile', '-Command', psScript], { encoding: 'utf8' });
 
-      if (lines.length > 0) {
-        log.success(`Detected ${lines.length} screen(s)`);
-        const parts = lines[0].split(/\s+/).filter((p) => p);
-        if (parts.length >= 2) {
+      if (result.status !== 0 || !result.stdout) {
+        throw new Error(result.stderr || 'PowerShell screen query failed');
+      }
+
+      const parsed = JSON.parse(result.stdout.trim());
+      // ConvertTo-Json yields a single object for one screen, an array for multiple.
+      const screens = Array.isArray(parsed) ? parsed : [parsed];
+
+      if (screens.length > 0) {
+        log.success(`Detected ${screens.length} screen(s)`);
+        const primary = screens[0];
+        const width = parseInt(primary.Width, 10);
+        const height = parseInt(primary.Height, 10);
+        if (!Number.isNaN(width) && !Number.isNaN(height)) {
           return {
-            screenCount: lines.length,
-            primaryResolution: { width: parseInt(parts[1]), height: parseInt(parts[0]) },
+            screenCount: screens.length,
+            primaryResolution: { width, height },
             rotation: 'landscape',
           };
         }

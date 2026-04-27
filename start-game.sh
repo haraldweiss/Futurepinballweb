@@ -7,7 +7,11 @@
 set -e
 
 SCREENS=${1:-"auto"}
-PORT=${2:-5174}
+PORT=${2:-5173}
+if ! [[ "$PORT" =~ ^[0-9]+$ ]] || [ "$PORT" -lt 1024 ] || [ "$PORT" -gt 65535 ]; then
+  echo "✗ Invalid port: $PORT (expected integer 1024-65535)"
+  exit 1
+fi
 BASE_URL="http://localhost:${PORT}"
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

@@ -12,7 +12,7 @@ if "%SCREENS%"=="" (
 
 set PORT=%2
 if "%PORT%"=="" (
-  set PORT=5174
+  set PORT=5173
 )
 
 set BASE_URL=http://localhost:%PORT%

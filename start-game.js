@@ -22,7 +22,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ─── Parse arguments ───
 const SCREENS = process.argv[2] || 'auto';
-const PORT = parseInt(process.argv[3] || '5174', 10);
+const PORT_ARG = process.argv[3] || '5173';
+if (!/^\d+$/.test(PORT_ARG) || +PORT_ARG < 1024 || +PORT_ARG > 65535) {
+  console.error(`✗ Invalid port: ${PORT_ARG} (expected integer 1024-65535)`);
+  process.exit(1);
+}
+const PORT = parseInt(PORT_ARG, 10);
 const BASE_URL = `http://localhost:${PORT}`;
 const PLATFORM = platform();
 
@@ -84,34 +89,33 @@ function isPortOpen(port) {
 }
 
 // ─── Open browser ───
+// Uses spawn (no shell) so URL never goes through a shell parser. URL is
+// already controlled (built from validated PORT + literal query string), but
+// keeping the no-shell discipline prevents future regressions.
 function openBrowser(url) {
-  let command;
+  let cmd, args;
   switch (PLATFORM) {
-    case 'darwin':  // macOS
-      command = `open "${url}"`;
-      break;
-    case 'win32':   // Windows
-      command = `start "" "${url}"`;
-      break;
-    case 'linux':   // Linux
-      command = `xdg-open "${url}" 2>/dev/null || gnome-open "${url}" 2>/dev/null || firefox "${url}"`;
-      break;
+    case 'darwin':
+      cmd = 'open'; args = [url]; break;
+    case 'win32':
+      // start.exe is a cmd.exe builtin; the empty "" is the window title slot
+      cmd = 'cmd'; args = ['/c', 'start', '""', url]; break;
+    case 'linux':
+      cmd = 'xdg-open'; args = [url]; break;
     default:
       log('⚠', `Open manually: ${url}`, 'yellow');
       return;
   }
 
   try {
-    if (PLATFORM === 'win32') {
-      execSync(command, { stdio: 'pipe', shell: true });
-    } else {
-      execSync(command, { stdio: 'pipe' });
-    }
+    const child = spawn(cmd, args, { stdio: 'ignore', detached: true });
+    child.on('error', (err) => {
+      log('⚠', `Could not open browser (${err.code || err.message}). Open manually: ${url}`, 'yellow');
+    });
+    child.unref();
     log('✓', `Browser opened: ${url}`, 'green');
   } catch (err) {
-    console.error('Browser error:', err.message);
-    log('⚠', `Could not open browser automatically.`, 'yellow');
-    log('', `Please open manually: ${url}`, 'yellow');
+    log('⚠', `Open manually: ${url} — ${err.message}`, 'yellow');
   }
 }
 
