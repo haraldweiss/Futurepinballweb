@@ -2,7 +2,10 @@
   "name": "futurepinball-web",
   "version": "0.20.1",
   "description": "Modern cross-platform browser-based 3D pinball game with VPX-competitive graphics and physics",
-  "author": "Future Pinball Contributors",
+  "author": {
+    "name": "Future Pinball Contributors",
+    "email": "noreply@futurepinball.invalid"
+  },
   "license": "MIT",
   "type": "module",
   "main": "electron-main.js",
@@ -100,9 +103,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Future Pinball Web",
-      "installerIcon": "public/icons/icon-256x256.png",
-      "uninstallerIcon": "public/icons/icon-256x256.png"
+      "shortcutName": "Future Pinball Web"
     },
     "mac": {
       "target": [
@@ -112,21 +113,6 @@
       "category": "public.app-category.games",
       "hardenedRuntime": true,
       "gatekeeperAssess": false
-    },
-    "dmg": {
-      "contents": [
-        {
-          "x": 110,
-          "y": 150,
-          "type": "file"
-        },
-        {
-          "x": 240,
-          "y": 150,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ]
     },
     "linux": {
       "target": [
