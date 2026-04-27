@@ -8,6 +8,7 @@ import { getAnimationBindingManager } from '../mechanics/animation-binding';
 import { getAnimationScheduler } from '../mechanics/animation-scheduler';
 import { getBamBridge } from '../bam-bridge';
 import { BAMEngine } from '../bam-engine';
+import { escapeHtml } from '../utils/html-escape';
 
 /**
  * Animation Debugger UI — provides controls and visualization for animations
@@ -164,6 +165,7 @@ export class AnimationDebugger {
       const duration = seq.keyframes?.length > 0
         ? seq.keyframes[seq.keyframes.length - 1].time || 0
         : 0;
+      const safeSeqId = escapeHtml(String(seqId));
 
       html += `
         <div style="
@@ -174,8 +176,8 @@ export class AnimationDebugger {
           border-radius: 3px;
         ">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: bold;">${seqId}</span>
-            <button data-seq-id="${seqId}" class="play-anim-btn" style="
+            <span style="font-weight: bold;">${safeSeqId}</span>
+            <button data-seq-id="${safeSeqId}" class="play-anim-btn" style="
               background: #0088ff;
               border: none;
               color: #fff;

@@ -15,6 +15,7 @@ import { getVideoBindingManager } from './mechanics/video-binding';
 import type { VideoConfig } from './video-manager';
 import type { ExtendedVideoEventType } from './table-video-events';
 import type { TableConfig } from './types';
+import { escapeHtml } from './utils/html-escape';
 
 export interface VideoEditorState {
   videos: VideoConfig[];
@@ -62,7 +63,7 @@ export class VideoEditor {
     panel.innerHTML = `
       <div class="video-editor-header">
         <h3>🎬 Video Manager</h3>
-        <p class="video-editor-subtitle">Table: <strong>${this.tableConfig.name || 'Untitled'}</strong></p>
+        <p class="video-editor-subtitle">Table: <strong>${escapeHtml(this.tableConfig.name || 'Untitled')}</strong></p>
       </div>
 
       <div class="video-editor-content">
@@ -183,17 +184,17 @@ export class VideoEditor {
     container.innerHTML = this.state.videos
       .map(
         (video) => `
-      <div class="video-item ${this.state.selectedVideoId === video.id ? 'active' : ''}" data-video-id="${video.id}">
+      <div class="video-item ${this.state.selectedVideoId === video.id ? 'active' : ''}" data-video-id="${escapeHtml(video.id)}">
         <div class="video-item-header">
-          <strong>${video.name || video.id}</strong>
-          <span class="video-type-badge">${video.type}</span>
+          <strong>${escapeHtml(video.name || video.id)}</strong>
+          <span class="video-type-badge">${escapeHtml(video.type)}</span>
         </div>
         <div class="video-item-meta">
           <span class="video-duration">⏱️ ${video.duration.toFixed(1)}s</span>
           <span class="video-volume">🔊 ${Math.round(video.volume * 100)}%</span>
         </div>
         <div class="video-item-url">
-          <small>${video.url}</small>
+          <small>${escapeHtml(video.url)}</small>
         </div>
       </div>
     `
@@ -226,10 +227,10 @@ export class VideoEditor {
     container.innerHTML = this.state.bindings
       .map(
         (binding) => `
-      <div class="binding-item ${this.state.selectedBindingId === binding.id ? 'active' : ''}" data-binding-id="${binding.id}">
+      <div class="binding-item ${this.state.selectedBindingId === binding.id ? 'active' : ''}" data-binding-id="${escapeHtml(binding.id)}">
         <div class="binding-item-header">
-          <span class="trigger-badge">${binding.trigger}</span>
-          <span class="video-name">${this.getVideoName(binding.videoId)}</span>
+          <span class="trigger-badge">${escapeHtml(binding.trigger)}</span>
+          <span class="video-name">${escapeHtml(this.getVideoName(binding.videoId))}</span>
         </div>
         <div class="binding-item-meta">
           <span class="priority">⭐ P${binding.priority}</span>
@@ -268,17 +269,17 @@ export class VideoEditor {
       <div class="video-details-content">
         <div class="detail-row">
           <label>Video ID</label>
-          <input type="text" value="${video.id}" readonly />
+          <input type="text" value="${escapeHtml(video.id)}" readonly />
         </div>
 
         <div class="detail-row">
           <label>Name</label>
-          <input type="text" value="${video.name || ''}" readonly />
+          <input type="text" value="${escapeHtml(video.name || '')}" readonly />
         </div>
 
         <div class="detail-row">
           <label>URL</label>
-          <input type="text" value="${video.url}" readonly />
+          <input type="text" value="${escapeHtml(video.url)}" readonly />
         </div>
 
         <div class="detail-row">
@@ -311,7 +312,7 @@ export class VideoEditor {
           <ul>
             ${this.state.bindings
               .filter((b) => b.videoId === videoId)
-              .map((b) => `<li>${b.trigger} → <strong>${b.videoId}</strong></li>`)
+              .map((b) => `<li>${escapeHtml(b.trigger)} → <strong>${escapeHtml(b.videoId)}</strong></li>`)
               .join('')}
           </ul>
           ${this.state.bindings.filter((b) => b.videoId === videoId).length === 0 ? '<p class="empty-state">No bindings for this video</p>' : ''}
@@ -376,7 +377,7 @@ export class VideoEditor {
       <div class="form-group">
         <label>Video</label>
         <select id="binding-video">
-          ${this.state.videos.map((v) => `<option value="${v.id}" ${binding.videoId === v.id ? 'selected' : ''}>${v.name || v.id}</option>`).join('')}
+          ${this.state.videos.map((v) => `<option value="${escapeHtml(v.id)}" ${binding.videoId === v.id ? 'selected' : ''}>${escapeHtml(v.name || v.id)}</option>`).join('')}
         </select>
       </div>
 
@@ -644,7 +645,7 @@ export class VideoEditor {
         <div class="form-group">
           <label>Video</label>
           <select id="new-video">
-            ${this.state.videos.map((v) => `<option value="${v.id}">${v.name || v.id}</option>`).join('')}
+            ${this.state.videos.map((v) => `<option value="${escapeHtml(v.id)}">${escapeHtml(v.name || v.id)}</option>`).join('')}
           </select>
         </div>
 

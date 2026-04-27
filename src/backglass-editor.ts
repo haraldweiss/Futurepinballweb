@@ -10,6 +10,7 @@
  */
 
 import type { TableConfig } from './types';
+import { escapeHtml } from './utils/html-escape';
 
 export interface BackglassSettings {
   cabinetColor: number;
@@ -226,7 +227,7 @@ export class BackglassEditor {
 
     list.innerHTML = this.settings.textOverlays.map((overlay, idx) => `
       <div class="overlay-item" data-overlay-idx="${idx}">
-        <input type="text" class="overlay-text" value="${overlay.text}" data-idx="${idx}" placeholder="Text">
+        <input type="text" class="overlay-text" value="${escapeHtml(overlay.text)}" data-idx="${idx}" placeholder="Text">
         <input type="color" class="overlay-color" value="#${this.numberToHex(overlay.color)}" data-idx="${idx}">
         <button class="remove-overlay-btn" data-idx="${idx}">✕</button>
       </div>

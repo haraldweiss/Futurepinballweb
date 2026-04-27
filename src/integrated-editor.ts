@@ -16,6 +16,7 @@ import { BackglassEditor, type BackglassSettings } from './backglass-editor';
 import { DMDEditor, type DMDSettings } from './dmd-editor';
 import { VideoEditor } from './video-editor';
 import { showTableSelector } from './table-selector';
+import { escapeHtml } from './utils/html-escape';
 
 type ToolType = 'select' | 'bumper' | 'target' | 'ramp';
 
@@ -353,7 +354,7 @@ export class EditorModal {
    * Get modal HTML structure
    */
   private getModalHTML(): string {
-    const tableName = this.currentTableConfig?.name || 'Table';
+    const tableName = escapeHtml(this.currentTableConfig?.name || 'Table');
     return `
       <div class="editor-modal-header">
         <div class="header-top">
