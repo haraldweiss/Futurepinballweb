@@ -1,5 +1,10 @@
 /**
- * electron-main.js — Main Process for Desktop App
+ * electron-main.cjs — Main Process for Desktop App
+ *
+ * The .cjs extension is intentional: package.json has "type": "module"
+ * (so the Vite source code is treated as ESM), but Electron's main and
+ * preload scripts use require() / CommonJS semantics. .cjs forces Node
+ * to ignore the "type": "module" hint for these two files specifically.
  *
  * Handles:
  * - Window creation and management
@@ -28,7 +33,7 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
-      preload: path.join(__dirname, 'electron-preload.js'),
+      preload: path.join(__dirname, 'electron-preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,

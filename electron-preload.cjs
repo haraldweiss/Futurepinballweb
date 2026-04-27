@@ -1,8 +1,9 @@
 /**
- * electron-preload.js — Preload Script for Secure Context
+ * electron-preload.cjs — Preload Script for Secure Context
  *
- * Exposes safe APIs to the renderer process
- * using context isolation for security
+ * Exposes safe APIs to the renderer process using context isolation
+ * for security. Uses .cjs to keep CommonJS semantics under
+ * "type": "module" — see electron-main.cjs for the full rationale.
  */
 
 const { contextBridge, ipcRenderer } = require('electron');

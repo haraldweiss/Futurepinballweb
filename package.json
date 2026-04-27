@@ -8,7 +8,7 @@
   },
   "license": "MIT",
   "type": "module",
-  "main": "electron-main.js",
+  "main": "electron-main.cjs",
   "homepage": "./",
   "scripts": {
     "dev": "vite src",
@@ -66,8 +66,8 @@
     "productName": "Future Pinball Web",
     "files": [
       "dist/**/*",
-      "electron-main.js",
-      "electron-preload.js",
+      "electron-main.cjs",
+      "electron-preload.cjs",
       "public/**/*",
       "node_modules/**/*"
     ],
