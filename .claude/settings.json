@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Desktop_Commander__read_process_output",
+      "mcp__Desktop_Commander__read_file",
+      "mcp__Desktop_Commander__list_directory",
+      "mcp__Desktop_Commander__get_file_info",
+      "mcp__Desktop_Commander__list_sessions",
+      "mcp__Claude_in_Chrome__screenshot",
+      "mcp__Claude_in_Chrome__get_page_text",
+      "mcp__Claude_in_Chrome__read_page",
+      "mcp__Kapture_Browser_Automation__screenshot",
+      "mcp__Control_Chrome__get_page_content"
+    ]
+  }
+}

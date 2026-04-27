@@ -31,10 +31,26 @@ function createWindow() {
       preload: path.join(__dirname, 'electron-preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: true,
+      webSecurity: true,
       enableRemoteModule: false,
     },
     icon: path.join(__dirname, 'public/icons/icon-512x512.png'),
   });
+
+  // Deny every permission request by default — game does not need
+  // mic/camera/geolocation/notifications/etc. Whitelist explicitly if needed.
+  mainWindow.webContents.session.setPermissionRequestHandler((_wc, _perm, callback) => callback(false));
+
+  // Block navigation away from app origin to prevent malicious tables
+  // (which run via VBScript transpilation) from steering the renderer to
+  // attacker-controlled origins.
+  mainWindow.webContents.on('will-navigate', (event, navUrl) => {
+    if (!navUrl.startsWith('http://localhost:5173') && !navUrl.startsWith('file://')) {
+      event.preventDefault();
+    }
+  });
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
   // Load the app
   const startUrl = isDev
@@ -67,10 +83,13 @@ app.on('ready', () => {
   createWindow();
   createMenu();
 
-  // Check for updates (only in production)
-  if (!isDev) {
-    autoUpdater.checkForUpdatesAndNotify();
-  }
+  // Auto-update is disabled until a `publish` target is configured in
+  // package.json `build`. Calling checkForUpdatesAndNotify() without one
+  // produces a noisy network failure on every launch. The IPC handlers and
+  // event listeners below remain wired so this can be re-enabled by adding
+  // `publish: github` (or similar) and uncommenting the call.
+  //
+  // if (!isDev) autoUpdater.checkForUpdatesAndNotify();
 });
 
 app.on('window-all-closed', () => {
