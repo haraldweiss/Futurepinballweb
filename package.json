@@ -1,6 +1,6 @@
 {
   "name": "futurepinball-web",
-  "version": "0.20.0",
+  "version": "0.20.1",
   "description": "Modern cross-platform browser-based 3D pinball game with VPX-competitive graphics and physics",
   "author": "Future Pinball Contributors",
   "license": "MIT",
