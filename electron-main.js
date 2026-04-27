@@ -33,7 +33,6 @@ function createWindow() {
       contextIsolation: true,
       sandbox: true,
       webSecurity: true,
-      enableRemoteModule: false,
     },
     icon: path.join(__dirname, 'public/icons/icon-512x512.png'),
   });
@@ -69,9 +68,12 @@ function createWindow() {
     mainWindow = null;
   });
 
-  // Handle any uncaught exceptions
-  mainWindow.webContents.on('crashed', () => {
-    dialog.showErrorBox('Error', 'Application crashed. Please restart.');
+  // Renderer-process crash handler. The legacy 'crashed' event was removed
+  // in Electron 22; 'render-process-gone' replaces it and provides details
+  // (reason: 'crashed' | 'killed' | 'oom' | 'launch-failed' | …).
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    const reason = details?.reason || 'unknown';
+    dialog.showErrorBox('Error', `Renderer terminated (${reason}). Please restart.`);
     app.quit();
   });
 }
