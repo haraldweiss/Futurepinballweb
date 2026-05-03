@@ -319,25 +319,31 @@ window.addEventListener('resize', () => {
       applyOptimizedTableView();
 
       // ─── Canvas Sizing ───
+      // Use displayWidth/displayHeight (CSS pixels) — Three.js applies pixelRatio
+      // internally. Passing canvasWidth (already pixelRatio-multiplied) here
+      // would double-scale the canvas on HiDPI displays.
       const canvasSize = getPlayfieldCanvasSize();
-      renderer.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
+      renderer.setPixelRatio(getOptimalPixelRatio());
+      renderer.setSize(canvasSize.displayWidth, canvasSize.displayHeight);
 
       // Update camera aspect ratio
       camera.aspect = canvasSize.displayWidth / canvasSize.displayHeight;
       camera.updateProjectionMatrix();
 
       // ─── Update Post-Processing Passes ───
+      // Composer/passes also expect CSS pixels — they manage their own
+      // backbuffer allocation based on the renderer's pixelRatio.
       if (composer) {
-        composer.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
+        composer.setSize(canvasSize.displayWidth, canvasSize.displayHeight);
       }
       if (ssrPass) {
-        ssrPass.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
+        ssrPass.setSize(canvasSize.displayWidth, canvasSize.displayHeight);
       }
       if (motionBlurPass) {
-        motionBlurPass.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
+        motionBlurPass.setSize(canvasSize.displayWidth, canvasSize.displayHeight);
       }
       if (perLightBloomPass) {
-        perLightBloomPass.setSize(canvasSize.canvasWidth, canvasSize.canvasHeight);
+        perLightBloomPass.setSize(canvasSize.displayWidth, canvasSize.displayHeight);
       }
 
       // ─── Reposition UI Elements for Different Viewport Sizes ───
@@ -605,10 +611,14 @@ console.log('📷 Camera Configuration:', {
 const renderer = new THREE.WebGLRenderer({ antialias: true, precision: 'highp' });
 renderer.domElement.id = 'playfield-canvas';
 // ─── Responsive Canvas Sizing ───
+// Three.js convention: setPixelRatio FIRST, then setSize with CSS pixels.
+// setSize internally multiplies by pixelRatio for the backbuffer and applies
+// CSS dimensions in CSS pixels — feeding pre-multiplied "device pixels" here
+// would double-scale the canvas on HiDPI screens (causing oversized canvas
+// that overflows the viewport).
 const initialCanvasSize = getPlayfieldCanvasSize();
-renderer.setSize(initialCanvasSize.canvasWidth, initialCanvasSize.canvasHeight);
-renderer.setPixelRatio(1); // We handle pixel ratio in responsive sizing
-renderer.setPixelRatio(getOptimalPixelRatio()); // Use optimal ratio if available
+renderer.setPixelRatio(getOptimalPixelRatio());
+renderer.setSize(initialCanvasSize.displayWidth, initialCanvasSize.displayHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
 renderer.toneMapping       = THREE.ACESFilmicToneMapping;
@@ -3453,18 +3463,19 @@ window.addEventListener('resize', () => {
     rightFlipperGroup.position.x = newFlipperX;
   }
 
-  // Apply to camera
-  camera.aspect = newAspect;
+  // Apply to camera (position/fov only — aspect ratio is handled by primary
+  // handler which uses canvasSize.displayWidth/displayHeight consistently.)
   camera.position.set(0, newTilt, newZoom);
   camera.fov = newFOV;
   camera.updateProjectionMatrix();
 
-  // Update renderer + composer + pixel ratio
-  renderer.setSize(innerWidth, innerHeight);
-  renderer.setPixelRatio(getOptimalPixelRatio());
-  composer.setSize(innerWidth, innerHeight);
+  // NOTE: renderer.setSize / renderer.setPixelRatio / composer.setSize are
+  // intentionally NOT called here. The primary resize handler (debounced
+  // 250ms) does that with canvas-size-aware values. Calling setSize again
+  // here with raw innerWidth/innerHeight conflicts with the primary's HiDPI
+  // logic and was the cause of the table disappearing on resize.
 
-  // Update FXAA resolution
+  // Update FXAA resolution to match current renderer state
   fxaaPass.uniforms['resolution'].value.x = 1 / (innerWidth * renderer.getPixelRatio());
   fxaaPass.uniforms['resolution'].value.y = 1 / (innerHeight * renderer.getPixelRatio());
 
