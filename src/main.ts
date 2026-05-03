@@ -395,8 +395,8 @@ window.addEventListener('resize', () => {
         loaderBox.style.maxHeight = `${Math.min(90, window.innerHeight / 10)}vh`;
       }
 
-      // Log resize info in debug mode
-      if (process.env.DEBUG) {
+      // Log resize info in debug mode (Vite exposes import.meta.env, not Node's process.env)
+      if (import.meta.env.DEV) {
         console.log(`📐 Window Resized: ${window.innerWidth}x${window.innerHeight} (DPR: ${window.devicePixelRatio})`);
       }
     } catch (error) {
@@ -3429,6 +3429,7 @@ setTimeout(() => {
 
 // ─── Resize (with Responsive Adjustments) ─────────────────────────────────────
 window.addEventListener('resize', () => {
+  try {
   // Calculate all responsive parameters
   const newAspect = innerWidth / innerHeight;
   const newZoom = calculateResponsiveZoom(newAspect);
@@ -3479,6 +3480,9 @@ window.addEventListener('resize', () => {
 
   // Update device detection
   (window as any).FPW_DEVICE = detectDeviceType();
+  } catch (error) {
+    console.error('Error during secondary resize handler:', error);
+  }
 });
 
 // ─── Touch Controls ────────────────────────────────────────────────────────────
