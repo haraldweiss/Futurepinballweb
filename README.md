@@ -630,3 +630,7 @@ Last Updated: March 12, 2026 | Version 0.18.0 | Phase 18 Complete ✅
 ---
 
 **🚀 Ready to contribute?** Check out [CONTRIBUTING.md](./CONTRIBUTING.md) or see [GitHub Issues](https://github.com/haraldweiss/Futurepinballweb/issues) for open tasks!
+
+---
+## 🌐 More on wolfinisoftware.de
+[Visit **wolfinisoftware.de**](https://www.wolfinisoftware.de/) for more news, projects, tools & resources.
