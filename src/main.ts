@@ -2309,6 +2309,13 @@ document.addEventListener('keyup', e => {
     callScriptFlipper('right', false);
   }
   if (e.key === 'Enter' && state.inLane && state.plungerCharging) {
+    // ─── Coin gate: only allow launching the ball if the player has actually
+    // started a game (coin inserted or coin-screen timed out).
+    if (!isGameStarted()) {
+      // Briefly show what's needed on the DMD without launching.
+      dmdEvent('INSERT COIN FIRST');
+      return;
+    }
     state.plungerCharging = false;
     const charge = state.plungerCharge;
 
@@ -2329,8 +2336,14 @@ document.addEventListener('keyup', e => {
     state.plungerCharge = 0; state.ballSaveTimer = 3.5;
 
     // Phase 15: Launch ball via physics worker
-    const vy = 16.0 + charge * 14.0;  // Min 16, max 30 m/s upward (playfield reach)
-    const vx = -8.0 - charge * 4.0;   // Min -8, max -12 m/s leftward (into playfield)
+    // Plunger fires the ball straight up. The plunger lane's left wall
+    // ends at y=-2.6, so once the ball clears that height it can drift
+    // sideways into the playfield. Earlier values (vx=-8…-12, vy=16…30)
+    // were so aggressive that the ball overshot the playfield in one frame
+    // and ended up wedged behind walls. These produce a controllable arc
+    // that actually rolls down through the bumpers.
+    const vy = 9.0 + charge * 5.0;     // 9 (light tap) → 14 (full charge) m/s up
+    const vx = -1.2 - charge * 1.8;    // gentle leftward bias so ball drifts into playfield
 
     console.log(`🎯 PLUNGER LAUNCH: charge=${charge.toFixed(2)}, vx=${vx.toFixed(2)}, vy=${vy.toFixed(2)}`);
 
