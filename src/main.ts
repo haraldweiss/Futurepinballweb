@@ -141,6 +141,7 @@ import { getInputOptimizer, disposeInputOptimizer } from './input-optimizer';
 import { getPerformanceDashboard } from './performance-dashboard';
 import { initScoreAnimationManager, getScoreAnimationManager, disposeScoreAnimationManager } from './score-animation-manager';
 import { initTouchControlsManager, getTouchControlsManager, disposeTouchControlsManager } from './touch-controls-manager';
+import { initBallTrailManager, getBallTrailManager, disposeBallTrailManager } from './ball-trail-manager';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -601,18 +602,13 @@ console.log('📷 Camera Configuration:', {
   lookAt: { x: 0, y: 0.5, z: 0 }
 });
 
-const backglassCanvas = document.getElementById('backglass-canvas') as HTMLCanvasElement;
-if (!backglassCanvas) {
-  throw new Error('backglass-canvas element not found in DOM');
-}
-
-const renderer = new THREE.WebGLRenderer({
-  canvas: backglassCanvas,
-  antialias: true,
-  precision: 'highp',
-  alpha: false,
-  preserveDrawingBuffer: false
-});
+const renderer = new THREE.WebGLRenderer({ antialias: true, precision: 'highp' });
+// Give renderer's canvas an ID and ensure it sits behind UI but above background
+renderer.domElement.id = 'playfield-canvas';
+renderer.domElement.style.position = 'fixed';
+renderer.domElement.style.top = '0';
+renderer.domElement.style.left = '0';
+renderer.domElement.style.zIndex = '1';
 // ─── Responsive Canvas Sizing ───
 const initialCanvasSize = getPlayfieldCanvasSize();
 renderer.setSize(initialCanvasSize.canvasWidth, initialCanvasSize.canvasHeight);
@@ -631,6 +627,8 @@ const gl = renderer.getContext()!;
 ['WEBGL_compressed_texture_s3tc', 'WEBGL_compressed_texture_s3tc_srgb',
  'WEBGL_compressed_texture_etc1', 'WEBGL_compressed_texture_etc',
  'WEBGL_compressed_texture_astc'].forEach(ext => gl.getExtension(ext));
+
+document.body.appendChild(renderer.domElement);
 
 // ─── WebGL context loss / restore ────────────────────────────────────────────
 // VPIN cabinets idle for hours and the GPU sometimes resets the WebGL context.
