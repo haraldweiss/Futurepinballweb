@@ -2721,12 +2721,12 @@ function animate(): void {
   updateExtraBalls(dt);
   updateParticles(dt);
 
-  // ─── Coin System: Render coin screen if visible ───
-  if (isCoinScreenVisible()) {
-    updateCoinDisplay();
-  } else {
-    dmdUpdate();
-  }
+  // ─── DMD: always render game state (score + table name + scrolling attract).
+  // The coin screen used to hijack the DMD canvas via updateCoinDisplay(),
+  // which overwrote the game display every frame and produced unreadable
+  // text overlaps. Coin status is shown via the separate UI overlay instead
+  // (see #coin-overlay or the table loader modal). ───
+  dmdUpdate();
 
   // ─── Phase 2: Update Advanced Lighting ───
   if (advancedLightingSystem) {

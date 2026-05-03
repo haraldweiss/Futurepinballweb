@@ -592,18 +592,22 @@ export function dmdRenderPlaying(): void {
 
 export function dmdRenderEvent(): void {
   dmdClear();
-  const flash = Math.floor(dmdState.animFrame / 7) % 2 === 0;
-  if (flash) dmdDrawText(dmdState.eventText, DMD_W / 2, 13, 11);
+  // Always render the event text (no flash). The previous on/off-every-7-frames
+  // flash made the DMD appear unreadable: anyone screenshotting or glancing
+  // mid-flash saw the dark frame. Use a softer pulse on the brightness via
+  // the text's draw style instead if needed in the future.
+  dmdDrawText(dmdState.eventText, DMD_W / 2, 13, 11);
   dmdDrawText(`+${100 * state.multiplier} PTS`, DMD_W / 2, 28, 7);
   dmdFlush();
 }
 
 export function dmdRenderGameOver(): void {
   dmdClear();
-  const flash = Math.floor(dmdState.animFrame / 18) % 2 === 0;
-  if (state.lastRank === 1 && flash) {
+  // Always render header — flashing rendered the DMD unreadable. See comment
+  // in dmdRenderEvent above.
+  if (state.lastRank === 1) {
     dmdDrawText('NEW HIGH SCORE!', DMD_W / 2, 10, 10);
-  } else if (flash) {
+  } else {
     dmdDrawText('GAME OVER', DMD_W / 2, 10, 13);
   }
   const rankStr = state.lastRank ? `RANK #${state.lastRank}  ` : '';
