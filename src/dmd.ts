@@ -406,10 +406,27 @@ class DirtyRectTracker {
 const dirtyRectTracker = new DirtyRectTracker();
 
 // ── DMD State ─────────────────────────────────────────────────────────────────
+//
+// Mode lifecycle (per table session):
+//   tableinfo  — boot scroll: TABLENAME · BY AUTHOR · YEAR  (≈4-5 sec)
+//   attract    — idle: "INSERT COIN TO PLAY" cycling with high scores / controls
+//   launch     — coin inserted, waiting for the player to release the plunger
+//   playing    — game in progress: live score + ball/mult/tablename
+//   event      — temporary in-game notification (BUMPER!, MULTIBALL!, …)
+//                auto-reverts to playing when eventTimer hits 0
+//   gameover   — final score screen
+//
+// State transitions are driven from main.ts:
+//   loadDemoTable     → 'tableinfo' (with bootTimer)
+//   tableinfo expires → 'attract'
+//   coin / startGame  → 'launch'
+//   plunger fires     → 'playing'
+//   game over         → 'gameover'
 export const dmdState = {
-  mode:       'attract' as 'attract' | 'playing' | 'event' | 'gameover',
+  mode:       'tableinfo' as 'tableinfo' | 'attract' | 'launch' | 'playing' | 'event' | 'gameover',
   eventText:  '',
   eventTimer: 0,
+  bootTimer:  0,    // counts down 'tableinfo' → 'attract' (set by main when loading a table)
   scrollX:    0,
   animFrame:  0,
 };
@@ -538,40 +555,11 @@ export function dmdFlush(): void {
 }
 
 // ── Render-Funktionen ────────────────────────────────────────────────────────
+// Legacy alias: external callers (separate backglass window) still import
+// dmdRenderAttract by name. The real attract-mode logic lives below in
+// dmdRenderInsertCoin — forward to it.
 export function dmdRenderAttract(): void {
-  dmdClear();
-  const phase = Math.floor(dmdState.animFrame / 150) % 4;
-  if (phase === 1) {
-    const scores = getTopScores();
-    dmdDrawText('HIGH SCORES', DMD_W / 2, 9, 9);
-    if (scores[0]) dmdDrawText(`#1  ${scores[0].toLocaleString()}`, DMD_W / 2, 21, 7);
-    if (scores[1]) dmdDrawText(`#2  ${scores[1].toLocaleString()}`, DMD_W / 2, 30, 6);
-  } else if (phase === 2) {
-    dmdDrawText('ENTER HALTEN = PLUNGER',      DMD_W / 2, 10, 7);
-    dmdDrawText('Z / X = TILT   M = MUSIK',    DMD_W / 2, 22, 7);
-    dmdDrawText('LEFT/RIGHT SHIFT = FLIPPER',  DMD_W / 2, 30, 6);
-  } else if (phase === 3) {
-    // ─── Show Credits/Coins ───
-    const creditsText = `CREDITS: ${state.credits}`;
-    const instructionText = state.credits > 0 ? 'PRESS 1 OR 2 TO START' : 'INSERT COIN (KEY 5)';
-    dmdDrawText(creditsText, DMD_W / 2, 12, 10);
-    dmdDrawText(instructionText, DMD_W / 2, 26, 7);
-  } else {
-    const S   = DMD_SCALE;
-    const msg = '  FUTURE PINBALL WEB  \u2014 INSERT COIN \u2014  ';
-    dmdOff2d.font      = `bold ${8 * S}px "Courier New", monospace`;
-    dmdOff2d.textAlign = 'left';
-    dmdOff2d.fillStyle = '#fff';
-    const w = dmdOff2d.measureText(msg).width;
-    const x = DMD_W * S - ((dmdState.scrollX * 0.6 * S) % (w + DMD_W * S));
-    dmdOff2d.fillText(msg, x, 13 * S);
-    dmdOff2d.fillStyle = '#aaa';
-    dmdOff2d.font      = `bold ${6 * S}px "Courier New", monospace`;
-    dmdOff2d.textAlign = 'center';
-    dmdOff2d.fillText('FUTURE PINBALL WEB v1.0', DMD_W * S / 2, 27 * S);
-  }
-  dmdState.scrollX++;
-  dmdFlush();
+  dmdRenderInsertCoin();
 }
 
 /**
@@ -666,6 +654,71 @@ export function dmdRenderGameOver(): void {
   dmdFlush();
 }
 
+// ── Boot scroll: TABLENAME · BY AUTHOR · YEAR ────────────────────────────────
+export function dmdRenderTableInfo(): void {
+  dmdClear();
+
+  const tname = (currentTableConfig?.name ?? 'FUTURE PINBALL').toUpperCase();
+  const author = currentTableConfig?.author ?? 'FPW TEAM';
+  const year = currentTableConfig?.year ?? new Date().getFullYear();
+
+  // Top line: small static label so the player knows what the scroll is
+  dmdDrawText('NOW LOADING', DMD_W / 2, 9, 7);
+
+  // Bottom line: continuously scrolls "TABLENAME · BY AUTHOR · 2025"
+  // — at ~30px/sec, the longest name + author + year easily fits per cycle.
+  const scrollLine = `${tname}  ·  BY ${author.toUpperCase()}  ·  ${year}`;
+  dmdDrawTextOrScroll(scrollLine, 26, 9, 0.6, 'right');
+
+  dmdFlush();
+}
+
+// ── Idle / attract: cycles between INSERT COIN, high scores, controls ────────
+export function dmdRenderInsertCoin(): void {
+  dmdClear();
+
+  // Cycle in 4-second blocks: INSERT COIN → HIGH SCORES → CONTROLS → repeat
+  const phase = Math.floor(dmdState.animFrame / 240) % 3;
+
+  if (phase === 0) {
+    // INSERT COIN — top text, then current credits / coin hint at bottom
+    dmdDrawText('INSERT COIN', DMD_W / 2, 12, 11);
+    const hint = state.credits > 0
+      ? `CREDITS: ${state.credits} — PRESS 1 TO START`
+      : 'TO PLAY';
+    dmdDrawTextOrScroll(hint, 27, 7, 0.5, 'right');
+  } else if (phase === 1) {
+    // HIGH SCORES
+    const scores = getTopScores();
+    dmdDrawText('HIGH SCORES', DMD_W / 2, 9, 8);
+    if (scores[0]) dmdDrawText(`#1  ${scores[0].toLocaleString()}`, DMD_W / 2, 21, 7);
+    if (scores[1]) dmdDrawText(`#2  ${scores[1].toLocaleString()}`, DMD_W / 2, 30, 6);
+  } else {
+    // CONTROLS
+    dmdDrawText('CONTROLS', DMD_W / 2, 9, 8);
+    dmdDrawTextOrScroll(
+      'SHIFT = FLIPPER  ·  ENTER = PLUNGER  ·  Z/X = TILT  ·  R = RESET',
+      26, 7, 0.5, 'right'
+    );
+  }
+
+  dmdFlush();
+}
+
+// ── Coin inserted — waiting for plunger ─────────────────────────────────────
+export function dmdRenderLaunch(): void {
+  dmdClear();
+  dmdDrawText('READY TO PLAY', DMD_W / 2, 11, 9);
+  // Pulse the LAUNCH instruction so it draws the eye without flashing off
+  // (using brightness instead of on/off — see dmdRenderEvent comment).
+  const t = (dmdState.animFrame % 60) / 60;
+  const pulse = 0.6 + 0.4 * Math.abs(Math.sin(t * Math.PI));
+  dmdOff2d.globalAlpha = pulse;
+  dmdDrawText('HOLD ENTER TO LAUNCH', DMD_W / 2, 27, 7);
+  dmdOff2d.globalAlpha = 1;
+  dmdFlush();
+}
+
 // ── Update (jeden Frame aufrufen) ─────────────────────────────────────────────
 export function dmdUpdate(): void {
   dmdState.animFrame++;
@@ -673,6 +726,16 @@ export function dmdUpdate(): void {
 
   // ─── Phase 3: Track mode changes for full redraw ───
   const prevMode = dmdState.mode;
+
+  // Mode auto-transitions
+  if (dmdState.bootTimer > 0) {
+    dmdState.bootTimer--;
+    if (dmdState.bootTimer === 0 && dmdState.mode === 'tableinfo') {
+      // Boot scroll done — go to attract idle
+      dmdState.mode = 'attract';
+      dmdState.animFrame = 0;
+    }
+  }
 
   if (dmdState.eventTimer > 0) {
     dmdState.eventTimer--;
@@ -687,10 +750,12 @@ export function dmdUpdate(): void {
   }
 
   switch (dmdState.mode) {
-    case 'attract':  dmdRenderAttract();  break;
-    case 'playing':  dmdRenderPlaying();  break;
-    case 'event':    dmdRenderEvent();    break;
-    case 'gameover': dmdRenderGameOver(); break;
+    case 'tableinfo': dmdRenderTableInfo(); break;
+    case 'attract':   dmdRenderInsertCoin(); break;
+    case 'launch':    dmdRenderLaunch();    break;
+    case 'playing':   dmdRenderPlaying();   break;
+    case 'event':     dmdRenderEvent();     break;
+    case 'gameover':  dmdRenderGameOver();  break;
   }
 
   // ─── Phase 3: Mark canvas dirty for next render ───

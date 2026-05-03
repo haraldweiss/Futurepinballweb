@@ -132,6 +132,8 @@ export interface ElementPhysics {
 
 export interface TableConfig {
   name:        string;
+  author?:     string;   // Designer / creator credit shown on DMD boot scroll
+  year?:       number;   // Year of release shown on DMD boot scroll
   tableColor:  number;
   accentColor: number;
   bumpers:  Array<{ x: number; y: number; color: number; size?: number; light?: { intensity: number; distance: number } }>;

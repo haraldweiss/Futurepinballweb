@@ -1769,7 +1769,13 @@ function updateHUD(): void {
     editorBtn.style.display = currentTableConfig ? 'inline-block' : 'none';
   }
 
-  if (dmdState.mode !== 'event' && dmdState.mode !== 'gameover') dmdState.mode = 'playing';
+  // Default DMD to 'playing' on HUD updates ONLY while a game is in progress.
+  // Pre-game modes (tableinfo / attract / launch) are driven from explicit
+  // transitions in loadDemoTable / closeCoinScreen / plunger-release; we
+  // must not yank the DMD out of them every time the HUD ticks.
+  if (dmdState.mode === 'playing' || dmdState.mode === 'event' || dmdState.mode === 'gameover') {
+    if (dmdState.mode !== 'event' && dmdState.mode !== 'gameover') dmdState.mode = 'playing';
+  }
 }
 
 // ─── Notification ─────────────────────────────────────────────────────────────
@@ -2710,22 +2716,36 @@ function animate(): void {
         : `SAVES  ${Math.ceil(state.ballSaveTimer)}`;
       dmdState.eventText = saveText; dmdState.eventTimer = 8; dmdState.mode = 'event';
     }
-  } else if (state.ballSavesRemaining > 0 && state.ballSaveMode !== 'exhausted') {
-    // Show available extended saves when not in countdown
-    dmdState.eventText = `SAVES READY x${state.ballSavesRemaining}`;
-    dmdState.eventTimer = 10;
-    dmdState.mode = 'event';
   }
+  // NOTE: previously this branch fired "SAVES READY x{n}" as an event every
+  // frame whenever ballSavesRemaining > 0. That hijacked the DMD and
+  // prevented tableinfo / attract / launch / score from ever showing —
+  // there was always a fresh event queued. The remaining-saves count is a
+  // status indicator, not an event; if we want to surface it we should add
+  // it as a small badge on the HUD or a brief one-shot announcement when
+  // the count actually changes, not every frame.
 
   updatePlunger(dt);
   updateExtraBalls(dt);
   updateParticles(dt);
 
-  // ─── DMD: always render game state (score + table name + scrolling attract).
-  // The coin screen used to hijack the DMD canvas via updateCoinDisplay(),
-  // which overwrote the game display every frame and produced unreadable
-  // text overlaps. Coin status is shown via the separate UI overlay instead
-  // (see #coin-overlay or the table loader modal). ───
+  // ─── DMD state machine ───────────────────────────────────────────────────
+  // tableinfo  → attract  (auto, dmdUpdate handles bootTimer countdown)
+  // attract    → launch   (coin screen closed AND ball is in plunger lane)
+  // launch     → playing  (ball leaves the plunger lane)
+  // event      → playing  (auto, dmdUpdate handles eventTimer)
+  // tableinfo is intentionally NOT in the launch transition — the boot
+  // scroll always runs to completion before anything else takes over.
+  if (currentTableConfig) {
+    const coinVisible = isCoinScreenVisible();
+    if (dmdState.mode === 'attract' && !coinVisible && state.inLane) {
+      dmdState.mode = 'launch';
+      dmdState.animFrame = 0;
+    } else if (dmdState.mode === 'launch' && !state.inLane) {
+      dmdState.mode = 'playing';
+      dmdState.animFrame = 0;
+    }
+  }
   dmdUpdate();
 
   // ─── Phase 2: Update Advanced Lighting ───
@@ -2980,6 +3000,14 @@ window.loadDemoTable = async (key: string) => {
   await loadTableWithPhysicsWorker(TABLE_CONFIGS[key], scene);
   setupBackglassForTable();
   window.closeLoader();
+
+  // ─── DMD boot sequence ──────────────────────────────────────────────────
+  // Show TABLENAME · BY AUTHOR · YEAR for ~5 seconds, then fall through to
+  // attract mode (INSERT COIN cycle). dmdUpdate handles the auto-transition
+  // when bootTimer hits 0.
+  dmdState.mode = 'tableinfo';
+  dmdState.bootTimer = 300;  // 5 sec at 60 fps
+  dmdState.animFrame = 0;
 
   // Show coin insert screen (delay for better UX)
   setTimeout(() => {

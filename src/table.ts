@@ -181,7 +181,7 @@ export function getAdvancedLighting(scene: THREE.Scene): AdvancedLightingSystem 
 // ─── TABLE_CONFIGS ────────────────────────────────────────────────────────────
 export const TABLE_CONFIGS: Record<string, TableConfig> = {
   pharaoh: {
-    name: 'Pharaoh\'s Gold', tableColor: 0x2d1810, accentColor: 0xffd700,
+    name: 'Pharaoh\'s Gold', author: 'FPW Team', year: 2025, tableColor: 0x2d1810, accentColor: 0xffd700,
     bumpers: [
       { x:-0.8, y:2.5, color:0xffaa00 }, { x:0.8, y:2.5, color:0xffaa00 }, { x:0.0, y:3.8, color:0xffaa00 },
     ],
@@ -199,7 +199,7 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
     ],
   },
   dragon: {
-    name: 'Dragon\'s Castle', tableColor: 0x1a1a1a, accentColor: 0xff0000,
+    name: 'Dragon\'s Castle', author: 'FPW Team', year: 2025, tableColor: 0x1a1a1a, accentColor: 0xff0000,
     bumpers: [
       { x:-1.4, y:1.5, color:0xff2020 }, { x:1.4, y:1.5, color:0xff2020 },
       { x:0.0,  y:2.8, color:0xff2020 }, { x:-0.8, y:3.8, color:0xcc0000 }, { x:0.8, y:3.8, color:0xcc0000 },
@@ -221,7 +221,7 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
     ],
   },
   knight: {
-    name: 'Knight\'s Quest', tableColor: 0x2d2416, accentColor: 0xffff00,
+    name: 'Knight\'s Quest', author: 'FPW Team', year: 2025, tableColor: 0x2d2416, accentColor: 0xffff00,
     bumpers: [
       { x:-0.9, y:2.2, color:0xffdd44 }, { x:0.9, y:2.2, color:0xffdd44 },
     ],
@@ -237,7 +237,7 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
     ],
   },
   cyber: {
-    name: 'Cyber Nexus', tableColor: 0x0a0a1a, accentColor: 0x00ff88,
+    name: 'Cyber Nexus', author: 'FPW Team', year: 2025, tableColor: 0x0a0a1a, accentColor: 0x00ff88,
     bumpers: [
       { x:-1.2, y:1.6, color:0x00ffaa }, { x:1.2, y:1.6, color:0x00ffaa },
       { x:0.0,  y:3.0, color:0x00ffaa }, { x:-0.7, y:4.0, color:0x00dd88 }, { x:0.7, y:4.0, color:0x00dd88 },
@@ -258,7 +258,7 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
     ],
   },
   neon: {
-    name: 'Neon City', tableColor: 0x1a0a2e, accentColor: 0xff006e,
+    name: 'Neon City', author: 'FPW Team', year: 2025, tableColor: 0x1a0a2e, accentColor: 0xff006e,
     bumpers: [
       { x:-0.9, y:2.3, color:0xff1493 }, { x:0.9, y:2.3, color:0xff1493 }, { x:0.0, y:3.7, color:0xdd0066 },
     ],
@@ -276,7 +276,7 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
     ],
   },
   jungle: {
-    name: 'Jungle Expedition', tableColor: 0x1a2d1a, accentColor: 0x00dd44,
+    name: 'Jungle Expedition', author: 'FPW Team', year: 2025, tableColor: 0x1a2d1a, accentColor: 0x00dd44,
     bumpers: [
       { x:-0.9, y:1.8, color:0x00dd44 }, { x:0.9, y:1.8, color:0x00dd44 },
       { x:0.0,  y:3.0, color:0x00cc33 }, { x:-1.4, y:3.5, color:0x22aa44 },
