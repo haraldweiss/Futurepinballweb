@@ -47,8 +47,8 @@ function initializePhysics(config: any): void {
     .setGravityScale(1.0, true)
     .setCanSleep(false)
     .setLinearDamping(0.002)
-    .setAngularDamping(0.1);
-    // Note: CCD is enabled via collider creation, not on RigidBodyDesc
+    .setAngularDamping(0.1)
+    .setCcdEnabled(true);  // CCD prevents ball tunneling through walls
 
   ballBody = world.createRigidBody(ballDesc);
 
@@ -56,8 +56,7 @@ function initializePhysics(config: any): void {
     RAPIER.ColliderDesc.ball(0.22)
       .setRestitution(config.ballRestitution ?? 0.5)
       .setFriction(config.ballFriction ?? 0.3)
-      .setDensity(1.0)
-      .setEnabledCCD(true),  // Enable CCD to prevent ball tunneling through walls
+      .setDensity(1.0),
     ballBody
   );
 

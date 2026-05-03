@@ -1164,18 +1164,18 @@ async function initPhysics(): Promise<void> {
   const eventQueue = new RAPIER.EventQueue(true);
 
   const ballBody = world.createRigidBody(
-    RAPIER.RigidBodyDesc.dynamic().setTranslation(2.55, -5.0).setGravityScale(0.0).setLinearDamping(0.0).setAngularDamping(0.9)
+    RAPIER.RigidBodyDesc.dynamic().setTranslation(2.55, -5.0).setGravityScale(0.0).setLinearDamping(0.0).setAngularDamping(0.9).setCcdEnabled(true)
   );
   const ballCollider = world.createCollider(
-    RAPIER.ColliderDesc.ball(0.22).setRestitution(0.5).setFriction(0.3).setEnabledCCD(true), ballBody
+    RAPIER.ColliderDesc.ball(0.22).setRestitution(0.5).setFriction(0.3), ballBody
   );
 
-  const lFlipperBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(-1.15, -4.6));
-  const lFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13).setTranslation(1.05, 0.0).setRestitution(0.5).setFriction(0.6).setEnabledCCD(true), lFlipperBody);
+  const lFlipperBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(-1.15, -4.6).setCcdEnabled(true));
+  const lFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13).setTranslation(1.05, 0.0).setRestitution(0.5).setFriction(0.6), lFlipperBody);
   leftFlipperColliderHandle = lFlipperCollider.handle;  // Phase 5: Save handle
 
-  const rFlipperBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(1.15, -4.6));
-  const rFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13).setTranslation(-1.05, 0.0).setRestitution(0.5).setFriction(0.6).setEnabledCCD(true), rFlipperBody);
+  const rFlipperBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(1.15, -4.6).setCcdEnabled(true));
+  const rFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13).setTranslation(-1.05, 0.0).setRestitution(0.5).setFriction(0.6), rFlipperBody);
   rightFlipperColliderHandle = rFlipperCollider.handle;  // Phase 5: Save handle
 
   const addFixedBox = (x:number,y:number,hw:number,hh:number,angle=0,restitution=0.75) => {
@@ -1566,8 +1566,8 @@ function launchMultiBall(): void {
   const startX = (Math.random()-0.5)*1.2, startY = 2.5+Math.random();
   let rapierBody = null;
   if (physics && RAPIER) {
-    rapierBody = physics.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(startX,startY).setLinearDamping(0.0).setAngularDamping(0.9));
-    physics.world.createCollider(RAPIER.ColliderDesc.ball(0.22).setRestitution(0.5).setFriction(0.3).setEnabledCCD(true), rapierBody);
+    rapierBody = physics.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(startX,startY).setLinearDamping(0.0).setAngularDamping(0.9).setCcdEnabled(true));
+    physics.world.createCollider(RAPIER.ColliderDesc.ball(0.22).setRestitution(0.5).setFriction(0.3), rapierBody);
     rapierBody.setLinvel({ x:-3+Math.random()*6, y:5+Math.random()*5 }, true);
   }
   extraBalls.push({ pos:new THREE.Vector3(startX,startY,0.5), vel:{x:0,y:0}, mesh, rapierBody });
