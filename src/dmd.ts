@@ -655,6 +655,8 @@ export function dmdRenderGameOver(): void {
 }
 
 // ── Boot scroll: TABLENAME · BY AUTHOR · YEAR ────────────────────────────────
+// Always scrolls (does not fall back to centred-static), so the boot sequence
+// is unambiguously animated even on tables where the info string fits.
 export function dmdRenderTableInfo(): void {
   dmdClear();
 
@@ -665,12 +667,37 @@ export function dmdRenderTableInfo(): void {
   // Top line: small static label so the player knows what the scroll is
   dmdDrawText('NOW LOADING', DMD_W / 2, 9, 7);
 
-  // Bottom line: continuously scrolls "TABLENAME · BY AUTHOR · 2025"
-  // — at ~30px/sec, the longest name + author + year easily fits per cycle.
-  const scrollLine = `${tname}  ·  BY ${author.toUpperCase()}  ·  ${year}`;
-  dmdDrawTextOrScroll(scrollLine, 26, 9, 0.6, 'right');
+  // Bottom line: ALWAYS scroll, regardless of length
+  const scrollLine = `${tname}    ·    BY ${author.toUpperCase()}    ·    ${year}    `;
+  dmdScrollText(scrollLine, 26, 9, 0.8, 'right');
 
   dmdFlush();
+}
+
+/**
+ * Force-scroll a single line: skips the "fits → centre" early-return so the
+ * text always animates, padding the gap with extra spaces so two adjacent
+ * cycles read as one continuous ticker.
+ */
+function dmdScrollText(
+  text: string,
+  y: number,
+  size: number,
+  speedPxPerFrame: number = 0.6,
+  direction: 'left' | 'right' = 'right'
+): void {
+  const S = DMD_SCALE;
+  dmdOff2d.font = `normal ${size * S}px "Courier New", monospace`;
+  const cycleW = dmdOff2d.measureText(text).width;
+  const displayPx = DMD_W * S;
+  const t = (dmdState.animFrame * speedPxPerFrame * S) % cycleW;
+  const x0 = direction === 'right' ? -cycleW + t : displayPx - t;
+
+  dmdOff2d.fillStyle = '#fff';
+  dmdOff2d.textAlign = 'left';
+  dmdOff2d.textBaseline = 'alphabetic';
+  dmdOff2d.fillText(text, x0, y * S);
+  dmdOff2d.fillText(text, x0 + cycleW, y * S);
 }
 
 // ── Idle / attract: cycles between INSERT COIN, high scores, controls ────────
