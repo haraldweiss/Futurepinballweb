@@ -601,7 +601,18 @@ console.log('📷 Camera Configuration:', {
   lookAt: { x: 0, y: 0.5, z: 0 }
 });
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, precision: 'highp' });
+const backglassCanvas = document.getElementById('backglass-canvas') as HTMLCanvasElement;
+if (!backglassCanvas) {
+  throw new Error('backglass-canvas element not found in DOM');
+}
+
+const renderer = new THREE.WebGLRenderer({
+  canvas: backglassCanvas,
+  antialias: true,
+  precision: 'highp',
+  alpha: false,
+  preserveDrawingBuffer: false
+});
 // ─── Responsive Canvas Sizing ───
 const initialCanvasSize = getPlayfieldCanvasSize();
 renderer.setSize(initialCanvasSize.canvasWidth, initialCanvasSize.canvasHeight);
@@ -620,8 +631,6 @@ const gl = renderer.getContext()!;
 ['WEBGL_compressed_texture_s3tc', 'WEBGL_compressed_texture_s3tc_srgb',
  'WEBGL_compressed_texture_etc1', 'WEBGL_compressed_texture_etc',
  'WEBGL_compressed_texture_astc'].forEach(ext => gl.getExtension(ext));
-
-document.body.appendChild(renderer.domElement);
 
 // ─── WebGL context loss / restore ────────────────────────────────────────────
 // VPIN cabinets idle for hours and the GPU sometimes resets the WebGL context.

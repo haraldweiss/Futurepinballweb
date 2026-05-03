@@ -216,7 +216,8 @@
     body.role-dmd #multiscreen-modal { display: none !important; }
     body.role-dmd #loading-overlay { display: none !important; }
 
-    #backglass-canvas { display: none; position: fixed; inset: 0; width: 100%; height: 100%; }
+    #backglass-canvas { display: block; position: fixed; inset: 0; width: 100%; height: 100%; }
+    body.role-dmd #backglass-canvas { display: none; }
     body.role-backglass #backglass-canvas { display: block; }
     body.role-backglass #dmd-wrap { display: none !important; }
 
