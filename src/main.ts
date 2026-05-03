@@ -2238,10 +2238,20 @@ document.addEventListener('keydown', e => {
     return;
   }
 
-  // Start Game if coin screen is showing
+  // Start Game if coin screen is showing.
+  // Enter is also the plunger key. If we just `return`-ed here we'd swallow
+  // the keypress and the plunger would never start charging — the player
+  // saw 'LAUNCH BALL' and pressed Enter, nothing happened, then on release
+  // their key-up was ignored too. Instead: start the game AND fall through
+  // so the plunger-charge code below also runs.
   if (checkKeyBinding(e, 'startGame') && isCoinScreenVisible() && !isGameStarted()) {
-    startGame();
-    return;
+    if (getPlayerCount() > 0) {
+      startGame();
+      // do NOT return — let the Enter-handler below begin charging the plunger
+    } else {
+      dmdEvent('INSERT COIN FIRST');
+      return;
+    }
   }
 
   // Multi-player start: keys 1-4 pick the player count (capped at credits in)
