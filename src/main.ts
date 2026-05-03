@@ -1311,6 +1311,33 @@ async function setupPhysicsWorker(): Promise<void> {
         cleanTargetMap.set(key, { x: value.x, y: value.y, index: value.index });
       });
 
+      // Perimeter walls — must be sent to the physics worker so the ball
+      // stays on the table. The main-thread world built by buildPhysicsTable()
+      // is now only used for legacy fallback; the worker has its own RAPIER
+      // world that needs its own collider definitions.
+      // Geometry mirrors buildPhysicsTable() in table.ts.
+      const tableBodies = [
+        // Top wall — seals top of playfield
+        { type: 'box', x: 0,     y: 6.3, width: 3.3,  height: 0.2, restitution: 0.5, friction: 0.2 },
+        // Left wall
+        { type: 'box', x: -3.15, y: 0,   width: 0.15, height: 7.0, restitution: 0.5, friction: 0.2 },
+        // Right wall
+        { type: 'box', x: 3.15,  y: 0,   width: 0.15, height: 7.0, restitution: 0.5, friction: 0.2 },
+        // Slingshots (left + right of flippers)
+        { type: 'box', x: -1.95, y: -3.5, width: 0.12, height: 0.9, rotation: -0.45, restitution: 1.4, friction: 0.3 },
+        { type: 'box', x:  1.95, y: -3.5, width: 0.12, height: 0.9, rotation:  0.45, restitution: 1.4, friction: 0.3 },
+        // Outer walls below slingshots (toward flippers)
+        { type: 'box', x: -2.65, y: -4.8, width: 0.1, height: 1.0, restitution: 0.5, friction: 0.2 },
+        { type: 'box', x:  2.65, y: -4.8, width: 0.1, height: 1.0, restitution: 0.5, friction: 0.2 },
+        // Bottom drain (well below flippers — catches missed balls; absent here is the
+        // intentional 3.0-unit gap between flippers used for natural draining)
+        // Plunger lane right side
+        { type: 'box', x:  2.95, y: -2.0, width: 0.08, height: 2.2, restitution: 0.5, friction: 0.3 },
+        // Apron / inlane guides
+        { type: 'box', x: -1.55, y: -4.4, width: 0.35, height: 0.12, rotation: -0.35, restitution: 0.5, friction: 0.5 },
+        { type: 'box', x:  1.55, y: -4.4, width: 0.35, height: 0.12, rotation:  0.35, restitution: 0.5, friction: 0.5 },
+      ];
+
       bridge.initializePhysicsWorld({
         ballInitialPos: { x: 2.65, y: -5.2 },
         ballRestitution: physicsConfig.ball.restitution,
@@ -1320,7 +1347,7 @@ async function setupPhysicsWorker(): Promise<void> {
         flipperLength: physicsConfig.flipper.length,
         flipperRestitution: physicsConfig.flipper.restitution,
         flipperFriction: physicsConfig.flipper.friction,
-        tableBodies: [],
+        tableBodies,
         bumperMap: cleanBumperMap,
         targetMap: cleanTargetMap,
         slingshotMap: physics.slingshotMap,

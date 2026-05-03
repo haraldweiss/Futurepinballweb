@@ -306,7 +306,12 @@ const dmdOff2d = dmdOff.getContext('2d')!;
 dmdOff2d.imageSmoothingEnabled = true;
 
 // ── Modus (Dot / Solid) ───────────────────────────────────────────────────────
-export let dmdSolidMode = localStorage.getItem('fpw_dmd_mode') === 'solid';
+// Default to solid mode — the LED-dot rendering at 128x32 native resolution
+// makes most text unreadable on modern high-DPI displays. SOLID renders the
+// underlying smooth canvas with the LED color overlay, which is far more
+// legible. Users can still toggle to DOT mode via the button if they prefer
+// the retro look.
+export let dmdSolidMode = (localStorage.getItem('fpw_dmd_mode') ?? 'solid') === 'solid';
 
 export function toggleDMDMode(): void {
   dmdSolidMode = !dmdSolidMode;
