@@ -63,10 +63,19 @@ export function addCoin(): void {
 }
 
 // ─── Start Game ──────────────────────────────────────────────────────────────
-export function startGame(): void {
+// playerCount: optional explicit player count (1..4). If omitted, defaults
+// to whatever currentPlayers is (== coins inserted, capped at 4).
+// Each requested player consumes one credit, so requesting more players than
+// inserted credits is silently capped down.
+export function startGame(playerCount?: number): void {
   if (coinSystemState.coinsInserted === 0) {
     console.log('⚠️ Cannot start game - no coins inserted');
     return;
+  }
+
+  if (playerCount !== undefined) {
+    const requested = Math.max(1, Math.min(4, Math.floor(playerCount)));
+    coinSystemState.currentPlayers = Math.min(requested, coinSystemState.coinsInserted);
   }
 
   coinSystemState.gameStarted = true;

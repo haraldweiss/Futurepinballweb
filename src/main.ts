@@ -2244,6 +2244,14 @@ document.addEventListener('keydown', e => {
     return;
   }
 
+  // Multi-player start: keys 1-4 pick the player count (capped at credits in)
+  if (isCoinScreenVisible() && !isGameStarted()
+      && (e.key === '1' || e.key === '2' || e.key === '3' || e.key === '4')) {
+    const requested = parseInt(e.key, 10);
+    startGame(requested);
+    return;
+  }
+
   // ─── Phase 13.2: Quick Rotation Controls for Cabinet Mode (Alt+Number) ───
   // Alt+1=0°, Alt+2=90°, Alt+3=180°, Alt+4=270°
   if (e.altKey && e.key === '1') {
@@ -2309,12 +2317,21 @@ document.addEventListener('keyup', e => {
     callScriptFlipper('right', false);
   }
   if (e.key === 'Enter' && state.inLane && state.plungerCharging) {
-    // ─── Coin gate: only allow launching the ball if the player has actually
-    // started a game (coin inserted or coin-screen timed out).
+    // ─── Coin gate: only allow launching the ball if at least one coin
+    // is in. If the player has inserted credits but didn't press '1' to
+    // explicitly start, we auto-start now (more forgiving — the plunger
+    // press is itself a clear "I want to play" signal).
     if (!isGameStarted()) {
-      // Briefly show what's needed on the DMD without launching.
-      dmdEvent('INSERT COIN FIRST');
-      return;
+      if (getPlayerCount() > 0) {
+        startGame();
+      } else {
+        // No coin yet — bounce them back to the coin screen.
+        dmdEvent('INSERT COIN FIRST');
+        if (!isCoinScreenVisible()) showCoinScreen();
+        state.plungerCharging = false;
+        state.plungerCharge = 0;
+        return;
+      }
     }
     state.plungerCharging = false;
     const charge = state.plungerCharge;

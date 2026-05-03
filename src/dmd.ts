@@ -2,6 +2,7 @@ import { state, currentTableConfig } from './game';
 import { getTopScores } from './highscore';
 import { getDMDSize, getDMDDotSize, onDisplayResize } from './responsive-display';
 import { dmdBoundsTracker } from './dmd-bounds-tracker';
+import { coinSystemState } from './coin-system';
 
 // ── DMD Konstanten ───────────────────────────────────────────────────────────
 // ─── Phase 3: Configurable Resolution ───
@@ -655,8 +656,9 @@ export function dmdRenderGameOver(): void {
 }
 
 // ── Boot scroll: TABLENAME · BY AUTHOR · YEAR ────────────────────────────────
-// Always scrolls (does not fall back to centred-static), so the boot sequence
-// is unambiguously animated even on tables where the info string fits.
+// Always scrolls so the boot sequence is unambiguously animated. Top line
+// also gets a subtle pulse via dot-count to make it clear this isn't a
+// frozen frame.
 export function dmdRenderTableInfo(): void {
   dmdClear();
 
@@ -664,12 +666,14 @@ export function dmdRenderTableInfo(): void {
   const author = currentTableConfig?.author ?? 'FPW TEAM';
   const year = currentTableConfig?.year ?? new Date().getFullYear();
 
-  // Top line: small static label so the player knows what the scroll is
-  dmdDrawText('NOW LOADING', DMD_W / 2, 9, 7);
+  // Top line: "LOADING" with animated dots so it's never visually frozen
+  // even if the bottom-line scroll is briefly off-screen between cycles.
+  const dots = '.'.repeat(1 + Math.floor(dmdState.animFrame / 20) % 4);
+  dmdDrawText('LOADING' + dots, DMD_W / 2, 9, 7);
 
-  // Bottom line: ALWAYS scroll, regardless of length
+  // Bottom line: ALWAYS scroll, faster so motion is obvious in the 5-sec window
   const scrollLine = `${tname}    ·    BY ${author.toUpperCase()}    ·    ${year}    `;
-  dmdScrollText(scrollLine, 26, 9, 0.8, 'right');
+  dmdScrollText(scrollLine, 26, 9, 1.4, 'right');
 
   dmdFlush();
 }
@@ -704,16 +708,25 @@ function dmdScrollText(
 export function dmdRenderInsertCoin(): void {
   dmdClear();
 
+  const coins = coinSystemState.coinsInserted;
   // Cycle in 4-second blocks: INSERT COIN → HIGH SCORES → CONTROLS → repeat
   const phase = Math.floor(dmdState.animFrame / 240) % 3;
 
   if (phase === 0) {
-    // INSERT COIN — top text, then current credits / coin hint at bottom
-    dmdDrawText('INSERT COIN', DMD_W / 2, 12, 11);
-    const hint = state.credits > 0
-      ? `CREDITS: ${state.credits} — PRESS 1 TO START`
-      : 'TO PLAY';
-    dmdDrawTextOrScroll(hint, 27, 7, 0.5, 'right');
+    if (coins === 0) {
+      // No credits yet — invite to insert
+      dmdDrawText('INSERT COIN', DMD_W / 2, 12, 11);
+      dmdScrollText('  PRESS 5 TO INSERT COIN  ', 27, 7, 0.7, 'right');
+    } else {
+      // Credits available — show count + start hint per allowed player count
+      // (1 credit = 1 player, 2 = 2 players, … capped at 4)
+      dmdDrawText(`CREDITS  ${coins}`, DMD_W / 2, 12, 11);
+      const maxPlayers = Math.min(coins, 4);
+      const hint = maxPlayers === 1
+        ? 'PRESS 1 TO START'
+        : `PRESS 1-${maxPlayers} TO START  (${maxPlayers}P MAX)`;
+      dmdScrollText('   ' + hint + '   ', 27, 7, 0.7, 'right');
+    }
   } else if (phase === 1) {
     // HIGH SCORES
     const scores = getTopScores();
@@ -723,9 +736,9 @@ export function dmdRenderInsertCoin(): void {
   } else {
     // CONTROLS
     dmdDrawText('CONTROLS', DMD_W / 2, 9, 8);
-    dmdDrawTextOrScroll(
-      'SHIFT = FLIPPER  ·  ENTER = PLUNGER  ·  Z/X = TILT  ·  R = RESET',
-      26, 7, 0.5, 'right'
+    dmdScrollText(
+      '  SHIFT = FLIPPER  ·  ENTER = PLUNGER  ·  Z/X = TILT  ·  R = RESET  ',
+      26, 7, 0.7, 'right'
     );
   }
 
