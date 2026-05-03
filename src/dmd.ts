@@ -574,6 +574,55 @@ export function dmdRenderAttract(): void {
   dmdFlush();
 }
 
+/**
+ * Render text on the offscreen DMD buffer. If it fits the display, draws it
+ * centered. If it overflows, scrolls it horizontally so the user can still
+ * read the full content over time.
+ *
+ * Direction: 'right' means the text travels left-to-right across the panel
+ * (entry from left edge, exit at right edge), 'left' is the traditional
+ * ticker tape direction.
+ */
+function dmdDrawTextOrScroll(
+  text: string,
+  y: number,
+  size: number,
+  speedPxPerFrame: number = 0.5,
+  direction: 'left' | 'right' = 'right'
+): void {
+  const S = DMD_SCALE;
+  const fontStr = `normal ${size * S}px "Courier New", monospace`;
+  dmdOff2d.font = fontStr;
+  const measured = dmdOff2d.measureText(text).width;
+  const displayPx = DMD_W * S;
+  const safeWidthPx = displayPx - 2 * S;  // small horizontal padding
+
+  if (measured <= safeWidthPx) {
+    // Fits \u2014 draw centered exactly like before
+    dmdDrawText(text, DMD_W / 2, y, size);
+    return;
+  }
+
+  // Overflows \u2014 scroll. Pad with spaces so two consecutive cycles have a
+  // visible gap and read as one repeating line, not as touching characters.
+  const padded = text + '    ';
+  dmdOff2d.font = fontStr;
+  const cycleW = dmdOff2d.measureText(padded).width;
+  const t = (dmdState.animFrame * speedPxPerFrame * S) % cycleW;
+
+  // Position of first copy. For 'right' the text emerges from the left edge
+  // and moves rightward; for 'left' it emerges from the right edge and moves
+  // leftward (classic ticker tape).
+  const x0 = direction === 'right' ? -cycleW + t : displayPx - t;
+
+  dmdOff2d.fillStyle = '#fff';
+  dmdOff2d.textAlign = 'left';
+  dmdOff2d.textBaseline = 'alphabetic';
+  // Draw two adjacent copies for a seamless wrap.
+  dmdOff2d.fillText(padded, x0, y * S);
+  dmdOff2d.fillText(padded, x0 + cycleW, y * S);
+}
+
 export function dmdRenderPlaying(): void {
   dmdClear();
   const scoreStr = state.score.toLocaleString().padStart(12, ' ');
@@ -586,17 +635,19 @@ export function dmdRenderPlaying(): void {
     playerInfo = `P${state.currentPlayer} `;
   }
 
-  dmdDrawText(`${playerInfo}BALL ${state.ballNum}/3   \u00d7${state.multiplier}   ${tname}`, DMD_W / 2, 28, 7);
+  // Status line \u2014 fits at default font on most table names; long names
+  // (e.g. "PHARAOH'S GOLD") may overflow and will then scroll.
+  dmdDrawTextOrScroll(
+    `${playerInfo}BALL ${state.ballNum}/3   \u00d7${state.multiplier}   ${tname}`,
+    28, 7
+  );
   dmdFlush();
 }
 
 export function dmdRenderEvent(): void {
   dmdClear();
-  // Always render the event text (no flash). The previous on/off-every-7-frames
-  // flash made the DMD appear unreadable: anyone screenshotting or glancing
-  // mid-flash saw the dark frame. Use a softer pulse on the brightness via
-  // the text's draw style instead if needed in the future.
-  dmdDrawText(dmdState.eventText, DMD_W / 2, 13, 11);
+  // Event text \u2014 scrolls if it overflows, otherwise centered. No flash.
+  dmdDrawTextOrScroll(dmdState.eventText, 13, 11);
   dmdDrawText(`+${100 * state.multiplier} PTS`, DMD_W / 2, 28, 7);
   dmdFlush();
 }
