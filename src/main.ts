@@ -1315,25 +1315,35 @@ async function setupPhysicsWorker(): Promise<void> {
       // stays on the table. The main-thread world built by buildPhysicsTable()
       // is now only used for legacy fallback; the worker has its own RAPIER
       // world that needs its own collider definitions.
-      // Geometry mirrors buildPhysicsTable() in table.ts.
+      // Geometry mirrors buildPhysicsTable() in table.ts (do not change one
+      // without the other or main-thread fallback diverges from worker).
       const tableBodies = [
-        // Top wall — seals top of playfield
-        { type: 'box', x: 0,     y: 6.3, width: 3.3,  height: 0.2, restitution: 0.5, friction: 0.2 },
+        // ── PERIMETER ──
+        // Top wall
+        { type: 'box', x: 0,     y: 6.3,  width: 3.3,  height: 0.2, restitution: 0.5, friction: 0.2 },
         // Left wall
-        { type: 'box', x: -3.15, y: 0,   width: 0.15, height: 7.0, restitution: 0.5, friction: 0.2 },
+        { type: 'box', x: -3.15, y: 0,    width: 0.15, height: 7.0, restitution: 0.5, friction: 0.2 },
         // Right wall
-        { type: 'box', x: 3.15,  y: 0,   width: 0.15, height: 7.0, restitution: 0.5, friction: 0.2 },
-        // Slingshots (left + right of flippers)
-        { type: 'box', x: -1.95, y: -3.5, width: 0.12, height: 0.9, rotation: -0.45, restitution: 1.4, friction: 0.3 },
-        { type: 'box', x:  1.95, y: -3.5, width: 0.12, height: 0.9, rotation:  0.45, restitution: 1.4, friction: 0.3 },
-        // Outer walls below slingshots (toward flippers)
-        { type: 'box', x: -2.65, y: -4.8, width: 0.1, height: 1.0, restitution: 0.5, friction: 0.2 },
-        { type: 'box', x:  2.65, y: -4.8, width: 0.1, height: 1.0, restitution: 0.5, friction: 0.2 },
-        // Bottom drain (well below flippers — catches missed balls; absent here is the
-        // intentional 3.0-unit gap between flippers used for natural draining)
-        // Plunger lane right side
-        { type: 'box', x:  2.95, y: -2.0, width: 0.08, height: 2.2, restitution: 0.5, friction: 0.3 },
-        // Apron / inlane guides
+        { type: 'box', x: 3.15,  y: 0,    width: 0.15, height: 7.0, restitution: 0.5, friction: 0.2 },
+
+        // ── SLINGSHOTS (angled bumpers either side of flippers) ──
+        { type: 'box', x: -2.2,  y: -1.5, width: 0.12, height: 0.9, rotation: -0.5,  restitution: 1.4, friction: 0.3 },
+        { type: 'box', x:  2.2,  y: -1.5, width: 0.12, height: 0.9, rotation:  0.5,  restitution: 1.4, friction: 0.3 },
+
+        // ── DRAIN LANE WALLS (guide ball between flippers) ──
+        // Without these the ball escapes sideways instead of draining
+        { type: 'box', x: -1.15, y: -5.05, width: 0.1, height: 1.0, restitution: 0.5, friction: 0.2 },
+        { type: 'box', x:  1.15, y: -5.05, width: 0.1, height: 1.0, restitution: 0.5, friction: 0.2 },
+
+        // ── DRAIN BOTTOM (catches the ball — without this it falls forever) ──
+        { type: 'box', x: 0,     y: -6.0, width: 3.2, height: 0.2, restitution: 0.3, friction: 0.1 },
+
+        // ── PLUNGER LANE ──
+        { type: 'box', x: 2.35, y: -4.8, width: 0.08, height: 2.2, restitution: 0.5, friction: 0.3 },
+        { type: 'box', x: 2.95, y: -4.8, width: 0.08, height: 2.2, restitution: 0.5, friction: 0.3 },
+        { type: 'box', x: 2.65, y: -6.3, width: 0.35, height: 0.12, restitution: 0.5, friction: 0.5 },
+
+        // ── INLANE / APRON GUIDES ──
         { type: 'box', x: -1.55, y: -4.4, width: 0.35, height: 0.12, rotation: -0.35, restitution: 0.5, friction: 0.5 },
         { type: 'box', x:  1.55, y: -4.4, width: 0.35, height: 0.12, rotation:  0.35, restitution: 0.5, friction: 0.5 },
       ];
