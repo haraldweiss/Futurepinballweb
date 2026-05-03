@@ -4584,3 +4584,13 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+// ─── Guaranteed Event Handler Initialization ───
+// The deferred init via requestAnimationFrame can fail silently if any prior
+// step crashes. Module scripts have implicit `defer`, so DOM is ready here.
+// initializeEventHandlers is idempotent, so calling it twice is safe.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => initializeEventHandlers());
+} else {
+  initializeEventHandlers();
+}
+

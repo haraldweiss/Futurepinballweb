@@ -6,11 +6,19 @@
  * This enables CSP compliance and cleaner separation of concerns.
  */
 
+let _eventHandlersInitialized = false;
+
 /**
  * Initialize all UI event handlers
  * Call this after DOM is ready (in main.ts)
+ * Idempotent: safe to call multiple times
  */
 export function initializeEventHandlers(): void {
+  if (_eventHandlersInitialized) {
+    console.log('[Event Handlers] Already initialized, skipping');
+    return;
+  }
+  _eventHandlersInitialized = true;
   console.log('[Event Handlers] Initializing UI event handlers...');
   
   // Quick Menu
