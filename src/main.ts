@@ -603,12 +603,7 @@ console.log('📷 Camera Configuration:', {
 });
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, precision: 'highp' });
-// Give renderer's canvas an ID and ensure it sits behind UI but above background
 renderer.domElement.id = 'playfield-canvas';
-renderer.domElement.style.position = 'fixed';
-renderer.domElement.style.top = '0';
-renderer.domElement.style.left = '0';
-renderer.domElement.style.zIndex = '1';
 // ─── Responsive Canvas Sizing ───
 const initialCanvasSize = getPlayfieldCanvasSize();
 renderer.setSize(initialCanvasSize.canvasWidth, initialCanvasSize.canvasHeight);

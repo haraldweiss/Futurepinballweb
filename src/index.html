@@ -12,7 +12,9 @@
   <link rel="apple-touch-icon" href="/icon-192.svg">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+    body { background: #000; overflow: hidden; font-family: 'Courier New', monospace; --right-offset: 0px; }
+    body.show-bg-panel { --right-offset: 22vw; }
+    body.show-bg-panel #hud { display: none; }
     canvas { display: block; }
 
     #hud {
@@ -101,12 +103,12 @@
 
     #notification { position: fixed; top: max(80px, 15vh); left: 50%; transform: translateX(-50%); background: rgba(0,200,100,0.15); border: 1px solid #00cc66; border-radius: 8px; padding: clamp(8px, 1.2vh, 16px) clamp(16px, 3vw, 32px); color: #00cc66; font-size: clamp(12px, 1.8vw, 18px); letter-spacing: 2px; opacity: 0; transition: opacity 0.4s; z-index: 200; text-shadow: 0 0 10px #00cc66; max-width: 90vw; }
 
-    #open-loader { position: fixed; top: calc(185px + 1vh); right: clamp(12px, 3vw, 30px); padding: clamp(6px, 1vh, 12px) clamp(10px, 2vw, 20px); background: rgba(0,50,100,0.8); border: 1px solid #00aaff; border-radius: 6px; color: #00aaff; font-family: 'Courier New',monospace; font-size: clamp(11px, 1.5vw, 14px); cursor: pointer; z-index: 100; letter-spacing: 1px; transition: all 0.2s; white-space: nowrap; }
+    #open-loader { position: fixed; top: calc(185px + 1vh); right: calc(var(--right-offset) + clamp(12px, 3vw, 30px)); padding: clamp(6px, 1vh, 12px) clamp(10px, 2vw, 20px); background: rgba(0,50,100,0.8); border: 1px solid #00aaff; border-radius: 6px; color: #00aaff; font-family: 'Courier New',monospace; font-size: clamp(11px, 1.5vw, 14px); cursor: pointer; z-index: 100; letter-spacing: 1px; transition: all 0.2s; white-space: nowrap; }
     #open-loader:hover { background: rgba(0,100,200,0.6); box-shadow: 0 0 15px rgba(0,170,255,0.4); }
 
-    #editor-btn { position: fixed; top: calc(185px + 1vh); right: calc(450px + 2vw); padding: clamp(6px, 0.8vh, 10px) clamp(8px, 1.5vw, 16px); background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: clamp(12px, 1.5vw, 16px); cursor: pointer; z-index: 100; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; }
+    #editor-btn { position: fixed; top: calc(185px + 1vh); right: calc(var(--right-offset) + 450px + 2vw); padding: clamp(6px, 0.8vh, 10px) clamp(8px, 1.5vw, 16px); background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: clamp(12px, 1.5vw, 16px); cursor: pointer; z-index: 100; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; }
     #editor-btn:hover { border-color: #ffcc00; color: #ffcc00; }
-    #fullscreen-btn  { position: fixed; top: calc(185px + 1vh); right: calc(150px + 1vw); padding: clamp(6px, 0.8vh, 10px) clamp(8px, 1.5vw, 16px); background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: clamp(14px, 2vw, 18px); cursor: pointer; z-index: 100; transition: all 0.2s; }
+    #fullscreen-btn  { position: fixed; top: calc(185px + 1vh); right: calc(var(--right-offset) + 150px + 1vw); padding: clamp(6px, 0.8vh, 10px) clamp(8px, 1.5vw, 16px); background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: clamp(14px, 2vw, 18px); cursor: pointer; z-index: 100; transition: all 0.2s; }
     #fullscreen-btn:hover { border-color: #00aaff; color: #00aaff; }
 
     .touch-btn { position: fixed; bottom: clamp(16px, 4vh, 40px); width: clamp(80px, 12vw, 140px); height: clamp(50px, 8vh, 100px); background: rgba(0,80,160,0.22); border: 2px solid rgba(0,170,255,0.4); border-radius: 14px; display: none; align-items: center; justify-content: center; color: rgba(0,170,255,0.8); font-size: clamp(20px, 4vw, 32px); font-family: 'Courier New',monospace; touch-action: none; user-select: none; z-index: 90; -webkit-tap-highlight-color: transparent; box-shadow: 0 0 15px rgba(0,170,255,0.15); }
@@ -114,24 +116,24 @@
     #touch-right { right: clamp(12px, 2vw, 25px); }
     #touch-plunger { position: fixed; bottom: clamp(16px, 4vh, 40px); left: 50%; transform: translateX(-50%); width: clamp(70px, 10vw, 120px); height: clamp(50px, 8vh, 100px); background: rgba(100,0,0,0.22); border: 2px solid rgba(255,80,0,0.4); border-radius: 50%; display: none; align-items: center; justify-content: center; color: rgba(255,100,0,0.8); font-size: clamp(18px, 3.5vw, 28px); touch-action: none; user-select: none; z-index: 90; -webkit-tap-highlight-color: transparent; }
 
-    #multiscreen-btn { position: fixed; top: calc(185px + 1vh); right: calc(230px + 1.5vw); padding: clamp(6px, 0.8vh, 10px) clamp(8px, 1.5vw, 16px); background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: clamp(12px, 1.5vw, 16px); cursor: pointer; z-index: 100; transition: all 0.2s; font-family: 'Courier New',monospace; }
+    #multiscreen-btn { position: fixed; top: calc(185px + 1vh); right: calc(var(--right-offset) + 230px + 1.5vw); padding: clamp(6px, 0.8vh, 10px) clamp(8px, 1.5vw, 16px); background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: clamp(12px, 1.5vw, 16px); cursor: pointer; z-index: 100; transition: all 0.2s; font-family: 'Courier New',monospace; }
     #multiscreen-btn:hover { border-color: #ffcc00; color: #ffcc00; }
     #multiscreen-btn.active-multi { border-color: #ffcc00; color: #ffcc00; box-shadow: 0 0 10px rgba(255,200,0,0.3); }
 
     #dmd-mode-btn { position: fixed; top: max(12px, calc(50% - 80px)); left: 50%; transform: translateX(max(360px, 35%)); padding: clamp(3px, 0.5vh, 6px) clamp(6px, 1vw, 12px); background: rgba(0,0,0,0.7); border: 1px solid #5a3000; border-radius: 4px; color: #ff8800; font-size: clamp(10px, 1.2vw, 13px); cursor: pointer; z-index: 96; font-family: 'Courier New',monospace; transition: all 0.2s; }
     #dmd-mode-btn:hover { border-color: #ff8800; }
 
-    #hide-dmd-btn { position: fixed; top: calc(185px + 1vh); right: calc(310px + 2vw); padding: clamp(6px, 0.8vh, 10px) clamp(8px, 1.5vw, 16px); background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: clamp(12px, 1.5vw, 16px); cursor: pointer; z-index: 100; transition: all 0.2s; font-family: 'Courier New',monospace; }
+    #hide-dmd-btn { position: fixed; top: calc(185px + 1vh); right: calc(var(--right-offset) + 310px + 2vw); padding: clamp(6px, 0.8vh, 10px) clamp(8px, 1.5vw, 16px); background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: clamp(12px, 1.5vw, 16px); cursor: pointer; z-index: 100; transition: all 0.2s; font-family: 'Courier New',monospace; }
     #hide-dmd-btn:hover { border-color: #ff8800; color: #ff8800; }
     #hide-dmd-btn.dmd-hidden { border-color: #ff4400; color: #ff4400; }
 
-    #install-btn { position: fixed; top: calc(185px + 1vh); right: calc(520px + 2vw); padding: clamp(6px, 0.8vh, 10px) clamp(8px, 1.5vw, 16px); background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: clamp(12px, 1.5vw, 16px); cursor: pointer; z-index: 100; transition: all 0.2s; display: none; }
+    #install-btn { position: fixed; top: calc(185px + 1vh); right: calc(var(--right-offset) + 520px + 2vw); padding: clamp(6px, 0.8vh, 10px) clamp(8px, 1.5vw, 16px); background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: clamp(12px, 1.5vw, 16px); cursor: pointer; z-index: 100; transition: all 0.2s; display: none; }
     #install-btn.visible { display: block; }
     #install-btn:hover { border-color: #00cc66; color: #00cc66; box-shadow: 0 0 10px rgba(0,200,100,0.2); }
 
-    #view-btn { position: fixed; top: calc(185px + 1vh); right: calc(375px + 2vw); padding: clamp(6px, 0.8vh, 10px) clamp(8px, 1.5vw, 16px); background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: clamp(12px, 1.5vw, 16px); cursor: pointer; z-index: 100; transition: all 0.2s; }
+    #view-btn { position: fixed; top: calc(185px + 1vh); right: calc(var(--right-offset) + 375px + 2vw); padding: clamp(6px, 0.8vh, 10px) clamp(8px, 1.5vw, 16px); background: rgba(0,30,60,0.8); border: 1px solid #334; border-radius: 6px; color: #556; font-size: clamp(12px, 1.5vw, 16px); cursor: pointer; z-index: 100; transition: all 0.2s; }
     #view-btn:hover { border-color: #00cc66; color: #00cc66; }
-    #view-panel { position: fixed; top: calc(220px + 2vh); right: calc(310px + 2vw); background: rgba(5,10,20,0.97); border: 1px solid #00cc66; border-radius: 10px; padding: clamp(12px, 2vh, 20px) clamp(14px, 2vw, 24px); z-index: 200; display: none; min-width: clamp(200px, 18vw, 280px); box-shadow: 0 0 20px rgba(0,200,100,0.2); font-family: 'Courier New',monospace; max-height: 80vh; overflow-y: auto; }
+    #view-panel { position: fixed; top: calc(220px + 2vh); right: calc(var(--right-offset) + 310px + 2vw); background: rgba(5,10,20,0.97); border: 1px solid #00cc66; border-radius: 10px; padding: clamp(12px, 2vh, 20px) clamp(14px, 2vw, 24px); z-index: 200; display: none; min-width: clamp(200px, 18vw, 280px); box-shadow: 0 0 20px rgba(0,200,100,0.2); font-family: 'Courier New',monospace; max-height: 80vh; overflow-y: auto; }
     #view-panel.open { display: block; }
     #view-panel h4 { color: #00cc66; font-size: clamp(10px, 1.2vw, 13px); letter-spacing: 2px; margin-bottom: clamp(10px, 1.5vh, 16px); text-align: center; }
     .vp-row { margin-bottom: clamp(8px, 1.2vh, 14px); }
@@ -216,11 +218,11 @@
     body.role-dmd #multiscreen-modal { display: none !important; }
     body.role-dmd #loading-overlay { display: none !important; }
 
-    #backglass-canvas { display: none; position: fixed; inset: 0; width: 100%; height: 100%; }
+    #backglass-canvas { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
     body.role-backglass #backglass-canvas { display: block; }
     body.role-backglass #dmd-wrap { display: none !important; }
 
-    body.show-bg-panel #backglass-canvas { display: block; position: fixed; right: 0; top: 0; width: 30vw; height: 100vh; z-index: 95; border-left: 1px solid rgba(255,200,0,0.25); inset: unset; }
+    body.show-bg-panel #backglass-canvas { display: block; position: fixed; left: auto; right: 0; top: 0; bottom: auto; width: 22vw; height: 100vh; z-index: 95; border-left: 1px solid rgba(255,200,0,0.25); }
 
     /* ─── QUICK MENU (kompaktes Popup für Demo-Tische) ─── */
     #quick-menu { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 950; }
