@@ -735,14 +735,11 @@ export function dmdRenderInsertCoin(): void {
 // ── Coin inserted — waiting for plunger ─────────────────────────────────────
 export function dmdRenderLaunch(): void {
   dmdClear();
-  dmdDrawText('READY TO PLAY', DMD_W / 2, 11, 9);
-  // Pulse the LAUNCH instruction so it draws the eye without flashing off
-  // (using brightness instead of on/off — see dmdRenderEvent comment).
-  const t = (dmdState.animFrame % 60) / 60;
-  const pulse = 0.6 + 0.4 * Math.abs(Math.sin(t * Math.PI));
-  dmdOff2d.globalAlpha = pulse;
-  dmdDrawText('HOLD ENTER TO LAUNCH', DMD_W / 2, 27, 7);
-  dmdOff2d.globalAlpha = 1;
+  // Top: short attention-grabber. Bottom: scrolling instruction so it can't
+  // be missed and isn't dimmed by an alpha pulse (which made the instruction
+  // hard to read against the LED color overlay in the previous version).
+  dmdDrawText('LAUNCH BALL', DMD_W / 2, 12, 11);
+  dmdScrollText('  HOLD ENTER, RELEASE TO FIRE  ', 27, 7, 0.7, 'right');
   dmdFlush();
 }
 

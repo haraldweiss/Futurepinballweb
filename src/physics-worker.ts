@@ -60,32 +60,34 @@ function initializePhysics(config: any): void {
     ballBody
   );
 
-  // Create flippers
-  const lFlipperDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
-    .setTranslation(config.leftFlipperPos.x, config.leftFlipperPos.y)
-    .setRotation(0);
+  // Create flippers — horizontal cuboids extending inward from each pivot.
+  // Mirrors initPhysics() in main.ts: half-length 1.05 (full 2.1) by 0.13 thick.
+  // Capsule(halfHeight, radius) in rapier2d is Y-axis oriented by default,
+  // which made the previous setup a vertical 4.4-unit pillar at each pivot
+  // and kicked the ball out unpredictably.
+  const flipperHalfLen = (config.flipperLength ?? 2.1) / 2;
 
+  const lFlipperDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
+    .setTranslation(config.leftFlipperPos.x, config.leftFlipperPos.y);
   lFlipperBody = world.createRigidBody(lFlipperDesc);
   world.createCollider(
-    RAPIER.ColliderDesc.capsule(config.flipperLength ?? 2.1, 0.08)
+    RAPIER.ColliderDesc.cuboid(flipperHalfLen, 0.13)
+      .setTranslation(flipperHalfLen, 0.0)   // extend inward (rightward) from pivot
       .setRestitution(config.flipperRestitution ?? 0.5)
       .setFriction(config.flipperFriction ?? 0.6)
-      .setDensity(0.5)
-      .setRotation(0),
+      .setDensity(0.5),
     lFlipperBody
   );
 
   const rFlipperDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
-    .setTranslation(config.rightFlipperPos.x, config.rightFlipperPos.y)
-    .setRotation(0);
-
+    .setTranslation(config.rightFlipperPos.x, config.rightFlipperPos.y);
   rFlipperBody = world.createRigidBody(rFlipperDesc);
   world.createCollider(
-    RAPIER.ColliderDesc.capsule(config.flipperLength ?? 2.1, 0.08)
+    RAPIER.ColliderDesc.cuboid(flipperHalfLen, 0.13)
+      .setTranslation(-flipperHalfLen, 0.0)  // extend inward (leftward) from pivot
       .setRestitution(config.flipperRestitution ?? 0.5)
       .setFriction(config.flipperFriction ?? 0.6)
-      .setDensity(0.5)
-      .setRotation(Math.PI),
+      .setDensity(0.5),
     rFlipperBody
   );
 
