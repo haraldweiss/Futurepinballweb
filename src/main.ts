@@ -3935,7 +3935,7 @@ window.applyMsLayout = async () => {
 function setupDMDWindow(): void {
   document.title='FPW — DMD';
   window.addEventListener('beforeunload',()=>{
-    try{localStorage.setItem('fpw_winpos_dmd',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{}
+    try{localStorage.setItem('fpw_winpos_dmd',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{} // localStorage can throw, ignore
     disposePhysicsWorker();
   });
   const wrap=document.getElementById('dmd-wrap')!, canvas=document.getElementById('dmd') as HTMLCanvasElement;
@@ -3972,7 +3972,8 @@ function setupDMDWindow(): void {
 
 function setupBackglassWindow(): void {
   document.title='FPW — Backglass';
-  window.addEventListener('beforeunload',()=>{try{localStorage.setItem('fpw_winpos_backglass',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{}disposePhysicsWorker();});
+  window.addEventListener('beforeunload',()=>{try{localStorage.setItem('fpw_winpos_backglass',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{} // localStorage can throw, ignore
+disposePhysicsWorker();});
   const canvas=document.getElementById('backglass-canvas') as HTMLCanvasElement;
   const showEmbedDMD=!new URLSearchParams(location.search).has('nodmd');
   const bgState:any={score:0,ballNum:1,multiplier:1,tableName:'FUTURE PINBALL',tableAccent:0x00ff66,tableColor:0x1a4a15,dmdMode:'attract',dmdEventText:'',dmdAnimFrame:0,dmdScrollX:0,dmdEventTimer:0,lastRank:0,lastScore:0,highScores:[]};

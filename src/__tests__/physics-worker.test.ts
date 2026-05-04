@@ -164,7 +164,7 @@ class MockPhysicsWorker {
     this.currentFrame.ballVelocity.y += impulse.vy;
   }
 
-  onMessage(id: number, handler: Function): void {
+  onMessage(id: number, handler: (...args: any[]) => any): void {
     this.responseHandlers.set(id, handler);
   }
 

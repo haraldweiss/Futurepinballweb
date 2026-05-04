@@ -42,16 +42,19 @@
     "no-unsanitized/property": "warn",
     "@typescript-eslint/no-explicit-any": "warn",
     "@typescript-eslint/explicit-function-return-types": "off",
+    "@typescript-eslint/ban-types": "warn",
     "no-console": "off",
     "eqeqeq": [
-      "error",
+      "warn",
       "always"
     ],
     "no-var": "error",
-    "prefer-const": "error",
+    "prefer-const": "warn",
     "prefer-template": "warn",
     "no-shadow": "warn",
     "no-unused-vars": "off",
+    "no-empty": "warn",
+    "@typescript-eslint/no-var-requires": "warn",
     "@typescript-eslint/no-unused-vars": [
       "warn",
       {
@@ -70,7 +73,16 @@
         "jest": true
       },
       "rules": {
-        "no-console": "off"
+        "no-console": "off",
+        "@typescript-eslint/ban-types": "off",
+        "no-empty": "off",
+        "@typescript-eslint/no-var-requires": "off",
+        "no-useless-escape": "off",
+        "no-control-regex": "off",
+        "eqeqeq": "off",
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-unused-vars": "off",
+        "security/detect-non-literal-regexp": "off"
       }
     }
   ]

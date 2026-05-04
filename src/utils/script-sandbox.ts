@@ -45,6 +45,7 @@ const FORBIDDEN_PATTERNS: ReadonlyArray<{ re: RegExp; name: string }> = [
   { re: /\b(?:localStorage|sessionStorage|indexedDB|caches)\b/, name: 'browser storage' },
   { re: /\b(?:electronAPI|ipcRenderer|require)\b/, name: 'Electron/Node bridge' },
   { re: /\b(?:parent|opener|frames)\.\s*\w/, name: 'cross-frame access' },
+  // eslint-disable-next-line no-useless-escape -- Escapes are necessary in regex character class
   { re: /\b(?:window|globalThis|self|top)\s*[\.\[]/, name: 'global object access' },
   { re: /\bdocument\s*\.\s*(?:write|cookie|domain|location)\b/, name: 'document.write/cookie/domain/location' },
   { re: /\bnavigator\s*\.\s*(?:sendBeacon|serviceWorker|geolocation|credentials|usb|hid|bluetooth)\b/, name: 'navigator privileged API' },

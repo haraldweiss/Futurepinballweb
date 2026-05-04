@@ -188,6 +188,7 @@ export class BaseRenderPass extends RenderPass {
   constructor(composer: THREE.EffectComposer, scene: THREE.Scene, camera: THREE.Camera) {
     super('BaseRender');
     this.composer = composer;
+    // eslint-disable-next-line @typescript-eslint/no-var-requires -- Dynamic require for three.js addon
     this.renderPass = new (require('three/addons/postprocessing/RenderPass.js').RenderPass)(scene, camera);
     this.renderPass.renderToScreen = false;  // Let other passes handle output
   }

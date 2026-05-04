@@ -52,7 +52,7 @@ class MockAnimationEngine {
   activeAnimations: Set<string> = new Set();
   bindings: Map<string, AnimationBinding> = new Map();
   gameObjects: Map<string, GameObject> = new Map();
-  eventHandlers: Map<string, Function[]> = new Map();
+  eventHandlers: Map<string, Array<(...args: any[]) => any>> = new Map();
   currentTime = 0;
   paused = false;
 
@@ -99,7 +99,7 @@ class MockAnimationEngine {
     }
   }
 
-  on(event: string, handler: Function): void {
+  on(event: string, handler: (...args: any[]) => any): void {
     if (!this.eventHandlers.has(event)) {
       this.eventHandlers.set(event, []);
     }

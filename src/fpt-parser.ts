@@ -499,7 +499,7 @@ function extractPascalStrings(bytes: Uint8Array): string[] {
         const c = bytes[i + (prefix as number) + j];
         if (c >= 32 && c < 127) s += String.fromCharCode(c); else { ok = false; break; }
       }
-      if (ok && /^[A-Za-z0-9\s\-_'!\.,:]+$/.test(s)) out.add(s.trim());
+      if (ok && /^[A-Za-z0-9\s\-_'!.,:]+$/.test(s)) out.add(s.trim());
     }
   }
   return [...out];
@@ -1073,7 +1073,7 @@ export async function parseFPTFile(
     try {
       const cfg = JSON.parse(await file.text());
       logMsg('✓ JSON geparst', 'ok');
-      if (cfg.name && cfg.bumpers && cfg.tableColor != null) {
+      if (cfg.name && cfg.bumpers && cfg.tableColor !== null) {
         buildTableFn(cfg); closeLoaderFn();
       } else { logMsg('⚠ Kein gültiges Tisch-Format', 'warn'); }
     } catch(e: any) { logMsg(`✗ JSON Fehler: ${  e.message}`, 'error'); }
@@ -1294,7 +1294,7 @@ export async function parseFPTFile(
   const nullStrings   = extractNullStrings(bytes);
   const pascalStrings = extractPascalStrings(bytes);
   const allStrings = [...new Set([...nullStrings, ...pascalStrings])]
-    .filter(s => s.length >= 3 && s.length <= 80 && /^[A-Za-z0-9\s\-_'!\.,:]+$/.test(s));
+    .filter(s => s.length >= 3 && s.length <= 80 && /^[A-Za-z0-9\s\-_'!.,:]+$/.test(s));
   logMsg(`Strings: ${allStrings.length}`, 'info');
 
   const tableName = allStrings

@@ -72,7 +72,7 @@ describe('VBScript sandbox', () => {
   describe('runSandboxed (runtime scope)', () => {
     it('runs a benign script and exposes api members via bindings', () => {
       const api = { greet: (n: string) => `hello ${n}`, score: 0 };
-      const handlers: Record<string, Function> = {};
+      const handlers: Record<string, (...args: any[]) => any> = {};
       // Mimic the bindings the engine builds at runtime
       const bindings = "var greet = __api__['greet']; var score = __api__['score'];";
       const collect = "if (typeof Table_Init === 'function') __h__['Table_Init'] = Table_Init;";
@@ -90,7 +90,7 @@ describe('VBScript sandbox', () => {
       // We bypass the static scan by running pre-validated code that *would*
       // touch a non-allowlisted global if the proxy weren't in place.
       const api: Record<string, unknown> = { result: undefined };
-      const handlers: Record<string, Function> = {};
+      const handlers: Record<string, (...args: any[]) => any> = {};
       const bindings = "var result = undefined;";
       const collect = "__api__.result = typeof someUnknownGlobal;";
       const jsCode = ""; // no forbidden tokens — just rely on bindings/collect
@@ -100,7 +100,7 @@ describe('VBScript sandbox', () => {
 
     it('throws ScriptSandboxError for forbidden references before executing', () => {
       const api = {};
-      const handlers: Record<string, Function> = {};
+      const handlers: Record<string, (...args: any[]) => any> = {};
       expect(() =>
         runSandboxed('fetch("evil")', '', '', api, handlers),
       ).toThrow(ScriptSandboxError);
@@ -108,7 +108,7 @@ describe('VBScript sandbox', () => {
 
     it('does not pollute the real globalThis', () => {
       const api = {};
-      const handlers: Record<string, Function> = {};
+      const handlers: Record<string, (...args: any[]) => any> = {};
       const bindings = '';
       const collect = '';
       const jsCode = 'somePolluterFlag = 12345;'; // bare assignment in `with(sandbox)` should land on sandbox, not globalThis
@@ -118,7 +118,7 @@ describe('VBScript sandbox', () => {
 
     it('exposes Math/Date/JSON inside the script', () => {
       const api: Record<string, unknown> = {};
-      const handlers: Record<string, Function> = {};
+      const handlers: Record<string, (...args: any[]) => any> = {};
       const bindings = '';
       const collect = '__api__.pi = Math.PI; __api__.serialized = JSON.stringify({a: 1});';
       runSandboxed('', bindings, collect, api, handlers);

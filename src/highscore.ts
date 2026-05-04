@@ -43,7 +43,7 @@ export function getTopScores(): number[] {
   } catch (e) {
     if (e instanceof SyntaxError) {
       console.error('[Highscores] JSON parse error - data corrupted, clearing:', e);
-      try { localStorage.removeItem(HS_KEY); } catch { }
+      try { localStorage.removeItem(HS_KEY); } catch { } // localStorage can throw, ignore
     }
     return [];
   }

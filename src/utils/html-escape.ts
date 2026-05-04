@@ -52,6 +52,7 @@ export function sanitizeFileName(fileName: string): string {
   if (!fileName) return 'file';
 
   return fileName
+    // eslint-disable-next-line no-useless-escape,no-control-regex -- Intentional: sanitize control chars and path chars
     .replace(/[<>:"\/\\|?*\x00-\x1f]/g, '_')  // Replace invalid chars
     .replace(/_+/g, '_')                       // Collapse consecutive underscores
     .replace(/\.+$/, '')                       // Remove trailing dots

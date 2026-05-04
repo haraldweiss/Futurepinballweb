@@ -9,7 +9,7 @@ import { BAMEngine } from './bam-engine';
 
 export class BamBridge {
   private bamEngine: BAMEngine;
-  private eventCallbacks: Map<string, Function[]> = new Map();
+  private eventCallbacks: Map<string, Array<(...args: any[]) => any>> = new Map();
 
   constructor(bamEngine: BAMEngine) {
     this.bamEngine = bamEngine;
