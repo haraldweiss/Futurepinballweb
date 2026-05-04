@@ -673,7 +673,7 @@ export function dmdRenderTableInfo(): void {
 
   // Bottom line: ALWAYS scroll, faster so motion is obvious in the 5-sec window
   const scrollLine = `${tname}    ·    BY ${author.toUpperCase()}    ·    ${year}    `;
-  dmdScrollText(scrollLine, 26, 9, 1.4, 'right');
+  dmdScrollText(scrollLine, 26, 9, 3.0, 'right');
 
   dmdFlush();
 }
@@ -716,7 +716,7 @@ export function dmdRenderInsertCoin(): void {
     if (coins === 0) {
       // No credits yet — invite to insert
       dmdDrawText('INSERT COIN', DMD_W / 2, 12, 11);
-      dmdScrollText('  PRESS 5 TO INSERT COIN  ', 27, 7, 0.7, 'right');
+      dmdScrollText('  PRESS 5 TO INSERT COIN  ', 27, 7, 2.5, 'right');
     } else {
       // Credits available — show count + start hint per allowed player count
       // (1 credit = 1 player, 2 = 2 players, … capped at 4)
@@ -725,7 +725,7 @@ export function dmdRenderInsertCoin(): void {
       const hint = maxPlayers === 1
         ? 'PRESS 1 TO START'
         : `PRESS 1-${maxPlayers} TO START  (${maxPlayers}P MAX)`;
-      dmdScrollText('   ' + hint + '   ', 27, 7, 0.7, 'right');
+      dmdScrollText('   ' + hint + '   ', 27, 7, 2.5, 'right');
     }
   } else if (phase === 1) {
     // HIGH SCORES
@@ -738,7 +738,7 @@ export function dmdRenderInsertCoin(): void {
     dmdDrawText('CONTROLS', DMD_W / 2, 9, 8);
     dmdScrollText(
       '  SHIFT = FLIPPER  ·  ENTER = PLUNGER  ·  Z/X = TILT  ·  R = RESET  ',
-      26, 7, 0.7, 'right'
+      26, 7, 2.5, 'right'
     );
   }
 
@@ -752,7 +752,7 @@ export function dmdRenderLaunch(): void {
   // be missed and isn't dimmed by an alpha pulse (which made the instruction
   // hard to read against the LED color overlay in the previous version).
   dmdDrawText('LAUNCH BALL', DMD_W / 2, 12, 11);
-  dmdScrollText('  HOLD ENTER, RELEASE TO FIRE  ', 27, 7, 0.7, 'right');
+  dmdScrollText('  HOLD ENTER, RELEASE TO FIRE  ', 27, 7, 2.5, 'right');
   dmdFlush();
 }
 

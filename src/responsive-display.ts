@@ -76,24 +76,28 @@ export function getDMDSize(containerWidth?: number, containerHeight?: number): C
   const DMD_NATIVE_HEIGHT = 32;
   const DMD_ASPECT = DMD_NATIVE_WIDTH / DMD_NATIVE_HEIGHT; // 4:1
 
-  // Calculate max size while maintaining aspect ratio
-  let dmdWidth = width * 0.25; // Default to 25% of width
+  // Display size: take roughly half the available width so the DMD has real
+  // presence at the top of the screen (was 25% — far too small, scrolling
+  // text moved only a few pixels per cycle and felt frozen).
+  let dmdWidth = width * 0.50;
   let dmdHeight = dmdWidth / DMD_ASPECT;
 
-  // If height is constraint, scale by height
-  if (dmdHeight > height * 0.3) {
-    dmdHeight = height * 0.3;
+  // Don't take more than ~22% of the available height (leaves room for HUD)
+  if (dmdHeight > height * 0.22) {
+    dmdHeight = height * 0.22;
     dmdWidth = dmdHeight * DMD_ASPECT;
   }
 
-  // Minimum size for readability
-  const minWidth = 256; // 128 * 2
+  // Floor for readability on tiny windows
+  const minWidth = 384; // 128 * 3
   if (dmdWidth < minWidth) {
     dmdWidth = minWidth;
     dmdHeight = dmdWidth / DMD_ASPECT;
   }
 
-  // Create canvas at 2x native resolution for crisp dots
+  // Backbuffer scale — kept at 2x because dmd.ts has its own DMD_SCALE
+  // mechanism that drives the offscreen LED-dot buffer separately. Bumping
+  // this beyond 2x without aligning DMD_SCALE produces blurry text.
   const scale = 2;
   const canvasWidth = DMD_NATIVE_WIDTH * scale;
   const canvasHeight = DMD_NATIVE_HEIGHT * scale;

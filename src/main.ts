@@ -1339,9 +1339,15 @@ async function setupPhysicsWorker(): Promise<void> {
         { type: 'box', x: 0,     y: -6.0, width: 3.2, height: 0.2, restitution: 0.3, friction: 0.1 },
 
         // ── PLUNGER LANE ──
-        { type: 'box', x: 2.35, y: -4.8, width: 0.08, height: 2.2, restitution: 0.5, friction: 0.3 },
-        { type: 'box', x: 2.95, y: -4.8, width: 0.08, height: 2.2, restitution: 0.5, friction: 0.3 },
-        { type: 'box', x: 2.65, y: -6.3, width: 0.35, height: 0.12, restitution: 0.5, friction: 0.5 },
+        // Walls widened so the ball has lateral clearance: ball diameter is
+        // 0.44 and the previous gap was exactly 0.44 — the ball was wedged
+        // between left+right walls and any horizontal launch velocity bounced
+        // it back and forth without ever escaping. Now: gap 0.94, ball has
+        // 0.25 clearance each side. Walls also shortened (top at y=-4.0
+        // instead of -2.6) so a moderate launch clears the lane easily.
+        { type: 'box', x: 2.10, y: -5.5, width: 0.08, height: 1.5, restitution: 0.5, friction: 0.3 },
+        { type: 'box', x: 3.20, y: -5.5, width: 0.08, height: 1.5, restitution: 0.5, friction: 0.3 },
+        { type: 'box', x: 2.65, y: -7.0, width: 0.55, height: 0.12, restitution: 0.5, friction: 0.5 },
 
         // ── INLANE / APRON GUIDES ──
         { type: 'box', x: -1.55, y: -4.4, width: 0.35, height: 0.12, rotation: -0.35, restitution: 0.5, friction: 0.5 },
@@ -2363,14 +2369,15 @@ document.addEventListener('keyup', e => {
     state.plungerCharge = 0; state.ballSaveTimer = 3.5;
 
     // Phase 15: Launch ball via physics worker
-    // Plunger fires the ball straight up. The plunger lane's left wall
-    // ends at y=-2.6, so once the ball clears that height it can drift
-    // sideways into the playfield. Earlier values (vx=-8…-12, vy=16…30)
-    // were so aggressive that the ball overshot the playfield in one frame
-    // and ended up wedged behind walls. These produce a controllable arc
-    // that actually rolls down through the bumpers.
-    const vy = 9.0 + charge * 5.0;     // 9 (light tap) → 14 (full charge) m/s up
-    const vx = -1.2 - charge * 1.8;    // gentle leftward bias so ball drifts into playfield
+    // The plunger lane's left wall (in main.ts initPhysics + worker tableBodies)
+    // ends at y=-2.6. Ball starts at y=-5.0. To enter the playfield it must
+    // (a) reach y > -2.6 and (b) be at x < ~2.27 (clear of the wall) at the
+    // same moment. Earlier values (vx=-1.2 base) only just cleared on a full
+    // charge — light taps had the ball graze the wall corner and come back
+    // down into the lane. New values give every charge level enough leftward
+    // bias to clear the wall edge.
+    const vy = 11.0 + charge * 5.0;    // 11 (tap) → 16 (full) m/s up — clears wall
+    const vx = -3.5 - charge * 2.5;    // -3.5 (tap) → -6 (full) m/s left — clears wall edge in time
 
     console.log(`🎯 PLUNGER LAUNCH: charge=${charge.toFixed(2)}, vx=${vx.toFixed(2)}, vy=${vy.toFixed(2)}`);
 
