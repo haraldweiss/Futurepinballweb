@@ -19,8 +19,8 @@ export function logMsg(msg: string, type = 'info'): void {
   const parseLog = document.getElementById('parse-log');
   if (!parseLog) return;
   const span = document.createElement('span');
-  span.className = 'log-' + type;
-  span.textContent = '> ' + msg;
+  span.className = `log-${  type}`;
+  span.textContent = `> ${  msg}`;
   parseLog.appendChild(span);
   parseLog.appendChild(document.createElement('br'));
   parseLog.scrollTop = parseLog.scrollHeight;
@@ -256,7 +256,7 @@ export async function parseCFBResources(
 
   let cfb: any;
   try { cfb = (CFB as any).read(new Uint8Array(arrayBuffer), { type: 'array' }); }
-  catch(e: any) { logMsg('CFB Parse-Fehler: ' + e.message, 'warn'); return { textureCount: 0, soundCount: 0, streamCount: 0 }; }
+  catch(e: any) { logMsg(`CFB Parse-Fehler: ${  e.message}`, 'warn'); return { textureCount: 0, soundCount: 0, streamCount: 0 }; }
 
   const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.t === 2 && e.size > 0);
   logMsg(`📦 CFB-Streams gefunden: ${entries.length}`, entries.length > 0 ? 'ok' : 'warn');
@@ -537,10 +537,10 @@ function tryExtractVBScriptFromData(bytes: Uint8Array): string | null {
       if (c >= 32 && c < 127) {
         curStr += String.fromCharCode(c);
       } else if (c === 10 || c === 13) {
-        if (curStr.length > 0) allText += curStr + '\n';
+        if (curStr.length > 0) allText += `${curStr  }\n`;
         curStr = '';
       } else {
-        if (curStr.length > 3) allText += curStr + ' ';
+        if (curStr.length > 3) allText += `${curStr  } `;
         curStr = '';
       }
     }
@@ -714,7 +714,7 @@ export function extractFPTPhysics(bytes: Uint8Array, coords: Array<{x:number;y:n
         continue;
       }
 
-      let candidate: PhysicsCandidate = { i, rest, fric, score: 15 };
+      const candidate: PhysicsCandidate = { i, rest, fric, score: 15 };
 
       // Bonus points for realistic physics ranges
       if (rest >= 0.6 && rest <= 1.2) candidate.score += 10;
@@ -1065,8 +1065,8 @@ export async function parseFPTFile(
 ): Promise<void> {
   const parseLog = document.getElementById('parse-log');
   if (parseLog) parseLog.innerHTML = '';
-  logMsg('Datei: ' + file.name, 'info');
-  logMsg('Größe: ' + (file.size/1024).toFixed(1) + ' KB', 'info');
+  logMsg(`Datei: ${  file.name}`, 'info');
+  logMsg(`Größe: ${  (file.size/1024).toFixed(1)  } KB`, 'info');
 
   // JSON
   if (file.name.toLowerCase().endsWith('.json')) {
@@ -1076,7 +1076,7 @@ export async function parseFPTFile(
       if (cfg.name && cfg.bumpers && cfg.tableColor != null) {
         buildTableFn(cfg); closeLoaderFn();
       } else { logMsg('⚠ Kein gültiges Tisch-Format', 'warn'); }
-    } catch(e: any) { logMsg('✗ JSON Fehler: ' + e.message, 'error'); }
+    } catch(e: any) { logMsg(`✗ JSON Fehler: ${  e.message}`, 'error'); }
     return;
   }
 
@@ -1694,7 +1694,7 @@ export function extractMS3DModelsFromCFB(arrayBuffer: ArrayBuffer): Map<string, 
 
   let cfb: any;
   try { cfb = (CFB as any).read(new Uint8Array(arrayBuffer), { type: 'array' }); }
-  catch(e: any) { logMsg('CFB Parse-Fehler beim Model-Extract: ' + e.message, 'warn'); return models; }
+  catch(e: any) { logMsg(`CFB Parse-Fehler beim Model-Extract: ${  e.message}`, 'warn'); return models; }
 
   const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.t === 2 && e.size > 0);
 
@@ -1734,7 +1734,7 @@ export function extractAnimationSequencesFromCFB(arrayBuffer: ArrayBuffer): Map<
 
   let cfb: any;
   try { cfb = (CFB as any).read(new Uint8Array(arrayBuffer), { type: 'array' }); }
-  catch(e: any) { logMsg('CFB Parse-Fehler beim Animation-Extract: ' + e.message, 'warn'); return animations; }
+  catch(e: any) { logMsg(`CFB Parse-Fehler beim Animation-Extract: ${  e.message}`, 'warn'); return animations; }
 
   const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.t === 2 && e.size > 0);
 

@@ -242,8 +242,8 @@ export class MultiScreenWindowManager {
   buildWindowFeatures(spec: WindowSpec): string {
     return (
       `width=${spec.width},height=${spec.height},` +
-      `left=${Math.round(spec.left)},top=${Math.round(spec.top)},` +
-      spec.features
+      `left=${Math.round(spec.left)},top=${Math.round(spec.top)},${ 
+      spec.features}`
     );
   }
 

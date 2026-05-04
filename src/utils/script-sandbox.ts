@@ -138,13 +138,14 @@ export function runSandboxed(
   bindings: string,
   collect: string,
   api: Record<string, unknown>,
-  handlers: Record<string, Function>,
+  handlers: Record<string, (...args: any[]) => any>,
 ): void {
   validateTranspiledJs(jsCode);
   const sandbox = buildSandboxScope();
   // The `with` block makes every bare identifier look up via the Proxy first.
   // `bindings` (var declarations) still create function-scope locals because
   // `var` hoists past `with` blocks — so the api injection keeps working.
+  // eslint-disable-next-line no-new-func -- Dynamic code is necessary for VBScript sandbox (input pre-validated)
   const fn = new Function(
     '__api__', '__h__', '__sandbox__',
     `with (__sandbox__) {\n${bindings}\n${jsCode}\n${collect}\n}`

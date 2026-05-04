@@ -338,7 +338,7 @@ export class DMDEditor {
    * Convert number to hex string
    */
   private numberToHex(num: number): string {
-    return ('000000' + num.toString(16)).slice(-6);
+    return (`000000${  num.toString(16)}`).slice(-6);
   }
 
   /**

@@ -250,7 +250,7 @@ export async function testInputValidation(): Promise<void> {
       ];
 
       testFiles.forEach(({ name, valid }) => {
-        const ext = '.' + name.split('.').pop()?.toLowerCase();
+        const ext = `.${  name.split('.').pop()?.toLowerCase()}`;
         const isValid = ALLOWED_EXTENSIONS.includes(ext);
         assert(isValid === valid, `File type validation failed: ${name}`);
       });
@@ -431,16 +431,16 @@ const mockDocument = typeof document !== 'undefined' ? document : {
   createElement(tag: string) {
     return {
       tag,
-      listeners: {} as { [key: string]: Function[] },
+      listeners: {} as { [key: string]: Array<(...args: any[]) => any> },
       attributes: {} as { [key: string]: string },
       children: [] as any[],
-      addEventListener(event: string, callback: Function) {
+      addEventListener(event: string, callback: (...args: any[]) => any) {
         if (!this.listeners[event]) this.listeners[event] = [];
         this.listeners[event].push(callback);
       },
       click() {
         if (this.listeners['click']) {
-          this.listeners['click'].forEach((cb: Function) => cb());
+          this.listeners['click'].forEach((cb: (...args: any[]) => any) => cb());
         }
       },
       setAttribute(name: string, value: string) {
@@ -518,11 +518,11 @@ export async function testEventHandlerSecurity(): Promise<void> {
       });
 
       const clickEvent1 = { target: child1 };
-      parent.listeners['click']?.forEach((cb: Function) => cb.call(parent, clickEvent1));
+      parent.listeners['click']?.forEach((cb: (...args: any[]) => any) => cb.call(parent, clickEvent1));
       assert(triggeredId === '1', 'Event delegation failed for child1');
 
       const clickEvent2 = { target: child2 };
-      parent.listeners['click']?.forEach((cb: Function) => cb.call(parent, clickEvent2));
+      parent.listeners['click']?.forEach((cb: (...args: any[]) => any) => cb.call(parent, clickEvent2));
       assert(triggeredId === '2', 'Event delegation failed for child2');
 
       logTest('Event handlers: Event delegation', true, 'Delegation works correctly', performance.now() - start, 'xss');

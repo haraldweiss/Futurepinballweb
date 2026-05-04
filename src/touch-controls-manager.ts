@@ -234,8 +234,8 @@ export class TouchControlsManager {
   private showTouchIndicator(touchId: number, x: number, y: number, color: string): void {
     const indicator = document.createElement('div');
     indicator.style.position = 'fixed';
-    indicator.style.left = (x - 25) + 'px';
-    indicator.style.top = (y - 25) + 'px';
+    indicator.style.left = `${x - 25  }px`;
+    indicator.style.top = `${y - 25  }px`;
     indicator.style.width = '50px';
     indicator.style.height = '50px';
     indicator.style.borderRadius = '50%';
@@ -257,8 +257,8 @@ export class TouchControlsManager {
   private updateTouchIndicator(touchId: number, x: number, y: number): void {
     const indicator = this.touchIndicators.get(touchId);
     if (indicator) {
-      indicator.style.left = (x - 25) + 'px';
-      indicator.style.top = (y - 25) + 'px';
+      indicator.style.left = `${x - 25  }px`;
+      indicator.style.top = `${y - 25  }px`;
     }
   }
 

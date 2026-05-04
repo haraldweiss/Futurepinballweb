@@ -426,7 +426,7 @@ export class PolishSuiteDiagnostics {
     output += `📅 Generated: ${report.timestamp}\n\n`;
 
     // System Health
-    output += '🏥 System Health: ' + (report.systemHealth.overall === 'healthy' ? '✅ HEALTHY' : '⚠️ ' + report.systemHealth.overall.toUpperCase()) + '\n';
+    output += `🏥 System Health: ${  report.systemHealth.overall === 'healthy' ? '✅ HEALTHY' : `⚠️ ${  report.systemHealth.overall.toUpperCase()}`  }\n`;
     output += `   Memory: ${(report.systemHealth.memory.heapPercent).toFixed(1)}% used\n`;
     output += `   Render Targets: ${report.systemHealth.renderTargets.activeTargets}\n\n`;
 

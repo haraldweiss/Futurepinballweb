@@ -226,7 +226,7 @@ export class LibraryCache {
       misses: this.stats.misses,
       evictions: this.stats.evictions,
       hitRate: this.stats.hits + this.stats.misses > 0
-        ? (this.stats.hits / (this.stats.hits + this.stats.misses) * 100).toFixed(1) + '%'
+        ? `${(this.stats.hits / (this.stats.hits + this.stats.misses) * 100).toFixed(1)  }%`
         : 'N/A',
       uptime: this.formatTime(Date.now() - this.stats.createdAt),
       entryList: Array.from(this.cache.entries()).map(([name, entry]) => ({
@@ -308,7 +308,7 @@ export class LibraryCache {
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
+    return `${(bytes / Math.pow(k, i)).toFixed(1)  } ${  sizes[i]}`;
   }
 }
 

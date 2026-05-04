@@ -130,7 +130,7 @@ export class MaterialFactory {
    */
   private getMaterial(config: MaterialConfig, context: string = 'generic'): THREE.MeshStandardMaterial {
     const cacheKey = this.getCacheKey(config);
-    let cached = this.materialCache.get(cacheKey);
+    const cached = this.materialCache.get(cacheKey);
 
     if (cached) {
       cached.refCount++;

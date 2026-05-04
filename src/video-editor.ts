@@ -60,6 +60,7 @@ export class VideoEditor {
   createPanel(): HTMLElement {
     const panel = document.createElement('div');
     panel.className = 'video-editor-panel';
+    // eslint-disable-next-line no-unsanitized/property -- innerHTML content uses escapeHtml() for safety
     panel.innerHTML = `
       <div class="video-editor-header">
         <h3>🎬 Video Manager</h3>
@@ -488,7 +489,7 @@ export class VideoEditor {
     const volumeDisplay = dialog.querySelector('#volume-display');
     if (volumeInput && volumeDisplay) {
       volumeInput.addEventListener('input', () => {
-        volumeDisplay.textContent = volumeInput.value + '%';
+        volumeDisplay.textContent = `${volumeInput.value  }%`;
       });
     }
 

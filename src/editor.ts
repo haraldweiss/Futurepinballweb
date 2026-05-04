@@ -40,7 +40,7 @@ function cToG(cx: number, cy: number) {
            y: GH / 2 - cy * (GH / canvas.height) };
 }
 function snap(v: number) { return snapEnabled ? Math.round(v * 5) / 5 : v; }
-function hex(n: number)  { return '#' + ('000000' + n.toString(16)).slice(-6); }
+function hex(n: number)  { return `#${  (`000000${  n.toString(16)}`).slice(-6)}`; }
 
 // ─── Render ───────────────────────────────────────────────────────────────────
 function render() {
@@ -108,7 +108,7 @@ function drawElem(el: Elem, selected: boolean) {
     ctx.save();
     ctx.shadowColor = c; ctx.shadowBlur = selected ? 20 : 8;
     ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-    ctx.fillStyle = c + '33'; ctx.fill();
+    ctx.fillStyle = `${c  }33`; ctx.fill();
     ctx.strokeStyle = c; ctx.lineWidth = selected ? 3 : 2; ctx.stroke();
     ctx.fillStyle = c; ctx.font = `bold ${r * 0.75}px monospace`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -122,7 +122,7 @@ function drawElem(el: Elem, selected: boolean) {
     const h = (canvas.height / GH) * 0.42;
     ctx.save();
     ctx.shadowColor = c; ctx.shadowBlur = selected ? 18 : 6;
-    ctx.fillStyle = c + '33'; ctx.fillRect(p.x - w/2, p.y - h/2, w, h);
+    ctx.fillStyle = `${c  }33`; ctx.fillRect(p.x - w/2, p.y - h/2, w, h);
     ctx.strokeStyle = c; ctx.lineWidth = selected ? 3 : 2;
     ctx.strokeRect(p.x - w/2, p.y - h/2, w, h);
     ctx.restore();
@@ -306,7 +306,7 @@ function updateStatus() {
 function setTool(t: ToolType) {
   tool = t; rampStart = null;
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tool-' + t)?.classList.add('active');
+  document.getElementById(`tool-${  t}`)?.classList.add('active');
   canvas.style.cursor = t === 'select' ? 'default' : 'crosshair';
 }
 
@@ -387,7 +387,7 @@ function buildConfig() {
   const json = JSON.stringify(buildConfig(), null, 2);
   const a    = document.createElement('a');
   a.href     = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-  a.download = tableName.replace(/[^A-Za-z0-9_-]/g, '_') + '.json';
+  a.download = `${tableName.replace(/[^A-Za-z0-9_-]/g, '_')  }.json`;
   a.click(); URL.revokeObjectURL(a.href);
 };
 
@@ -414,10 +414,10 @@ function buildConfig() {
 
 function loadFromConfig(cfg: any) {
   tableName   = cfg.name || 'Importiert';
-  const tc    = ('000000' + ((cfg.tableColor  || 0x1a4a15).toString(16))).slice(-6);
-  const ac    = ('000000' + ((cfg.accentColor || 0x00ff66).toString(16))).slice(-6);
-  tableColor  = '#' + tc;
-  accentColor = '#' + ac;
+  const tc    = (`000000${  (cfg.tableColor  || 0x1a4a15).toString(16)}`).slice(-6);
+  const ac    = (`000000${  (cfg.accentColor || 0x00ff66).toString(16)}`).slice(-6);
+  tableColor  = `#${  tc}`;
+  accentColor = `#${  ac}`;
   elements    = [];
   (cfg.bumpers || []).forEach((b: any) => elements.push({ type:'bumper', x:b.x, y:b.y, color:b.color||0xff2200 }));
   (cfg.targets || []).forEach((t: any) => elements.push({ type:'target', x:t.x, y:t.y, color:t.color||0x00aaff }));

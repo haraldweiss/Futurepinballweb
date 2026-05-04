@@ -441,7 +441,7 @@ const FPW_SCREEN_INDEX = new URLSearchParams(location.search).get('screen');
 (window as any).FPW_ROLE = FPW_ROLE || 'playfield';
 (window as any).FPW_SCREEN_INDEX = FPW_SCREEN_INDEX || '0';
 
-if (FPW_ROLE) document.body.classList.add('role-' + FPW_ROLE);
+if (FPW_ROLE) document.body.classList.add(`role-${  FPW_ROLE}`);
 (window as any).FPW_DEVICE = detectDeviceType();
 
 console.log(`🎮 FPW Window Started - Role: ${(window as any).FPW_ROLE}, Screen: ${(window as any).FPW_SCREEN_INDEX}, Size: ${window.innerWidth}x${window.innerHeight}`);
@@ -493,7 +493,7 @@ let advancedLightingSystem: ReturnType<typeof getAdvancedLighting> | null = null
 
 // ─── Phase 4: Backglass Renderer ───────────────────────────────────────────────
 let backglassRenderer: ReturnType<typeof getBackglassRenderer> | null = null;
-let backglassCanvasElement: HTMLCanvasElement | null = null;
+const backglassCanvasElement: HTMLCanvasElement | null = null;
 
 // ─── Phase 5: Performance Profiler ────────────────────────────────────────────
 const profiler = getProfiler();
@@ -550,7 +550,7 @@ console.log('[Score Animation] ✓ Initialized');
 let scoreDisplayManager: ScoreDisplayManager | null = null;
 
 // ─── Phase 9: Enhanced Audio System ──────────────────────────────────────────
-let enhancedAudioSystem = initializeAudioSystem();
+const enhancedAudioSystem = initializeAudioSystem();
 
 // ─── Phase 6: Audio Source Pool (GC pressure reduction) ──────────────────────
 initializeAudioPooling();
@@ -568,7 +568,7 @@ initializeKeyBindings();
 logMsg(`🔑 Key Bindings initialized (VPX Standard)`, 'ok');
 
 // ─── Phase 10+: Cabinet System (Rotation & Profiles) ──────────────────────────
-let cabinetSystem = initializeCabinetSystem();
+const cabinetSystem = initializeCabinetSystem();
 const activeCabinetProfile = cabinetSystem.autoDetectProfile();
 console.log(`🎮 Cabinet profile auto-detected: ${activeCabinetProfile.name}`);
 
@@ -776,19 +776,19 @@ const renderPass = new RenderPass(scene, camera);
 composer.addPass(renderPass);
 
 // ─── Phase 10+: Initialize Rotation Engine ────────────────────────────────────
-let rotationEngine = initializeRotationEngine(playgroundGroup, camera);
+const rotationEngine = initializeRotationEngine(playgroundGroup, camera);
 // Apply initial profile rotation
 applyProfileRotation(activeCabinetProfile);
 console.log(`✓ Rotation engine initialized with profile: ${activeCabinetProfile.name}`);
 
 // ─── Phase 10+: Initialize UI Rotation Manager ─────────────────────────────────
-let uiRotationManager = initializeUIRotation();
+const uiRotationManager = initializeUIRotation();
 // Apply initial UI rotation based on active profile
 applyUIRotation(activeCabinetProfile);
 console.log(`✓ UI rotation manager initialized`);
 
 // ─── Phase 10+: Initialize Input Mapping Manager ────────────────────────────────
-let inputMappingManager = initializeInputMapping();
+const inputMappingManager = initializeInputMapping();
 // Apply initial input mapping based on active profile
 applyInputMapping(activeCabinetProfile);
 console.log(`✓ Input mapping manager initialized`);
@@ -807,7 +807,7 @@ composer.addPass(bloomPass);
 const initPreset = profiler.getQualityPreset();
 
 // ─── Phase 18: Screen Space Reflections (SSR) ────────────────────────────
-let ssrPass: SSRPass | null = initializeGraphicsPass(
+const ssrPass: SSRPass | null = initializeGraphicsPass(
   'SSRPass',
   initPreset.ssrEnabled,
   () => new SSRPass(renderer, scene, camera, innerWidth, innerHeight),
@@ -822,7 +822,7 @@ let ssrPass: SSRPass | null = initializeGraphicsPass(
 );
 
 // ─── Phase 19: Motion Blur (Velocity-Based Blur) ────────────────────────
-let motionBlurPass: MotionBlurPass | null = initializeGraphicsPass(
+const motionBlurPass: MotionBlurPass | null = initializeGraphicsPass(
   'MotionBlurPass',
   initPreset.motionBlurEnabled,
   () => new MotionBlurPass(renderer, innerWidth, innerHeight),
@@ -837,7 +837,7 @@ let motionBlurPass: MotionBlurPass | null = initializeGraphicsPass(
 );
 
 // ─── Phase 20: Cascaded Shadows ────────────────────────────────────────
-let cascadedShadowMapper: CascadedShadowMapper | null = initializeGraphicsPass(
+const cascadedShadowMapper: CascadedShadowMapper | null = initializeGraphicsPass(
   'CascadedShadows',
   initPreset.cascadeShadowsEnabled,
   () =>
@@ -850,7 +850,7 @@ let cascadedShadowMapper: CascadedShadowMapper | null = initializeGraphicsPass(
 );
 
 // ─── Phase 20: Cascaded Shadow Composite (Apply Shadows to Scene) ──────
-let cascadedShadowCompositePass: CascadedShadowCompositePass | null = initializeGraphicsPass(
+const cascadedShadowCompositePass: CascadedShadowCompositePass | null = initializeGraphicsPass(
   'CascadedShadowComposite',
   initPreset.cascadeShadowsEnabled && cascadedShadowMapper !== null,
   () => initializeCascadedShadowComposite(innerWidth, innerHeight),
@@ -883,7 +883,7 @@ let cascadedShadowCompositePass: CascadedShadowCompositePass | null = initialize
 );
 
 // ─── Phase 20: Per-Light Bloom ──────────────────────────────────────────
-let perLightBloomPass: PerLightBloomPass | null = initializeGraphicsPass(
+const perLightBloomPass: PerLightBloomPass | null = initializeGraphicsPass(
   'PerLightBloom',
   initPreset.perLightBloomEnabled,
   () => initializePerLightBloom(renderer, innerWidth, innerHeight),
@@ -897,7 +897,7 @@ let perLightBloomPass: PerLightBloomPass | null = initializeGraphicsPass(
 );
 
 // ─── Phase 21: Advanced Particle System ────────────────────────────────
-let particleSystem: AdvancedParticleSystem | null = initializeGraphicsPass(
+const particleSystem: AdvancedParticleSystem | null = initializeGraphicsPass(
   'ParticleSystem',
   initPreset.advancedParticlesEnabled,
   () => initializeParticleSystem(scene, initPreset.maxParticles),
@@ -913,7 +913,7 @@ volumetricPass.setParameters(0.5, 0.4, 0.95, 32);  // ─── Reduced decay fr
 composer.addPass((volumetricPass as any).pass || volumetricPass);
 
 // ─── Phase 22: Film Effects (Grain + Aberration + Distortion) ──────────
-let filmEffectsPass: FilmEffectsPass | null = initializeGraphicsPass(
+const filmEffectsPass: FilmEffectsPass | null = initializeGraphicsPass(
   'FilmEffects',
   initPreset.filmEffectsEnabled,
   () => initializeFilmEffects(renderer),
@@ -925,7 +925,7 @@ let filmEffectsPass: FilmEffectsPass | null = initializeGraphicsPass(
 );
 
 // ─── Phase 23: Depth of Field (Optional, Ultra-Only) ──────────────────
-let dofPass: DepthOfFieldPass | null = initializeGraphicsPass(
+const dofPass: DepthOfFieldPass | null = initializeGraphicsPass(
   'DepthOfField',
   initPreset.depthOfFieldEnabled,
   () => initializeDepthOfField(renderer, camera as THREE.PerspectiveCamera),
@@ -1744,7 +1744,7 @@ function updatePlunger(dt: number): void {
     plungerKnob.position.y = 0.8 - state.plungerCharge * 0.7;
     if (Math.floor(state.plungerCharge*10)%3===0) {
       const bars = '█'.repeat(Math.floor(state.plungerCharge*8));
-      dmdState.eventText='POWER '+bars; dmdState.eventTimer=3; dmdState.mode='event';
+      dmdState.eventText=`POWER ${bars}`; dmdState.eventTimer=3; dmdState.mode='event';
     }
   } else {
     // Return to rest position (local y=0.8) with smooth interpolation
@@ -2665,7 +2665,7 @@ function animate(): void {
           // Game over / next ball
           state.ballSaveMode = 'none';
           const bonus = Math.floor(state.bumperHits*100*state.multiplier*0.5);
-          if (bonus > 0) { state.score+=bonus; dmdEvent('BONUS +'+bonus.toLocaleString()); updateHUD(); }
+          if (bonus > 0) { state.score+=bonus; dmdEvent(`BONUS +${bonus.toLocaleString()}`); updateHUD(); }
           playSound('drain'); callScriptDrain();
 
           // ─── Phase 13: Trigger ball drain animations ───
@@ -2915,12 +2915,12 @@ function drawInlineBackglass(): void {
   if (!canvas || !canvas.width) return;
   const ctx = canvas.getContext('2d')!;
   const W = canvas.width, H = canvas.height;
-  const toHex = (n: number) => '#' + ('000000'+n.toString(16)).slice(-6);
+  const toHex = (n: number) => `#${  (`000000${n.toString(16)}`).slice(-6)}`;
   const accent = currentTableConfig ? toHex(currentTableConfig.accentColor) : '#00ff66';
   const tcolor = currentTableConfig ? toHex(currentTableConfig.tableColor)  : '#1a4a15';
 
   const bg = ctx.createLinearGradient(0,0,0,H);
-  bg.addColorStop(0,'#0a0a14'); bg.addColorStop(0.5,tcolor+'44'); bg.addColorStop(1,'#050508');
+  bg.addColorStop(0,'#0a0a14'); bg.addColorStop(0.5,`${tcolor}44`); bg.addColorStop(1,'#050508');
   ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
 
   const bw = Math.max(4,W*0.025);
@@ -2954,7 +2954,7 @@ function drawInlineBackglass(): void {
   ctx.fillText('MULT',W*0.08,H*0.34); ctx.restore();
   ctx.save(); ctx.shadowColor='#ffcc00'; ctx.shadowBlur=14; ctx.fillStyle='#ffcc00';
   ctx.font=`bold ${ms*1.35}px "Courier New",monospace`; ctx.textAlign='left'; ctx.textBaseline='top';
-  ctx.fillText('×'+state.multiplier,W*0.08,H*0.375); ctx.restore();
+  ctx.fillText(`×${state.multiplier}`,W*0.08,H*0.375); ctx.restore();
 
   const ballR=Math.min(W*0.065,H*0.038), bx0=W*0.52, by0=H*0.375;
   ctx.save(); ctx.fillStyle='#334'; ctx.font=`${H*0.028}px "Courier New",monospace`;
@@ -3025,7 +3025,7 @@ function initViewSettings(): void {
 window.switchTab = (tab: string) => {
   document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['demo','import','browser','info','script'][i]===tab));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  (document.getElementById('tab-'+tab) as HTMLElement)?.classList.add('active');
+  (document.getElementById(`tab-${tab}`) as HTMLElement)?.classList.add('active');
 };
 
 // ─── Phase 4: Setup Backglass After Table Load ──────────────────────────────────
@@ -3072,7 +3072,7 @@ window.closeLoader = async function closeLoader() {
 };
 
 // ─── Phase 2: Loading Overlay Management ─────────────────────────────────────────
-let currentLoadingState = {
+const currentLoadingState = {
   isLoading: false,
   resourcesLoaded: 0,
   totalResources: 0,
@@ -3136,11 +3136,11 @@ function updateLoadingProgress(phase: string, current: number, total: number): v
 
   // Update progress bar
   const progressBar = document.getElementById('progress-bar')!;
-  progressBar.style.width = Math.min(totalProgress, 100) + '%';
+  progressBar.style.width = `${Math.min(totalProgress, 100)  }%`;
 
   // Update progress text
   const progressText = document.getElementById('progress-text')!;
-  progressText.textContent = Math.floor(Math.min(totalProgress, 100)) + '%';
+  progressText.textContent = `${Math.floor(Math.min(totalProgress, 100))  }%`;
 
   // Update details
   const detailsEl = document.getElementById('loading-details')!;
@@ -3154,7 +3154,7 @@ function updateLoadingProgress(phase: string, current: number, total: number): v
 }
 
 // ─── Phase 7: File Browser Integration ──────────────────────────────────────────
-let fileBrowserState = {
+const fileBrowserState = {
   selectedTableFile: null as FileInfo | null,
   selectedLibraryFiles: [] as FileInfo[],
   tableDirectory: null as FileSystemDirectoryHandle | null,
@@ -3428,7 +3428,7 @@ function logMsg(msg: string, className: string = 'log-info'): void {
   if (parseLog) {
     const span = document.createElement('span');
     span.className = className;
-    span.textContent = msg + '\n';
+    span.textContent = `${msg  }\n`;
     parseLog.appendChild(span);
     parseLog.scrollTop = parseLog.scrollHeight;
   }
@@ -3646,7 +3646,7 @@ const _msWindowStatus: Record<string,{opened: boolean; verified: boolean}> = {};
 
 window.selectMsLayout = (n: number) => {
   _msLayout=n;
-  [1,2,3].forEach(i => document.getElementById('ms-card-'+i)?.classList.toggle('selected',i===n));
+  [1,2,3].forEach(i => document.getElementById(`ms-card-${i}`)?.classList.toggle('selected',i===n));
 
   // ─── Update Screen Role Configuration UI ───
   const roleConfig = document.getElementById('screen-role-config')!;
@@ -3799,7 +3799,7 @@ window.applyStartupScreenConfig = async () => {
 
 function _winSpec(role: string, dw: number, dh: number, screenIdx?: number): string {
   // Try to use saved position first
-  try { const s=JSON.parse(localStorage.getItem('fpw_winpos_'+role)??'null'); if(s?.w>100) return `width=${s.w},height=${s.h},left=${s.x},top=${s.y}`; } catch { /* ignore */ }
+  try { const s=JSON.parse(localStorage.getItem(`fpw_winpos_${role}`)??'null'); if(s?.w>100) return `width=${s.w},height=${s.h},left=${s.x},top=${s.y}`; } catch { /* ignore */ }
 
   // If screen index provided, use that screen's position
   if (screenIdx !== undefined) {
@@ -3858,10 +3858,10 @@ window.applyMsLayout = async () => {
       const screen2 = screens[screenIdx];
       const x = screen2.availLeft, y = screen2.availTop, w = screen2.availWidth, h = screen2.availHeight;
       const spec = `width=${w},height=${h},left=${x},top=${y},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
-      _msWindows['backglass']=window.open(base+'?role=backglass','fpw_backglass', spec);
+      _msWindows['backglass']=window.open(`${base}?role=backglass`,'fpw_backglass', spec);
       showNotification(`2-Screen: Backglass auf Screen ${screenIdx + 1} geöffnet`);
     } else {
-      _msWindows['backglass']=window.open(base+'?role=backglass','fpw_backglass',_winSpec('backglass',sw,sh)+',toolbar=no,menubar=no,scrollbars=no,resizable=yes');
+      _msWindows['backglass']=window.open(`${base}?role=backglass`,'fpw_backglass',`${_winSpec('backglass',sw,sh)},toolbar=no,menubar=no,scrollbars=no,resizable=yes`);
       showNotification('2-Screen: Bitte Backglass-Fenster auf zweiten Monitor ziehen');
     }
     if(hdBtn){hdBtn.style.display='block';} btn.classList.add('active-multi');
@@ -3881,7 +3881,7 @@ window.applyMsLayout = async () => {
         const bgScreen = screens[bgScreenIdx];
         const xbg = bgScreen.availLeft, ybg = bgScreen.availTop, wbg = bgScreen.availWidth, hbg = bgScreen.availHeight;
         const specBg = `width=${wbg},height=${hbg},left=${xbg},top=${ybg},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
-        _msWindows['backglass']=window.open(base+'?role=backglass&nodmd=1','fpw_backglass', specBg);
+        _msWindows['backglass']=window.open(`${base}?role=backglass&nodmd=1`,'fpw_backglass', specBg);
       }
 
       // DMD on assigned screen
@@ -3890,10 +3890,10 @@ window.applyMsLayout = async () => {
         const xdmd = dmdScreen.availLeft, ydmd = dmdScreen.availTop, wdmd = dmdScreen.availWidth, hdmd = dmdScreen.availHeight;
         const specDmd = `width=${wdmd},height=${hdmd},left=${xdmd},top=${ydmd},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
         console.log(`✓ Opening DMD on Screen ${dmdScreenIdx + 1}: ${wdmd}x${hdmd} at (${xdmd},${ydmd})`);
-        _msWindows['dmd']=window.open(base+'?role=dmd','fpw_dmd', specDmd);
+        _msWindows['dmd']=window.open(`${base}?role=dmd`,'fpw_dmd', specDmd);
         if (!_msWindows['dmd']) {
           console.warn('⚠ Detailed positioning failed, trying basic window.open()');
-          _msWindows['dmd']=window.open(base+'?role=dmd','fpw_dmd', 'toolbar=no,menubar=no,scrollbars=no,resizable=yes,width=1024,height=256');
+          _msWindows['dmd']=window.open(`${base}?role=dmd`,'fpw_dmd', 'toolbar=no,menubar=no,scrollbars=no,resizable=yes,width=1024,height=256');
         }
         if (!_msWindows['dmd']) console.error('⚠ DMD window failed to open - may be blocked by browser or popups disabled');
       } else {
@@ -3907,15 +3907,15 @@ window.applyMsLayout = async () => {
       const screen2 = screens[1];
       const x = screen2.availLeft, y = screen2.availTop, w = screen2.availWidth, h = screen2.availHeight;
       const spec = `width=${w},height=${h},left=${x},top=${y},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
-      _msWindows['backglass']=window.open(base+'?role=backglass&nodmd=1','fpw_backglass', spec);
+      _msWindows['backglass']=window.open(`${base}?role=backglass&nodmd=1`,'fpw_backglass', spec);
       console.log(`✓ Backglass opened on Screen 2`);
-      _msWindows['dmd']=window.open(base+'?role=dmd','fpw_dmd', spec);
+      _msWindows['dmd']=window.open(`${base}?role=dmd`,'fpw_dmd', spec);
       console.log(`✓ DMD opened on Screen 2`);
       showNotification('3-Screen-Modus mit 2 Bildschirmen: Backglass+DMD auf Screen 2');
     } else {
       // Fallback for single screen: manual arrangement
-      _msWindows['backglass']=window.open(base+'?role=backglass&nodmd=1','fpw_backglass',_winSpec('backglass',Math.round(sw*0.75),Math.round(sh*0.75))+',toolbar=no,menubar=no,scrollbars=no,resizable=yes');
-      _msWindows['dmd']=window.open(base+'?role=dmd','fpw_dmd',_winSpec('dmd',Math.round(sw*0.55),Math.round(sh*0.28))+',toolbar=no,menubar=no,scrollbars=no,resizable=yes');
+      _msWindows['backglass']=window.open(`${base}?role=backglass&nodmd=1`,'fpw_backglass',`${_winSpec('backglass',Math.round(sw*0.75),Math.round(sh*0.75))},toolbar=no,menubar=no,scrollbars=no,resizable=yes`);
+      _msWindows['dmd']=window.open(`${base}?role=dmd`,'fpw_dmd',`${_winSpec('dmd',Math.round(sw*0.55),Math.round(sh*0.28))},toolbar=no,menubar=no,scrollbars=no,resizable=yes`);
       showNotification('3-Screen: Fenster auf gewünschte Bildschirme ziehen');
     }
     if(hdBtn) hdBtn.style.display='block'; btn.classList.add('active-multi');
@@ -3946,8 +3946,8 @@ function setupDMDWindow(): void {
     const ww=innerWidth-60, wh=innerHeight-40;
     let w=ww, h=ww/a;
     if(h>wh){h=wh;w=h*a;}
-    canvas.style.width=w+'px';
-    canvas.style.height=h+'px';
+    canvas.style.width=`${w}px`;
+    canvas.style.height=`${h}px`;
 
     // Update DMD scale based on actual height
     if((window as any).updateResponsiveDMDScale) {
@@ -3975,7 +3975,7 @@ function setupBackglassWindow(): void {
   window.addEventListener('beforeunload',()=>{try{localStorage.setItem('fpw_winpos_backglass',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{}disposePhysicsWorker();});
   const canvas=document.getElementById('backglass-canvas') as HTMLCanvasElement;
   const showEmbedDMD=!new URLSearchParams(location.search).has('nodmd');
-  let bgState:any={score:0,ballNum:1,multiplier:1,tableName:'FUTURE PINBALL',tableAccent:0x00ff66,tableColor:0x1a4a15,dmdMode:'attract',dmdEventText:'',dmdAnimFrame:0,dmdScrollX:0,dmdEventTimer:0,lastRank:0,lastScore:0,highScores:[]};
+  const bgState:any={score:0,ballNum:1,multiplier:1,tableName:'FUTURE PINBALL',tableAccent:0x00ff66,tableColor:0x1a4a15,dmdMode:'attract',dmdEventText:'',dmdAnimFrame:0,dmdScrollX:0,dmdEventTimer:0,lastRank:0,lastScore:0,highScores:[]};
 
   const setSize=()=>{canvas.width=innerWidth;canvas.height=innerHeight;};
   setSize(); window.addEventListener('resize',setSize);
@@ -3996,10 +3996,10 @@ function setupBackglassWindow(): void {
 function drawBGCanvas(canvas: HTMLCanvasElement, bgState: any, showEmbedDMD: boolean): void {
   const ctx=canvas.getContext('2d')!; if(!canvas.width)return;
   const W=canvas.width,H=canvas.height;
-  const toHex=(n:number)=>'#'+('000000'+n.toString(16)).slice(-6);
+  const toHex=(n:number)=>`#${(`000000${n.toString(16)}`).slice(-6)}`;
   const accent=toHex(bgState.tableAccent||0x00ff66), tcolor=toHex(bgState.tableColor||0x1a4a15);
   const bg=ctx.createLinearGradient(0,0,0,H);
-  bg.addColorStop(0,'#0a0a14');bg.addColorStop(0.5,tcolor+'44');bg.addColorStop(1,'#050508');
+  bg.addColorStop(0,'#0a0a14');bg.addColorStop(0.5,`${tcolor}44`);bg.addColorStop(1,'#050508');
   ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
   ctx.save();ctx.shadowColor=accent;ctx.shadowBlur=25;ctx.fillStyle=accent;
   ctx.font=`bold ${Math.min(H*0.06,W*0.07)}px "Courier New",monospace`;ctx.textAlign='center';ctx.textBaseline='top';
@@ -4008,7 +4008,7 @@ function drawBGCanvas(canvas: HTMLCanvasElement, bgState: any, showEmbedDMD: boo
   ctx.font=`bold ${Math.min(H*0.14,W*0.12)}px "Courier New",monospace`;ctx.textAlign='center';ctx.textBaseline='top';
   ctx.fillText((bgState.score||0).toLocaleString(),W/2,H*0.15);ctx.restore();
   ctx.save();ctx.fillStyle='#ffcc00';ctx.font=`bold ${Math.min(H*0.07,W*0.06)}px "Courier New",monospace`;ctx.textAlign='left';ctx.textBaseline='top';
-  ctx.fillText('×'+(bgState.multiplier||1),W*0.08,H*0.38);ctx.restore();
+  ctx.fillText(`×${bgState.multiplier||1}`,W*0.08,H*0.38);ctx.restore();
   if(showEmbedDMD&&dmdCanvas){
     const dY=H*0.72,dH=H*0.25,dW=W*0.86,dX=W*0.07;
     ctx.fillStyle='#050200';ctx.strokeStyle='#5a2200';ctx.lineWidth=2;
@@ -4061,7 +4061,7 @@ async function browseTableDirectory(): Promise<void> {
       DirectoryPathManager.saveTablePath(dirHandle.name || 'Tabellenverzeichnis');
       updateTablePathShortcuts();
 
-      let files: File[] = [];
+      const files: File[] = [];
       for await (const [name, handle] of dirHandle.entries()) {
         if (name.endsWith('.fpt') || name.endsWith('.fp')) {
           try {
@@ -4088,7 +4088,7 @@ async function browseTableDirectory(): Promise<void> {
     tableInput.onchange = (e) => {
       const input = e.target as HTMLInputElement;
       if (input.files && input.files.length > 0) {
-        let files: File[] = [];
+        const files: File[] = [];
         Array.from(input.files).forEach(f => {
           if (f.name.endsWith('.fpt') || f.name.endsWith('.fp')) {
             files.push(f);
@@ -4157,7 +4157,7 @@ async function browseLibraryDirectory(): Promise<void> {
       DirectoryPathManager.saveLibraryPath(dirHandle.name || 'Bibliotheksverzeichnis');
       updateLibraryPathShortcuts();
 
-      let files: File[] = [];
+      const files: File[] = [];
       for await (const [name, handle] of dirHandle.entries()) {
         if (name.endsWith('.fpl')) {
           try {
@@ -4184,7 +4184,7 @@ async function browseLibraryDirectory(): Promise<void> {
     libInput.onchange = (e) => {
       const input = e.target as HTMLInputElement;
       if (input.files && input.files.length > 0) {
-        let files: File[] = [];
+        const files: File[] = [];
         Array.from(input.files).forEach(f => {
           if (f.name.endsWith('.fpl')) {
             files.push(f);

@@ -133,8 +133,8 @@ function startDMDDrag(e: MouseEvent, handle: string, canvas: HTMLCanvasElement, 
       }
     }
 
-    canvas.style.width = newWidth + 'px';
-    canvas.style.height = newHeight + 'px';
+    canvas.style.width = `${newWidth  }px`;
+    canvas.style.height = `${newHeight  }px`;
 
     // Update DMD scale based on new size
     const newScale = Math.max(1, Math.floor(newHeight / 32));
@@ -171,8 +171,8 @@ function loadDMDCustomSize(canvas: HTMLCanvasElement, wrap: HTMLElement): void {
     const saved = localStorage.getItem(DMD_RESIZE_STORAGE_KEY);
     if (saved) {
       const { width, height } = JSON.parse(saved);
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
+      canvas.style.width = `${width  }px`;
+      canvas.style.height = `${height  }px`;
       const newScale = Math.max(1, Math.floor(height / 32));
       DMD_SCALE = newScale;
       console.log(`📺 DMD restored to saved size: ${width}x${height}px (scale: ${DMD_SCALE}x)`);
@@ -230,7 +230,7 @@ export interface DMDOptions {
   resolution: 'standard' | 'hires' | 'uhires';
 }
 
-export let dmdOptions: DMDOptions = {
+export const dmdOptions: DMDOptions = {
   enableGlow: localStorage.getItem('fpw_dmd_glow') !== 'false',
   glowIntensity: 0.6,
   colorScheme: localStorage.getItem('fpw_dmd_color') || 'amber',
@@ -594,7 +594,7 @@ function dmdDrawTextOrScroll(
 
   // Overflows \u2014 scroll. Pad with spaces so two consecutive cycles have a
   // visible gap and read as one repeating line, not as touching characters.
-  const padded = text + '    ';
+  const padded = `${text  }    `;
   dmdOff2d.font = fontStr;
   const cycleW = dmdOff2d.measureText(padded).width;
   const t = (dmdState.animFrame * speedPxPerFrame * S) % cycleW;
@@ -651,7 +651,7 @@ export function dmdRenderGameOver(): void {
     dmdDrawText('GAME OVER', DMD_W / 2, 10, 13);
   }
   const rankStr = state.lastRank ? `RANK #${state.lastRank}  ` : '';
-  dmdDrawText(rankStr + 'SCORE: ' + state.lastScore.toLocaleString(), DMD_W / 2, 26, 7);
+  dmdDrawText(`${rankStr  }SCORE: ${  state.lastScore.toLocaleString()}`, DMD_W / 2, 26, 7);
   dmdFlush();
 }
 
@@ -669,7 +669,7 @@ export function dmdRenderTableInfo(): void {
   // Top line: "LOADING" with animated dots so it's never visually frozen
   // even if the bottom-line scroll is briefly off-screen between cycles.
   const dots = '.'.repeat(1 + Math.floor(dmdState.animFrame / 20) % 4);
-  dmdDrawText('LOADING' + dots, DMD_W / 2, 9, 7);
+  dmdDrawText(`LOADING${  dots}`, DMD_W / 2, 9, 7);
 
   // Bottom line: ALWAYS scroll, faster so motion is obvious in the 5-sec window
   const scrollLine = `${tname}    ·    BY ${author.toUpperCase()}    ·    ${year}    `;
@@ -725,7 +725,7 @@ export function dmdRenderInsertCoin(): void {
       const hint = maxPlayers === 1
         ? 'PRESS 1 TO START'
         : `PRESS 1-${maxPlayers} TO START  (${maxPlayers}P MAX)`;
-      dmdScrollText('   ' + hint + '   ', 27, 7, 2.5, 'right');
+      dmdScrollText(`   ${  hint  }   `, 27, 7, 2.5, 'right');
     }
   } else if (phase === 1) {
     // HIGH SCORES

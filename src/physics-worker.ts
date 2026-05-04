@@ -27,7 +27,7 @@ let slingshotMap: Map<number, string> = new Map();
 let tableBodies: RAPIER.RigidBody[] = [];
 
 // Physics state
-let gravity = { x: 0, y: -9.8 };
+const gravity = { x: 0, y: -9.8 };
 let frameCount = 0;
 let lastPhysicsUpdate = 0;
 

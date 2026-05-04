@@ -104,11 +104,11 @@ export class AudioSourcePool {
       reused: this.stats.reused,
       reuseRate:
         this.stats.reused + this.stats.created > 0
-          ? (
+          ? `${(
               (this.stats.reused /
                 (this.stats.reused + this.stats.created)) *
               100
-            ).toFixed(1) + '%'
+            ).toFixed(1)  }%`
           : 'N/A',
     };
   }

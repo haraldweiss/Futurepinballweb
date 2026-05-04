@@ -242,7 +242,7 @@ export class BamBridge {
   /**
    * Register event callback
    */
-  on(eventName: string, callback: Function): void {
+  on(eventName: string, callback: (...args: any[]) => any): void {
     if (!this.eventCallbacks.has(eventName)) {
       this.eventCallbacks.set(eventName, []);
     }
@@ -252,7 +252,7 @@ export class BamBridge {
   /**
    * Unregister event callback
    */
-  off(eventName: string, callback: Function): void {
+  off(eventName: string, callback: (...args: any[]) => any): void {
     const callbacks = this.eventCallbacks.get(eventName);
     if (callbacks) {
       const idx = callbacks.indexOf(callback);

@@ -258,7 +258,7 @@ export function formatFileSize(bytes: number): string {
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round((bytes / Math.pow(k, i)) * 10) / 10 + ' ' + sizes[i];
+  return `${Math.round((bytes / Math.pow(k, i)) * 10) / 10  } ${  sizes[i]}`;
 }
 
 /**
@@ -266,7 +266,7 @@ export function formatFileSize(bytes: number): string {
  */
 export function formatDate(timestamp: number): string {
   const date = new Date(timestamp);
-  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+  return `${date.toLocaleDateString()  } ${  date.toLocaleTimeString()}`;
 }
 
 /**

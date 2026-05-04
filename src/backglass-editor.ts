@@ -271,7 +271,7 @@ export class BackglassEditor {
     const h = this.canvas.height;
 
     // Background
-    ctx.fillStyle = '#' + this.numberToHex(this.settings.cabinetColor);
+    ctx.fillStyle = `#${  this.numberToHex(this.settings.cabinetColor)}`;
     ctx.fillRect(0, 0, w, h);
 
     // Cabinet frame
@@ -318,7 +318,7 @@ export class BackglassEditor {
       ctx.fillRect(x - radius * 2, y - radius * 2, radius * 4, radius * 4);
 
       // Core
-      ctx.fillStyle = '#' + this.numberToHex(light.color);
+      ctx.fillStyle = `#${  this.numberToHex(light.color)}`;
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
@@ -328,7 +328,7 @@ export class BackglassEditor {
     this.settings.textOverlays.forEach(overlay => {
       ctx.save();
       ctx.globalAlpha = overlay.opacity;
-      ctx.fillStyle = '#' + this.numberToHex(overlay.color);
+      ctx.fillStyle = `#${  this.numberToHex(overlay.color)}`;
       ctx.font = `${overlay.fontSize}px Arial`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -355,7 +355,7 @@ export class BackglassEditor {
    * Convert number to hex string
    */
   private numberToHex(num: number): string {
-    return ('000000' + num.toString(16)).slice(-6);
+    return (`000000${  num.toString(16)}`).slice(-6);
   }
 
   /**

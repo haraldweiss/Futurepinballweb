@@ -566,8 +566,8 @@ export class EditorModal {
    */
   private loadTableConfig(config: TableConfig): void {
     this.tableName = config.name || 'My Table';
-    this.tableColor = '#' + ('000000' + (config.tableColor || 0x1a4a15).toString(16)).slice(-6);
-    this.accentColor = '#' + ('000000' + (config.accentColor || 0x00ff66).toString(16)).slice(-6);
+    this.tableColor = `#${  (`000000${  (config.tableColor || 0x1a4a15).toString(16)}`).slice(-6)}`;
+    this.accentColor = `#${  (`000000${  (config.accentColor || 0x00ff66).toString(16)}`).slice(-6)}`;
 
     this.elements = [];
     (config.bumpers || []).forEach(b => {
@@ -742,7 +742,7 @@ export class EditorModal {
     // Ramp start preview
     if (this.tool === 'ramp' && this.rampStart) {
       const p = this.gToC(this.rampStart.x, this.rampStart.y);
-      ctx.fillStyle = '#' + ('000000' + this.COLORS[this.colorIdx].toString(16)).slice(-6);
+      ctx.fillStyle = `#${  (`000000${  this.COLORS[this.colorIdx].toString(16)}`).slice(-6)}`;
       ctx.beginPath();
       ctx.arc(p.x, p.y, 7, 0, Math.PI * 2);
       ctx.fill();
@@ -755,7 +755,7 @@ export class EditorModal {
   private drawElement(el: Elem, selected: boolean): void {
     if (!this.ctx) return;
     const ctx = this.ctx;
-    const color = '#' + ('000000' + el.color.toString(16)).slice(-6);
+    const color = `#${  (`000000${  el.color.toString(16)}`).slice(-6)}`;
 
     if (el.type === 'bumper') {
       const p = this.gToC(el.x, el.y);

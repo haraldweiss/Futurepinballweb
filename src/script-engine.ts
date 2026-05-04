@@ -164,7 +164,7 @@ function _vbsStmt(s: string, withContext?: string): string {
   // Handle With context: .Property becomes __with__.Property
   let target = t;
   if (withContext && t.startsWith('.')) {
-    target = '__with__' + t;
+    target = `__with__${  t}`;
   }
 
   const eqIdx = target.search(/(?<![<>!])=(?!=)/);
@@ -185,14 +185,14 @@ export function vbsToJS(src: string): string {
   const lines = preprocessed.replace(/\r\n?/g, '\n').split('\n');
   const out: string[] = [];
   let depth = 0;
-  let withStack: string[] = [];  // Track With context for property access
+  const withStack: string[] = [];  // Track With context for property access
   const pad = () => '  '.repeat(Math.max(0, depth));
 
   for (const rawLine of lines) {
     const t = rawLine.trim();
     if (!t) { out.push(''); continue; }
     if (t.startsWith("'") || /^rem\s/i.test(t)) {
-      out.push(pad() + '// ' + t.replace(/^'|^rem\s+/i, '')); continue;
+      out.push(`${pad()  }// ${  t.replace(/^'|^rem\s+/i, '')}`); continue;
     }
     let code = t;
     const sqIdx = t.indexOf("'");
@@ -202,68 +202,68 @@ export function vbsToJS(src: string): string {
 
     let m: RegExpMatchArray | null;
 
-    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Sub\s+(\w+)\s*\((.*?)\)/i)))     { out.push(pad() + `function ${m[1]}(${m[2]}) {`); depth++; continue; }
-    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Function\s+(\w+)\s*\((.*?)\)/i))) { out.push(pad() + `function ${m[1]}(${m[2]}) {`); depth++; continue; }
-    if (/^End\s+(Sub|Function)$/i.test(code))  { depth = Math.max(0,depth-1); out.push(pad()+'}'); continue; }
+    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Sub\s+(\w+)\s*\((.*?)\)/i)))     { out.push(`${pad()  }function ${m[1]}(${m[2]}) {`); depth++; continue; }
+    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Function\s+(\w+)\s*\((.*?)\)/i))) { out.push(`${pad()  }function ${m[1]}(${m[2]}) {`); depth++; continue; }
+    if (/^End\s+(Sub|Function)$/i.test(code))  { depth = Math.max(0,depth-1); out.push(`${pad()}}`); continue; }
 
-    if ((m = code.match(/^If\s+(.*?)\s+Then$/i)))         { out.push(pad()+`if (${_vbsXpr(m[1])}) {`); depth++; continue; }
-    if ((m = code.match(/^If\s+(.*?)\s+Then\s+(.+)$/i)))  { out.push(pad()+`if (${_vbsXpr(m[1])}) { ${_vbsStmt(m[2])}; }`); continue; }
-    if ((m = code.match(/^ElseIf\s+(.*?)\s+Then$/i)))     { depth=Math.max(0,depth-1); out.push(pad()+`} else if (${_vbsXpr(m[1])}) {`); depth++; continue; }
-    if (/^Else$/i.test(code))   { depth=Math.max(0,depth-1); out.push(pad()+'} else {'); depth++; continue; }
-    if (/^End\s+If$/i.test(code)) { depth=Math.max(0,depth-1); out.push(pad()+'}'); continue; }
+    if ((m = code.match(/^If\s+(.*?)\s+Then$/i)))         { out.push(`${pad()}if (${_vbsXpr(m[1])}) {`); depth++; continue; }
+    if ((m = code.match(/^If\s+(.*?)\s+Then\s+(.+)$/i)))  { out.push(`${pad()}if (${_vbsXpr(m[1])}) { ${_vbsStmt(m[2])}; }`); continue; }
+    if ((m = code.match(/^ElseIf\s+(.*?)\s+Then$/i)))     { depth=Math.max(0,depth-1); out.push(`${pad()}} else if (${_vbsXpr(m[1])}) {`); depth++; continue; }
+    if (/^Else$/i.test(code))   { depth=Math.max(0,depth-1); out.push(`${pad()}} else {`); depth++; continue; }
+    if (/^End\s+If$/i.test(code)) { depth=Math.max(0,depth-1); out.push(`${pad()}}`); continue; }
 
     // Phase 1.2: For...To...Next and For Each...In loops
     if ((m = code.match(/^For\s+(\w+)\s*=\s*(.+?)\s+To\s+(.+?)(?:\s+Step\s+(.+))?$/i))) {
       const v=m[1], a=_vbsXpr(m[2].trim()), b=_vbsXpr(m[3].trim()), st=m[4]?parseFloat(m[4]):1;
       const op=st<0?'>=':'<=', inc=st===1?`${v}++`:st===-1?`${v}--`:`${v}+=${st}`;
-      out.push(pad()+`for (let ${v}=${a}; ${v}${op}${b}; ${inc}) {`); depth++; continue;
+      out.push(`${pad()}for (let ${v}=${a}; ${v}${op}${b}; ${inc}) {`); depth++; continue;
     }
     if ((m = code.match(/^For\s+Each\s+(\w+)\s+In\s+(.+)$/i))) {
       const v = m[1], arr = _vbsXpr(m[2].trim());
-      out.push(pad() + `for (let ${v} of ${arr}) {`); depth++; continue;
+      out.push(`${pad()  }for (let ${v} of ${arr}) {`); depth++; continue;
     }
-    if (/^Next(?:\s+\w+)?$/i.test(code)) { depth=Math.max(0,depth-1); out.push(pad()+'}'); continue; }
+    if (/^Next(?:\s+\w+)?$/i.test(code)) { depth=Math.max(0,depth-1); out.push(`${pad()}}`); continue; }
 
     // Phase 2.1: Do loop variants (Do, Do While, Do Until, post-test loops)
     if ((m = code.match(/^Do\s*$/i))) {
-      out.push(pad() + `while(true) {`); depth++; continue;
+      out.push(`${pad()  }while(true) {`); depth++; continue;
     }
-    if ((m = code.match(/^Do\s+While\s+(.*)/i)))  { out.push(pad()+`while (${_vbsXpr(m[1])}) {`); depth++; continue; }
-    if ((m = code.match(/^Do\s+Until\s+(.*)/i)))  { out.push(pad()+`while (!(${_vbsXpr(m[1])})) {`); depth++; continue; }
+    if ((m = code.match(/^Do\s+While\s+(.*)/i)))  { out.push(`${pad()}while (${_vbsXpr(m[1])}) {`); depth++; continue; }
+    if ((m = code.match(/^Do\s+Until\s+(.*)/i)))  { out.push(`${pad()}while (!(${_vbsXpr(m[1])})) {`); depth++; continue; }
     if ((m = code.match(/^Loop\s+While\s+(.*)/i))) {
       depth = Math.max(0, depth - 1);
-      out.push(pad() + `} while(${_vbsXpr(m[1])})`); continue;
+      out.push(`${pad()  }} while(${_vbsXpr(m[1])})`); continue;
     }
     if ((m = code.match(/^Loop\s+Until\s+(.*)/i))) {
       depth = Math.max(0, depth - 1);
-      out.push(pad() + `} while(!(${_vbsXpr(m[1])}))`); continue;
+      out.push(`${pad()  }} while(!(${_vbsXpr(m[1])}))`); continue;
     }
-    if (/^Loop$/i.test(code)) { depth=Math.max(0,depth-1); out.push(pad()+'}'); continue; }
-    if (/^Exit\s+Do$/i.test(code)) { out.push(pad()+'break;'); continue; }
+    if (/^Loop$/i.test(code)) { depth=Math.max(0,depth-1); out.push(`${pad()}}`); continue; }
+    if (/^Exit\s+Do$/i.test(code)) { out.push(`${pad()}break;`); continue; }
 
-    if ((m = code.match(/^Select\s+Case\s+(.*)/i)))  { out.push(pad()+`switch (${_vbsXpr(m[1])}) {`); depth++; continue; }
-    if (/^Case\s+Else$/i.test(code)) { out.push(pad()+'default:'); continue; }
+    if ((m = code.match(/^Select\s+Case\s+(.*)/i)))  { out.push(`${pad()}switch (${_vbsXpr(m[1])}) {`); depth++; continue; }
+    if (/^Case\s+Else$/i.test(code)) { out.push(`${pad()}default:`); continue; }
     if ((m = code.match(/^Case\s+(.*)/i))) { out.push(pad()+m[1].split(',').map(v=>`case ${_vbsXpr(v.trim())}:`).join(' ')); continue; }
-    if (/^End\s+Select$/i.test(code)) { depth=Math.max(0,depth-1); out.push(pad()+'}'); continue; }
+    if (/^End\s+Select$/i.test(code)) { depth=Math.max(0,depth-1); out.push(`${pad()}}`); continue; }
 
     if ((m = code.match(/^Dim\s+(.*)/i))) {
       const vars = m[1].split(',').map(v=>v.trim().replace(/\s+As\s+\w+/i,'').replace(/\(.*?\)/,'').trim()).filter(Boolean);
-      out.push(pad()+'let '+vars.join(', ')+';'); continue;
+      out.push(`${pad()}let ${vars.join(', ')};`); continue;
     }
-    if ((m = code.match(/^Const\s+(\w+)\s*=\s*(.*)/i))) { out.push(pad()+`const ${m[1]} = ${_vbsXpr(m[2])};`); continue; }
+    if ((m = code.match(/^Const\s+(\w+)\s*=\s*(.*)/i))) { out.push(`${pad()}const ${m[1]} = ${_vbsXpr(m[2])};`); continue; }
 
-    if (/^Exit\s+(Sub|Function)$/i.test(code)) { out.push(pad()+'return;'); continue; }
-    if (/^Exit\s+For$/i.test(code))            { out.push(pad()+'break;');  continue; }
+    if (/^Exit\s+(Sub|Function)$/i.test(code)) { out.push(`${pad()}return;`); continue; }
+    if (/^Exit\s+For$/i.test(code))            { out.push(`${pad()}break;`);  continue; }
 
     if (/^On\s+Error\s+Resume\s+Next$/i.test(code)) {
-      out.push(pad() + 'try {'); depth++; continue;
+      out.push(`${pad()  }try {`); depth++; continue;
     }
 
     // Phase 3.1: With statement - properly track context
     if ((m = code.match(/^With\s+([\w.]+)\s*$/i))) {
       const objName = m[1];
-      out.push(pad() + `let __with__ = ${_vbsXpr(objName)};`);
-      out.push(pad() + '{');
+      out.push(`${pad()  }let __with__ = ${_vbsXpr(objName)};`);
+      out.push(`${pad()  }{`);
       depth++;
       withStack.push(objName);
       continue;
@@ -271,14 +271,14 @@ export function vbsToJS(src: string): string {
     if (/^End\s+With$/i.test(code)) {
       withStack.pop();
       depth = Math.max(0, depth - 1);
-      out.push(pad() + '}');
+      out.push(`${pad()  }}`);
       continue;
     }
 
-    if ((m = code.match(/^Call\s+(.*)/i)))               { out.push(pad()+_vbsStmt(m[1], withStack[withStack.length-1])+';'); continue; }
-    if ((m = code.match(/^Set\s+([\w.]+)\s*=\s*(.*)/i))) { out.push(pad()+`${m[1]} = ${_vbsXpr(m[2])};`); continue; }
+    if ((m = code.match(/^Call\s+(.*)/i)))               { out.push(`${pad()+_vbsStmt(m[1], withStack[withStack.length-1])};`); continue; }
+    if ((m = code.match(/^Set\s+([\w.]+)\s*=\s*(.*)/i))) { out.push(`${pad()}${m[1]} = ${_vbsXpr(m[2])};`); continue; }
 
-    out.push(pad() + _vbsStmt(code, withStack[withStack.length-1]) + ';');
+    out.push(`${pad() + _vbsStmt(code, withStack[withStack.length-1])  };`);
   }
   return out.join('\n');
 }
@@ -294,7 +294,7 @@ export function fpScriptLog(msg: string, type = 'info'): void {
   const fullMsg = `[${timeStr}] ${msg}`;
 
   const span = document.createElement('span');
-  span.className = 'log-' + type;
+  span.className = `log-${  type}`;
   span.textContent = fullMsg;
   el.appendChild(span);
   el.appendChild(document.createElement('br'));
@@ -311,13 +311,13 @@ function buildFPScriptAPI() {
   const timers: Record<string, any> = {};
 
   const makeTimer = (name: string) => ({
-    get Enabled() { return !!timers[name + '_id']; },
+    get Enabled() { return !!timers[`${name  }_id`]; },
     set Enabled(v: boolean) {
-      clearInterval(timers[name + '_id']); delete timers[name + '_id'];
-      if (v) timers[name + '_id'] = setInterval(() => callScriptFn(name + '_Expired'), timers[name + '_ms'] || 1000);
+      clearInterval(timers[`${name  }_id`]); delete timers[`${name  }_id`];
+      if (v) timers[`${name  }_id`] = setInterval(() => callScriptFn(`${name  }_Expired`), timers[`${name  }_ms`] || 1000);
     },
-    get Interval() { return timers[name + '_ms'] || 1000; },
-    set Interval(ms: number) { timers[name + '_ms'] = ms; },
+    get Interval() { return timers[`${name  }_ms`] || 1000; },
+    set Interval(ms: number) { timers[`${name  }_ms`] = ms; },
   });
 
   return {
@@ -346,16 +346,16 @@ function buildFPScriptAPI() {
     StopMusic:  () => stopBGMusic(),
 
     DMDText:     (text: string) => dmdEvent(String(text).slice(0, 22).toUpperCase()),
-    LightOn:     (name: string) => fpScriptLog('Light ON: ' + name),
-    LightOff:    (name: string) => fpScriptLog('Light OFF: ' + name),
-    LightBlink:  (name: string) => fpScriptLog('Light BLINK: ' + name),
+    LightOn:     (name: string) => fpScriptLog(`Light ON: ${  name}`),
+    LightOff:    (name: string) => fpScriptLog(`Light OFF: ${  name}`),
+    LightBlink:  (name: string) => fpScriptLog(`Light BLINK: ${  name}`),
     SetLight:    (name: string, val: any) => fpScriptLog(`SetLight: ${name}=${val}`),
-    FlasherOn:   (name: string) => { cb.showNotification('💡 ' + name); fpScriptLog('Flasher ON: ' + name); },
-    FlasherOff:  (name: string) => fpScriptLog('Flasher OFF: ' + name),
-    FlasherBlink:(name: string) => fpScriptLog('Flasher BLINK: ' + name),
-    FireCoil:    (name: string) => fpScriptLog('FireCoil: ' + name),
-    SolenoidOn:  (name: string) => fpScriptLog('Solenoid ON: ' + name),
-    SolenoidOff: (name: string) => fpScriptLog('Solenoid OFF: ' + name),
+    FlasherOn:   (name: string) => { cb.showNotification(`💡 ${  name}`); fpScriptLog(`Flasher ON: ${  name}`); },
+    FlasherOff:  (name: string) => fpScriptLog(`Flasher OFF: ${  name}`),
+    FlasherBlink:(name: string) => fpScriptLog(`Flasher BLINK: ${  name}`),
+    FireCoil:    (name: string) => fpScriptLog(`FireCoil: ${  name}`),
+    SolenoidOn:  (name: string) => fpScriptLog(`Solenoid ON: ${  name}`),
+    SolenoidOff: (name: string) => fpScriptLog(`Solenoid OFF: ${  name}`),
 
     AddBalls:       (n: number) => { for (let i = 0; i < Math.max(0,(+n||1)-1); i++) cb.launchMultiBall(); },
     MultiballStart: (n: number) => { for (let i = 0; i < Math.max(0,(+n||2)-1); i++) cb.launchMultiBall(); },
@@ -807,14 +807,14 @@ function buildFPScriptAPI() {
     Max: (...args: number[]) => Math.max(...args),
 
     // Timer helpers
-    SetTimeout: (fn: Function, ms: number) => {
+    SetTimeout: (fn: (...args: any[]) => any, ms: number) => {
       if (typeof fn === 'function') {
         return setTimeout(() => fn(), ms);
       }
       return null;
     },
 
-    SetInterval: (fn: Function, ms: number) => {
+    SetInterval: (fn: (...args: any[]) => any, ms: number) => {
       if (typeof fn === 'function') {
         return setInterval(() => fn(), ms);
       }
@@ -1174,7 +1174,7 @@ function buildFPScriptAPI() {
           if (key && key.startsWith(sectionFilter)) {
             try {
               const value = JSON.parse(localStorage.getItem(key) || 'null');
-              const parts = key.replace(appPrefix + '_', '').split('_');
+              const parts = key.replace(`${appPrefix  }_`, '').split('_');
               if (parts.length >= 2) {
                 const sec = parts[0];
                 const k = parts.slice(1).join('_');
@@ -1340,7 +1340,7 @@ function buildFPScriptAPI() {
     FormatPercent: (n: number, digits?: number) => {
       const num = Number(n || 0) * 100;
       const d = Math.max(0, Math.floor(digits || 2));
-      return num.toFixed(d) + '%';
+      return `${num.toFixed(d)  }%`;
     },
 
     FormatBytes: (n: number) => {
@@ -1354,7 +1354,7 @@ function buildFPScriptAPI() {
         unitIdx++;
       }
 
-      return size.toFixed(unitIdx === 0 ? 0 : 1) + ' ' + units[unitIdx];
+      return `${size.toFixed(unitIdx === 0 ? 0 : 1)  } ${  units[unitIdx]}`;
     },
 
     PadLeft: (s: string, len: number, char?: string) => {
@@ -1799,7 +1799,7 @@ export function runFPScript(vbsCode: string): void {
 
   let jsCode: string;
   try { jsCode = vbsToJS(vbsCode); }
-  catch(e: any) { fpScriptLog('Transpile-Fehler: ' + e.message, 'error'); return; }
+  catch(e: any) { fpScriptLog(`Transpile-Fehler: ${  e.message}`, 'error'); return; }
 
   const api = buildFPScriptAPI();
   _collectTimers(api, jsCode);
@@ -1816,9 +1816,9 @@ export function runFPScript(vbsCode: string): void {
     runSandboxed(jsCode, bindings, collect, api, handlers);
   } catch(e: any) {
     if (e instanceof ScriptSandboxError) {
-      fpScriptLog('Script blocked by sandbox: ' + e.message, 'error');
+      fpScriptLog(`Script blocked by sandbox: ${  e.message}`, 'error');
     } else {
-      fpScriptLog('Script-Fehler: ' + e.message, 'error');
+      fpScriptLog(`Script-Fehler: ${  e.message}`, 'error');
     }
   }
 
@@ -1850,13 +1850,13 @@ export function callScriptFn(name: string, ...args: any[]): boolean {
   return false;
 }
 
-export const callScriptBumper    = (i: number) => callScriptFn('Bumper' + (i+1) + '_Hit');
-export const callScriptTarget    = (i: number) => callScriptFn('Target' + (i+1) + '_Hit') || callScriptFn('StandupTarget' + (i+1) + '_Hit');
-export const callScriptSlingshot = (side: string) => { const n = side==='left'?'LeftSlingshot':'RightSlingshot'; callScriptFn(n+'_Hit') || callScriptFn(n+'_Slingshot'); };
+export const callScriptBumper    = (i: number) => callScriptFn(`Bumper${  i+1  }_Hit`);
+export const callScriptTarget    = (i: number) => callScriptFn(`Target${  i+1  }_Hit`) || callScriptFn(`StandupTarget${  i+1  }_Hit`);
+export const callScriptSlingshot = (side: string) => { const n = side==='left'?'LeftSlingshot':'RightSlingshot'; callScriptFn(`${n}_Hit`) || callScriptFn(`${n}_Slingshot`); };
 export const callScriptDrain     = () => callScriptFn('BallDrain') || callScriptFn('Table1_BallDrained') || callScriptFn('Table_BallDrain');
 export const callScriptFlipper   = (side: string, isDown: boolean) => callScriptFn((side==='left'?'LeftFlipper':'RightFlipper') + (isDown?'_Enabled':'_Disabled'));
 
 // ─── B.A.M. Event Dispatch (Session 20.2) ───
 export function callScriptBAMEvent(eventName: string, ...args: any[]): boolean {
-  return callScriptFn('BAM_' + String(eventName), ...args);
+  return callScriptFn(`BAM_${  String(eventName)}`, ...args);
 }

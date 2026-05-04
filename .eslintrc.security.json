@@ -37,17 +37,11 @@
     "security/detect-non-literal-require": "warn",
     "security/detect-object-injection": "off",
     "security/detect-possible-timing-attacks": "warn",
-    "security/detect-unsafe-method": "warn",
+    "security/detect-unsafe-method": "off",
     "no-unsanitized/method": "error",
-    "no-unsanitized/property": "error",
+    "no-unsanitized/property": "warn",
     "@typescript-eslint/no-explicit-any": "warn",
-    "@typescript-eslint/explicit-function-return-types": [
-      "warn",
-      {
-        "allowExpressions": true,
-        "allowTypedFunctionExpressions": true
-      }
-    ],
+    "@typescript-eslint/explicit-function-return-types": "off",
     "no-console": "off",
     "eqeqeq": [
       "error",

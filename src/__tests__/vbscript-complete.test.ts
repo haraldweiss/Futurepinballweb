@@ -560,7 +560,7 @@ describe('VBScript Complete Function Coverage', () => {
       const modeType = env.lCase(mode);
       expect(modeType).toBe('multiball');
 
-      const message = env.repeat('*', 5) + ' COMBO ' + env.repeat('*', 5);
+      const message = `${env.repeat('*', 5)  } COMBO ${  env.repeat('*', 5)}`;
       expect(env.len(message)).toBe(17);
       expect(env.inStr(message, 'COMBO')).toBeGreaterThan(0);
     });

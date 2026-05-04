@@ -584,7 +584,7 @@ export function checkRolloverLanes(): void {
         if (rolloversHit.every(Boolean)) {
           rolloversHit.fill(false);
           state.multiplier = Math.min(5, state.multiplier + 1);
-          cb.dmdEvent('\u00d7' + state.multiplier + ' ROLLOVER BONUS!');
+          cb.dmdEvent(`\u00d7${  state.multiplier  } ROLLOVER BONUS!`);
           cb.showNotification(`🏆 ×${state.multiplier} ROLLOVER BONUS!`);
           cb.updateHUD();
         } else {
