@@ -77,8 +77,11 @@ export async function testXSSPrevention(): Promise<void> {
     try {
       const input = '<img src=x onerror="alert(1)">';
       const output = escapeHtml(input);
-      assert(!output.includes('onerror'), 'onerror attribute not escaped');
       assert(output.includes('&lt;img'), 'img tag not escaped');
+      assert(output.includes('&quot;'), 'quotes not escaped');
+      assert(output.includes('&gt;'), 'closing bracket not escaped');
+      assert(!output.includes('<'), 'unescaped < found');
+      assert(!output.includes('>'), 'unescaped > found');
       logTest('escapeHtml: Image onerror payload', true, 'Payload neutralized', performance.now() - start, 'xss');
     } catch (e) {
       logTest('escapeHtml: Image onerror payload', false, String(e), performance.now() - start, 'xss');
@@ -122,9 +125,10 @@ export async function testXSSPrevention(): Promise<void> {
         size: '5.2 MB'
       };
       const output = createSafeHtml(template, data);
-      assert(!output.includes('onerror'), 'Template data not escaped');
       assert(output.includes('&lt;img'), 'Template escaping failed');
+      assert(output.includes('&quot;'), 'Quotes not escaped in template');
       assert(output.includes('5.2 MB'), 'Safe data corrupted');
+      assert(!output.includes('<img'), 'unescaped img tag found');
       logTest('createSafeHtml: Template escaping', true, 'All placeholders escaped', performance.now() - start, 'xss');
     } catch (e) {
       logTest('createSafeHtml: Template escaping', false, String(e), performance.now() - start, 'xss');
@@ -172,7 +176,7 @@ export async function testInputValidation(): Promise<void> {
         { input: 'Normal Table.fpt', expected: 'Normal Table.fpt' },
         { input: '<script>.fpt', expected: '_script_.fpt' },
         { input: 'Test<img>.fpt', expected: 'Test_img_.fpt' },
-        { input: 'file:///etc/passwd', expected: 'file___etc_passwd' },
+        { input: 'file:///etc/passwd', expected: 'file_etc_passwd' },
       ];
 
       inputs.forEach(({ input, expected }) => {
@@ -422,6 +426,36 @@ export async function testWorkerSecurity(): Promise<void> {
 
 // ─── Test Suite: Event Handler Security ────────────────────────────────────
 
+// Mock document for Node.js environment
+const mockDocument = typeof document !== 'undefined' ? document : {
+  createElement(tag: string) {
+    return {
+      tag,
+      listeners: {} as { [key: string]: Function[] },
+      attributes: {} as { [key: string]: string },
+      children: [] as any[],
+      addEventListener(event: string, callback: Function) {
+        if (!this.listeners[event]) this.listeners[event] = [];
+        this.listeners[event].push(callback);
+      },
+      click() {
+        if (this.listeners['click']) {
+          this.listeners['click'].forEach((cb: Function) => cb());
+        }
+      },
+      setAttribute(name: string, value: string) {
+        this.attributes[name] = value;
+      },
+      getAttribute(name: string) {
+        return this.attributes[name] || null;
+      },
+      appendChild(child: any) {
+        this.children.push(child);
+      },
+    };
+  }
+};
+
 export async function testEventHandlerSecurity(): Promise<void> {
   console.log('\n🎯 Event Handler Security Tests\n');
 
@@ -429,7 +463,7 @@ export async function testEventHandlerSecurity(): Promise<void> {
   {
     const start = performance.now();
     try {
-      const mockElement = document.createElement('button');
+      const mockElement = mockDocument.createElement('button');
       let clicked = false;
 
       mockElement.addEventListener('click', () => {
@@ -449,7 +483,7 @@ export async function testEventHandlerSecurity(): Promise<void> {
   {
     const start = performance.now();
     try {
-      const mockElement = document.createElement('div');
+      const mockElement = mockDocument.createElement('div');
       mockElement.setAttribute('data-table', 'pharaoh');
       mockElement.setAttribute('data-action', 'load');
 
@@ -469,24 +503,26 @@ export async function testEventHandlerSecurity(): Promise<void> {
   {
     const start = performance.now();
     try {
-      const parent = document.createElement('div');
-      const child1 = document.createElement('button');
-      const child2 = document.createElement('button');
+      const parent = mockDocument.createElement('div');
+      const child1 = mockDocument.createElement('button');
+      const child2 = mockDocument.createElement('button');
       child1.setAttribute('data-id', '1');
       child2.setAttribute('data-id', '2');
       parent.appendChild(child1);
       parent.appendChild(child2);
 
       let triggeredId: string | null = null;
-      parent.addEventListener('click', (e) => {
-        const btn = e.target as HTMLElement;
+      parent.addEventListener('click', (e: any) => {
+        const btn = e && e.target ? e.target : this;
         triggeredId = btn.getAttribute('data-id');
       });
 
-      child1.click();
+      const clickEvent1 = { target: child1 };
+      parent.listeners['click']?.forEach((cb: Function) => cb.call(parent, clickEvent1));
       assert(triggeredId === '1', 'Event delegation failed for child1');
 
-      child2.click();
+      const clickEvent2 = { target: child2 };
+      parent.listeners['click']?.forEach((cb: Function) => cb.call(parent, clickEvent2));
       assert(triggeredId === '2', 'Event delegation failed for child2');
 
       logTest('Event handlers: Event delegation', true, 'Delegation works correctly', performance.now() - start, 'xss');
