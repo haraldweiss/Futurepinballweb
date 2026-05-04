@@ -2382,7 +2382,13 @@ document.addEventListener('keyup', e => {
     // charge — light taps had the ball graze the wall corner and come back
     // down into the lane. New values give every charge level enough leftward
     // bias to clear the wall edge.
-    const vy = 11.0 + charge * 5.0;    // 11 (tap) → 16 (full) m/s up — clears wall
+    //
+    // Tap vy bumped 11 → 13: with the old value a tap peaked at y≈1.2 and
+    // hit the left wall at y≈-0.2 (before the upper half), so the user
+    // never saw the ball cross center. vy=13 peaks at y≈3.6 and hits the
+    // left wall at y≈3.1 — solidly in the upper half. Max stays at 16 to
+    // preserve the existing full-charge top-wall behavior.
+    const vy = 13.0 + charge * 3.0;    // 13 (tap) → 16 (full) m/s up — clears wall + reaches upper half on tap
     const vx = -3.5 - charge * 2.5;    // -3.5 (tap) → -6 (full) m/s left — clears wall edge in time
 
     console.log(`🎯 PLUNGER LAUNCH: charge=${charge.toFixed(2)}, vx=${vx.toFixed(2)}, vy=${vy.toFixed(2)}`);
