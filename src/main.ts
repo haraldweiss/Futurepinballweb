@@ -2232,9 +2232,14 @@ document.addEventListener('keydown', e => {
     }
   }
 
-  // Key 5: Coin Up (legacy)
+  // Key 5: Coin Up (legacy state) — also feed coin-system so its startGame()
+  // doesn't early-return with "no coins inserted" when the player then
+  // presses 1-4 and the new gate at line ~2266 routes through startGame().
+  // Without this the two coin systems drift apart and the DMD attract→launch
+  // transition never fires (coinScreenVisible stays true).
   if (e.key === '5') {
     state.credits++;
+    addCoin();
     showNotification(`💰 Coin Inserted! Credits: ${state.credits}`);
   }
 
@@ -2786,7 +2791,13 @@ function animate(): void {
   // scroll always runs to completion before anything else takes over.
   if (currentTableConfig) {
     const coinVisible = isCoinScreenVisible();
-    if (dmdState.mode === 'attract' && !coinVisible && state.inLane) {
+    // Ball in plunger lane and coin screen closed → show launch UI. Allow this
+    // from BOTH 'attract' (initial coin→start path) and 'playing' (return from
+    // 'event' mode after a notification preempted the attract phase, e.g. the
+    // "1-Player Game Started" toast on game start). dmd.ts:781 always sends
+    // event back to 'playing', so without this we'd never reach 'launch'.
+    const launchEligible = dmdState.mode === 'attract' || dmdState.mode === 'playing';
+    if (launchEligible && !coinVisible && state.inLane) {
       dmdState.mode = 'launch';
       dmdState.animFrame = 0;
     } else if (dmdState.mode === 'launch' && !state.inLane) {
