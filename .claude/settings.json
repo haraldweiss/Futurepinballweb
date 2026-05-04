@@ -10,7 +10,14 @@
       "mcp__Claude_in_Chrome__get_page_text",
       "mcp__Claude_in_Chrome__read_page",
       "mcp__Kapture_Browser_Automation__screenshot",
-      "mcp__Control_Chrome__get_page_content"
+      "mcp__Control_Chrome__get_page_content",
+      "mcp__Claude_Preview__preview_screenshot",
+      "mcp__Claude_Preview__preview_console_logs",
+      "mcp__Claude_Preview__preview_resize",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Claude_Preview__preview_stop",
+      "mcp__ccd_session__mark_chapter",
+      "Bash(git fetch *)"
     ]
   }
 }
