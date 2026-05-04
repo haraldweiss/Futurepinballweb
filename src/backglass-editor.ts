@@ -64,6 +64,7 @@ export class BackglassEditor {
    * Setup backglass editor UI
    */
   setupUI(container: HTMLElement): void {
+    // eslint-disable-next-line no-unsanitized/property -- getEditorHTML() returns a static template with no untrusted interpolation
     container.innerHTML = this.getEditorHTML();
     this.attachEventListeners(container);
   }
@@ -225,6 +226,7 @@ export class BackglassEditor {
     const list = container.querySelector('#overlays-list') as HTMLElement;
     if (!list) return;
 
+    // eslint-disable-next-line no-unsanitized/property -- overlay.text is escapeHtml'd inline; idx and color are numeric/hex
     list.innerHTML = this.settings.textOverlays.map((overlay, idx) => `
       <div class="overlay-item" data-overlay-idx="${idx}">
         <input type="text" class="overlay-text" value="${escapeHtml(overlay.text)}" data-idx="${idx}" placeholder="Text">

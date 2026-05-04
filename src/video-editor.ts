@@ -182,6 +182,7 @@ export class VideoEditor {
       return;
     }
 
+    // eslint-disable-next-line no-unsanitized/property -- video.id is escapeHtml'd inline
     container.innerHTML = this.state.videos
       .map(
         (video) => `
@@ -225,6 +226,7 @@ export class VideoEditor {
       return;
     }
 
+    // eslint-disable-next-line no-unsanitized/property -- binding.id is escapeHtml'd inline
     container.innerHTML = this.state.bindings
       .map(
         (binding) => `
@@ -266,6 +268,7 @@ export class VideoEditor {
     const detailsPanel = this.editorPanel?.querySelector('#video-details-panel');
     if (!detailsPanel) return;
 
+    // eslint-disable-next-line no-unsanitized/property -- static template — no untrusted interpolation
     detailsPanel.innerHTML = `
       <div class="video-details-content">
         <div class="detail-row">
@@ -367,6 +370,7 @@ export class VideoEditor {
       'special_event',
     ];
 
+    // eslint-disable-next-line no-unsanitized/property -- static template — trigger options from internal enum list
     configPanel.innerHTML = `
       <div class="form-group">
         <label>Trigger Event</label>
@@ -543,6 +547,7 @@ export class VideoEditor {
 
     const dialog = document.createElement('div');
     dialog.className = 'video-template-dialog';
+    // eslint-disable-next-line no-unsanitized/property -- static template for template-selection dialog
     dialog.innerHTML = `
       <div class="dialog-content">
         <h4>Select Video Template</h4>
@@ -632,6 +637,7 @@ export class VideoEditor {
 
     const dialog = document.createElement('div');
     dialog.className = 'video-binding-dialog';
+    // eslint-disable-next-line no-unsanitized/property -- static template for binding-creation dialog
     dialog.innerHTML = `
       <div class="dialog-content">
         <h4>Create Video Binding</h4>

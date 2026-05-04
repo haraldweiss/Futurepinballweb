@@ -12,6 +12,11 @@ const IF_PATTERN = /If\s+(.+?)\s+Then/gi;
 const MULTIBALL_PATTERN = /multiball|multi.?ball|mb/gi;
 const EXTRA_BALL_PATTERN = /extra.?ball|xball|eb/gi;
 
+// Escape regex metachars so a function name from an FPT file can't break the dynamic regex
+function escapeRegexLiteral(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // ─── Core Extraction ───────────────────────────────────────────────────────
 
 /**
@@ -211,7 +216,8 @@ function extractMultiplierLogic(vbsCode: string, functionName: string): Record<s
   const multipliers: Record<string, any> = {};
 
   // Find the function
-  const funcRegex = new RegExp(`Sub\\s+${functionName}\\s*\\([^)]*\\)([^E]*?)End Sub`, 'i');
+  // eslint-disable-next-line security/detect-non-literal-regexp -- functionName is regex-escaped above
+  const funcRegex = new RegExp(`Sub\\s+${escapeRegexLiteral(functionName)}\\s*\\([^)]*\\)([^E]*?)End Sub`, 'i');
   const funcMatch = vbsCode.match(funcRegex);
 
   if (!funcMatch) return multipliers;
@@ -241,7 +247,8 @@ function extractSpecialEffects(vbsCode: string, functionName: string): string[] 
   const effects: string[] = [];
 
   // Find the function
-  const funcRegex = new RegExp(`Sub\\s+${functionName}\\s*\\([^)]*\\)([^E]*?)End Sub`, 'i');
+  // eslint-disable-next-line security/detect-non-literal-regexp -- functionName is regex-escaped above
+  const funcRegex = new RegExp(`Sub\\s+${escapeRegexLiteral(functionName)}\\s*\\([^)]*\\)([^E]*?)End Sub`, 'i');
   const funcMatch = vbsCode.match(funcRegex);
 
   if (!funcMatch) return effects;

@@ -194,6 +194,7 @@ export class AnimationDebugger {
       `;
     });
 
+    // eslint-disable-next-line no-unsanitized/property -- seq IDs are escapeHtml'd via safeSeqId above
     this.animationList.innerHTML = html;
 
     // Add play button event listeners

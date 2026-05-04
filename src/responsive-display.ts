@@ -201,10 +201,9 @@ export function onDisplayResize(callback: (dims: DisplayDimensions) => void): ()
 export function onDisplayChange(callback: () => void): () => void {
   let lastWidth = window.innerWidth;
   let lastHeight = window.innerHeight;
-  let checkInterval: number;
 
   // Check periodically for display changes
-  checkInterval = window.setInterval(() => {
+  const checkInterval: number = window.setInterval(() => {
     const newWidth = window.innerWidth;
     const newHeight = window.innerHeight;
 

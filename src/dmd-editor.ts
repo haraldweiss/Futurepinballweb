@@ -77,6 +77,7 @@ export class DMDEditor {
    * Setup DMD editor UI
    */
   setupUI(container: HTMLElement): void {
+    // eslint-disable-next-line no-unsanitized/property -- getEditorHTML() interpolates only internal config (this.colorSchemes)
     container.innerHTML = this.getEditorHTML();
     this.attachEventListeners(container);
   }

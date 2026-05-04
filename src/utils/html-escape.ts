@@ -84,7 +84,10 @@ export function createSafeHtml(
   let result = template;
 
   for (const [key, value] of Object.entries(data)) {
-    const placeholder = new RegExp(`{{${key}}}`, 'g');
+    // Escape regex metachars in key so dynamic placeholder names can't break the pattern
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // eslint-disable-next-line security/detect-non-literal-regexp -- escapedKey is regex-safe by construction above
+    const placeholder = new RegExp(`{{${escapedKey}}}`, 'g');
     const escapedValue = escapeHtml(String(value));
     result = result.replace(placeholder, escapedValue);
   }
@@ -115,9 +118,11 @@ export function setInnerHTMLSafe(
   if (!element) {
     console.error('[HTML Escape] No element provided');
     return;
+  // eslint-disable-next-line no-unsanitized/property -- central safe-html sink; data is escaped via createSafeHtml
   }
 
   try {
+    // eslint-disable-next-line no-unsanitized/property -- escapeHtml-protected or static template
     element.innerHTML = data ? createSafeHtml(template, data) : template;
   } catch (e) {
     console.error('[HTML Escape] Failed to set innerHTML:', e);

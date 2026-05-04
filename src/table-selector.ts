@@ -124,6 +124,7 @@ export class TableSelector {
     if (!this.modal.id) {
       this.modal.id = 'table-selector-modal';
       this.modal.className = 'table-selector-modal';
+      // eslint-disable-next-line no-unsanitized/property -- getModalHTML() returns a static internal template
       this.modal.innerHTML = this.getModalHTML();
       document.body.appendChild(this.modal);
     }

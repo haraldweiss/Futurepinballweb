@@ -339,6 +339,7 @@ export class EditorModal {
       // Modal doesn't exist in HTML, create it
       this.modal.id = 'editor-modal';
       this.modal.className = 'editor-modal hidden';
+      // eslint-disable-next-line no-unsanitized/property -- getModalHTML() returns a static internal template
       this.modal.innerHTML = this.getModalHTML();
       document.body.appendChild(this.modal);
     }

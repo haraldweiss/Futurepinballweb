@@ -285,6 +285,7 @@ function updateSidebar() {
       <div class="prop-row"><label>Y2</label><input type="number" step="0.2" value="${el.y2.toFixed(2)}" oninput="setProp('y2',this.value)"></div>`;
   }
 
+  // eslint-disable-next-line no-unsanitized/property -- el fields are internal element state; numeric coords and enum types only
   panel.innerHTML = `
     <div class="prop-type">${el.type.toUpperCase()}</div>
     ${coordHtml}

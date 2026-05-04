@@ -1789,6 +1789,7 @@ function showNotification(msg: string): void {
   const n = document.getElementById('notification') as HTMLElement;
   n.textContent = msg; n.style.opacity = '1';
   setTimeout(() => n.style.opacity = '0', 2500);
+  // eslint-disable-next-line security/detect-unsafe-regex -- emoji codepoint ranges, no quantifiers
   const clean = msg.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
   if (clean.length > 1) dmdEvent(clean.substring(0, 22).toUpperCase());
 }
@@ -3144,6 +3145,7 @@ function updateLoadingProgress(phase: string, current: number, total: number): v
 
   // Update details
   const detailsEl = document.getElementById('loading-details')!;
+  // eslint-disable-next-line no-unsanitized/property -- loading-state values are internal counters and phase enum
   detailsEl.innerHTML = `
     <div style="color:#00ff88;">🖼️ Textures:</div>
     <div style="margin-left:10px;color:#556;margin-bottom:8px;">${currentLoadingState.currentPhase === 'images' ? currentLoadingState.resourcesLoaded : currentLoadingState.totalResources} / ${currentLoadingState.totalResources} loaded</div>
@@ -3173,6 +3175,7 @@ function updateFileBrowserUI(): void {
   const totalSize = tableSize + libSize;
 
   const statusEl = document.getElementById('browser-status')!;
+  // eslint-disable-next-line no-unsanitized/property -- browser status uses internal counts and formatFileSize() output
   statusEl.innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
       <div style="background: rgba(0, 150, 100, 0.1); border: 1px solid #00ff88; border-radius: 4px; padding: 8px;">
@@ -3195,6 +3198,7 @@ function updateFileBrowserUI(): void {
   const loadBtn = document.getElementById('load-selected-btn')!;
   if (fileBrowserState.selectedTableFile) {
     loadBtn.style.display = 'block';
+    // eslint-disable-next-line no-unsanitized/property -- filename is escapeHtml'd inline
     loadBtn.innerHTML = `▶ ${escapeHtml(fileBrowserState.selectedTableFile.name)} LADEN`;
   } else {
     loadBtn.style.display = 'none';
@@ -3765,6 +3769,7 @@ window.autoDetectScreens = async () => {
     if ('getScreenDetails' in window) { const d=await (window as any).getScreenDetails(); screenCount=d.screens.length; }
     else if ((window.screen as any).isExtended) screenCount=2;
   } catch { /* ignore */ }
+  // eslint-disable-next-line no-unsanitized/property -- screenCount is a number from window.getScreenDetails()
   if(screenCount>=3){info.innerHTML=`<span>✓ ${screenCount} screens</span> — 3-screen empfohlen`;window.selectMsLayout(3);}
   else if(screenCount===2){info.innerHTML=`<span>✓ 2 screens</span> — 2-screen empfohlen`;window.selectMsLayout(2);}
   else {info.innerHTML=`<span>1 screen</span>`;window.selectMsLayout(1);}
@@ -3935,7 +3940,7 @@ window.applyMsLayout = async () => {
 function setupDMDWindow(): void {
   document.title='FPW — DMD';
   window.addEventListener('beforeunload',()=>{
-    try{localStorage.setItem('fpw_winpos_dmd',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{} // localStorage can throw, ignore
+    try{localStorage.setItem('fpw_winpos_dmd',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{ /* localStorage can throw, ignore */ }
     disposePhysicsWorker();
   });
   const wrap=document.getElementById('dmd-wrap')!, canvas=document.getElementById('dmd') as HTMLCanvasElement;
@@ -3972,7 +3977,7 @@ function setupDMDWindow(): void {
 
 function setupBackglassWindow(): void {
   document.title='FPW — Backglass';
-  window.addEventListener('beforeunload',()=>{try{localStorage.setItem('fpw_winpos_backglass',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{} // localStorage can throw, ignore
+  window.addEventListener('beforeunload',()=>{try{localStorage.setItem('fpw_winpos_backglass',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{ /* localStorage can throw, ignore */ }
 disposePhysicsWorker();});
   const canvas=document.getElementById('backglass-canvas') as HTMLCanvasElement;
   const showEmbedDMD=!new URLSearchParams(location.search).has('nodmd');
@@ -4127,6 +4132,7 @@ function renderTableFileGrid(files: File[]): void {
     card.className = 'table-card';
     const sizeMB = (f.size / 1024 / 1024).toFixed(2);
     const displayName = escapeHtml(f.name.replace(/\.fpt$/i, ''));
+    // eslint-disable-next-line no-unsanitized/property -- displayName is escapeHtml'd; sizeMB is numeric
     card.innerHTML = `<div class="preview">🎱</div><h3>${displayName}</h3><span>${sizeMB} MB</span>`;
     card.style.cursor = 'pointer';
     card.onclick = () => {
@@ -4265,6 +4271,7 @@ function updateTablePathShortcuts(): void {
     btn.style.width = '100%';
     btn.style.textAlign = 'left';
     btn.style.opacity = (1 - idx * 0.1).toString();
+    // eslint-disable-next-line no-unsanitized/property -- path.name is escapeHtml'd inline
     btn.innerHTML = `🔄 ${escapeHtml(path.name)}`;
     btn.title = new Date(path.timestamp).toLocaleDateString();
     btn.onclick = () => browseTableDirectory();
@@ -4309,6 +4316,7 @@ function updateLibraryPathShortcuts(): void {
     btn.style.width = '100%';
     btn.style.textAlign = 'left';
     btn.style.opacity = (1 - idx * 0.1).toString();
+    // eslint-disable-next-line no-unsanitized/property -- path.name is escapeHtml'd inline
     btn.innerHTML = `🔄 ${escapeHtml(path.name)}`;
     btn.title = new Date(path.timestamp).toLocaleDateString();
     btn.onclick = () => browseLibraryDirectory();

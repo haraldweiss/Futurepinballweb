@@ -6,6 +6,7 @@ import { getAudioCtx, playSound, playFPTMusic, startBGMusic, stopBGMusic } from 
 import { dmdEvent } from './dmd';
 import { getBamBridge } from './bam-bridge';
 import { runSandboxed, ScriptSandboxError } from './utils/script-sandbox';
+import { magnetSystem } from './mechanics/magnet-system';
 
 // ─── VBScript → JS Transpiler ─────────────────────────────────────────────────
 
@@ -41,6 +42,7 @@ function replaceOutsideStrings(text: string, pattern: string, replacement: strin
     } else if (inString) {
       result += part;
     } else {
+      // eslint-disable-next-line security/detect-non-literal-regexp -- pattern arg is a literal VBS-token regex hardcoded by callers
       result += part.replace(new RegExp(pattern, 'g'), replacement);
     }
   }
@@ -82,6 +84,7 @@ function _vbsXpr(e: string): string {
 
     // ─── Phase 8: Extended String Functions ───────────────────────────────────────
     // InStr(haystack, needle, [start]) - Find substring position (1-based, 0 if not found)
+    // eslint-disable-next-line security/detect-unsafe-regex -- linear on commas, no nested quantifiers in same scope
     .replace(/\bInStr\(([^,]+),([^,)]+)(?:,\s*([^)]+))?\)/gi, (m, haystack, needle, start) => {
       const h = `String(${_vbsXpr(haystack)})`;
       const n = `String(${_vbsXpr(needle)})`;
@@ -90,6 +93,7 @@ function _vbsXpr(e: string): string {
     })
 
     // InStrRev(haystack, needle, [start]) - Find from right
+    // eslint-disable-next-line security/detect-unsafe-regex -- linear on commas, no nested quantifiers in same scope
     .replace(/\bInStrRev\(([^,]+),([^,)]+)(?:,\s*([^)]+))?\)/gi, (m, haystack, needle, start) => {
       const h = `String(${_vbsXpr(haystack)})`;
       const n = `String(${_vbsXpr(needle)})`;
@@ -110,6 +114,7 @@ function _vbsXpr(e: string): string {
     })
 
     // Replace(str, find, replace, [start], [count]) - Replace substring
+    // eslint-disable-next-line security/detect-unsafe-regex -- linear on commas; optional groups are after a comma anchor
     .replace(/\bReplace\(([^,]+),([^,]+),([^,)]+)(?:,[^,)]*)?(?:,[^)]+)?\)/gi, (m, str, find, replace) => {
       const s = `String(${_vbsXpr(str)})`;
       const f = `String(${_vbsXpr(find)})`;
@@ -202,7 +207,9 @@ export function vbsToJS(src: string): string {
 
     let m: RegExpMatchArray | null;
 
+    // eslint-disable-next-line security/detect-unsafe-regex -- VBS Sub/Function declaration; lazy group bounded by closing paren
     if ((m = code.match(/^(?:(?:Private|Public)\s+)?Sub\s+(\w+)\s*\((.*?)\)/i)))     { out.push(`${pad()  }function ${m[1]}(${m[2]}) {`); depth++; continue; }
+    // eslint-disable-next-line security/detect-unsafe-regex -- VBS Sub/Function declaration; lazy group bounded by closing paren
     if ((m = code.match(/^(?:(?:Private|Public)\s+)?Function\s+(\w+)\s*\((.*?)\)/i))) { out.push(`${pad()  }function ${m[1]}(${m[2]}) {`); depth++; continue; }
     if (/^End\s+(Sub|Function)$/i.test(code))  { depth = Math.max(0,depth-1); out.push(`${pad()}}`); continue; }
 
@@ -213,6 +220,7 @@ export function vbsToJS(src: string): string {
     if (/^End\s+If$/i.test(code)) { depth=Math.max(0,depth-1); out.push(`${pad()}}`); continue; }
 
     // Phase 1.2: For...To...Next and For Each...In loops
+    // eslint-disable-next-line security/detect-unsafe-regex -- lazy groups anchored by literal "To"/"Step" tokens; linear time
     if ((m = code.match(/^For\s+(\w+)\s*=\s*(.+?)\s+To\s+(.+?)(?:\s+Step\s+(.+))?$/i))) {
       const v=m[1], a=_vbsXpr(m[2].trim()), b=_vbsXpr(m[3].trim()), st=m[4]?parseFloat(m[4]):1;
       const op=st<0?'>=':'<=', inc=st===1?`${v}++`:st===-1?`${v}--`:`${v}+=${st}`;
@@ -222,6 +230,7 @@ export function vbsToJS(src: string): string {
       const v = m[1], arr = _vbsXpr(m[2].trim());
       out.push(`${pad()  }for (let ${v} of ${arr}) {`); depth++; continue;
     }
+    // eslint-disable-next-line security/detect-unsafe-regex -- single optional \w group anchored end; linear time
     if (/^Next(?:\s+\w+)?$/i.test(code)) { depth=Math.max(0,depth-1); out.push(`${pad()}}`); continue; }
 
     // Phase 2.1: Do loop variants (Do, Do While, Do Until, post-test loops)
@@ -369,7 +378,7 @@ function buildFPScriptAPI() {
     Len: (s: string) => String(s || '').length,
     Left:  (s: string, n: number) => String(s||'').slice(0,n),
     Right: (s: string, n: number) => String(s||'').slice(-n),
-    Mid:   (s: string, p: number, l?: number) => { const ss=String(s||''); return l!=null?ss.slice(p-1,p-1+l):ss.slice(p-1); },
+    Mid:   (s: string, p: number, l?: number) => { const ss=String(s||''); return l!==undefined&&l!==null?ss.slice(p-1,p-1+l):ss.slice(p-1); },
     UCase: (s: string) => String(s||'').toUpperCase(),
     LCase: (s: string) => String(s||'').toLowerCase(),
     Trim:  (s: string) => String(s||'').trim(),
@@ -380,8 +389,8 @@ function buildFPScriptAPI() {
     InStr:   (s: string, sub: string) => { const i=String(s||'').indexOf(sub); return i<0?0:i+1; },
     Replace: (s: string, a: string, b: string) => String(s||'').replaceAll(a,b),
     Space:   (n: number) => ' '.repeat(+n||0),
-    IsNothing: (x: any) => x==null, IsNull: (x: any) => x==null,
-    IsEmpty:   (x: any) => x==null||x==='', IsNumeric: (x: any) => !isNaN(parseFloat(x)),
+    IsNothing: (x: any) => x===null||x===undefined, IsNull: (x: any) => x===null||x===undefined,
+    IsEmpty:   (x: any) => x===null||x===undefined||x==='', IsNumeric: (x: any) => !isNaN(parseFloat(x)),
 
     // ─── Game State API (Phase 2.3) ───
     GetMultiplier: () => state.multiplier,
@@ -1024,7 +1033,6 @@ function buildFPScriptAPI() {
     // ─── PHASE 12: Task 4 - Magnet Zones Physics ───
     SetMagnetZone: (x: number, y: number, radius?: number, holdTime?: number, power?: number) => {
       try {
-        const { magnetSystem } = require('./mechanics/magnet-system');
         if (!magnetSystem) return '';
         const r = Math.max(0.1, Number(radius) || 1.0);
         const h = Math.max(100, Number(holdTime) || 3000);
@@ -1040,7 +1048,6 @@ function buildFPScriptAPI() {
 
     RemoveMagnetZone: (zoneId: string) => {
       try {
-        const { magnetSystem } = require('./mechanics/magnet-system');
         if (magnetSystem) {
           magnetSystem.removeZone(String(zoneId));
           fpScriptLog(`RemoveMagnetZone: Removed zone ${zoneId}`);
@@ -1052,7 +1059,6 @@ function buildFPScriptAPI() {
 
     HoldBallInZone: (ballIndex: number, zoneId: string, holdTime?: number) => {
       try {
-        const { magnetSystem } = require('./mechanics/magnet-system');
         if (magnetSystem) {
           const held = magnetSystem.holdBallInZone(Math.floor(ballIndex), String(zoneId), holdTime);
           fpScriptLog(`HoldBallInZone: Ball ${ballIndex} in zone ${zoneId}, held=${held}`);
@@ -1064,7 +1070,6 @@ function buildFPScriptAPI() {
 
     ReleaseBallFromZone: (zoneId: string, directionX?: number, directionY?: number, power?: number) => {
       try {
-        const { magnetSystem } = require('./mechanics/magnet-system');
         if (magnetSystem) {
           const count = magnetSystem.releaseBallsFromZone(String(zoneId), directionX, directionY, power);
           fpScriptLog(`ReleaseBallFromZone: Released ${count} ball(s) from zone ${zoneId}`);
@@ -1077,7 +1082,6 @@ function buildFPScriptAPI() {
 
     GetHeldBalls: () => {
       try {
-        const { magnetSystem } = require('./mechanics/magnet-system');
         if (magnetSystem) {
           return magnetSystem.getAllHeldBalls();
         }
@@ -1089,7 +1093,6 @@ function buildFPScriptAPI() {
 
     IsZoneActive: (zoneId: string) => {
       try {
-        const { magnetSystem } = require('./mechanics/magnet-system');
         if (magnetSystem) {
           return magnetSystem.isZoneActive(String(zoneId));
         }
@@ -1101,7 +1104,6 @@ function buildFPScriptAPI() {
 
     SetMagnetPower: (zoneId: string, power: number) => {
       try {
-        const { magnetSystem } = require('./mechanics/magnet-system');
         if (magnetSystem) {
           magnetSystem.setZonePower(String(zoneId), power);
           fpScriptLog(`SetMagnetPower: Zone ${zoneId} power = ${power}`);
@@ -1489,7 +1491,7 @@ function buildFPScriptAPI() {
         try {
           const vel = obj.body.linvel();
           return { x: vel.x || 0, y: vel.y || 0, z: vel.z || 0 };
-        } catch { }
+        } catch { /* physics may be disposed */ }
       }
       // Default to stationary
       return { x: 0, y: 0, z: 0 };
@@ -1507,7 +1509,7 @@ function buildFPScriptAPI() {
           const vel = physics.rFlipperBody.linvel();
           return Math.sqrt((vel.x || 0) ** 2 + (vel.y || 0) ** 2);
         }
-      } catch { }
+      } catch { /* physics may be disposed */ }
       return 0;
     },
 
@@ -1791,7 +1793,7 @@ function _collectTimers(api: any, jsCode: string): void {
 
 // ─── Script Runner ────────────────────────────────────────────────────────────
 export function runFPScript(vbsCode: string): void {
-  const handlers: Record<string, Function> = {};
+  const handlers: Record<string, (...args: unknown[]) => unknown> = {};
 
   // Phase 4.2: Debug hooks
   const lineCount = vbsCode.split('\n').length;
