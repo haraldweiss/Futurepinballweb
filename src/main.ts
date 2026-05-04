@@ -2651,7 +2651,17 @@ function animate(): void {
       // ─── Phase 4: Drain Guide + Phase 7: Extended Ball Saves & Drain Logic ───
       // Phase 4: Realistic drain guides - ball flows naturally through guides
       // Plunger lane is now properly enclosed, guides ball to flippers
-      if (state.ballPos.y < -6.5) {
+      //
+      // Drain threshold: the drain-bottom wall sits at y=-6.0 (extent
+      // y∈[-6.2,-5.8]) so a ball cannot physically reach below y≈-5.58
+      // (ball-edge against wall top, ball center at -5.58). The earlier
+      // y<-6.5 check was unreachable, so a ball that settled in the drain
+      // channel just sat there forever — only the R-key reset recovered it.
+      // -5.4 catches the resting position; the low-speed guard (|v|<1.5)
+      // prevents single-frame false-positives when a fast ball briefly
+      // touches the drain wall before bouncing back into the playfield.
+      const ballSpeedSq = state.ballVel.x * state.ballVel.x + state.ballVel.y * state.ballVel.y;
+      if (state.ballPos.y < -5.4 && ballSpeedSq < 2.25) {
         // ─── Phase 2: Trigger drain warning effect ───
         cb.triggerDrainWarning();
 
