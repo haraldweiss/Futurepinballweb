@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * Performance Analysis Script for Full Polish Suite
  * Analyzes preset configurations and estimates performance impact

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * Base Animator — Apply keyframe transforms to 3D objects
  * Phase 13 Task 4: Foundation for all animation application

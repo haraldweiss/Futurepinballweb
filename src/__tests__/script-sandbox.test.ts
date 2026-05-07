@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 import { describe, it, expect } from 'vitest';
 import { runSandboxed, validateTranspiledJs, ScriptSandboxError } from '../utils/script-sandbox';
 

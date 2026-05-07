@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * gpu-diagnostics.ts — GPU Detection & Diagnostics for Windows Multi-GPU Systems
  *

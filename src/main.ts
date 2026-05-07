@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * main.ts — Einstiegspunkt: Scene, Physik, Game-Loop, Input, UI, Multiscreen
  */

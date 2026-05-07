@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * Camera Animator — Apply keyframe animations to Three.js camera
  * Phase 13 Task 4: Animate camera position, rotation, and FOV

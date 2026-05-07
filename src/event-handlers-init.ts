@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * Event Handlers Initialization
  * Phase: Security Remediation Phase 1 - Replace Inline onclick

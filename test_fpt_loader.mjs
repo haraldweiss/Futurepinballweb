@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * Test script to validate FPT loader enhancements
  * Tests LZO decompression and VBScript extraction

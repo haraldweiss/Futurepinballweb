@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 import type * as THREE from 'three';
 import type RAPIER from '@dimforge/rapier2d-compat';
 

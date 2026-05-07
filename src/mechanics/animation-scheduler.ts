@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * Animation Scheduler — Manages animation playback queuing
  * Phase 13 Task 3: Queue and schedule animations with priority

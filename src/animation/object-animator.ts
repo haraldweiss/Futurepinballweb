@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * Object Animator — Apply keyframe animations to Three.js objects
  * Phase 13 Task 4: Animate meshes, groups, and game elements

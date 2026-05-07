@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * ssr-pass.ts — Screen Space Reflections (SSR)
  *

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * geometry-pool.ts — Geometry caching and reuse system
  * Reduces memory allocations by sharing geometries across multiple meshes

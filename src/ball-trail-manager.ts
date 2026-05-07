@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * ball-trail-manager.ts — Visual trail behind ball
  * Phase 27: Ball Movement Visualization

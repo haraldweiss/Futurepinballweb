@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * table-builder-enhanced.ts — Integrate ExtendedFPTData with existing table building
  * Convert extracted data to TableConfig format compatible with game engine

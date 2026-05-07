@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * BAM Bridge — Connects VBScript (xBAM) to the BAMEngine
  * Implements real method calls and state feedback

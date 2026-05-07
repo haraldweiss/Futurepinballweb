@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * Animation Queue — Manages queuing and blending between animations
  * Phase 13 Task 5: Smooth animation transitions and priority-based playback

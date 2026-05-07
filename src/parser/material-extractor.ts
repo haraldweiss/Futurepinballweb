@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * material-extractor.ts — Extract material properties from textures and binary data
  * Define materials with physics and visual properties

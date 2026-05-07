@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * light-manager.ts — Centralized light lifecycle management
  * Manages light creation, updates, shadows, dynamic effects

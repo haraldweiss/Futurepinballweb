@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * Animation Binding System — Connects animations to game events
  * Phase 13 Task 3: Enable animations to trigger on bumper hits, ramp completions, etc.

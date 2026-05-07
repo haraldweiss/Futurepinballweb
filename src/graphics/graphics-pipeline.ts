@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * graphics-pipeline.ts — Main orchestrator for the graphics rendering system
  * Manages: render loop, quality presets, geometry pooling, lighting, post-processing passes

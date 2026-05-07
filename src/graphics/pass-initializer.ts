@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * graphics/pass-initializer.ts — Graphics Pass Initialization Utility
  * Provides a unified pattern for initializing graphics passes with error handling

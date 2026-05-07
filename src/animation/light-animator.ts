@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * Light Animator — Apply keyframe animations to Three.js lights
  * Phase 13 Task 4: Animate light intensity, color, and position

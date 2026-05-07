@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * physics-worker-bridge.ts — Bridge between main thread and physics worker
  * Manages async physics updates with proper state synchronization

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * Memory Profiling & Leak Detection Tests — Long-Play Session Stability
  *

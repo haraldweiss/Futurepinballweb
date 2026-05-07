@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * enhanced-fpt-parser.ts — Main orchestration pipeline for comprehensive FPT extraction
  * Coordinates all extraction modules to produce complete ExtendedFPTData

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * input-optimizer.ts — Low-latency input handling for flipper response
  * Phase 24: Arcade-grade input responsiveness

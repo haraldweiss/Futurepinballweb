@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * rendering-passes.ts — Modular post-processing pass implementations
  * Provides bloom, FXAA, tone mapping and other effects as composable passes

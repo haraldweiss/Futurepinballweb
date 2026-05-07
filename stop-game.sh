@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# © 2026 Harald Weiss
 # Future Pinball Web — Stop dev server (POSIX shell)
 # Usage: ./stop-game.sh [--force] [--port 5173]
 

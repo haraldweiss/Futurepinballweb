@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * editor.ts — Visueller Tisch-Editor
  * Koordinatensystem: Game-Space X: -3..+3, Y: -6..+6 (Y oben positiv)

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * film-effects-pass.ts — Film Effects (Grain + Chromatic Aberration + Distortion)
  *

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * Animation Debugger — UI for testing and visualizing animations
  * Phase 13 Task 5: Debugging tools for animation system

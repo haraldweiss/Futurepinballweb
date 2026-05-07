@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * Security Test Suite
  * Comprehensive tests for XSS prevention, input validation, and security fixes

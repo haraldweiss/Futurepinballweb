@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * enhanced-fpt-types.ts — Extended FPT data structures based on fp-dump/fp-grab
  * Provides comprehensive type definitions for advanced FPT parsing

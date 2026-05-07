@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * touch-controls-manager.ts — Mobile/Tablet touch input
  * Phase 29: Touch Controls for Mobile Devices

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * physics-worker.ts — Physics simulation worker thread
  * Runs Rapier2D physics on a separate CPU core for non-blocking simulation

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * music-manager.ts — Background music & ambient audio
  * Phase 26: Audio Ambiance for Arcade Feel

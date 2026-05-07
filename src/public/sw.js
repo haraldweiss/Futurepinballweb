@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * sw.js — Future Pinball Web Service Worker
  * Strategy: network-first for HTML/navigation, cache-first for assets

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * playfield-extractor.ts — Extract core playfield settings from .fpt binary
  * Gravity, table dimensions, friction, tilt sensitivity, drain behavior

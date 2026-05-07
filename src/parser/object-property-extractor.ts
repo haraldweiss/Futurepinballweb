@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * object-property-extractor.ts — Extract and classify game elements from .fpt
  * Bumpers, targets, flippers, ramps, walls, etc. with full properties

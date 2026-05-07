@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * physics-parameters-extractor.ts — Enhanced physics extraction for each element
  * Restitution, friction, damping, max velocity, collision groups

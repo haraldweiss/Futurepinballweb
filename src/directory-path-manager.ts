@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * directory-path-manager.ts — Speichert und verwaltet zuletzt genutzte Verzeichnispfade
  */

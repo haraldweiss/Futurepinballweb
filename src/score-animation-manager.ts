@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * score-animation-manager.ts — Floating score numbers
  * Phase 28: Score Feedback Animations

@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# © 2026 Harald Weiss
 # Future Pinball Web — Startup (POSIX shell)
 # Usage: ./start-game.sh [1|2|3|auto] [port]
 # Default: auto-detect — opens one window, the app spawns the rest.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 import { state, currentTableConfig } from './game';
 import { getTopScores } from './highscore';
 import { getDMDSize, getDMDDotSize, onDisplayResize } from './responsive-display';

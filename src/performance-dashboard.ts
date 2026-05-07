@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * performance-dashboard.ts — Real-time performance monitoring
  * Phase 24: Visibility into game performance & health

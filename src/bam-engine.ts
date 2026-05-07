@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * BAM (Better Arcade Mode) Engine for Futurepinball Web
  * Implements advanced table mechanics, animation sequencing, and enhanced lighting

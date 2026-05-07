@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * physics-config-enhancer.ts — Enhanced physics configuration
  * Phase 24: Better ball/flipper parameters from FPT parsing

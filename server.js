@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * Production Server with CSP Headers
  * Phase 25: Security - Content Security Policy

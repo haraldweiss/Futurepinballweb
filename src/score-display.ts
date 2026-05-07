@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * score-display.ts — PHASE 9: Score Display Animations & Floating Text
  *

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
 /**
  * sound-manager.ts — Sound effects for pinball gameplay
  * Phase 25: Audio feedback for arcade authenticity
