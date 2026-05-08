@@ -103,3 +103,33 @@ describe('globalAssetCatalog', () => {
     setGlobalAssetCatalog(null);
   });
 });
+
+describe('AssetCatalog memory budget', () => {
+  it('flips usingOnDemand to true when budget exceeded', () => {
+    const cat = new AssetCatalog({ memoryBudgetBytes: 100 });
+    expect(cat.stats().usingOnDemand).toBe(false);
+    cat.registerTexture(
+      'big',
+      new THREE.DataTexture(new Uint8Array([0,0,0,255]), 1, 1, THREE.RGBAFormat),
+      150 // 150 > 100 → over budget
+    );
+    expect(cat.stats().usingOnDemand).toBe(true);
+  });
+
+  it('stays usingOnDemand=false when within budget', () => {
+    const cat = new AssetCatalog({ memoryBudgetBytes: 1000 });
+    cat.registerTexture(
+      'small',
+      new THREE.DataTexture(new Uint8Array([0,0,0,255]), 1, 1, THREE.RGBAFormat),
+      50
+    );
+    expect(cat.stats().usingOnDemand).toBe(false);
+  });
+
+  it('stats.estimatedBytes reflects sum of registered sizes', () => {
+    const cat = new AssetCatalog({ memoryBudgetBytes: 1000 });
+    cat.registerTexture('a', new THREE.DataTexture(new Uint8Array([0,0,0,255]), 1, 1, THREE.RGBAFormat), 30);
+    cat.registerModel('b', new THREE.Mesh(new THREE.BoxGeometry(1,1,1)), 70);
+    expect(cat.stats().estimatedBytes).toBe(100);
+  });
+});
