@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import * as THREE from 'three';
-import { createPlaceholderTexture, createPlaceholderMesh, createPlaceholderAudio } from '../assets/placeholders';
+import { createPlaceholderTexture, createPlaceholderMesh, createPlaceholderAudio, _resetPlaceholderCache } from '../assets/placeholders';
 
 describe('Placeholders', () => {
+  afterEach(() => _resetPlaceholderCache());
+
   it('creates a 1x1 grey placeholder texture', () => {
     const tex = createPlaceholderTexture();
     expect(tex).toBeInstanceOf(THREE.Texture);
@@ -23,5 +25,14 @@ describe('Placeholders', () => {
     expect(buf.numberOfChannels).toBe(1);
     expect(buf.sampleRate).toBe(44100);
     expect(buf.length).toBe(1);
+  });
+
+  it('returns a fresh Mesh instance each call (not a shared singleton)', () => {
+    const a = createPlaceholderMesh();
+    const b = createPlaceholderMesh();
+    expect(a).not.toBe(b);
+    // But the geometry and material can be shared (cheap)
+    expect(a.geometry).toBe(b.geometry);
+    expect(a.material).toBe(b.material);
   });
 });

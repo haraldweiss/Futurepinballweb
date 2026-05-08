@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import type { SilentBuffer } from './asset-types';
 
 let cachedTexture: THREE.Texture | null = null;
-let cachedMesh: THREE.Mesh | null = null;
+let cachedMeshGeom: THREE.BoxGeometry | null = null;
+let cachedMeshMat: THREE.MeshStandardMaterial | null = null;
 let cachedAudio: SilentBuffer | null = null;
 
 export function createPlaceholderTexture(): THREE.Texture {
@@ -18,11 +19,9 @@ export function createPlaceholderTexture(): THREE.Texture {
 }
 
 export function createPlaceholderMesh(): THREE.Mesh {
-  if (cachedMesh) return cachedMesh;
-  const geom = new THREE.BoxGeometry(1, 1, 1);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x808080 });
-  cachedMesh = new THREE.Mesh(geom, mat);
-  return cachedMesh;
+  if (!cachedMeshGeom) cachedMeshGeom = new THREE.BoxGeometry(1, 1, 1);
+  if (!cachedMeshMat) cachedMeshMat = new THREE.MeshStandardMaterial({ color: 0x808080 });
+  return new THREE.Mesh(cachedMeshGeom, cachedMeshMat);
 }
 
 export function createPlaceholderAudio(): SilentBuffer {
@@ -41,6 +40,7 @@ export function createPlaceholderAudio(): SilentBuffer {
 // Test-only reset
 export function _resetPlaceholderCache(): void {
   cachedTexture = null;
-  cachedMesh = null;
+  cachedMeshGeom = null;
+  cachedMeshMat = null;
   cachedAudio = null;
 }
