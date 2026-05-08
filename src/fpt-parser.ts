@@ -491,6 +491,9 @@ export function populateCatalogFromFPTResources(): void {
     setGlobalAssetCatalog(cat);
   }
 
+  // Reset catalog to match current fptResources state — each call replaces, not appends
+  cat.clear();
+
   // Textures
   for (const [name, tex] of Object.entries(fptResources.textures)) {
     cat.registerTexture(name, tex);

@@ -69,6 +69,33 @@ describe('Renderer texture resolution via catalog', () => {
   });
 });
 
+describe('populateCatalogFromFPTResources — idempotency and clearing', () => {
+  beforeEach(() => {
+    Object.keys(fptResources.textures).forEach(k => delete fptResources.textures[k]);
+    fptResources.playfield = null;
+    if (fptResources.models) fptResources.models.clear();
+    setGlobalAssetCatalog(new AssetCatalog());
+  });
+
+  it('second populate call replaces first (clears stale state)', () => {
+    // First populate with one texture
+    const tex1 = new THREE.DataTexture(new Uint8Array([255,0,0,255]), 1, 1, THREE.RGBAFormat);
+    fptResources.textures['old.png'] = tex1;
+    populateCatalogFromFPTResources();
+    expect(globalAssetCatalog()!.hasTexture('old.png')).toBe(true);
+
+    // Replace fptResources with new state
+    delete fptResources.textures['old.png'];
+    const tex2 = new THREE.DataTexture(new Uint8Array([0,0,255,255]), 1, 1, THREE.RGBAFormat);
+    fptResources.textures['new.png'] = tex2;
+    populateCatalogFromFPTResources();
+
+    // After second populate, old texture must be gone
+    expect(globalAssetCatalog()!.hasTexture('old.png')).toBe(false);
+    expect(globalAssetCatalog()!.hasTexture('new.png')).toBe(true);
+  });
+});
+
 describe('Renderer model resolution via catalog', () => {
   beforeEach(() => {
     if (fptResources.models) fptResources.models.clear();

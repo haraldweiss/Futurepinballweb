@@ -21,6 +21,7 @@ import { getAnimationScheduler } from './mechanics/animation-scheduler';
 import { getBamBridge } from './bam-bridge';
 import { getGraphicsPipeline } from './graphics/graphics-pipeline';
 import { getScoreAnimationManager } from './score-animation-manager';
+import { populateCatalogFromFPTResources } from './fpt-parser';
 // Phase 15: Future imports (modules not yet integrated to main)
 // import { PlayfieldMeshBuilder, BumperPosition, TargetPosition } from './geometry/playfield-mesh-builder';
 // import { TextureAnalyzer } from './graphics/texture-analyzer';
@@ -1561,6 +1562,9 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
         fptResources.playfield = library.textureLibrary[textureNames[0]];
       }
     }
+
+    // Refresh catalog with merged library state (library merge happens after parser populated catalog)
+    populateCatalogFromFPTResources();
   }
 
   // ─── Phase 14: Get Graphics Resources for optimized allocation ────────────────
