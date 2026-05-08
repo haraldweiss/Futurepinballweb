@@ -16,7 +16,9 @@
  * - System integration
  */
 
-const { app, BrowserWindow, Menu, ipcMain, dialog, screen } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
+// NOTE: `screen` is lazy-imported inside handlers — accessing it before
+// app.ready throws on some platforms ("Cannot require screen module before app is ready").
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -255,6 +257,7 @@ ipcMain.handle('app:getPath', (event, name) => {
 // Screen enumeration — main process has access to all displays.
 // Renderer can't see secondary displays in Electron's file:// context.
 ipcMain.handle('screen:getAllDisplays', () => {
+  const { screen } = require('electron');
   const displays = screen.getAllDisplays();
   const primaryId = screen.getPrimaryDisplay().id;
   return displays.map((d) => ({
