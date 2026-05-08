@@ -44,4 +44,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeAllListeners('updater:update-downloaded');
     ipcRenderer.removeAllListeners('updater:error');
   },
+
+  // Multi-screen support (Phase 4) — Electron-only path, undefined in browser
+  getAllDisplays: () => ipcRenderer.invoke('screen:getAllDisplays'),
+  openWindow: (options) => ipcRenderer.invoke('window:openOnDisplay', options),
+  closeWindow: (id) => ipcRenderer.invoke('window:close', id),
+  closeAllChildWindows: () => ipcRenderer.invoke('window:closeAllChildren'),
 });
