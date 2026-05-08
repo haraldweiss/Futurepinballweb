@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import type { CatalogStats, SilentBuffer } from './asset-types';
 import { createPlaceholderTexture, createPlaceholderMesh, createPlaceholderAudio } from './placeholders';
+import type { AssetCache } from './asset-cache';
 
 export interface AssetCatalogOptions {
   memoryBudgetBytes?: number;
@@ -91,6 +92,33 @@ export class AssetCatalog {
     this.sounds.clear();
     this.estimatedBytes = 0;
     this.usingOnDemand = false;
+  }
+
+  private cache: AssetCache | null = null;
+  private tableId: string = '';
+
+  bindCache(cache: AssetCache, tableId: string): void {
+    this.cache = cache;
+    this.tableId = tableId;
+  }
+
+  private cacheKey(kind: 'tex' | 'mdl' | 'snd', name: string): string {
+    return `${this.tableId}:${kind}:${name}`;
+  }
+
+  async persistTextureBytes(name: string, bytes: Uint8Array): Promise<void> {
+    if (!this.cache) return;
+    await this.cache.put(this.cacheKey('tex', name), bytes);
+  }
+
+  async hasPersistedTexture(name: string): Promise<boolean> {
+    if (!this.cache) return false;
+    return this.cache.hasKey(this.cacheKey('tex', name));
+  }
+
+  async loadPersistedTextureBytes(name: string): Promise<Uint8Array | null> {
+    if (!this.cache) return null;
+    return this.cache.get(this.cacheKey('tex', name));
   }
 
   private checkBudget(): void {

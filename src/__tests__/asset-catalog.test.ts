@@ -133,3 +133,34 @@ describe('AssetCatalog memory budget', () => {
     expect(cat.stats().estimatedBytes).toBe(100);
   });
 });
+
+import 'fake-indexeddb/auto';
+import { AssetCache } from '../assets/asset-cache';
+
+describe('AssetCatalog persistence (IndexedDB)', () => {
+  it('persistTexture stores raw bytes under tableId+name key', async () => {
+    const cache = new AssetCache('catalog-persist-test');
+    await cache.open();
+    await cache.clear();
+
+    const cat = new AssetCatalog();
+    cat.bindCache(cache, 'table-xyz');
+    const bytes = new Uint8Array([1, 2, 3, 4]);
+    await cat.persistTextureBytes('thumb.png', bytes);
+
+    const stored = await cache.get('table-xyz:tex:thumb.png');
+    expect(stored).not.toBeNull();
+    expect(Array.from(stored!)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('hasPersistedTexture returns true after persist', async () => {
+    const cache = new AssetCache('catalog-persist-test-2');
+    await cache.open();
+    await cache.clear();
+    const cat = new AssetCatalog();
+    cat.bindCache(cache, 'table-q');
+    await cat.persistTextureBytes('a.png', new Uint8Array([5]));
+    expect(await cat.hasPersistedTexture('a.png')).toBe(true);
+    expect(await cat.hasPersistedTexture('b.png')).toBe(false);
+  });
+});
