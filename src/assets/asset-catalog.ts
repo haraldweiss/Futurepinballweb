@@ -75,6 +75,10 @@ export class AssetCatalog {
     return [...this.models.keys()];
   }
 
+  registeredSoundNames(): string[] {
+    return [...this.sounds.keys()];
+  }
+
   isPlaceholder(asset: object): boolean {
     return this.placeholders.has(asset);
   }
