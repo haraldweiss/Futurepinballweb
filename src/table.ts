@@ -10,7 +10,7 @@ import {
   state, fptResources, physics, currentTableConfig, tableGroup, extraBalls,
   bumpers, targets, slingshots, ramps,
   setCurrentTableConfig, setTableGroup, setPlungerKnob,
-  cb,
+  cb, globalAssetCatalog,
 } from './game';
 import {
   callScriptBumper, callScriptTarget, callScriptSlingshot,
@@ -25,6 +25,20 @@ import { getScoreAnimationManager } from './score-animation-manager';
 // import { PlayfieldMeshBuilder, BumperPosition, TargetPosition } from './geometry/playfield-mesh-builder';
 // import { TextureAnalyzer } from './graphics/texture-analyzer';
 // import { getNormalMapGenerator } from './graphics/normal-map-generator';
+
+/**
+ * Resolve the active playfield texture.
+ * Prefers AssetCatalog (new path); returns null if not present.
+ * Returning null signals "use solid color fallback".
+ */
+export function resolvePlayfieldTexture(): THREE.Texture | null {
+  const cat = globalAssetCatalog();
+  if (cat && cat.hasTexture('playfield')) {
+    const tex = cat.getTexture('playfield');
+    if (!cat.isPlaceholder(tex)) return tex;
+  }
+  return null;
+}
 
 // ─── PHASE 2: Advanced Lighting & Effects System ───────────────────────────────
 /**
@@ -1569,11 +1583,12 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
 
   // Spielfeld (mit verbesserter Texture-Anwendung)
   const tableGeom = geomPool?.getBox(6, 12, 0.25) ?? new THREE.BoxGeometry(6, 12, 0.25);
-  const hasFPTTex = !!fptResources.playfield;
+  const playfieldTex = resolvePlayfieldTexture();
+  const hasFPTTex = playfieldTex !== null;
 
   const tableMat  = new THREE.MeshStandardMaterial({
     color:     hasFPTTex ? 0xffffff : config.tableColor,
-    map:       hasFPTTex ? fptResources.playfield : null,
+    map:       playfieldTex,
     roughness: hasFPTTex ? 0.4 : 0.65,  // FPT-Texturen: glänzender
     metalness: hasFPTTex ? 0.15 : 0.12,  // FPT-Texturen: leicht metallisch
     emissive:  new THREE.Color(config.tableColor).multiplyScalar(hasFPTTex ? 0.08 : 0.14),
@@ -1581,11 +1596,11 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   });
 
   // UV-Mapping optimieren für Playfield
-  if (hasFPTTex && fptResources.playfield) {
-    fptResources.playfield.repeat.set(1.0, 1.0);
-    fptResources.playfield.offset.set(0, 0);
-    fptResources.playfield.wrapS = THREE.ClampToEdgeWrapping;
-    fptResources.playfield.wrapT = THREE.ClampToEdgeWrapping;
+  if (playfieldTex) {
+    playfieldTex.repeat.set(1.0, 1.0);
+    playfieldTex.offset.set(0, 0);
+    playfieldTex.wrapS = THREE.ClampToEdgeWrapping;
+    playfieldTex.wrapT = THREE.ClampToEdgeWrapping;
   }
 
   const tableMesh = new THREE.Mesh(tableGeom, tableMat);

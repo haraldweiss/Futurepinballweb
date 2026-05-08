@@ -10,6 +10,7 @@ vi.mock('cfb', () => ({}));
 import { AssetCatalog } from '../assets/asset-catalog';
 import { setGlobalAssetCatalog, globalAssetCatalog, fptResources } from '../game';
 import { populateCatalogFromFPTResources } from '../fpt-parser';
+import { resolvePlayfieldTexture } from '../table';
 
 describe('FPT parser → AssetCatalog integration', () => {
   beforeEach(() => {
@@ -45,5 +46,25 @@ describe('FPT parser → AssetCatalog integration', () => {
     populateCatalogFromFPTResources();
     const tex = globalAssetCatalog()!.getTexture('nope');
     expect(globalAssetCatalog()!.isPlaceholder(tex)).toBe(true);
+  });
+});
+
+describe('Renderer texture resolution via catalog', () => {
+  beforeEach(() => {
+    Object.keys(fptResources.textures).forEach(k => delete fptResources.textures[k]);
+    fptResources.playfield = null;
+    setGlobalAssetCatalog(new AssetCatalog());
+  });
+
+  it('resolvePlayfieldTexture returns catalog texture when registered', () => {
+    const tex = new THREE.DataTexture(new Uint8Array([255,255,255,255]), 1, 1, THREE.RGBAFormat);
+    fptResources.playfield = tex;
+    populateCatalogFromFPTResources();
+    expect(resolvePlayfieldTexture()).toBe(tex);
+  });
+
+  it('resolvePlayfieldTexture returns null when no playfield is registered', () => {
+    populateCatalogFromFPTResources();
+    expect(resolvePlayfieldTexture()).toBeNull();
   });
 });
