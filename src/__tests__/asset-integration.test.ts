@@ -126,7 +126,7 @@ describe('Renderer model resolution via catalog', () => {
   });
 });
 
-import { buildBumper } from '../table';
+import { buildBumper, buildTarget } from '../table';
 
 describe('buildBumper uses AssetCatalog for MS3D models', () => {
   let origCreateElement: typeof document.createElement;
@@ -182,5 +182,61 @@ describe('buildBumper uses AssetCatalog for MS3D models', () => {
     const meshes: THREE.Mesh[] = [];
     result.traverse(o => { if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh); });
     expect(meshes.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('buildTarget uses AssetCatalog for MS3D models', () => {
+  let origCreateElementTarget: typeof document.createElement;
+
+  beforeEach(() => {
+    if (fptResources.models) fptResources.models.clear();
+    setGlobalAssetCatalog(new AssetCatalog());
+
+    // Stub canvas so createProceduralNormalMap doesn't crash in happy-dom
+    origCreateElementTarget = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string, ...rest: any[]) => {
+      if (tag === 'canvas') {
+        const stub = {
+          width: 0, height: 0,
+          getContext: () => ({
+            fillStyle: '',
+            fillRect: () => {},
+            getImageData: (x: number, y: number, w: number, h: number) => ({
+              data: new Uint8ClampedArray(w * h * 4),
+            }),
+            putImageData: () => {},
+            createLinearGradient: () => ({ addColorStop: () => {} }),
+          }),
+          toDataURL: () => 'data:image/png;base64,',
+        };
+        return stub as unknown as HTMLCanvasElement;
+      }
+      return origCreateElementTarget(tag, ...rest);
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('uses extracted MS3D model from catalog when "target" is registered', () => {
+    const customGeom = new THREE.BoxGeometry(0.6, 0.4, 0.2);
+    const customMesh = new THREE.Mesh(customGeom, new THREE.MeshStandardMaterial({ color: 0x00ff00 }));
+    globalAssetCatalog()!.registerModel('target.ms3d', customMesh);
+
+    const result = buildTarget(0, 0, 0xffffff);
+    expect(result).toBeInstanceOf(THREE.Group);
+    const meshes: THREE.Mesh[] = [];
+    result.traverse(o => { if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh); });
+    const fromCatalog = meshes.find(m => m.geometry === customGeom);
+    expect(fromCatalog).toBeDefined();
+  });
+
+  it('falls back to procedural geometry when no target model is in catalog', () => {
+    const result = buildTarget(0, 0, 0xff0000);
+    expect(result).toBeInstanceOf(THREE.Group);
+    const meshes: THREE.Mesh[] = [];
+    result.traverse(o => { if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh); });
+    expect(meshes.length).toBeGreaterThanOrEqual(1);
   });
 });
