@@ -5,7 +5,8 @@
  */
 import * as THREE from 'three';
 import * as CFB from 'cfb';
-import { fptResources } from './game';
+import { fptResources, globalAssetCatalog, setGlobalAssetCatalog } from './game';
+import { AssetCatalog } from './assets/asset-catalog';
 import { getAudioCtx, playFPTMusic } from './audio-system';
 import { runFPScript } from './script-engine';
 
@@ -476,6 +477,41 @@ export function mapFPTSounds(sounds: Record<string, AudioBuffer>): void {
   if (dk) { fptResources.mapped.drain   = sounds[dk]; logMsg(`  Drain-Sound: "${dk}"`, 'ok'); }
   if (!fptResources.mapped.bumper  && names[0]) fptResources.mapped.bumper  = sounds[names[0]];
   if (!fptResources.mapped.flipper && names[1]) fptResources.mapped.flipper = sounds[names[1]];
+}
+
+/**
+ * Mirror current fptResources content into globalAssetCatalog.
+ * Lazily creates a catalog if one does not yet exist.
+ * Idempotent — safe to call multiple times.
+ */
+export function populateCatalogFromFPTResources(): void {
+  let cat = globalAssetCatalog();
+  if (!cat) {
+    cat = new AssetCatalog();
+    setGlobalAssetCatalog(cat);
+  }
+
+  // Textures
+  for (const [name, tex] of Object.entries(fptResources.textures)) {
+    cat.registerTexture(name, tex);
+  }
+  if (fptResources.playfield) {
+    cat.registerTexture('playfield', fptResources.playfield);
+  }
+
+  // Models
+  if (fptResources.models) {
+    for (const [name, mesh] of fptResources.models.entries()) {
+      if (mesh) cat.registerModel(name, mesh);
+    }
+  }
+
+  // Sounds — only AudioBuffer entries, skip Blob URL strings
+  for (const [name, snd] of Object.entries(fptResources.sounds)) {
+    if (typeof snd !== 'string') {
+      cat.registerSound(name, snd);
+    }
+  }
 }
 
 // ─── Heuristischer Parser ─────────────────────────────────────────────────────
@@ -1094,6 +1130,8 @@ export async function parseFPTFile(
     if (textureCount > 0 || soundCount > 0) {
       logMsg(`✓ CFB erfolgreich: ${textureCount} Textur(en), ${soundCount} Sound(s), ${streamCount} Stream(s) total`, 'ok');
       if (soundCount > 0) { logMsg('Mappe Sounds...', 'info'); mapFPTSounds(fptResources.sounds); }
+      // Mirror extracted resources into AssetCatalog for renderer use
+      populateCatalogFromFPTResources();
       if (fptResources.playfield) logMsg('✓ Spielfeld-Textur geladen', 'ok');
 
       if (fptResources.script) {
