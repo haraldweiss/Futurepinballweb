@@ -478,12 +478,14 @@ export function mapFPTSounds(sounds: Record<string, AudioBuffer>): void {
   if (!fptResources.mapped.bumper  && names[0]) fptResources.mapped.bumper  = sounds[names[0]];
   if (!fptResources.mapped.flipper && names[1]) fptResources.mapped.flipper = sounds[names[1]];
 
-  // Phase 2: auto-classify long sounds as music tracks
+  // Phase 2: auto-classify long sounds as music tracks.
+  // Threshold matches the primary classifier in parseCFBResources (8s)
+  // to avoid promoting a long SFX to music.
   if (!fptResources.musicTrack) {
     for (const [, buf] of Object.entries(sounds)) {
       if (typeof buf === 'string') continue;
       const duration = (buf as AudioBuffer).duration;
-      if (typeof duration === 'number' && duration > 5) {
+      if (typeof duration === 'number' && duration > 8) {
         fptResources.musicTrack = buf;
         break;
       }

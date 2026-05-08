@@ -27,9 +27,17 @@ export function resolveSoundForPlayback(name: string): AudioBuffer | null {
     if (lower === wanted || lower.includes(wanted)) {
       const buf = cat.getSound(candidate);
       if (cat.isPlaceholder(buf)) continue;
-      // Only return real AudioBuffer (not SilentBuffer placeholder shape)
-      if ((buf as AudioBuffer).getChannelData && (buf as AudioBuffer).sampleRate) {
-        return buf as AudioBuffer;
+      // Only accept real AudioBuffer (not SilentBuffer placeholders).
+      // typeof guard for test environments where AudioBuffer may be undefined.
+      if (typeof AudioBuffer !== 'undefined' && buf instanceof AudioBuffer) {
+        return buf;
+      }
+      // Test-environment duck-type fallback: real AudioBuffers always have a non-zero length AND a getChannelData
+      // function that returns a Float32Array of that length. SilentBuffer's getChannelData returns Float32Array(1)
+      // regardless. So we additionally require length > 1 to filter SilentBuffers.
+      const candidate_buf = buf as AudioBuffer;
+      if (candidate_buf && typeof candidate_buf.getChannelData === 'function' && candidate_buf.length > 1) {
+        return candidate_buf;
       }
     }
   }

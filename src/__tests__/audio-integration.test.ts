@@ -68,6 +68,18 @@ describe('resolveSoundForPlayback (catalog-first lookup)', () => {
   it('returns null when only placeholders are available', () => {
     expect(resolveSoundForPlayback('anything')).toBeNull();
   });
+
+  it('rejects a SilentBuffer placeholder shape (length=1)', () => {
+    const fakeSilent = {
+      numberOfChannels: 1,
+      sampleRate: 44100,
+      length: 1,
+      duration: 1 / 44100,
+      getChannelData: () => new Float32Array(1),
+    } as unknown as AudioBuffer;
+    globalAssetCatalog()!.registerSound('silent.wav', fakeSilent);
+    expect(resolveSoundForPlayback('silent.wav')).toBeNull();
+  });
 });
 
 describe('mapFPTSounds: name-based mapping', () => {
@@ -116,7 +128,7 @@ describe('mapFPTSounds: music auto-classification', () => {
     fptResources.musicTrack = undefined;
   });
 
-  it('sets musicTrack when a sound longer than 5 seconds is present', () => {
+  it('sets musicTrack when a sound longer than 8 seconds is present', () => {
     const sounds: Record<string, AudioBuffer> = {
       'short.wav': makeBuffer(0.3),
       'theme.ogg': makeBuffer(120), // 2 minutes
@@ -139,6 +151,14 @@ describe('mapFPTSounds: music auto-classification', () => {
     const sounds: Record<string, AudioBuffer> = {
       'sfx_a.wav': makeBuffer(0.5),
       'sfx_b.wav': makeBuffer(2.0),
+    };
+    mapFPTSounds(sounds);
+    expect(fptResources.musicTrack).toBeUndefined();
+  });
+
+  it('does not classify a 6-second sound as music (below 8s threshold)', () => {
+    const sounds: Record<string, AudioBuffer> = {
+      'voice.wav': makeBuffer(6.0),
     };
     mapFPTSounds(sounds);
     expect(fptResources.musicTrack).toBeUndefined();
