@@ -10,7 +10,7 @@ vi.mock('cfb', () => ({}));
 import { AssetCatalog } from '../assets/asset-catalog';
 import { setGlobalAssetCatalog, globalAssetCatalog, fptResources } from '../game';
 import { populateCatalogFromFPTResources } from '../fpt-parser';
-import { resolvePlayfieldTexture } from '../table';
+import { resolvePlayfieldTexture, resolveModel } from '../table';
 
 describe('FPT parser → AssetCatalog integration', () => {
   beforeEach(() => {
@@ -66,5 +66,31 @@ describe('Renderer texture resolution via catalog', () => {
   it('resolvePlayfieldTexture returns null when no playfield is registered', () => {
     populateCatalogFromFPTResources();
     expect(resolvePlayfieldTexture()).toBeNull();
+  });
+});
+
+describe('Renderer model resolution via catalog', () => {
+  beforeEach(() => {
+    if (fptResources.models) fptResources.models.clear();
+    setGlobalAssetCatalog(new AssetCatalog());
+  });
+
+  it('resolveModel returns registered mesh when present in catalog', () => {
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5));
+    fptResources.models!.set('bumper.ms3d', mesh);
+    populateCatalogFromFPTResources();
+    const resolved = resolveModel('bumper.ms3d');
+    expect(resolved).toBe(mesh);
+  });
+
+  it('resolveModel returns null when model is not in catalog', () => {
+    populateCatalogFromFPTResources();
+    expect(resolveModel('nonexistent.ms3d')).toBeNull();
+  });
+
+  it('resolveModel returns null when catalog returns placeholder', () => {
+    populateCatalogFromFPTResources();
+    // missing model returns placeholder; resolver treats as "no model available"
+    expect(resolveModel('also-missing')).toBeNull();
   });
 });

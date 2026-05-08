@@ -40,6 +40,18 @@ export function resolvePlayfieldTexture(): THREE.Texture | null {
   return null;
 }
 
+/**
+ * Resolve a 3D model by name from the AssetCatalog.
+ * Returns the registered mesh or null if not present (placeholder rejected).
+ * Caller decides fallback behavior (e.g., procedural geometry).
+ */
+export function resolveModel(name: string): THREE.Mesh | null {
+  const cat = globalAssetCatalog();
+  if (!cat || !cat.hasModel(name)) return null;
+  const mesh = cat.getModel(name);
+  return cat.isPlaceholder(mesh) ? null : mesh;
+}
+
 // ─── PHASE 2: Advanced Lighting & Effects System ───────────────────────────────
 /**
  * Advanced lighting controller for special effects and dynamic light updates
