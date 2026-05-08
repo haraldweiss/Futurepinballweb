@@ -18,6 +18,7 @@ import { BackglassEditor, type BackglassSettings } from './backglass-editor';
 import { DMDEditor, type DMDSettings } from './dmd-editor';
 import { VideoEditor } from './video-editor';
 import { AssetBrowser } from './editor/asset-browser';
+import { PropertyModal } from './editor/property-modal';
 import { showTableSelector } from './table-selector';
 import { escapeHtml } from './utils/html-escape';
 
@@ -52,6 +53,7 @@ export class EditorModal {
   private dmdEditor: DMDEditor | null = null;
   private videoEditor: VideoEditor | null = null;
   private assetBrowser: AssetBrowser | null = null;
+  private propertyModal: PropertyModal = new PropertyModal();
 
   // Editor state (Playfield)
   private elements: Elem[] = [];
@@ -479,6 +481,7 @@ export class EditorModal {
     this.canvas.addEventListener('mousedown', (e) => this.onCanvasMouseDown(e));
     this.canvas.addEventListener('mouseup', (e) => this.onCanvasMouseUp(e));
     this.canvas.addEventListener('click', (e) => this.onCanvasClick(e));
+    this.canvas.addEventListener('dblclick', (e) => this.onCanvasDoubleClick(e));
 
     // Toolbar events
     const toolBtns = this.modal?.querySelectorAll('[data-tool]');
@@ -846,38 +849,60 @@ export class EditorModal {
     const rect = this.canvas.getBoundingClientRect();
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
-    const g = this.cToG(cx, cy);
 
-    // Find clicked element
-    for (let i = this.elements.length - 1; i >= 0; i--) {
-      const el = this.elements[i];
-      let dist = 999;
+    const idx = this.pickElementAt(cx, cy);
+    if (idx >= 0) {
+      const el = this.elements[idx];
+      this.selectedIdx = idx;
+      this.isDragging = true;
 
-      if (el.type === 'bumper' || el.type === 'target') {
-        dist = Math.hypot(el.x - g.x, el.y - g.y);
-      } else if (el.type === 'ramp') {
-        const d1 = Math.hypot(el.x1 - g.x, el.y1 - g.y);
-        const d2 = Math.hypot(el.x2 - g.x, el.y2 - g.y);
-        dist = Math.min(d1, d2);
-      }
+      const p = this.gToC(el.type === 'bumper' || el.type === 'target' ? el.x : el.x2,
+                         el.type === 'bumper' || el.type === 'target' ? el.y : el.y2);
+      this.dragOffX = cx - p.x;
+      this.dragOffY = cy - p.y;
 
-      if (dist < 0.5) {
-        this.selectedIdx = i;
-        this.isDragging = true;
-
-        const p = this.gToC(el.type === 'bumper' || el.type === 'target' ? el.x : el.x2,
-                           el.type === 'bumper' || el.type === 'target' ? el.y : el.y2);
-        this.dragOffX = cx - p.x;
-        this.dragOffY = cy - p.y;
-
-        this.render();
-        return;
-      }
+      this.render();
+      return;
     }
 
     // No element clicked, deselect
     this.selectedIdx = -1;
     this.render();
+  }
+
+  /**
+   * Pick element at canvas pixel position; returns element index or -1.
+   * Iterates top-to-bottom (last-placed first) to match selection priority.
+   */
+  private pickElementAt(cx: number, cy: number): number {
+    const g = this.cToG(cx, cy);
+    for (let i = this.elements.length - 1; i >= 0; i--) {
+      const el = this.elements[i];
+      let dist = 999;
+      if (el.type === 'bumper' || el.type === 'target') {
+        dist = Math.hypot(el.x - g.x, el.y - g.y);
+      } else if (el.type === 'ramp') {
+        dist = Math.min(
+          Math.hypot(el.x1 - g.x, el.y1 - g.y),
+          Math.hypot(el.x2 - g.x, el.y2 - g.y),
+        );
+      }
+      if (dist < 0.5) return i;
+    }
+    return -1;
+  }
+
+  private onCanvasDoubleClick(e: MouseEvent): void {
+    if (!this.canvas) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    const idx = this.pickElementAt(cx, cy);
+    if (idx < 0 || !this.elements[idx]) return;
+    this.propertyModal.openForElement(this.elements[idx] as any, (updated) => {
+      this.elements[idx] = updated as any;
+      this.updateEditor();
+    });
   }
 
   private onCanvasMouseUp(): void {
