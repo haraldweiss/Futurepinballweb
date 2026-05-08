@@ -285,6 +285,19 @@
     @media (min-resolution: 150dpi) {
       body { font-size: 14px; }
     }
+
+    /* ─── SCRIPT EDITOR MODAL ─── */
+    .script-editor-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10001; }
+    .script-editor-modal-dialog { background: #1c1c1f; color: #ddd; border: 1px solid #333; border-radius: 6px; padding: 20px; width: 80vw; max-width: 1100px; height: 80vh; display: flex; flex-direction: column; }
+    .script-editor-modal-title { margin: 0 0 12px; font-size: 16px; }
+    .script-editor-container { flex: 1; min-height: 300px; border: 1px solid #333; border-radius: 4px; overflow: hidden; }
+    .script-editor-container .cm-editor { height: 100%; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; }
+    .script-editor-modal-buttons { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+    .script-editor-modal-buttons button { padding: 6px 14px; background: #2a2a2e; color: #ddd; border: 1px solid #444; border-radius: 3px; cursor: pointer; }
+    .script-editor-modal-buttons button[data-action="apply"] { background: #2a5a3a; border-color: #4a8a5a; }
+    .script-editor-modal-buttons button:hover { filter: brightness(1.2); }
+    .btn-script { padding: 6px 12px; background: #2a3050; color: #ddd; border: 1px solid #4060a0; border-radius: 3px; cursor: pointer; }
+    .btn-script:hover { background: #3a4060; }
   </style>
 </head>
 <body>

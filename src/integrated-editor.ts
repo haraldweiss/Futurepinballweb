@@ -19,8 +19,11 @@ import { DMDEditor, type DMDSettings } from './dmd-editor';
 import { VideoEditor } from './video-editor';
 import { AssetBrowser } from './editor/asset-browser';
 import { PropertyModal } from './editor/property-modal';
+import { ScriptEditorModal } from './editor/script-editor-modal';
 import { showTableSelector } from './table-selector';
 import { escapeHtml } from './utils/html-escape';
+import { fptResources } from './game';
+import { runFPScript } from './script-engine';
 
 type ToolType = 'select' | 'bumper' | 'target' | 'ramp';
 
@@ -54,6 +57,7 @@ export class EditorModal {
   private videoEditor: VideoEditor | null = null;
   private assetBrowser: AssetBrowser | null = null;
   private propertyModal: PropertyModal = new PropertyModal();
+  private scriptEditorModal: ScriptEditorModal = new ScriptEditorModal();
 
   // Editor state (Playfield)
   private elements: Elem[] = [];
@@ -285,6 +289,24 @@ export class EditorModal {
   }
 
   /**
+   * Open the VBScript editor modal for the current table's script.
+   * On Apply, hot-reloads the script via runFPScript().
+   */
+  public openScriptEditor(): void {
+    const currentScript = fptResources.script ?? '';
+    this.scriptEditorModal.open(currentScript, (updated) => {
+      fptResources.script = updated;
+      try {
+        runFPScript(updated);
+        console.log('[ScriptEditor] Script re-loaded, handlers refreshed');
+      } catch (err) {
+        console.error('[ScriptEditor] Script reload failed:', err);
+        alert('Script reload failed: ' + (err as Error).message);
+      }
+    });
+  }
+
+  /**
    * Check if there are unsaved changes
    */
   private hasUnsavedChanges(): boolean {
@@ -462,6 +484,7 @@ export class EditorModal {
         <button class="btn-apply" onclick="(window as any).getIntegratedEditor?.().applyChanges?.()">✓ Apply & Save</button>
         <button class="btn-discard" onclick="(window as any).getIntegratedEditor?.().discardChanges?.()">✕ Discard</button>
         <button class="btn-switch-table" onclick="(window as any).getIntegratedEditor?.().switchTable?.()">⇨ Switch Table</button>
+        <button class="btn-script" onclick="(window as any).getIntegratedEditor?.().openScriptEditor?.()">📝 Script</button>
       </div>
     `;
   }
