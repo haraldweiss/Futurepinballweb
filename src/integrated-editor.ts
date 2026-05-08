@@ -22,7 +22,8 @@ import { PropertyModal } from './editor/property-modal';
 import { ScriptEditorModal } from './editor/script-editor-modal';
 import { showTableSelector } from './table-selector';
 import { escapeHtml } from './utils/html-escape';
-import { fptResources } from './game';
+import { fptResources, fptRawBytes } from './game';
+import { serializeFPT } from './fpt-writer';
 import { runFPScript } from './script-engine';
 
 type ToolType = 'select' | 'bumper' | 'target' | 'ramp';
@@ -307,6 +308,38 @@ export class EditorModal {
   }
 
   /**
+   * Serialize current FPT state and trigger a browser download.
+   * - 'sidecar': downloads as <name>.fpt.edited (preserves original)
+   * - 'overwrite': downloads as <name>.fpt (same extension as original)
+   */
+  public saveFPT(mode: 'sidecar' | 'overwrite'): void {
+    if (mode === 'overwrite') {
+      if (!confirm('Download this as the original FPT filename? The original will not be overwritten on disk (browsers cannot do that), but the downloaded file will use the .fpt extension.')) {
+        return;
+      }
+    }
+
+    const bytes = serializeFPT({
+      script: fptResources.script ?? '',
+      textures: fptRawBytes.textures,
+      sounds:   fptRawBytes.sounds,
+      models:   fptRawBytes.models,
+      otherStreams: fptRawBytes.otherStreams,
+    });
+
+    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const name = (this.tableName || 'table').replace(/\s+/g, '_');
+    a.download = mode === 'sidecar' ? `${name}.fpt.edited` : `${name}.fpt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
    * Check if there are unsaved changes
    */
   private hasUnsavedChanges(): boolean {
@@ -481,6 +514,8 @@ export class EditorModal {
       </div>
 
       <div class="editor-modal-footer">
+        <button class="btn-save-fpt" onclick="(window as any).getIntegratedEditor?.().saveFPT?.('sidecar')">💾 Save (.edited)</button>
+        <button class="btn-save-fpt-overwrite" onclick="(window as any).getIntegratedEditor?.().saveFPT?.('overwrite')">💾 Save As / Overwrite...</button>
         <button class="btn-apply" onclick="(window as any).getIntegratedEditor?.().applyChanges?.()">✓ Apply & Save</button>
         <button class="btn-discard" onclick="(window as any).getIntegratedEditor?.().discardChanges?.()">✕ Discard</button>
         <button class="btn-switch-table" onclick="(window as any).getIntegratedEditor?.().switchTable?.()">⇨ Switch Table</button>
