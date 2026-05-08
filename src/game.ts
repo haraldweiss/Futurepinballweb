@@ -12,6 +12,7 @@ import type {
   BumperMesh, TargetMesh, RampData, ExtraBall, ParticleData, FPLLibrary
 } from './types';
 import type { BAMEngine } from './bam-engine';
+import { AssetCatalog } from './assets/asset-catalog';
 
 // ── Game State ───────────────────────────────────────────────────────────────
 export const state: GameState = {
@@ -112,6 +113,8 @@ export let fpScriptHandlers:    Record<string, (...args: any[]) => any> = {};
 export let loadedLibrary:       FPLLibrary     | null = null;
 export let bamEngine:           BAMEngine      | null = null;
 
+let _globalAssetCatalog: AssetCatalog | null = null;
+
 export const bumpers:    BumperMesh[] = [];
 export const targets:    TargetMesh[] = [];
 export const slingshots: Array<{ x: number; y: number; side: string }> = [];
@@ -127,6 +130,8 @@ export function setPlungerKnob(m: THREE.Mesh | null)       { plungerKnob        
 export function setFpScriptHandlers(h: Record<string, (...args: any[]) => any>) { fpScriptHandlers = h; }
 export function setLoadedLibrary(lib: FPLLibrary | null)    { loadedLibrary      = lib; }
 export function setBAMEngine(e: BAMEngine | null)           { bamEngine          = e; }
+export function globalAssetCatalog(): AssetCatalog | null { return _globalAssetCatalog; }
+export function setGlobalAssetCatalog(c: AssetCatalog | null): void { _globalAssetCatalog = c; }
 
 // ── Cross-module callbacks (registered by main.ts after scene init) ───────────
 export const cb = {

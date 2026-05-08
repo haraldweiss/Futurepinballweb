@@ -87,3 +87,19 @@ describe('AssetCatalog (in-memory)', () => {
     expect(cat.stats().textureCount).toBe(0);
   });
 });
+
+import { globalAssetCatalog, setGlobalAssetCatalog } from '../game';
+
+describe('globalAssetCatalog', () => {
+  it('is null by default', () => {
+    setGlobalAssetCatalog(null);
+    expect(globalAssetCatalog()).toBeNull();
+  });
+
+  it('can be set and retrieved', () => {
+    const cat = new AssetCatalog();
+    setGlobalAssetCatalog(cat);
+    expect(globalAssetCatalog()).toBe(cat);
+    setGlobalAssetCatalog(null);
+  });
+});
