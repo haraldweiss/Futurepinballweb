@@ -16,7 +16,7 @@
  * - System integration
  */
 
-const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, screen } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -32,6 +32,9 @@ const isDev = !app.isPackaged;
 
 // Keep a global reference of the window object
 let mainWindow;
+
+const childWindows = new Map(); // id -> BrowserWindow
+let nextChildId = 1;
 
 /**
  * Create the browser window
@@ -247,6 +250,82 @@ ipcMain.handle('app:getVersion', () => {
 // Get app path
 ipcMain.handle('app:getPath', (event, name) => {
   return app.getPath(name);
+});
+
+// Screen enumeration — main process has access to all displays.
+// Renderer can't see secondary displays in Electron's file:// context.
+ipcMain.handle('screen:getAllDisplays', () => {
+  const displays = screen.getAllDisplays();
+  const primaryId = screen.getPrimaryDisplay().id;
+  return displays.map((d) => ({
+    id: d.id,
+    label: d.label || `Display ${d.id}`,
+    bounds: { x: d.bounds.x, y: d.bounds.y, width: d.bounds.width, height: d.bounds.height },
+    workArea: { x: d.workArea.x, y: d.workArea.y, width: d.workArea.width, height: d.workArea.height },
+    scaleFactor: d.scaleFactor,
+    rotation: d.rotation,
+    isPrimary: d.id === primaryId,
+    internal: d.internal === true,
+  }));
+});
+
+// Open a child window at a specific position/size (multi-screen layouts).
+// Routes around setWindowOpenHandler's denial of renderer-initiated window.open.
+ipcMain.handle('window:openOnDisplay', async (_event, options) => {
+  const { url, x, y, width, height, role } = options || {};
+  if (typeof url !== 'string') throw new Error('url required');
+  if ([x, y, width, height].some((v) => typeof v !== 'number' || !Number.isFinite(v))) {
+    throw new Error('numeric x, y, width, height required');
+  }
+
+  const allowed =
+    url.startsWith('http://localhost:5173') ||
+    url.startsWith('file://');
+  if (!allowed) throw new Error('disallowed url');
+
+  const child = new BrowserWindow({
+    x, y, width, height,
+    frame: false,
+    resizable: true,
+    fullscreenable: true,
+    title: role ? `Future Pinball — ${role}` : 'Future Pinball',
+    webPreferences: {
+      preload: path.join(__dirname, 'electron-preload.cjs'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      webSecurity: true,
+    },
+  });
+  child.setMenuBarVisibility(false);
+  child.webContents.session.setPermissionRequestHandler((_wc, _p, cb) => cb(false));
+  child.webContents.on('will-navigate', (event, navUrl) => {
+    if (!navUrl.startsWith('http://localhost:5173') && !navUrl.startsWith('file://')) {
+      event.preventDefault();
+    }
+  });
+  child.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  child.loadURL(url);
+
+  const id = nextChildId++;
+  childWindows.set(id, child);
+  child.on('closed', () => childWindows.delete(id));
+  return id;
+});
+
+ipcMain.handle('window:close', (_event, id) => {
+  const w = childWindows.get(id);
+  if (w && !w.isDestroyed()) {
+    w.close();
+  }
+  childWindows.delete(id);
+});
+
+ipcMain.handle('window:closeAllChildren', () => {
+  for (const w of childWindows.values()) {
+    if (!w.isDestroyed()) w.close();
+  }
+  childWindows.clear();
 });
 
 // Check for updates
