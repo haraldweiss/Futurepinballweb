@@ -71,6 +71,10 @@ export class AssetCatalog {
   hasModel(name: string):   boolean { return this.models.has(name); }
   hasSound(name: string):   boolean { return this.sounds.has(name); }
 
+  registeredTextureNames(): string[] {
+    return [...this.textures.keys()];
+  }
+
   registeredModelNames(): string[] {
     return [...this.models.keys()];
   }
