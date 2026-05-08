@@ -6,6 +6,10 @@ import * as THREE from 'three';
 vi.mock('../script-engine', () => ({ runFPScript: vi.fn() }));
 vi.mock('../audio-system', () => ({ getAudioCtx: vi.fn(), playFPTMusic: vi.fn() }));
 vi.mock('cfb', () => ({}));
+vi.mock('../graphics/graphics-pipeline', () => ({
+  getGraphicsPipeline: vi.fn(() => null),
+  initializeGraphicsPipeline: vi.fn(),
+}));
 
 import { AssetCatalog } from '../assets/asset-catalog';
 import { setGlobalAssetCatalog, globalAssetCatalog, fptResources } from '../game';
@@ -119,5 +123,64 @@ describe('Renderer model resolution via catalog', () => {
     populateCatalogFromFPTResources();
     // missing model returns placeholder; resolver treats as "no model available"
     expect(resolveModel('also-missing')).toBeNull();
+  });
+});
+
+import { buildBumper } from '../table';
+
+describe('buildBumper uses AssetCatalog for MS3D models', () => {
+  let origCreateElement: typeof document.createElement;
+
+  beforeEach(() => {
+    if (fptResources.models) fptResources.models.clear();
+    setGlobalAssetCatalog(new AssetCatalog());
+
+    // Stub canvas so createProceduralNormalMap doesn't crash in happy-dom
+    origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string, ...rest: any[]) => {
+      if (tag === 'canvas') {
+        const stub = {
+          width: 0, height: 0,
+          getContext: () => ({
+            fillStyle: '',
+            fillRect: () => {},
+            getImageData: (x: number, y: number, w: number, h: number) => ({
+              data: new Uint8ClampedArray(w * h * 4),
+            }),
+            putImageData: () => {},
+            createLinearGradient: () => ({ addColorStop: () => {} }),
+          }),
+          toDataURL: () => 'data:image/png;base64,',
+        };
+        return stub as unknown as HTMLCanvasElement;
+      }
+      return origCreateElement(tag, ...rest);
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('uses extracted MS3D model from catalog when "bumper" is registered', () => {
+    const customGeom = new THREE.SphereGeometry(0.5);
+    const customMat = new THREE.MeshStandardMaterial({ color: 0xff00ff });
+    const customMesh = new THREE.Mesh(customGeom, customMat);
+    globalAssetCatalog()!.registerModel('bumper.ms3d', customMesh);
+
+    const result = buildBumper(0, 0, 0xffffff, 'high', 1.0);
+    expect(result).toBeInstanceOf(THREE.Group);
+    const meshes: THREE.Mesh[] = [];
+    result.traverse(o => { if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh); });
+    const fromCatalog = meshes.find(m => m.geometry === customGeom);
+    expect(fromCatalog).toBeDefined();
+  });
+
+  it('falls back to procedural geometry when no bumper model is in catalog', () => {
+    const result = buildBumper(0, 0, 0xff0000, 'high', 1.0);
+    expect(result).toBeInstanceOf(THREE.Group);
+    const meshes: THREE.Mesh[] = [];
+    result.traverse(o => { if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh); });
+    expect(meshes.length).toBeGreaterThanOrEqual(2);
   });
 });

@@ -1185,34 +1185,37 @@ export function buildRealisticFlipper(side: 'left' | 'right', length: number = 2
 
 // ─── Bumper bauen (mit Enhanced Geometry + LOD + Variable Size + Custom Light) ──
 export function buildBumper(x: number, y: number, color: number, lod: 'high'|'med'|'low' = 'high', size: number = 1.0, lightCfg?: { intensity: number; distance: number }, geomPool?: any): THREE.Mesh | THREE.Group {
-  // Phase 7: Try to use extracted MS3D model first
-  const fptRes = fptResources as any;
-  if (fptRes.models && fptRes.models instanceof Map && fptRes.models.size > 0) {
-    for (const [modelName, mesh] of fptRes.models) {
-      // Verify mesh is a THREE.Mesh object (not binary data)
-      if (modelName.toLowerCase().includes('bumper') && mesh && mesh instanceof THREE.Mesh) {
-        try {
-          const cloned = mesh.clone();
-          cloned.position.set(x, y, 0.125);
-          cloned.scale.setScalar(size);
-          cloned.castShadow = true;
-          cloned.receiveShadow = true;
+  // Phase 1b: Try to use extracted MS3D model from AssetCatalog
+  const cat = globalAssetCatalog();
+  if (cat) {
+    let bumperMesh: THREE.Mesh | null = null;
+    for (const name of cat.registeredModelNames()) {
+      if (name.toLowerCase().includes('bumper')) {
+        bumperMesh = resolveModel(name);
+        if (bumperMesh) break;
+      }
+    }
+    if (bumperMesh) {
+      try {
+        const cloned = bumperMesh.clone();
+        cloned.position.set(x, y, 0.125);
+        cloned.scale.setScalar(size);
+        cloned.castShadow = true;
+        cloned.receiveShadow = true;
 
-          // Add light for aesthetic
-          const lightIntensity = lightCfg?.intensity ?? 0.9;
-          const lightDistance = lightCfg?.distance ?? 4.5;
-          const pl = new THREE.PointLight(color, lightIntensity, lightDistance);
-          pl.position.set(x, y, 0.625);
-          pl.castShadow = true;
+        const lightIntensity = lightCfg?.intensity ?? 0.9;
+        const lightDistance = lightCfg?.distance ?? 4.5;
+        const pl = new THREE.PointLight(color, lightIntensity, lightDistance);
+        pl.position.set(x, y, 0.625);
+        pl.castShadow = true;
 
-          const group = new THREE.Group();
-          group.add(cloned);
-          group.add(pl);
-          group.userData = { light: pl, color, hit: false, lod, size, modelBased: true };
-          return group;
-        } catch (e) {
-          console.warn('[buildBumper] Failed to clone MS3D model:', e);
-        }
+        const group = new THREE.Group();
+        group.add(cloned);
+        group.add(pl);
+        group.userData = { light: pl, color, hit: false, lod, size, modelBased: true };
+        return group;
+      } catch (e) {
+        console.warn('[buildBumper] Failed to clone MS3D model:', e);
       }
     }
   }
