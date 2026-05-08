@@ -101,7 +101,10 @@
             "x64"
           ]
         }
-      ]
+      ],
+      "signtoolOptions": null,
+      "signAndEditExecutable": false,
+      "verifyUpdateCodeSignature": false
     },
     "nsis": {
       "oneClick": false,
