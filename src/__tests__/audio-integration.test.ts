@@ -109,3 +109,38 @@ describe('mapFPTSounds: name-based mapping', () => {
     expect(fptResources.mapped.flipper).toBe(sounds['mystery_b.wav']);
   });
 });
+
+describe('mapFPTSounds: music auto-classification', () => {
+  beforeEach(() => {
+    fptResources.mapped = { bumper: null, flipper: null, drain: null };
+    fptResources.musicTrack = undefined;
+  });
+
+  it('sets musicTrack when a sound longer than 5 seconds is present', () => {
+    const sounds: Record<string, AudioBuffer> = {
+      'short.wav': makeBuffer(0.3),
+      'theme.ogg': makeBuffer(120), // 2 minutes
+    };
+    mapFPTSounds(sounds);
+    expect(fptResources.musicTrack).toBe(sounds['theme.ogg']);
+  });
+
+  it('does not overwrite an already-set musicTrack', () => {
+    const existing = makeBuffer(60);
+    fptResources.musicTrack = existing;
+    const sounds: Record<string, AudioBuffer> = {
+      'theme.ogg': makeBuffer(120),
+    };
+    mapFPTSounds(sounds);
+    expect(fptResources.musicTrack).toBe(existing);
+  });
+
+  it('does not classify short sounds as music', () => {
+    const sounds: Record<string, AudioBuffer> = {
+      'sfx_a.wav': makeBuffer(0.5),
+      'sfx_b.wav': makeBuffer(2.0),
+    };
+    mapFPTSounds(sounds);
+    expect(fptResources.musicTrack).toBeUndefined();
+  });
+});
