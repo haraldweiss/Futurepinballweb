@@ -44,6 +44,7 @@ export class MultiScreenWindowManager {
   private windows: Map<string, Window | null> = new Map();
   private broadcastChannel: BroadcastChannel | null = null;
   private windowPositions: Map<string, { x: number; y: number; w: number; h: number }> = new Map();
+  private electronWindowIds = new Map<string, number>();
 
   constructor() {
     this.initBroadcastChannel();
@@ -66,14 +67,51 @@ export class MultiScreenWindowManager {
   }
 
   /**
+   * Detect screens via Electron IPC (Phase 4).
+   * Returns true if successful, false to indicate caller should fall back.
+   */
+  private async detectScreensElectron(): Promise<boolean> {
+    const api = (window as any).electronAPI;
+    if (!api?.getAllDisplays) return false;
+    try {
+      const displays = await api.getAllDisplays();
+      if (!Array.isArray(displays) || displays.length === 0) return false;
+      this.screens = [];
+      displays.forEach((d: any, index: number) => {
+        this.screens.push({
+          index,
+          label: d.label || `Screen ${index + 1}`,
+          width: d.bounds?.width ?? 1920,
+          height: d.bounds?.height ?? 1080,
+          availWidth: d.workArea?.width ?? d.bounds?.width ?? 1920,
+          availHeight: d.workArea?.height ?? d.bounds?.height ?? 1080,
+          x: d.bounds?.x ?? 0,
+          y: d.bounds?.y ?? 0,
+          availX: d.workArea?.x ?? d.bounds?.x ?? 0,
+          availY: d.workArea?.y ?? d.bounds?.y ?? 0,
+          dpi: (d.scaleFactor || 1) * 96,
+          isPrimary: !!d.isPrimary,
+          isInternal: !!d.internal,
+        });
+      });
+      return true;
+    } catch (e) {
+      console.warn('[MultiScreen] Electron getAllDisplays failed:', e);
+      return false;
+    }
+  }
+
+  /**
    * Detect all available physical screens
    */
-  private detectScreens(): void {
+  async detectScreens(): Promise<void> {
     this.screens = [];
 
-    // Try modern Screen Enumeration API (best for Windows)
-    if ('getScreenDetails' in window) {
-      this.detectScreensModern();
+    // Phase 4: Electron IPC path — most reliable when running in Electron
+    if (await this.detectScreensElectron()) {
+      // Electron path succeeded
+    } else if ('getScreenDetails' in window) {
+      await this.detectScreensModern();
     } else {
       // Fallback: Use standard screen object
       this.detectScreensFallback();
@@ -239,6 +277,37 @@ export class MultiScreenWindowManager {
   }
 
   /**
+   * Open a child window. Uses Electron IPC when available (Phase 4),
+   * falls back to browser window.open otherwise.
+   */
+  private async openWindowSmart(
+    url: string,
+    name: string,
+    spec: { left: number; top: number; width: number; height: number },
+    role: string
+  ): Promise<Window | null> {
+    const api = (window as any).electronAPI;
+    if (api?.openWindow) {
+      try {
+        const id = await api.openWindow({
+          url,
+          x: Math.round(spec.left),
+          y: Math.round(spec.top),
+          width: Math.round(spec.width),
+          height: Math.round(spec.height),
+          role,
+        });
+        this.electronWindowIds.set(name, id);
+        return null;
+      } catch (e) {
+        console.warn(`[MultiScreen] electronAPI.openWindow failed for ${role}, falling back:`, e);
+      }
+    }
+    const features = this.buildWindowFeatures(spec as WindowSpec);
+    return window.open(url, name, features);
+  }
+
+  /**
    * Build window.open() feature string from spec
    */
   buildWindowFeatures(spec: WindowSpec): string {
@@ -252,16 +321,16 @@ export class MultiScreenWindowManager {
   /**
    * Open multiscreen windows for given layout
    */
-  openMultiScreenWindows(layout: 2 | 3): Map<string, Window | null> {
+  async openMultiScreenWindows(layout: 2 | 3): Promise<Map<string, Window | null>> {
     const currentUrl = new URL(window.location.href);
     const baseUrl = currentUrl.origin + currentUrl.pathname;
 
     this.windows.clear();
 
     if (layout === 2) {
-      this.openTwoScreenLayout(baseUrl);
+      await this.openTwoScreenLayout(baseUrl);
     } else if (layout === 3) {
-      this.openThreeScreenLayout(baseUrl);
+      await this.openThreeScreenLayout(baseUrl);
     }
 
     return this.windows;
@@ -270,29 +339,26 @@ export class MultiScreenWindowManager {
   /**
    * Open 2-screen layout
    */
-  private openTwoScreenLayout(baseUrl: string): void {
+  private async openTwoScreenLayout(baseUrl: string): Promise<void> {
     const specs = this.getSpec2Screen();
 
     // Backglass window on screen 2
     const backglassUrl = `${baseUrl}?role=backglass`;
-    const backglassFeatures = this.buildWindowFeatures(specs.backglass);
 
     console.log(
-      `🎮 Opening Backglass window: ${specs.backglass.width}x${specs.backglass.height} ` +
+      `Opening Backglass window: ${specs.backglass.width}x${specs.backglass.height} ` +
       `at (${Math.round(specs.backglass.left)},${Math.round(specs.backglass.top)})`
     );
 
-    const bgWindow = window.open(backglassUrl, 'fpw_backglass', backglassFeatures);
+    const bgWindow = await this.openWindowSmart(backglassUrl, 'fpw_backglass', specs.backglass, 'backglass');
     this.windows.set('backglass', bgWindow);
 
-    if (bgWindow) {
-      this.windowPositions.set('backglass', {
-        x: specs.backglass.left,
-        y: specs.backglass.top,
-        w: specs.backglass.width,
-        h: specs.backglass.height,
-      });
-    }
+    this.windowPositions.set('backglass', {
+      x: specs.backglass.left,
+      y: specs.backglass.top,
+      w: specs.backglass.width,
+      h: specs.backglass.height,
+    });
 
     // Broadcast to other windows
     this.broadcast('multiscreen-opened', { layout: 2, windows: Array.from(this.windows.keys()) });
@@ -301,65 +367,59 @@ export class MultiScreenWindowManager {
   /**
    * Open 3-screen layout
    */
-  private openThreeScreenLayout(baseUrl: string): void {
+  private async openThreeScreenLayout(baseUrl: string): Promise<void> {
     const specs = this.getSpec3Screen();
 
     // Backglass window on screen 2
     const backglassUrl = `${baseUrl}?role=backglass&nodmd=1`;
-    const backglassFeatures = this.buildWindowFeatures(specs.backglass);
 
     console.log(
-      `🎮 Opening Backglass window: ${specs.backglass.width}x${specs.backglass.height} ` +
+      `Opening Backglass window: ${specs.backglass.width}x${specs.backglass.height} ` +
       `at (${Math.round(specs.backglass.left)},${Math.round(specs.backglass.top)})`
     );
 
-    const bgWindow = window.open(backglassUrl, 'fpw_backglass', backglassFeatures);
+    const bgWindow = await this.openWindowSmart(backglassUrl, 'fpw_backglass', specs.backglass, 'backglass');
     this.windows.set('backglass', bgWindow);
 
-    if (bgWindow) {
-      this.windowPositions.set('backglass', {
-        x: specs.backglass.left,
-        y: specs.backglass.top,
-        w: specs.backglass.width,
-        h: specs.backglass.height,
-      });
-    }
+    this.windowPositions.set('backglass', {
+      x: specs.backglass.left,
+      y: specs.backglass.top,
+      w: specs.backglass.width,
+      h: specs.backglass.height,
+    });
 
     // DMD window on screen 3
     const dmdUrl = `${baseUrl}?role=dmd`;
-    const dmdFeatures = this.buildWindowFeatures(specs.dmd);
 
     console.log(
-      `🎮 Opening DMD window: ${specs.dmd.width}x${specs.dmd.height} ` +
+      `Opening DMD window: ${specs.dmd.width}x${specs.dmd.height} ` +
       `at (${Math.round(specs.dmd.left)},${Math.round(specs.dmd.top)})`
     );
 
-    const dmdWindow = window.open(dmdUrl, 'fpw_dmd', dmdFeatures);
+    const dmdWindow = await this.openWindowSmart(dmdUrl, 'fpw_dmd', specs.dmd, 'dmd');
     this.windows.set('dmd', dmdWindow);
 
-    if (dmdWindow) {
-      this.windowPositions.set('dmd', {
-        x: specs.dmd.left,
-        y: specs.dmd.top,
-        w: specs.dmd.width,
-        h: specs.dmd.height,
-      });
-    }
+    this.windowPositions.set('dmd', {
+      x: specs.dmd.left,
+      y: specs.dmd.top,
+      w: specs.dmd.width,
+      h: specs.dmd.height,
+    });
 
     // Broadcast to other windows
     this.broadcast('multiscreen-opened', { layout: 3, windows: Array.from(this.windows.keys()) });
   }
 
   /**
-   * Close all multiscreen windows
+   * Close all multiscreen windows (browser + Electron child windows)
    */
-  closeMultiScreenWindows(): void {
+  async closeMultiScreenWindows(): Promise<void> {
     this.windows.forEach((win) => {
       if (win && !win.closed) {
         try {
           win.close();
         } catch (e) {
-          console.warn('⚠ Could not close window:', e);
+          console.warn('Could not close window:', e);
         }
       }
     });
@@ -367,7 +427,21 @@ export class MultiScreenWindowManager {
     this.windows.clear();
     this.windowPositions.clear();
 
+    // Electron child windows
+    const api = (window as any).electronAPI;
+    if (api?.closeAllChildWindows) {
+      try { await api.closeAllChildWindows(); } catch { /* ignore */ }
+    }
+    this.electronWindowIds.clear();
+
     this.broadcast('multiscreen-closed', {});
+  }
+
+  /**
+   * Alias for closeMultiScreenWindows (used by Phase 4 tests)
+   */
+  async closeAll(): Promise<void> {
+    return this.closeMultiScreenWindows();
   }
 
   /**
@@ -468,13 +542,13 @@ if (typeof window !== 'undefined') {
   window.openMultiScreenLayout = (layout: 2 | 3) => {
     const manager = globalMultiScreenManager;
     if (!manager) {
-      console.warn('⚠ MultiScreen manager not initialized');
+      console.warn('MultiScreen manager not initialized');
       return;
     }
-    manager.openMultiScreenWindows(layout);
+    manager.openMultiScreenWindows(layout).catch((e) => console.error('[MultiScreen] openMultiScreenWindows failed:', e));
   };
   window.closeMultiScreenWindows = () => {
-    globalMultiScreenManager?.closeMultiScreenWindows();
+    globalMultiScreenManager?.closeMultiScreenWindows().catch((e) => console.error('[MultiScreen] closeMultiScreenWindows failed:', e));
   };
   window.getMultiScreenDiagnostics = () => globalMultiScreenManager?.getDiagnostics() || '';
 }
