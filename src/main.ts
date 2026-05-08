@@ -3742,6 +3742,89 @@ window.selectMsLayout = (n: number) => {
 window.openMultiscreenModal  = () => document.getElementById('multiscreen-modal')!.classList.add('open');
 window.closeMultiscreenModal = () => document.getElementById('multiscreen-modal')!.classList.remove('open');
 
+// ─── Multi-Screen helpers (Phase 4: prefer Electron IPC over browser APIs) ───
+interface ScreenLike {
+  availLeft: number;
+  availTop: number;
+  availWidth: number;
+  availHeight: number;
+  isPrimary?: boolean;
+  label?: string;
+}
+
+async function getAllScreensForLayout(): Promise<ScreenLike[]> {
+  const api = (window as any).electronAPI;
+  if (api?.getAllDisplays) {
+    try {
+      const displays = await api.getAllDisplays();
+      if (Array.isArray(displays) && displays.length > 0) {
+        return displays.map((d: any) => ({
+          availLeft: d.workArea?.x ?? d.bounds?.x ?? 0,
+          availTop: d.workArea?.y ?? d.bounds?.y ?? 0,
+          availWidth: d.workArea?.width ?? d.bounds?.width ?? 1920,
+          availHeight: d.workArea?.height ?? d.bounds?.height ?? 1080,
+          isPrimary: !!d.isPrimary,
+          label: d.label,
+        }));
+      }
+    } catch (e) {
+      console.warn('[multiscreen] electronAPI.getAllDisplays failed:', e);
+    }
+  }
+  if ('getScreenDetails' in window) {
+    try {
+      const details = await (window as any).getScreenDetails();
+      return (details.screens || []).map((s: any) => ({
+        availLeft: s.availLeft,
+        availTop: s.availTop,
+        availWidth: s.availWidth,
+        availHeight: s.availHeight,
+        isPrimary: s.isPrimary,
+        label: s.label,
+      }));
+    } catch { /* fall through */ }
+  }
+  // Single-screen fallback
+  return [{
+    availLeft: 0,
+    availTop: 0,
+    availWidth: window.screen.availWidth,
+    availHeight: window.screen.availHeight,
+    isPrimary: true,
+  }];
+}
+
+async function openMultiscreenWindow(
+  url: string,
+  name: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  role: string
+): Promise<Window | null> {
+  const api = (window as any).electronAPI;
+  if (api?.openWindow) {
+    try {
+      await api.openWindow({
+        url,
+        x: Math.round(x),
+        y: Math.round(y),
+        width: Math.round(w),
+        height: Math.round(h),
+        role,
+      });
+      // Electron child windows aren't a renderer-accessible Window object.
+      // Return a stub the existing code can store/test for non-null.
+      return { closed: false, close: () => { /* main-process handles close */ } } as unknown as Window;
+    } catch (e) {
+      console.warn(`[multiscreen] electronAPI.openWindow failed for ${role}, falling back:`, e);
+    }
+  }
+  const features = `width=${Math.round(w)},height=${Math.round(h)},left=${Math.round(x)},top=${Math.round(y)},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
+  return window.open(url, name, features);
+}
+
 // ─── Helper function to open windows with verification ───
 function openMultiScreenWindow(url: string, name: string, features: string, role: string): Window | null {
   console.log(`🪟 Opening ${role} window: ${url}`);
@@ -3792,16 +3875,12 @@ window.swapScreenRoles = (screen1: number, screen2: number) => {
 };
 
 window.autoDetectScreens = async () => {
-  const info=document.getElementById('ms-detect-info')!; info.classList.add('visible'); info.innerHTML='<span>Scanning...</span>';
-  let screenCount=1;
-  try {
-    if ('getScreenDetails' in window) { const d=await (window as any).getScreenDetails(); screenCount=d.screens.length; }
-    else if ((window.screen as any).isExtended) screenCount=2;
-  } catch { /* ignore */ }
-  // eslint-disable-next-line no-unsanitized/property -- screenCount is a number from window.getScreenDetails()
-  if(screenCount>=3){info.innerHTML=`<span>✓ ${screenCount} screens</span> — 3-screen empfohlen`;window.selectMsLayout(3);}
-  else if(screenCount===2){info.innerHTML=`<span>✓ 2 screens</span> — 2-screen empfohlen`;window.selectMsLayout(2);}
-  else {info.innerHTML=`<span>1 screen</span>`;window.selectMsLayout(1);}
+  const info=document.getElementById('ms-detect-info')!; info.classList.add('visible'); info.textContent='Scanning...';
+  const screensList = await getAllScreensForLayout();
+  const screenCount = screensList.length;
+  if(screenCount>=3){info.textContent=`✓ ${screenCount} screens — 3-screen empfohlen`;window.selectMsLayout(3);}
+  else if(screenCount===2){info.textContent=`✓ 2 screens — 2-screen empfohlen`;window.selectMsLayout(2);}
+  else {info.textContent=`1 screen`;window.selectMsLayout(1);}
 };
 
 // ─── Apply startup screen configuration from URL parameter ───────────────────
@@ -3862,23 +3941,12 @@ window.applyMsLayout = async () => {
   const screenRoleMgr = getScreenRoleManager();
   const roleLayout = screenRoleMgr.getLayout();
 
-  // Try to get available screens
-  let screens: any[] = [];
-  try {
-    if ('getScreenDetails' in window) {
-      const details = await (window as any).getScreenDetails();
-      screens = details.screens || [];
-      console.log(`📺 Screen API detected: ${screens.length} screens found`);
-      screens.forEach((s, i) => {
-        console.log(`  Screen ${i}: ${s.availWidth}x${s.availHeight} @ (${s.availLeft},${s.availTop})`);
-      });
-    } else {
-      console.warn('⚠ getScreenDetails not available, screen positioning may not work');
-    }
-  } catch (e) {
-    console.error('⚠ Screen enumeration failed:', e);
-    /* Screen enumeration not available, fallback to manual positioning */
-  }
+  // Try to get available screens (Phase 4: uses Electron IPC if available)
+  const screens: ScreenLike[] = await getAllScreensForLayout();
+  console.log(`📺 Screen API detected: ${screens.length} screens found`);
+  screens.forEach((s, i) => {
+    console.log(`  Screen ${i}: ${s.availWidth}x${s.availHeight} @ (${s.availLeft},${s.availTop})${s.isPrimary ? ' [PRIMARY]' : ''}`);
+  });
 
   if(_msLayout===1){
     initInlineBackglass(); btn.classList.add('active-multi');
@@ -3891,11 +3959,10 @@ window.applyMsLayout = async () => {
     if(screens.length > screenIdx) {
       const screen2 = screens[screenIdx];
       const x = screen2.availLeft, y = screen2.availTop, w = screen2.availWidth, h = screen2.availHeight;
-      const spec = `width=${w},height=${h},left=${x},top=${y},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
-      _msWindows['backglass']=window.open(`${base}?role=backglass`,'fpw_backglass', spec);
+      _msWindows['backglass']=await openMultiscreenWindow(`${base}?role=backglass`,'fpw_backglass', x, y, w, h, 'backglass');
       showNotification(`2-Screen: Backglass auf Screen ${screenIdx + 1} geöffnet`);
     } else {
-      _msWindows['backglass']=window.open(`${base}?role=backglass`,'fpw_backglass',`${_winSpec('backglass',sw,sh)},toolbar=no,menubar=no,scrollbars=no,resizable=yes`);
+      _msWindows['backglass']=await openMultiscreenWindow(`${base}?role=backglass`,'fpw_backglass', 0, 0, sw, sh, 'backglass');
       showNotification('2-Screen: Bitte Backglass-Fenster auf zweiten Monitor ziehen');
     }
     if(hdBtn){hdBtn.style.display='block';} btn.classList.add('active-multi');
@@ -3914,20 +3981,18 @@ window.applyMsLayout = async () => {
       if (bgScreenIdx < screens.length) {
         const bgScreen = screens[bgScreenIdx];
         const xbg = bgScreen.availLeft, ybg = bgScreen.availTop, wbg = bgScreen.availWidth, hbg = bgScreen.availHeight;
-        const specBg = `width=${wbg},height=${hbg},left=${xbg},top=${ybg},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
-        _msWindows['backglass']=window.open(`${base}?role=backglass&nodmd=1`,'fpw_backglass', specBg);
+        _msWindows['backglass']=await openMultiscreenWindow(`${base}?role=backglass&nodmd=1`,'fpw_backglass', xbg, ybg, wbg, hbg, 'backglass');
       }
 
       // DMD on assigned screen
       if (dmdScreenIdx < screens.length) {
         const dmdScreen = screens[dmdScreenIdx];
         const xdmd = dmdScreen.availLeft, ydmd = dmdScreen.availTop, wdmd = dmdScreen.availWidth, hdmd = dmdScreen.availHeight;
-        const specDmd = `width=${wdmd},height=${hdmd},left=${xdmd},top=${ydmd},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
         console.log(`✓ Opening DMD on Screen ${dmdScreenIdx + 1}: ${wdmd}x${hdmd} at (${xdmd},${ydmd})`);
-        _msWindows['dmd']=window.open(`${base}?role=dmd`,'fpw_dmd', specDmd);
+        _msWindows['dmd']=await openMultiscreenWindow(`${base}?role=dmd`,'fpw_dmd', xdmd, ydmd, wdmd, hdmd, 'dmd');
         if (!_msWindows['dmd']) {
-          console.warn('⚠ Detailed positioning failed, trying basic window.open()');
-          _msWindows['dmd']=window.open(`${base}?role=dmd`,'fpw_dmd', 'toolbar=no,menubar=no,scrollbars=no,resizable=yes,width=1024,height=256');
+          console.warn('⚠ Detailed positioning failed, trying basic openMultiscreenWindow()');
+          _msWindows['dmd']=await openMultiscreenWindow(`${base}?role=dmd`,'fpw_dmd', 0, 0, 1024, 256, 'dmd');
         }
         if (!_msWindows['dmd']) console.error('⚠ DMD window failed to open - may be blocked by browser or popups disabled');
       } else {
@@ -3940,16 +4005,15 @@ window.applyMsLayout = async () => {
       console.warn('⚠ Only 2 screens detected, opening Backglass+DMD both on Screen 2');
       const screen2 = screens[1];
       const x = screen2.availLeft, y = screen2.availTop, w = screen2.availWidth, h = screen2.availHeight;
-      const spec = `width=${w},height=${h},left=${x},top=${y},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
-      _msWindows['backglass']=window.open(`${base}?role=backglass&nodmd=1`,'fpw_backglass', spec);
+      _msWindows['backglass']=await openMultiscreenWindow(`${base}?role=backglass&nodmd=1`,'fpw_backglass', x, y, w, h, 'backglass');
       console.log(`✓ Backglass opened on Screen 2`);
-      _msWindows['dmd']=window.open(`${base}?role=dmd`,'fpw_dmd', spec);
+      _msWindows['dmd']=await openMultiscreenWindow(`${base}?role=dmd`,'fpw_dmd', x, y, w, h, 'dmd');
       console.log(`✓ DMD opened on Screen 2`);
       showNotification('3-Screen-Modus mit 2 Bildschirmen: Backglass+DMD auf Screen 2');
     } else {
       // Fallback for single screen: manual arrangement
-      _msWindows['backglass']=window.open(`${base}?role=backglass&nodmd=1`,'fpw_backglass',`${_winSpec('backglass',Math.round(sw*0.75),Math.round(sh*0.75))},toolbar=no,menubar=no,scrollbars=no,resizable=yes`);
-      _msWindows['dmd']=window.open(`${base}?role=dmd`,'fpw_dmd',`${_winSpec('dmd',Math.round(sw*0.55),Math.round(sh*0.28))},toolbar=no,menubar=no,scrollbars=no,resizable=yes`);
+      _msWindows['backglass']=await openMultiscreenWindow(`${base}?role=backglass&nodmd=1`,'fpw_backglass', 0, 0, Math.round(sw*0.75), Math.round(sh*0.75), 'backglass');
+      _msWindows['dmd']=await openMultiscreenWindow(`${base}?role=dmd`,'fpw_dmd', 0, 0, Math.round(sw*0.55), Math.round(sh*0.28), 'dmd');
       showNotification('3-Screen: Fenster auf gewünschte Bildschirme ziehen');
     }
     if(hdBtn) hdBtn.style.display='block'; btn.classList.add('active-multi');
