@@ -17,6 +17,7 @@ import { parseFPTFile } from './fpt-parser';
 import { BackglassEditor, type BackglassSettings } from './backglass-editor';
 import { DMDEditor, type DMDSettings } from './dmd-editor';
 import { VideoEditor } from './video-editor';
+import { AssetBrowser } from './editor/asset-browser';
 import { showTableSelector } from './table-selector';
 import { escapeHtml } from './utils/html-escape';
 
@@ -43,13 +44,14 @@ export class EditorModal {
   private preview3d: Editor3DPreview | null = null;
 
   // Tab management
-  private currentTab: 'playfield' | 'backglass' | 'dmd' | 'video' = 'playfield';
+  private currentTab: 'playfield' | 'backglass' | 'dmd' | 'video' | 'assets' = 'playfield';
   private currentTableConfig: TableConfig | null = null;
 
   // Sub-editors
   private backglassEditor: BackglassEditor | null = null;
   private dmdEditor: DMDEditor | null = null;
   private videoEditor: VideoEditor | null = null;
+  private assetBrowser: AssetBrowser | null = null;
 
   // Editor state (Playfield)
   private elements: Elem[] = [];
@@ -125,7 +127,7 @@ export class EditorModal {
   /**
    * Switch to a different editor tab
    */
-  switchTab(tabId: 'playfield' | 'backglass' | 'dmd' | 'video'): void {
+  switchTab(tabId: 'playfield' | 'backglass' | 'dmd' | 'video' | 'assets'): void {
     this.currentTab = tabId;
 
     if (!this.modal) return;
@@ -175,6 +177,17 @@ export class EditorModal {
         container.innerHTML = '';
         container.appendChild(videoPanel);
       }
+    }
+
+    if (tabId === 'assets') {
+      if (!this.assetBrowser) {
+        this.assetBrowser = new AssetBrowser();
+        const container = this.modal.querySelector('.assets-editor-container');
+        if (container) {
+          this.assetBrowser.attachTo(container as HTMLElement);
+        }
+      }
+      this.assetBrowser.refresh();
     }
   }
 
@@ -369,6 +382,7 @@ export class EditorModal {
           <button class="tab-btn" data-tab="backglass" title="Edit backglass">🖼️ Backglass</button>
           <button class="tab-btn" data-tab="dmd" title="Edit DMD">🔲 DMD</button>
           <button class="tab-btn" data-tab="video" title="Manage videos">🎬 Videos</button>
+          <button class="tab-btn" data-tab="assets" title="Browse assets">📦 Assets</button>
         </div>
       </div>
 
@@ -434,6 +448,11 @@ export class EditorModal {
         <!-- TAB 4: Video Manager -->
         <div id="tab-video" class="editor-tab hidden">
           <div class="video-editor-container"></div>
+        </div>
+
+        <!-- TAB 5: Asset Browser -->
+        <div id="tab-assets" class="editor-tab hidden">
+          <div class="assets-editor-container"></div>
         </div>
       </div>
 
