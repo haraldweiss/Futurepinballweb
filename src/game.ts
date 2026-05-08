@@ -104,6 +104,23 @@ export const fptResources: FPTResources = {
   mapped: { bumper: null, flipper: null, drain: null },
 };
 
+// ── Raw FPT Bytes (for lossless write-back) ──────────────────────────────────
+export const fptRawBytes = {
+  textures:  {} as Record<string, Uint8Array>,
+  sounds:    {} as Record<string, Uint8Array>,
+  models:    {} as Record<string, Uint8Array>,
+  otherStreams: [] as Array<{ name: string; data: Uint8Array }>,
+  scriptOriginal: null as string | null,
+};
+
+export function resetFPTRawBytes(): void {
+  fptRawBytes.textures = {};
+  fptRawBytes.sounds   = {};
+  fptRawBytes.models   = {};
+  fptRawBytes.otherStreams = [];
+  fptRawBytes.scriptOriginal = null;
+}
+
 // ── Mutable references (set via setters from main.ts / table.ts) ─────────────
 export let physics:             PhysicsContext | null = null;
 export let currentTableConfig:  TableConfig    | null = null;

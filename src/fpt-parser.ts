@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import * as CFB from 'cfb';
-import { fptResources, globalAssetCatalog, setGlobalAssetCatalog } from './game';
+import { fptResources, fptRawBytes, resetFPTRawBytes, globalAssetCatalog, setGlobalAssetCatalog } from './game';
 import { AssetCatalog } from './assets/asset-catalog';
 import { getAudioCtx, playFPTMusic } from './audio-system';
 import { runFPScript } from './script-engine';
@@ -256,6 +256,7 @@ export async function parseCFBResources(
   fptResources.script    = null;
   fptResources.mapped    = { bumper: null, flipper: null, drain: null };
   delete fptResources.musicTrack;
+  resetFPTRawBytes();
 
   let cfb: any;
   try { cfb = (CFB as any).read(new Uint8Array(arrayBuffer), { type: 'array' }); }
@@ -354,6 +355,7 @@ export async function parseCFBResources(
       fptResources.textures[name] = tex;
       const bytes = textureEntries.find(e => e.name === name)?.bytes;
       if (bytes) {
+        fptRawBytes.textures[name] = bytes;
         logMsg(`  Textur: "${name}" (${(bytes.length/1024).toFixed(0)} KB)`, 'ok');
         if (bytes.length > largestTexSize) {
           largestTexSize = bytes.length;
@@ -372,6 +374,7 @@ export async function parseCFBResources(
 
       if (isMusicTrack) {
         if (!fptResources.musicTrack) fptResources.musicTrack = buf;
+        fptRawBytes.sounds[name] = bytes;
 
         // Phase 3: Log streaming status
         if (typeof buf === 'string') {
@@ -383,6 +386,7 @@ export async function parseCFBResources(
         }
       } else {
         fptResources.sounds[name] = buf;
+        fptRawBytes.sounds[name] = bytes;
 
         // Phase 3: Log streaming status
         if (typeof buf === 'string') {
@@ -407,6 +411,7 @@ export async function parseCFBResources(
         const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
         if (/\bSub\s+\w+/i.test(text) && /\bEnd\s+Sub\b/i.test(text)) {
           fptResources.script = text;
+          fptRawBytes.scriptOriginal = text;
           logMsg(`  Script: "${name}" (${text.split('\n').length} Zeilen VBScript)`, 'ok');
           break;
         }
@@ -421,7 +426,9 @@ export async function parseCFBResources(
       try {
         const text = new TextDecoder('utf-8', { fatal: false }).decode((entry.content as Uint8Array).slice(0, 8192));
         if (/\bSub\s+\w+.*?\bEnd\s+Sub\b/is.test(text)) {
-          fptResources.script = new TextDecoder('utf-8', { fatal: false }).decode(entry.content);
+          const fullText = new TextDecoder('utf-8', { fatal: false }).decode(entry.content);
+          fptResources.script = fullText;
+          fptRawBytes.scriptOriginal = fullText;
           logMsg(`  Script (heuristisch): "${entry.name || '?'}"`, 'ok');
           break;
         }
@@ -444,6 +451,7 @@ export async function parseCFBResources(
               const text = tryExtractVBScriptFromData(decompressed);
               if (text) {
                 fptResources.script = text;
+                fptRawBytes.scriptOriginal = text;
                 logMsg(`  Script (LZO): "${entry.name}" @ offset ${i} (${text.length} chars)`, 'ok');
                 break;
               }
@@ -454,6 +462,11 @@ export async function parseCFBResources(
       }
       if (fptResources.script) break;
     }
+  }
+
+  // Stash unknown streams for lossless write-back
+  for (const { name, bytes } of otherEntries) {
+    fptRawBytes.otherStreams.push({ name, data: bytes });
   }
 
   const elapsedMs = performance.now() - startTime;
