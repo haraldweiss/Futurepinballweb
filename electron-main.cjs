@@ -359,6 +359,33 @@ ipcMain.handle('window:closeAllChildren', () => {
   childWindows.clear();
 });
 
+// FPT directory scanner — list .fpt files with basic metadata.
+// Renderer can't safely use fs.readdir; main process owns filesystem access.
+ipcMain.handle('fpt:scanDirectory', async (_event, dirPath) => {
+  if (typeof dirPath !== 'string' || dirPath.length === 0) return [];
+  try {
+    const dirents = await fs.promises.readdir(dirPath, { withFileTypes: true });
+    const fptFiles = dirents.filter(d => d.isFile() && d.name.toLowerCase().endsWith('.fpt'));
+    const out = [];
+    for (const dirent of fptFiles) {
+      const fullPath = path.join(dirPath, dirent.name);
+      try {
+        const stat = await fs.promises.stat(fullPath);
+        out.push({
+          path: fullPath,
+          name: dirent.name.replace(/\.fpt$/i, ''),
+          size: stat.size,
+          mtime: stat.mtimeMs,
+        });
+      } catch { /* ignore individual stat failures */ }
+    }
+    return out;
+  } catch (err) {
+    console.warn('[fpt:scanDirectory] failed:', err.message);
+    return [];
+  }
+});
+
 // Cross-window state relay. The playfield window emits per-frame state
 // (score, DMD frame, animation flags). BroadcastChannel does not bridge
 // independent BrowserWindow instances reliably, so we relay via IPC:
