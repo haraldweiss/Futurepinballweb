@@ -42,9 +42,26 @@ let nextChildId = 1;
  * Create the browser window
  */
 function createWindow() {
+  // On a pinball cabinet the playfield should fill the primary display.
+  // Open AT the display's exact bounds — using show:false + maximize() then
+  // show() caused the renderer to init at 0×0 and never pick up the resize,
+  // resulting in an empty playfield window.
+  let initX = 0, initY = 0;
+  let initWidth = 1280, initHeight = 960;
+  try {
+    const { screen } = require('electron');
+    const primary = screen.getPrimaryDisplay();
+    initX = primary.workArea.x;
+    initY = primary.workArea.y;
+    initWidth = primary.workArea.width;
+    initHeight = primary.workArea.height;
+  } catch { /* fall back to defaults */ }
+
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 960,
+    x: initX,
+    y: initY,
+    width: initWidth,
+    height: initHeight,
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
@@ -310,6 +327,17 @@ ipcMain.handle('window:openOnDisplay', async (_event, options) => {
   child.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   child.loadURL(url);
 
+  // Re-assert position+size right after window has its first paint. On some
+  // Windows configs the initial x/y/width/height in the constructor are
+  // ignored if they cross display boundaries — child ends up on the primary
+  // display at default size. setBounds AFTER ready-to-show forces it onto
+  // the intended display at the intended size.
+  child.once('ready-to-show', () => {
+    try {
+      child.setBounds({ x: Math.round(x), y: Math.round(y), width: Math.round(width), height: Math.round(height) });
+    } catch { /* may fail if window already destroyed */ }
+  });
+
   const id = nextChildId++;
   childWindows.set(id, child);
   child.on('closed', () => childWindows.delete(id));
@@ -329,6 +357,25 @@ ipcMain.handle('window:closeAllChildren', () => {
     if (!w.isDestroyed()) w.close();
   }
   childWindows.clear();
+});
+
+// Cross-window state relay. The playfield window emits per-frame state
+// (score, DMD frame, animation flags). BroadcastChannel does not bridge
+// independent BrowserWindow instances reliably, so we relay via IPC:
+// playfield → main → all child windows. We deliberately do NOT echo the
+// message back to the sender (it already has its own state).
+ipcMain.on('mp:broadcast', (event, data) => {
+  const senderId = event.sender.id;
+  for (const w of childWindows.values()) {
+    if (!w.isDestroyed() && w.webContents.id !== senderId) {
+      w.webContents.send('mp:state', data);
+    }
+  }
+  // Also relay to the main playfield window if a child triggered it
+  // (rare, but keeps the bus symmetric).
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents.id !== senderId) {
+    mainWindow.webContents.send('mp:state', data);
+  }
 });
 
 // Check for updates

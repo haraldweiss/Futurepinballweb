@@ -63,6 +63,8 @@ export function initDMDResizing(canvas: HTMLCanvasElement, wrap: HTMLElement): v
       border: 2px solid rgba(255, 170, 0, 0.8);
       cursor: ${getCursorForHandle(position)};
       z-index: 1000;
+      -webkit-app-region: no-drag;
+      app-region: no-drag;
     `;
 
     // Position handle based on corner/edge
