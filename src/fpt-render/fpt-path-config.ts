@@ -13,7 +13,8 @@ export const FPT_PATH_KEY = 'fpw_fpt_directory';
 export function getFPTPath(): string | null {
   try {
     const v = localStorage.getItem(FPT_PATH_KEY);
-    return v && v.length > 0 ? v : null;
+    const trimmed = v?.trim() ?? '';
+    return trimmed.length > 0 ? trimmed : null;
   } catch {
     return null;
   }
@@ -21,8 +22,9 @@ export function getFPTPath(): string | null {
 
 export function setFPTPath(path: string): void {
   try {
-    if (path && path.length > 0) {
-      localStorage.setItem(FPT_PATH_KEY, path);
+    const trimmed = path?.trim() ?? '';
+    if (trimmed.length > 0) {
+      localStorage.setItem(FPT_PATH_KEY, trimmed);
     } else {
       localStorage.removeItem(FPT_PATH_KEY);
     }

@@ -25,4 +25,9 @@ describe('fpt-path-config', () => {
     setFPTPath('');
     expect(getFPTPath()).toBeNull();
   });
+
+  it('rejects whitespace-only paths', () => {
+    setFPTPath('   ');
+    expect(getFPTPath()).toBeNull();
+  });
 });
