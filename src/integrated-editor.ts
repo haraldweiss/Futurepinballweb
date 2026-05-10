@@ -17,8 +17,14 @@ import { parseFPTFile } from './fpt-parser';
 import { BackglassEditor, type BackglassSettings } from './backglass-editor';
 import { DMDEditor, type DMDSettings } from './dmd-editor';
 import { VideoEditor } from './video-editor';
+import { AssetBrowser } from './editor/asset-browser';
+import { PropertyModal } from './editor/property-modal';
+import { ScriptEditorModal } from './editor/script-editor-modal';
 import { showTableSelector } from './table-selector';
 import { escapeHtml } from './utils/html-escape';
+import { fptResources, fptRawBytes } from './game';
+import { serializeFPT } from './fpt-writer';
+import { runFPScript } from './script-engine';
 
 type ToolType = 'select' | 'bumper' | 'target' | 'ramp';
 
@@ -43,13 +49,16 @@ export class EditorModal {
   private preview3d: Editor3DPreview | null = null;
 
   // Tab management
-  private currentTab: 'playfield' | 'backglass' | 'dmd' | 'video' = 'playfield';
+  private currentTab: 'playfield' | 'backglass' | 'dmd' | 'video' | 'assets' = 'playfield';
   private currentTableConfig: TableConfig | null = null;
 
   // Sub-editors
   private backglassEditor: BackglassEditor | null = null;
   private dmdEditor: DMDEditor | null = null;
   private videoEditor: VideoEditor | null = null;
+  private assetBrowser: AssetBrowser | null = null;
+  private propertyModal: PropertyModal = new PropertyModal();
+  private scriptEditorModal: ScriptEditorModal = new ScriptEditorModal();
 
   // Editor state (Playfield)
   private elements: Elem[] = [];
@@ -125,7 +134,7 @@ export class EditorModal {
   /**
    * Switch to a different editor tab
    */
-  switchTab(tabId: 'playfield' | 'backglass' | 'dmd' | 'video'): void {
+  switchTab(tabId: 'playfield' | 'backglass' | 'dmd' | 'video' | 'assets'): void {
     this.currentTab = tabId;
 
     if (!this.modal) return;
@@ -175,6 +184,17 @@ export class EditorModal {
         container.innerHTML = '';
         container.appendChild(videoPanel);
       }
+    }
+
+    if (tabId === 'assets') {
+      if (!this.assetBrowser) {
+        this.assetBrowser = new AssetBrowser();
+        const container = this.modal.querySelector('.assets-editor-container');
+        if (container) {
+          this.assetBrowser.attachTo(container as HTMLElement);
+        }
+      }
+      this.assetBrowser.refresh();
     }
   }
 
@@ -267,6 +287,56 @@ export class EditorModal {
         }
       }, 100);
     });
+  }
+
+  /**
+   * Open the VBScript editor modal for the current table's script.
+   * On Apply, hot-reloads the script via runFPScript().
+   */
+  public openScriptEditor(): void {
+    const currentScript = fptResources.script ?? '';
+    this.scriptEditorModal.open(currentScript, (updated) => {
+      fptResources.script = updated;
+      try {
+        runFPScript(updated);
+        console.log('[ScriptEditor] Script re-loaded, handlers refreshed');
+      } catch (err) {
+        console.error('[ScriptEditor] Script reload failed:', err);
+        alert('Script reload failed: ' + (err as Error).message);
+      }
+    });
+  }
+
+  /**
+   * Serialize current FPT state and trigger a browser download.
+   * - 'sidecar': downloads as <name>.fpt.edited (preserves original)
+   * - 'overwrite': downloads as <name>.fpt (same extension as original)
+   */
+  public saveFPT(mode: 'sidecar' | 'overwrite'): void {
+    if (mode === 'overwrite') {
+      if (!confirm('Download this as the original FPT filename? The original will not be overwritten on disk (browsers cannot do that), but the downloaded file will use the .fpt extension.')) {
+        return;
+      }
+    }
+
+    const bytes = serializeFPT({
+      script: fptResources.script ?? '',
+      textures: fptRawBytes.textures,
+      sounds:   fptRawBytes.sounds,
+      models:   fptRawBytes.models,
+      otherStreams: fptRawBytes.otherStreams,
+    });
+
+    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const name = (this.tableName || 'table').replace(/\s+/g, '_');
+    a.download = mode === 'sidecar' ? `${name}.fpt.edited` : `${name}.fpt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   /**
@@ -369,6 +439,7 @@ export class EditorModal {
           <button class="tab-btn" data-tab="backglass" title="Edit backglass">🖼️ Backglass</button>
           <button class="tab-btn" data-tab="dmd" title="Edit DMD">🔲 DMD</button>
           <button class="tab-btn" data-tab="video" title="Manage videos">🎬 Videos</button>
+          <button class="tab-btn" data-tab="assets" title="Browse assets">📦 Assets</button>
         </div>
       </div>
 
@@ -435,12 +506,20 @@ export class EditorModal {
         <div id="tab-video" class="editor-tab hidden">
           <div class="video-editor-container"></div>
         </div>
+
+        <!-- TAB 5: Asset Browser -->
+        <div id="tab-assets" class="editor-tab hidden">
+          <div class="assets-editor-container"></div>
+        </div>
       </div>
 
       <div class="editor-modal-footer">
+        <button class="btn-save-fpt" onclick="(window as any).getIntegratedEditor?.().saveFPT?.('sidecar')">💾 Save (.edited)</button>
+        <button class="btn-save-fpt-overwrite" onclick="(window as any).getIntegratedEditor?.().saveFPT?.('overwrite')">💾 Save As / Overwrite...</button>
         <button class="btn-apply" onclick="(window as any).getIntegratedEditor?.().applyChanges?.()">✓ Apply & Save</button>
         <button class="btn-discard" onclick="(window as any).getIntegratedEditor?.().discardChanges?.()">✕ Discard</button>
         <button class="btn-switch-table" onclick="(window as any).getIntegratedEditor?.().switchTable?.()">⇨ Switch Table</button>
+        <button class="btn-script" onclick="(window as any).getIntegratedEditor?.().openScriptEditor?.()">📝 Script</button>
       </div>
     `;
   }
@@ -460,6 +539,7 @@ export class EditorModal {
     this.canvas.addEventListener('mousedown', (e) => this.onCanvasMouseDown(e));
     this.canvas.addEventListener('mouseup', (e) => this.onCanvasMouseUp(e));
     this.canvas.addEventListener('click', (e) => this.onCanvasClick(e));
+    this.canvas.addEventListener('dblclick', (e) => this.onCanvasDoubleClick(e));
 
     // Toolbar events
     const toolBtns = this.modal?.querySelectorAll('[data-tool]');
@@ -827,38 +907,60 @@ export class EditorModal {
     const rect = this.canvas.getBoundingClientRect();
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
-    const g = this.cToG(cx, cy);
 
-    // Find clicked element
-    for (let i = this.elements.length - 1; i >= 0; i--) {
-      const el = this.elements[i];
-      let dist = 999;
+    const idx = this.pickElementAt(cx, cy);
+    if (idx >= 0) {
+      const el = this.elements[idx];
+      this.selectedIdx = idx;
+      this.isDragging = true;
 
-      if (el.type === 'bumper' || el.type === 'target') {
-        dist = Math.hypot(el.x - g.x, el.y - g.y);
-      } else if (el.type === 'ramp') {
-        const d1 = Math.hypot(el.x1 - g.x, el.y1 - g.y);
-        const d2 = Math.hypot(el.x2 - g.x, el.y2 - g.y);
-        dist = Math.min(d1, d2);
-      }
+      const p = this.gToC(el.type === 'bumper' || el.type === 'target' ? el.x : el.x2,
+                         el.type === 'bumper' || el.type === 'target' ? el.y : el.y2);
+      this.dragOffX = cx - p.x;
+      this.dragOffY = cy - p.y;
 
-      if (dist < 0.5) {
-        this.selectedIdx = i;
-        this.isDragging = true;
-
-        const p = this.gToC(el.type === 'bumper' || el.type === 'target' ? el.x : el.x2,
-                           el.type === 'bumper' || el.type === 'target' ? el.y : el.y2);
-        this.dragOffX = cx - p.x;
-        this.dragOffY = cy - p.y;
-
-        this.render();
-        return;
-      }
+      this.render();
+      return;
     }
 
     // No element clicked, deselect
     this.selectedIdx = -1;
     this.render();
+  }
+
+  /**
+   * Pick element at canvas pixel position; returns element index or -1.
+   * Iterates top-to-bottom (last-placed first) to match selection priority.
+   */
+  private pickElementAt(cx: number, cy: number): number {
+    const g = this.cToG(cx, cy);
+    for (let i = this.elements.length - 1; i >= 0; i--) {
+      const el = this.elements[i];
+      let dist = 999;
+      if (el.type === 'bumper' || el.type === 'target') {
+        dist = Math.hypot(el.x - g.x, el.y - g.y);
+      } else if (el.type === 'ramp') {
+        dist = Math.min(
+          Math.hypot(el.x1 - g.x, el.y1 - g.y),
+          Math.hypot(el.x2 - g.x, el.y2 - g.y),
+        );
+      }
+      if (dist < 0.5) return i;
+    }
+    return -1;
+  }
+
+  private onCanvasDoubleClick(e: MouseEvent): void {
+    if (!this.canvas) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    const idx = this.pickElementAt(cx, cy);
+    if (idx < 0 || !this.elements[idx]) return;
+    this.propertyModal.openForElement(this.elements[idx] as any, (updated) => {
+      this.elements[idx] = updated as any;
+      this.updateEditor();
+    });
   }
 
   private onCanvasMouseUp(): void {

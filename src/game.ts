@@ -12,6 +12,7 @@ import type {
   BumperMesh, TargetMesh, RampData, ExtraBall, ParticleData, FPLLibrary
 } from './types';
 import type { BAMEngine } from './bam-engine';
+import { AssetCatalog } from './assets/asset-catalog';
 
 // ── Game State ───────────────────────────────────────────────────────────────
 export const state: GameState = {
@@ -103,6 +104,23 @@ export const fptResources: FPTResources = {
   mapped: { bumper: null, flipper: null, drain: null },
 };
 
+// ── Raw FPT Bytes (for lossless write-back) ──────────────────────────────────
+export const fptRawBytes = {
+  textures:  {} as Record<string, Uint8Array>,
+  sounds:    {} as Record<string, Uint8Array>,
+  models:    {} as Record<string, Uint8Array>,
+  otherStreams: [] as Array<{ name: string; data: Uint8Array }>,
+  scriptOriginal: null as string | null,
+};
+
+export function resetFPTRawBytes(): void {
+  fptRawBytes.textures = {};
+  fptRawBytes.sounds   = {};
+  fptRawBytes.models   = {};
+  fptRawBytes.otherStreams = [];
+  fptRawBytes.scriptOriginal = null;
+}
+
 // ── Mutable references (set via setters from main.ts / table.ts) ─────────────
 export let physics:             PhysicsContext | null = null;
 export let currentTableConfig:  TableConfig    | null = null;
@@ -111,6 +129,8 @@ export let plungerKnob:         THREE.Mesh     | null = null;
 export let fpScriptHandlers:    Record<string, (...args: any[]) => any> = {};
 export let loadedLibrary:       FPLLibrary     | null = null;
 export let bamEngine:           BAMEngine      | null = null;
+
+let _globalAssetCatalog: AssetCatalog | null = null;
 
 export const bumpers:    BumperMesh[] = [];
 export const targets:    TargetMesh[] = [];
@@ -127,6 +147,8 @@ export function setPlungerKnob(m: THREE.Mesh | null)       { plungerKnob        
 export function setFpScriptHandlers(h: Record<string, (...args: any[]) => any>) { fpScriptHandlers = h; }
 export function setLoadedLibrary(lib: FPLLibrary | null)    { loadedLibrary      = lib; }
 export function setBAMEngine(e: BAMEngine | null)           { bamEngine          = e; }
+export function globalAssetCatalog(): AssetCatalog | null { return _globalAssetCatalog; }
+export function setGlobalAssetCatalog(c: AssetCatalog | null): void { _globalAssetCatalog = c; }
 
 // ── Cross-module callbacks (registered by main.ts after scene init) ───────────
 export const cb = {

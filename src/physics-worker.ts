@@ -303,6 +303,7 @@ type WorkerMessage =
   | { type: 'updateFlipper'; side: 'left' | 'right'; angle: number }
   | { type: 'updateBall'; x: number; y: number; vx?: number; vy?: number }
   | { type: 'setBallGravity'; scale: number }
+  | { type: 'setWorldGravity'; x: number; y: number }
   | { type: 'dispose' };
 
 type PhysicsFrame = {
@@ -360,6 +361,20 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
       case 'setBallGravity': {
         const { scale } = params as any;
         setBallGravityScale(scale);
+        break;
+      }
+
+      case 'setWorldGravity': {
+        // Rotate the world's gravity vector to match the visual playfield
+        // rotation. Without this, a 90° visual rotation makes the ball
+        // appear to fall sideways across the rotated screen — bumpers can't
+        // be reached, no scoring happens, no animations trigger.
+        const { x, y } = params as any;
+        if (world) {
+          world.gravity.x = x;
+          world.gravity.y = y;
+          console.log(`[Physics Worker] World gravity → (${x.toFixed(2)}, ${y.toFixed(2)})`);
+        }
         break;
       }
 

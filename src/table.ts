@@ -10,7 +10,7 @@ import {
   state, fptResources, physics, currentTableConfig, tableGroup, extraBalls,
   bumpers, targets, slingshots, ramps,
   setCurrentTableConfig, setTableGroup, setPlungerKnob,
-  cb,
+  cb, globalAssetCatalog,
 } from './game';
 import {
   callScriptBumper, callScriptTarget, callScriptSlingshot,
@@ -21,10 +21,37 @@ import { getAnimationScheduler } from './mechanics/animation-scheduler';
 import { getBamBridge } from './bam-bridge';
 import { getGraphicsPipeline } from './graphics/graphics-pipeline';
 import { getScoreAnimationManager } from './score-animation-manager';
+import { populateCatalogFromFPTResources } from './fpt-parser';
 // Phase 15: Future imports (modules not yet integrated to main)
 // import { PlayfieldMeshBuilder, BumperPosition, TargetPosition } from './geometry/playfield-mesh-builder';
 // import { TextureAnalyzer } from './graphics/texture-analyzer';
 // import { getNormalMapGenerator } from './graphics/normal-map-generator';
+
+/**
+ * Resolve the active playfield texture.
+ * Prefers AssetCatalog (new path); returns null if not present.
+ * Returning null signals "use solid color fallback".
+ */
+export function resolvePlayfieldTexture(): THREE.Texture | null {
+  const cat = globalAssetCatalog();
+  if (cat && cat.hasTexture('playfield')) {
+    const tex = cat.getTexture('playfield');
+    if (!cat.isPlaceholder(tex)) return tex;
+  }
+  return null;
+}
+
+/**
+ * Resolve a 3D model by name from the AssetCatalog.
+ * Returns the registered mesh or null if not present (placeholder rejected).
+ * Caller decides fallback behavior (e.g., procedural geometry).
+ */
+export function resolveModel(name: string): THREE.Mesh | null {
+  const cat = globalAssetCatalog();
+  if (!cat || !cat.hasModel(name)) return null;
+  const mesh = cat.getModel(name);
+  return cat.isPlaceholder(mesh) ? null : mesh;
+}
 
 // ─── PHASE 2: Advanced Lighting & Effects System ───────────────────────────────
 /**
@@ -1158,34 +1185,37 @@ export function buildRealisticFlipper(side: 'left' | 'right', length: number = 2
 
 // ─── Bumper bauen (mit Enhanced Geometry + LOD + Variable Size + Custom Light) ──
 export function buildBumper(x: number, y: number, color: number, lod: 'high'|'med'|'low' = 'high', size: number = 1.0, lightCfg?: { intensity: number; distance: number }, geomPool?: any): THREE.Mesh | THREE.Group {
-  // Phase 7: Try to use extracted MS3D model first
-  const fptRes = fptResources as any;
-  if (fptRes.models && fptRes.models instanceof Map && fptRes.models.size > 0) {
-    for (const [modelName, mesh] of fptRes.models) {
-      // Verify mesh is a THREE.Mesh object (not binary data)
-      if (modelName.toLowerCase().includes('bumper') && mesh && mesh instanceof THREE.Mesh) {
-        try {
-          const cloned = mesh.clone();
-          cloned.position.set(x, y, 0.125);
-          cloned.scale.setScalar(size);
-          cloned.castShadow = true;
-          cloned.receiveShadow = true;
+  // Phase 1b: Try to use extracted MS3D model from AssetCatalog
+  const cat = globalAssetCatalog();
+  if (cat) {
+    let bumperMesh: THREE.Mesh | null = null;
+    for (const name of cat.registeredModelNames()) {
+      if (name.toLowerCase().includes('bumper')) {
+        bumperMesh = resolveModel(name);
+        if (bumperMesh) break;
+      }
+    }
+    if (bumperMesh) {
+      try {
+        const cloned = bumperMesh.clone();
+        cloned.position.set(x, y, 0.125);
+        cloned.scale.setScalar(size);
+        cloned.castShadow = true;
+        cloned.receiveShadow = true;
 
-          // Add light for aesthetic
-          const lightIntensity = lightCfg?.intensity ?? 0.9;
-          const lightDistance = lightCfg?.distance ?? 4.5;
-          const pl = new THREE.PointLight(color, lightIntensity, lightDistance);
-          pl.position.set(x, y, 0.625);
-          pl.castShadow = true;
+        const lightIntensity = lightCfg?.intensity ?? 0.9;
+        const lightDistance = lightCfg?.distance ?? 4.5;
+        const pl = new THREE.PointLight(color, lightIntensity, lightDistance);
+        pl.position.set(x, y, 0.625);
+        pl.castShadow = true;
 
-          const group = new THREE.Group();
-          group.add(cloned);
-          group.add(pl);
-          group.userData = { light: pl, color, hit: false, lod, size, modelBased: true };
-          return group;
-        } catch (e) {
-          console.warn('[buildBumper] Failed to clone MS3D model:', e);
-        }
+        const group = new THREE.Group();
+        group.add(cloned);
+        group.add(pl);
+        group.userData = { light: pl, color, hit: false, lod, size, modelBased: true };
+        return group;
+      } catch (e) {
+        console.warn('[buildBumper] Failed to clone MS3D model:', e);
       }
     }
   }
@@ -1245,33 +1275,37 @@ export function buildBumper(x: number, y: number, color: number, lod: 'high'|'me
 
 // ─── Target bauen (mit Enhanced Geometry + Custom Light) ────────────────────────
 export function buildTarget(x: number, y: number, color: number, lightCfg?: { intensity: number; distance: number }, geomPool?: any): THREE.Group {
-  // Phase 7: Try to use extracted MS3D model first
-  const fptRes = fptResources as any;
-  if (fptRes.models && fptRes.models instanceof Map && fptRes.models.size > 0) {
-    for (const [modelName, mesh] of fptRes.models) {
-      // Verify mesh is a THREE.Mesh object (not binary data)
-      if ((modelName.toLowerCase().includes('target') || modelName.toLowerCase().includes('drop')) && mesh && mesh instanceof THREE.Mesh) {
-        try {
-          const cloned = mesh.clone();
-          cloned.position.set(x, y, 0.18);
-          cloned.castShadow = true;
-          cloned.receiveShadow = true;
+  // Phase 1b: Try to use extracted MS3D model from AssetCatalog
+  const cat = globalAssetCatalog();
+  if (cat) {
+    let targetMesh: THREE.Mesh | null = null;
+    for (const name of cat.registeredModelNames()) {
+      if (name.toLowerCase().includes('target') || name.toLowerCase().includes('drop')) {
+        targetMesh = resolveModel(name);
+        if (targetMesh) break;
+      }
+    }
+    if (targetMesh) {
+      try {
+        const cloned = targetMesh.clone();
+        cloned.position.set(x, y, 0.18);
+        cloned.castShadow = true;
+        cloned.receiveShadow = true;
 
-          // Add light for aesthetic
-          const lightIntensity = lightCfg?.intensity ?? 0.9;
-          const lightDistance = lightCfg?.distance ?? 4.5;
-          const pl = new THREE.PointLight(color, lightIntensity, lightDistance);
-          pl.position.set(x, y, 0.5);
-          pl.castShadow = true;
+        // Add light for aesthetic
+        const lightIntensity = lightCfg?.intensity ?? 0.9;
+        const lightDistance = lightCfg?.distance ?? 4.5;
+        const pl = new THREE.PointLight(color, lightIntensity, lightDistance);
+        pl.position.set(x, y, 0.5);
+        pl.castShadow = true;
 
-          const group = new THREE.Group();
-          group.add(cloned);
-          group.add(pl);
-          group.userData = { light: pl, color, hit: false, modelBased: true };
-          return group;
-        } catch (e) {
-          console.warn('[buildTarget] Failed to clone MS3D model:', e);
-        }
+        const group = new THREE.Group();
+        group.add(cloned);
+        group.add(pl);
+        group.userData = { light: pl, color, hit: false, modelBased: true };
+        return group;
+      } catch (e) {
+        console.warn('[buildTarget] Failed to clone MS3D model:', e);
       }
     }
   }
@@ -1535,6 +1569,9 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
         fptResources.playfield = library.textureLibrary[textureNames[0]];
       }
     }
+
+    // Refresh catalog with merged library state (library merge happens after parser populated catalog)
+    populateCatalogFromFPTResources();
   }
 
   // ─── Phase 14: Get Graphics Resources for optimized allocation ────────────────
@@ -1569,11 +1606,12 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
 
   // Spielfeld (mit verbesserter Texture-Anwendung)
   const tableGeom = geomPool?.getBox(6, 12, 0.25) ?? new THREE.BoxGeometry(6, 12, 0.25);
-  const hasFPTTex = !!fptResources.playfield;
+  const playfieldTex = resolvePlayfieldTexture();
+  const hasFPTTex = playfieldTex !== null;
 
   const tableMat  = new THREE.MeshStandardMaterial({
     color:     hasFPTTex ? 0xffffff : config.tableColor,
-    map:       hasFPTTex ? fptResources.playfield : null,
+    map:       playfieldTex,
     roughness: hasFPTTex ? 0.4 : 0.65,  // FPT-Texturen: glänzender
     metalness: hasFPTTex ? 0.15 : 0.12,  // FPT-Texturen: leicht metallisch
     emissive:  new THREE.Color(config.tableColor).multiplyScalar(hasFPTTex ? 0.08 : 0.14),
@@ -1581,11 +1619,11 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   });
 
   // UV-Mapping optimieren für Playfield
-  if (hasFPTTex && fptResources.playfield) {
-    fptResources.playfield.repeat.set(1.0, 1.0);
-    fptResources.playfield.offset.set(0, 0);
-    fptResources.playfield.wrapS = THREE.ClampToEdgeWrapping;
-    fptResources.playfield.wrapT = THREE.ClampToEdgeWrapping;
+  if (playfieldTex) {
+    playfieldTex.repeat.set(1.0, 1.0);
+    playfieldTex.offset.set(0, 0);
+    playfieldTex.wrapS = THREE.ClampToEdgeWrapping;
+    playfieldTex.wrapT = THREE.ClampToEdgeWrapping;
   }
 
   const tableMesh = new THREE.Mesh(tableGeom, tableMat);
