@@ -359,6 +359,11 @@ ipcMain.handle('window:closeAllChildren', () => {
   childWindows.clear();
 });
 
+// Phase B0: paths that the renderer is allowed to read.
+// Populated when fpt:scanDirectory returns entries — the renderer can only
+// read files the scanner has surfaced (i.e. .fpt files in user-picked dirs).
+const allowedFPTPaths = new Set();
+
 // FPT directory scanner — list .fpt files with basic metadata.
 // Renderer can't safely use fs.readdir; main process owns filesystem access.
 ipcMain.handle('fpt:scanDirectory', async (_event, dirPath) => {
@@ -377,6 +382,7 @@ ipcMain.handle('fpt:scanDirectory', async (_event, dirPath) => {
           size: stat.size,
           mtime: stat.mtimeMs,
         });
+        allowedFPTPaths.add(fullPath);
       } catch { /* ignore individual stat failures */ }
     }
     return out;
@@ -394,6 +400,20 @@ ipcMain.handle('fpt:pickDirectory', async () => {
   });
   if (result.canceled || result.filePaths.length === 0) return null;
   return result.filePaths[0];
+});
+
+// Read an FPT file from disk and return its bytes to the renderer.
+// SECURITY: only paths previously returned by fpt:scanDirectory are accepted.
+// This prevents a compromised renderer (XSS) from reading arbitrary files.
+ipcMain.handle('fpt:readFile', async (_event, filePath) => {
+  if (typeof filePath !== 'string') throw new Error('filePath required');
+  if (!filePath.toLowerCase().endsWith('.fpt')) throw new Error('not an fpt file');
+  if (!allowedFPTPaths.has(filePath)) {
+    throw new Error('path not in allowlist — call scanFPTDirectory first');
+  }
+  const buf = await fs.promises.readFile(filePath);
+  // Convert to ArrayBuffer so structured clone gives renderer-friendly bytes.
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
 });
 
 // Cross-window state relay. The playfield window emits per-frame state
