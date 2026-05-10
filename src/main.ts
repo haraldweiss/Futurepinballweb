@@ -4615,6 +4615,77 @@ function renderTableFileGrid(files: File[]): void {
   }
 }
 
+// ─── Phase B0: FPT Browser Init ───────────────────────────────────────────────
+
+// Phase B0: FPT auto-scan + browser. Only runs when running under Electron
+// (electronAPI present); in plain browsers the section stays empty and the
+// user falls back to the existing drag-drop / file-picker UI.
+async function initializeFPTBrowser(): Promise<void> {
+  const api = (window as any).electronAPI;
+  if (!api?.scanFPTDirectory) {
+    // No Electron — hide the FPT section entirely
+    const section = document.getElementById('qm-fpt-section');
+    if (section) section.style.display = 'none';
+    return;
+  }
+
+  const { scanFPTDirectory } = await import('./fpt-render/fpt-table-scanner');
+  const { filterEntries, sortEntries, renderTableList } = await import('./fpt-render/fpt-table-browser');
+  type SortKey = 'name' | 'size' | 'mtime';
+  const { getFPTPath, setFPTPath } = await import('./fpt-render/fpt-path-config');
+
+  const listEl = document.getElementById('qm-fpt-list')!;
+  const searchEl = document.getElementById('qm-fpt-search') as HTMLInputElement;
+  const sortEl = document.getElementById('qm-fpt-sort') as HTMLSelectElement;
+  const pathBtn = document.getElementById('qm-fpt-set-path') as HTMLButtonElement;
+
+  let allEntries: import('./fpt-render/fpt-table-scanner').FPTFileEntry[] = [];
+
+  const refreshList = () => {
+    const filtered = filterEntries(allEntries, searchEl.value);
+    const sorted = sortEntries(filtered, sortEl.value as SortKey);
+    renderTableList(listEl, sorted, (entry) => {
+      void loadFPTFromPath(entry.path).catch((e) => {
+        console.error('[fpt-browser] load failed:', e);
+        showNotification(`Failed to load ${entry.name}: ${e.message}`);
+      });
+    });
+  };
+
+  const scan = async (path: string | null) => {
+    if (!path) { allEntries = []; refreshList(); return; }
+    allEntries = await scanFPTDirectory(path);
+    console.log(`[fpt-browser] scanned ${allEntries.length} files in ${path}`);
+    refreshList();
+  };
+
+  // Initial scan from saved path
+  await scan(getFPTPath());
+
+  // Wire controls
+  searchEl.addEventListener('input', refreshList);
+  sortEl.addEventListener('change', refreshList);
+  pathBtn.addEventListener('click', async () => {
+    const picked = await api.pickFPTDirectory?.();
+    if (picked) {
+      setFPTPath(picked);
+      await scan(picked);
+    }
+  });
+}
+
+async function loadFPTFromPath(filePath: string): Promise<void> {
+  const api = (window as any).electronAPI;
+  if (!api?.readFPTFile) throw new Error('not running in Electron');
+  const buf: ArrayBuffer = await api.readFPTFile(filePath);
+  const bytes = new Uint8Array(buf);
+  // Hand off to existing parser. Phase B0 stops here — actually showing the
+  // table on the playfield with FPT-derived geometry is Phase B1+.
+  const { parseFPTFile } = await import('./fpt-parser');
+  await parseFPTFile(bytes, { onPhaseComplete: () => {} });
+  showNotification(`Loaded ${filePath.split(/[\\/]/).pop()} — rendering polish in upcoming phases`);
+}
+
 // ─── Library Directory Browser ──────────────────────────────────────────────────
 async function browseLibraryDirectory(): Promise<void> {
   const dirPathInput = document.getElementById('lib-dir-path') as HTMLInputElement;
@@ -4837,6 +4908,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     // Apply startup screen configuration from URL parameter (if present)
     setTimeout(() => window.applyStartupScreenConfig?.(), 100);
   }
+
+  void initializeFPTBrowser();
 });
 
 // ─── Phase 15: Cleanup Physics Worker on Exit ──────────────────────────────────
