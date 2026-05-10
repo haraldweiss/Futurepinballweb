@@ -292,7 +292,11 @@ export async function parseCFBResources(
 
   for (const entry of entries) {
     const name: string = entry.name || '';
-    const bytes: Uint8Array = entry.content;
+    // cfb library returns `entry.content` as plain Array<number> when
+    // `type: 'array'` is used. Code below uses `bytes.buffer` for DataView /
+    // LZO / typed-array ops which throws on plain arrays. Normalize to Uint8Array.
+    const raw = entry.content;
+    const bytes: Uint8Array = raw instanceof Uint8Array ? raw : new Uint8Array(raw as ArrayLike<number>);
     const nameL = name.toLowerCase();
 
     // Classify entry
@@ -1776,7 +1780,11 @@ export function extractMS3DModelsFromCFB(arrayBuffer: ArrayBuffer): Map<string, 
 
   for (const entry of entries) {
     const name: string = entry.name || '';
-    const bytes: Uint8Array = entry.content;
+    // cfb library returns `entry.content` as plain Array<number> when
+    // `type: 'array'` is used. Code below uses `bytes.buffer` for DataView /
+    // LZO / typed-array ops which throws on plain arrays. Normalize to Uint8Array.
+    const raw = entry.content;
+    const bytes: Uint8Array = raw instanceof Uint8Array ? raw : new Uint8Array(raw as ArrayLike<number>);
     const nameL = name.toLowerCase();
 
     // Look for MS3D models (by stream name or magic header)
@@ -1816,7 +1824,11 @@ export function extractAnimationSequencesFromCFB(arrayBuffer: ArrayBuffer): Map<
 
   for (const entry of entries) {
     const name: string = entry.name || '';
-    const bytes: Uint8Array = entry.content;
+    // cfb library returns `entry.content` as plain Array<number> when
+    // `type: 'array'` is used. Code below uses `bytes.buffer` for DataView /
+    // LZO / typed-array ops which throws on plain arrays. Normalize to Uint8Array.
+    const raw = entry.content;
+    const bytes: Uint8Array = raw instanceof Uint8Array ? raw : new Uint8Array(raw as ArrayLike<number>);
     const nameL = name.toLowerCase();
 
     // Look for animation streams (by name pattern)
