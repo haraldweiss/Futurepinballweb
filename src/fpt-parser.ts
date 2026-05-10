@@ -178,8 +178,21 @@ function trimJpegToEoi(bytes: Uint8Array): Uint8Array {
   return eoi > 0 ? bytes.subarray(0, eoi) : bytes;
 }
 
-async function bytesToTexture(slice: Uint8Array, mime: string): Promise<THREE.Texture> {
-  const payload = mime === 'image/jpeg' ? trimJpegToEoi(slice) : slice;
+// DIAG v7: trace trim behavior for first 3 JPEG decodes
+const _trimDiag = { logged: 0 };
+
+async function bytesToTexture(slice: Uint8Array, mime: string, diagName?: string): Promise<THREE.Texture> {
+  let payload = slice;
+  if (mime === 'image/jpeg') {
+    const eoi = findJpegEoiOffset(slice);
+    payload = eoi > 0 ? slice.subarray(0, eoi) : slice;
+    if (_trimDiag.logged < 3 && diagName) {
+      const last4 = Array.from(payload.slice(payload.length - 4))
+        .map(b => b.toString(16).padStart(2, '0')).join(' ');
+      logMsg(`🔬 trim "${diagName}" eoi=${eoi} orig=${slice.length} trim=${payload.length} last4=${last4}`, 'info');
+      _trimDiag.logged++;
+    }
+  }
   const blob = new Blob([payload], { type: mime });
 
   // Primary path: createImageBitmap is more lenient than <img>-based decoders
@@ -249,7 +262,7 @@ async function extractImageFromBytes(bytes: Uint8Array, name?: string): Promise<
   if (found) {
     _extractDiag.scanFound++;
     try {
-      const t = await bytesToTexture(bytes.slice(found.off), found.mime);
+      const t = await bytesToTexture(bytes.slice(found.off), found.mime, name);
       _extractDiag.decodeOk++;
       return t;
     } catch (e: any) {
@@ -487,6 +500,7 @@ export async function parseCFBResources(
   // Reset extract diagnostics for this run
   _extractDiag.calls = 0; _extractDiag.scanFound = 0; _extractDiag.decodeOk = 0;
   _extractDiag.decodeFail = 0; _extractDiag.lastError = ''; _extractDiag.errorsLogged = 0;
+  _trimDiag.logged = 0;
 
   // Decode all textures in parallel
   const textureDecodes = Promise.all(
