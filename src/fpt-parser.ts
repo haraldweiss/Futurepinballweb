@@ -338,21 +338,27 @@ export async function parseCFBResources(
     }
   }
 
-  // DIAGNOSTIC v3: Hex-dump first 32 bytes of first 3 streams whose name
-  // contains "Image" (capital). This tells us the actual FPT header format
-  // so we can decide whether we need a different decoder.
+  // DIAGNOSTIC v4: Image* streams are tiny metadata records (193B etc).
+  // The real image data must be in "Other" streams. Dump the 5 LARGEST
+  // "Other" streams to find where image bytes actually live.
+  const dumpHex = (b: Uint8Array, n = 32) => Array.from(b.slice(0, n))
+    .map(x => x.toString(16).padStart(2, '0')).join(' ');
+  const dumpAscii = (b: Uint8Array, n = 32) => Array.from(b.slice(0, n))
+    .map(x => (x >= 32 && x < 127) ? String.fromCharCode(x) : '.').join('');
+
+  // First 3 Image* metadata records (for record format reference)
   let imgDumped = 0;
   for (const { name, bytes } of textureEntries) {
     if (imgDumped >= 3) break;
     if (!name.includes('Image')) continue;
-    const head = Array.from(bytes.slice(0, 32))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join(' ');
-    const ascii = Array.from(bytes.slice(0, 32))
-      .map(b => (b >= 32 && b < 127) ? String.fromCharCode(b) : '.')
-      .join('');
-    logMsg(`🔬 "${name}" (${bytes.length}B) hdr32: ${head} | ${ascii}`, 'info');
+    logMsg(`🔬 IMG-meta "${name}" (${bytes.length}B): ${dumpHex(bytes)} | ${dumpAscii(bytes)}`, 'info');
     imgDumped++;
+  }
+
+  // Top-5 largest "Other" streams (likely contains real image data)
+  const otherSorted = [...otherEntries].sort((a, b) => b.bytes.length - a.bytes.length).slice(0, 5);
+  for (const { name, bytes } of otherSorted) {
+    logMsg(`🔬 OTHER-big "${name}" (${(bytes.length/1024).toFixed(1)}KB): ${dumpHex(bytes)} | ${dumpAscii(bytes)}`, 'info');
   }
 
   // ─── Phase 1B: Parallel decoding by type using Promise.all() ───
