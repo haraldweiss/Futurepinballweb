@@ -152,11 +152,27 @@ function scanForImageMagic(bytes: Uint8Array, maxScan = 4096): { mime: string; o
   return null;
 }
 
-async function extractImageFromBytes(bytes: Uint8Array): Promise<THREE.Texture | null> {
+// DIAG v6 counters: tracks why extractImageFromBytes is failing
+const _extractDiag = { calls: 0, scanFound: 0, decodeOk: 0, decodeFail: 0, lastError: '', errorsLogged: 0 };
+
+async function extractImageFromBytes(bytes: Uint8Array, name?: string): Promise<THREE.Texture | null> {
+  _extractDiag.calls++;
   // Primary: scan for magic bytes (handles FPT's variable-length headers).
   const found = scanForImageMagic(bytes);
   if (found) {
-    try { return await bytesToTexture(bytes.slice(found.off), found.mime); } catch { /* fall through */ }
+    _extractDiag.scanFound++;
+    try {
+      const t = await bytesToTexture(bytes.slice(found.off), found.mime);
+      _extractDiag.decodeOk++;
+      return t;
+    } catch (e: any) {
+      _extractDiag.decodeFail++;
+      _extractDiag.lastError = e?.message || String(e);
+      if (_extractDiag.errorsLogged < 3) {
+        logMsg(`🔬 decode FAIL "${name || '?'}" mime=${found.mime} off=${found.off} size=${bytes.length}: ${_extractDiag.lastError}`, 'warn');
+        _extractDiag.errorsLogged++;
+      }
+    }
   }
   // Fallback: try LZO decompression then scan again.
   const decompressed = tryLZOExtract(bytes);
@@ -167,6 +183,10 @@ async function extractImageFromBytes(bytes: Uint8Array): Promise<THREE.Texture |
     }
   }
   return null;
+}
+
+export function reportExtractDiag(): void {
+  logMsg(`🔬 EXTRACT-DIAG: calls=${_extractDiag.calls} scanFound=${_extractDiag.scanFound} decodeOk=${_extractDiag.decodeOk} decodeFail=${_extractDiag.decodeFail}`, 'info');
 }
 
 // ─── Phase 3: Audio Streaming for Large Files ──────────────────────────────────
@@ -377,10 +397,14 @@ export async function parseCFBResources(
   // Phase 2: Notify phase start
   callbacks?.onPhaseStart?.('images');
 
+  // Reset extract diagnostics for this run
+  _extractDiag.calls = 0; _extractDiag.scanFound = 0; _extractDiag.decodeOk = 0;
+  _extractDiag.decodeFail = 0; _extractDiag.lastError = ''; _extractDiag.errorsLogged = 0;
+
   // Decode all textures in parallel
   const textureDecodes = Promise.all(
     textureEntries.map(async (entry, idx) => {
-      const tex = await extractImageFromBytes(entry.bytes);
+      const tex = await extractImageFromBytes(entry.bytes, entry.name);
       // Phase 2: Notify resource loaded
       callbacks?.onResourceLoaded?.('image', entry.name, {
         current: idx + 1,
@@ -541,6 +565,7 @@ export async function parseCFBResources(
 
   const elapsedMs = performance.now() - startTime;
   logMsg(`⏱️ Phase 1 Parallel Loading: ${elapsedMs.toFixed(0)}ms (Textures: ${textureResults.length}, Sounds: ${soundResults.length})`, 'ok');
+  reportExtractDiag();
 
   return {
     textureCount: Object.keys(fptResources.textures).length,
