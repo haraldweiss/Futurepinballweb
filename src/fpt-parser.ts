@@ -206,6 +206,31 @@ async function bytesToTexture(slice: Uint8Array, mime: string, diagName?: string
  * payload, so a fixed offset list misses most of them. Scanning the first
  * 4KB catches names up to ~3.5KB which is well beyond anything FP writes.
  */
+/**
+ * Validate that a "BM" byte pair is actually a BMP file header.
+ *
+ * Real BMP headers have a fixed structure: "BM" + 4-byte file size +
+ * 4 bytes reserved (zero) + 4-byte pixel-data offset. Validating these
+ * fields rejects the random "BM" byte pairs that occur frequently in
+ * binary streams.
+ */
+function isBmpAt(bytes: Uint8Array, off: number): boolean {
+  if (off + 14 > bytes.length) return false;
+  if (bytes[off] !== 0x42 || bytes[off + 1] !== 0x4D) return false;
+  // bytes[off+6..off+9] reserved — must be zero
+  if (bytes[off + 6] !== 0 || bytes[off + 7] !== 0 ||
+      bytes[off + 8] !== 0 || bytes[off + 9] !== 0) return false;
+  // bytes[off+10..13] data offset (LE) — typical 54..4118 (with palette)
+  const dataOff = bytes[off + 10] | (bytes[off + 11] << 8) |
+                  (bytes[off + 12] << 16) | (bytes[off + 13] << 24);
+  if (dataOff < 26 || dataOff > 8192) return false;
+  // bytes[off+2..5] file size (LE) — should not exceed remaining buffer by much
+  const fileSize = bytes[off + 2] | (bytes[off + 3] << 8) |
+                   (bytes[off + 4] << 16) | (bytes[off + 5] << 24);
+  if (fileSize < dataOff || fileSize > bytes.length - off + 4096) return false;
+  return true;
+}
+
 function scanForImageMagic(bytes: Uint8Array, maxScan = 4096): { mime: string; off: number } | null {
   const max = Math.min(bytes.length - 4, maxScan);
   for (let off = 0; off < max; off++) {
@@ -219,8 +244,9 @@ function scanForImageMagic(bytes: Uint8Array, maxScan = 4096): { mime: string; o
       return { mime: 'image/jpeg', off };
     }
     if (a === 0x47 && b === 0x49 && c === 0x46 && d === 0x38) return { mime: 'image/gif', off };
-    // BMP "BM" — only at off=0 to avoid false positives (2-byte sig is too weak)
-    if (off === 0 && a === 0x42 && b === 0x4D)                return { mime: 'image/bmp', off };
+    // BMP "BM" with full header validation — necessary to scan at variable
+    // offsets without false positives from random byte data.
+    if (a === 0x42 && b === 0x4D && isBmpAt(bytes, off)) return { mime: 'image/bmp', off };
     // WebP RIFF...WEBP
     if (a === 0x52 && b === 0x49 && c === 0x46 && d === 0x46 &&
         off + 9 < bytes.length && bytes[off + 8] === 0x57 && bytes[off + 9] === 0x45) {
@@ -455,8 +481,10 @@ export async function parseCFBResources(
       const a0 = b[off], a1 = b[off+1], a2 = b[off+2], a3 = b[off+3];
       let mime: string | null = null;
       if (a0===0x89 && a1===0x50 && a2===0x4E && a3===0x47) { pngHits++; mime = 'PNG'; }
-      else if (a0===0xFF && a1===0xD8 && a2===0xFF)         { jpegHits++; mime = 'JPEG'; }
-      else if (off === 0 && a0===0x42 && a1===0x4D)         { bmpHits++; mime = 'BMP'; }
+      // Match the same tightened JPEG check as scanForImageMagic
+      else if (a0===0xFF && a1===0xD8 && a2===0xFF &&
+               (a3===0xE0 || a3===0xE1 || a3===0xDB || a3===0xEE)) { jpegHits++; mime = 'JPEG'; }
+      else if (a0===0x42 && a1===0x4D && isBmpAt(b, off))    { bmpHits++; mime = 'BMP'; }
       else if (a0===0x47 && a1===0x49 && a2===0x46 && a3===0x38) { gifHits++; mime = 'GIF'; }
       if (mime) {
         if (hitsLogged < 8) {
