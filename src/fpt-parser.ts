@@ -1152,7 +1152,8 @@ export async function parseFPTFile(
       const cfg = JSON.parse(await file.text());
       logMsg('✓ JSON geparst', 'ok');
       if (cfg.name && cfg.bumpers && cfg.tableColor !== null) {
-        buildTableFn(cfg); closeLoaderFn();
+        if (buildTableFn) buildTableFn(cfg);
+        if (closeLoaderFn) closeLoaderFn();
       } else { logMsg('⚠ Kein gültiges Tisch-Format', 'warn'); }
     } catch(e: any) { logMsg(`✗ JSON Fehler: ${  e.message}`, 'error'); }
     return;
@@ -1439,10 +1440,14 @@ export async function parseFPTFile(
   const confidence = calcConfidence(sig, allStrings.length, coords.length, file.size);
   logMsg(`Konfidenz: ${confidence}%`, confidence>60?'ok':confidence>30?'warn':'error');
 
-  buildTableFn({ name: tableName, tableColor, accentColor: accent, bumpers: bumpCfg, targets: targetCfg,
-    lights: [{ color:accent,intensity:0.8,dist:10,x:0,y:2,z:4 }, { color:accent,intensity:0.4,dist:8,x:-2,y:-2,z:3 }]
-  });
-  closeLoaderFn();
+  // Optional callbacks — guard so callers like Phase B0's loadFPTFromPath
+  // can invoke parseFPTFile() purely for asset extraction (no rendering hookup).
+  if (buildTableFn) {
+    buildTableFn({ name: tableName, tableColor, accentColor: accent, bumpers: bumpCfg, targets: targetCfg,
+      lights: [{ color:accent,intensity:0.8,dist:10,x:0,y:2,z:4 }, { color:accent,intensity:0.4,dist:8,x:-2,y:-2,z:3 }]
+    });
+  }
+  if (closeLoaderFn) closeLoaderFn();
 
   // Detect library dependencies (heuristic path)
   const dependencies = detectLibraryDependencies(tableName, null, coords.length);
