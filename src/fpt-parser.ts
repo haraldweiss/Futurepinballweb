@@ -308,6 +308,9 @@ export async function parseCFBResources(
     logMsg(`  • ${type}: ${count} stream${count>1?'s':''}`);
   });
 
+  // DIAGNOSTIC v3: Confirm new code path is running
+  logMsg('🔬 DIAG v3: scanForImageMagic active', 'info');
+
   // ─── Phase 1A: Separate streams by type for parallel processing ───
   const textureEntries: Array<{ name: string; bytes: Uint8Array }> = [];
   const soundEntries: Array<{ name: string; bytes: Uint8Array }> = [];
@@ -333,6 +336,23 @@ export async function parseCFBResources(
     } else {
       otherEntries.push({ name, bytes });
     }
+  }
+
+  // DIAGNOSTIC v3: Hex-dump first 32 bytes of first 3 streams whose name
+  // contains "Image" (capital). This tells us the actual FPT header format
+  // so we can decide whether we need a different decoder.
+  let imgDumped = 0;
+  for (const { name, bytes } of textureEntries) {
+    if (imgDumped >= 3) break;
+    if (!name.includes('Image')) continue;
+    const head = Array.from(bytes.slice(0, 32))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join(' ');
+    const ascii = Array.from(bytes.slice(0, 32))
+      .map(b => (b >= 32 && b < 127) ? String.fromCharCode(b) : '.')
+      .join('');
+    logMsg(`🔬 "${name}" (${bytes.length}B) hdr32: ${head} | ${ascii}`, 'info');
+    imgDumped++;
   }
 
   // ─── Phase 1B: Parallel decoding by type using Promise.all() ───
