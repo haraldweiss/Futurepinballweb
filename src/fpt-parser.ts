@@ -262,7 +262,13 @@ export async function parseCFBResources(
   try { cfb = (CFB as any).read(new Uint8Array(arrayBuffer), { type: 'array' }); }
   catch(e: any) { logMsg(`CFB Parse-Fehler: ${  e.message}`, 'warn'); return { textureCount: 0, soundCount: 0, streamCount: 0 }; }
 
-  const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.t === 2 && e.size > 0);
+  // The cfb library (v1.2.2) does not always populate `e.t` — for FPT files
+  // every entry comes back with `t === undefined`. Previously we filtered for
+  // `t === 2 && size > 0`, which silently dropped EVERY stream and left the
+  // parser thinking the file was empty (textures, sounds, models all unloaded).
+  // Trust `size > 0` and exclude the root storage by name instead — streams
+  // have a payload, the root storage entry never carries one we want to read.
+  const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.size > 0 && e.name && e.name !== 'Root Entry');
   logMsg(`📦 CFB-Streams gefunden: ${entries.length}`, entries.length > 0 ? 'ok' : 'warn');
 
   // Enhanced: Zeige Stream-Overview
@@ -1479,7 +1485,7 @@ export async function parseFPLFile(
     };
 
     const entries = ((cfb.FileIndex as any[]) || [])
-      .filter((e: any) => e.t === 2 && e.size > 0);
+      .filter((e: any) => e.size > 0 && e.name && e.name !== 'Root Entry');
 
     logMsg(`📚 FPL Parser: Found ${entries.length} streams in "${libName}"`);
 
@@ -1766,7 +1772,7 @@ export function extractMS3DModelsFromCFB(arrayBuffer: ArrayBuffer): Map<string, 
   try { cfb = (CFB as any).read(new Uint8Array(arrayBuffer), { type: 'array' }); }
   catch(e: any) { logMsg(`CFB Parse-Fehler beim Model-Extract: ${  e.message}`, 'warn'); return models; }
 
-  const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.t === 2 && e.size > 0);
+  const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.size > 0 && e.name && e.name !== 'Root Entry');
 
   for (const entry of entries) {
     const name: string = entry.name || '';
@@ -1806,7 +1812,7 @@ export function extractAnimationSequencesFromCFB(arrayBuffer: ArrayBuffer): Map<
   try { cfb = (CFB as any).read(new Uint8Array(arrayBuffer), { type: 'array' }); }
   catch(e: any) { logMsg(`CFB Parse-Fehler beim Animation-Extract: ${  e.message}`, 'warn'); return animations; }
 
-  const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.t === 2 && e.size > 0);
+  const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.size > 0 && e.name && e.name !== 'Root Entry');
 
   for (const entry of entries) {
     const name: string = entry.name || '';
