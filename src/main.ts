@@ -4678,12 +4678,14 @@ async function loadFPTFromPath(filePath: string): Promise<void> {
   const api = (window as any).electronAPI;
   if (!api?.readFPTFile) throw new Error('not running in Electron');
   const buf: ArrayBuffer = await api.readFPTFile(filePath);
-  const bytes = new Uint8Array(buf);
-  // Hand off to existing parser. Phase B0 stops here — actually showing the
-  // table on the playfield with FPT-derived geometry is Phase B1+.
-  const { parseFPTFile } = await import('./fpt-parser');
-  await parseFPTFile(bytes, { onPhaseComplete: () => {} });
-  showNotification(`Loaded ${filePath.split(/[\\/]/).pop()} — rendering polish in upcoming phases`);
+  const filename = filePath.split(/[\\/]/).pop() ?? 'table.fpt';
+  // parseFPTFile expects a File. Wrap the ArrayBuffer in one — the parser
+  // only uses .name, .size, and .arrayBuffer(), all of which a File provides.
+  const file = new File([buf], filename, { type: 'application/octet-stream' });
+  // Use the static import (parseFPTFile is already imported at the top of
+  // this file; redundant dynamic import was removed).
+  await parseFPTFile(file);
+  showNotification(`Loaded ${filename} — rendering polish in upcoming phases`);
 }
 
 // ─── Library Directory Browser ──────────────────────────────────────────────────

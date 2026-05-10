@@ -369,6 +369,7 @@ const allowedFPTPaths = new Set();
 ipcMain.handle('fpt:scanDirectory', async (_event, dirPath) => {
   if (typeof dirPath !== 'string' || dirPath.length === 0) return [];
   try {
+    allowedFPTPaths.clear(); // reset before populating for the new scan
     const dirents = await fs.promises.readdir(dirPath, { withFileTypes: true });
     const fptFiles = dirents.filter(d => d.isFile() && d.name.toLowerCase().endsWith('.fpt'));
     const out = [];
