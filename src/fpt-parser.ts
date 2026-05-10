@@ -117,17 +117,65 @@ function detectAudioMime(buf: Uint8Array, off = 0): string | null {
 }
 
 /**
- * Trim a JPEG byte stream to its EOI marker (FF D9). FPT image streams
- * append proprietary metadata after the JPEG payload, and Chromium's
- * Image decoder rejects the whole stream rather than stopping at EOI.
+ * Walk JPEG markers forward from SOI to find the EOI offset. Returns -1
+ * if the stream is malformed.
+ *
+ * Scanning backward from the end of the stream is unreliable because FPT
+ * appends ~5KB of trailing metadata after the JPEG payload, and that
+ * metadata commonly contains spurious FF D9 byte pairs that look like
+ * EOI markers. Walking markers from SOI is the robust way: each section
+ * declares its own length, and inside compressed image data raw 0xFF is
+ * escaped as FF 00 so FF D9 is unambiguously the EOI marker.
  */
-function trimJpegToEoi(bytes: Uint8Array): Uint8Array {
-  for (let i = bytes.length - 2; i >= 1; i--) {
-    if (bytes[i] === 0xFF && bytes[i + 1] === 0xD9) {
-      return bytes.subarray(0, i + 2);
+function findJpegEoiOffset(bytes: Uint8Array): number {
+  if (bytes.length < 4 || bytes[0] !== 0xFF || bytes[1] !== 0xD8) return -1;
+  let pos = 2;
+  while (pos < bytes.length - 1) {
+    // Skip any FF fill bytes between markers
+    while (pos < bytes.length && bytes[pos] === 0xFF) pos++;
+    if (pos >= bytes.length) return -1;
+    const marker = bytes[pos];
+    pos++;
+
+    if (marker === 0xD9) return pos;                       // EOI
+    if (marker === 0xD8) continue;                         // stray SOI — skip
+    if (marker >= 0xD0 && marker <= 0xD7) continue;        // RSTn — no payload
+    if (marker === 0x00) continue;                         // FF00 escape — should not occur outside entropy data, skip safely
+
+    if (marker === 0xDA) {
+      // SOS — read its length, skip the SOS payload, then scan the
+      // entropy-coded image data for the next non-RST marker, which
+      // must be EOI in a well-formed JPEG.
+      if (pos + 2 > bytes.length) return -1;
+      const len = (bytes[pos] << 8) | bytes[pos + 1];
+      if (len < 2) return -1;
+      pos += len;
+      while (pos < bytes.length - 1) {
+        if (bytes[pos] !== 0xFF) { pos++; continue; }
+        // Collapse any FF fill
+        while (pos < bytes.length && bytes[pos] === 0xFF) pos++;
+        if (pos >= bytes.length) return -1;
+        const m = bytes[pos]; pos++;
+        if (m === 0x00) continue;                          // escaped FF
+        if (m === 0xD9) return pos;                        // EOI
+        if (m >= 0xD0 && m <= 0xD7) continue;              // RSTn during entropy
+        return -1;                                         // unexpected
+      }
+      return -1;
     }
+
+    // Standard length-prefixed marker section
+    if (pos + 2 > bytes.length) return -1;
+    const len = (bytes[pos] << 8) | bytes[pos + 1];
+    if (len < 2) return -1;
+    pos += len;
   }
-  return bytes;
+  return -1;
+}
+
+function trimJpegToEoi(bytes: Uint8Array): Uint8Array {
+  const eoi = findJpegEoiOffset(bytes);
+  return eoi > 0 ? bytes.subarray(0, eoi) : bytes;
 }
 
 async function bytesToTexture(slice: Uint8Array, mime: string): Promise<THREE.Texture> {
