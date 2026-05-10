@@ -116,16 +116,49 @@ function detectAudioMime(buf: Uint8Array, off = 0): string | null {
   return null;
 }
 
+/**
+ * Trim a JPEG byte stream to its EOI marker (FF D9). FPT image streams
+ * append proprietary metadata after the JPEG payload, and Chromium's
+ * Image decoder rejects the whole stream rather than stopping at EOI.
+ */
+function trimJpegToEoi(bytes: Uint8Array): Uint8Array {
+  for (let i = bytes.length - 2; i >= 1; i--) {
+    if (bytes[i] === 0xFF && bytes[i + 1] === 0xD9) {
+      return bytes.subarray(0, i + 2);
+    }
+  }
+  return bytes;
+}
+
 async function bytesToTexture(slice: Uint8Array, mime: string): Promise<THREE.Texture> {
-  const blob = new Blob([slice.buffer.slice(slice.byteOffset, slice.byteOffset + slice.byteLength) as ArrayBuffer], { type: mime });
-  const url  = URL.createObjectURL(blob);
+  const payload = mime === 'image/jpeg' ? trimJpegToEoi(slice) : slice;
+  const blob = new Blob([payload], { type: mime });
+
+  // Primary path: createImageBitmap is more lenient than <img>-based decoders
+  // and gives a sensible error rather than a generic Event on failure.
   try {
-    const tex = await new THREE.TextureLoader().loadAsync(url);
+    const bitmap = await createImageBitmap(blob);
+    const tex = new THREE.Texture(bitmap as any);
     tex.flipY      = false;
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.needsUpdate = true;
     return tex;
-  } finally { URL.revokeObjectURL(url); }
+  } catch (bitmapErr) {
+    // Fall back to TextureLoader+ObjectURL for environments without
+    // createImageBitmap support. If that also fails, propagate that error.
+    const url = URL.createObjectURL(blob);
+    try {
+      const tex = await new THREE.TextureLoader().loadAsync(url);
+      tex.flipY      = false;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+      return tex;
+    } catch {
+      // Surface the createImageBitmap error since it has the most info
+      throw bitmapErr;
+    } finally { URL.revokeObjectURL(url); }
+  }
 }
 
 /**
@@ -139,7 +172,13 @@ function scanForImageMagic(bytes: Uint8Array, maxScan = 4096): { mime: string; o
   for (let off = 0; off < max; off++) {
     const a = bytes[off], b = bytes[off + 1], c = bytes[off + 2], d = bytes[off + 3];
     if (a === 0x89 && b === 0x50 && c === 0x4E && d === 0x47) return { mime: 'image/png', off };
-    if (a === 0xFF && b === 0xD8 && c === 0xFF)               return { mime: 'image/jpeg', off };
+    // JPEG SOI is FF D8 FF, followed by APP marker FFEn (E0=JFIF, E1=EXIF) or
+    // FFDB (DQT). Tighter than just FFD8FF — rejects noise like FFD8FFF8 we
+    // saw in PinModel-stream data.
+    if (a === 0xFF && b === 0xD8 && c === 0xFF &&
+        (d === 0xE0 || d === 0xE1 || d === 0xDB || d === 0xEE)) {
+      return { mime: 'image/jpeg', off };
+    }
     if (a === 0x47 && b === 0x49 && c === 0x46 && d === 0x38) return { mime: 'image/gif', off };
     // BMP "BM" — only at off=0 to avoid false positives (2-byte sig is too weak)
     if (off === 0 && a === 0x42 && b === 0x4D)                return { mime: 'image/bmp', off };
