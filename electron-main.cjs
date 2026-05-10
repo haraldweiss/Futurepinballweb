@@ -386,6 +386,16 @@ ipcMain.handle('fpt:scanDirectory', async (_event, dirPath) => {
   }
 });
 
+// Show a native OS folder picker for the user to choose their FPT directory.
+ipcMain.handle('fpt:pickDirectory', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select your Future Pinball tables directory',
+    properties: ['openDirectory'],
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
+});
+
 // Cross-window state relay. The playfield window emits per-frame state
 // (score, DMD frame, animation flags). BroadcastChannel does not bridge
 // independent BrowserWindow instances reliably, so we relay via IPC:

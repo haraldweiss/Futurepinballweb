@@ -53,6 +53,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Phase B0: FPT auto-scan
   scanFPTDirectory: (dirPath) => ipcRenderer.invoke('fpt:scanDirectory', dirPath),
+  pickFPTDirectory: () => ipcRenderer.invoke('fpt:pickDirectory'),
 
   // Cross-window state broadcast (replaces BroadcastChannel for Electron — child
   // windows opened via main-process IPC don't share a browsing-context group with
