@@ -156,21 +156,10 @@ function trimJpegToEoi(bytes: Uint8Array): Uint8Array {
   return eoi > 0 ? bytes.subarray(0, eoi) : bytes;
 }
 
-// DIAG v7: trace trim behavior for first 3 JPEG decodes
-const _trimDiag = { logged: 0 };
-
-async function bytesToTexture(slice: Uint8Array, mime: string, diagName?: string): Promise<THREE.Texture> {
-  let payload = slice;
-  if (mime === 'image/jpeg') {
-    const eoi = findJpegEoiOffset(slice);
-    payload = eoi > 0 ? slice.subarray(0, eoi) : slice;
-    if (_trimDiag.logged < 3 && diagName) {
-      const last4 = Array.from(payload.slice(payload.length - 4))
-        .map(b => b.toString(16).padStart(2, '0')).join(' ');
-      logMsg(`🔬 trim "${diagName}" eoi=${eoi} orig=${slice.length} trim=${payload.length} last4=${last4}`, 'info');
-      _trimDiag.logged++;
-    }
-  }
+async function bytesToTexture(slice: Uint8Array, mime: string): Promise<THREE.Texture> {
+  // For JPEGs, trim trailing FPT-specific bytes after the EOI marker so the
+  // browser decoder doesn't see proprietary garbage past the JPEG payload.
+  const payload = mime === 'image/jpeg' ? trimJpegToEoi(slice) : slice;
   const blob = new Blob([payload], { type: mime });
 
   // Primary path: createImageBitmap is more lenient than <img>-based decoders
@@ -256,41 +245,23 @@ function scanForImageMagic(bytes: Uint8Array, maxScan = 4096): { mime: string; o
   return null;
 }
 
-// DIAG v6 counters: tracks why extractImageFromBytes is failing
-const _extractDiag = { calls: 0, scanFound: 0, decodeOk: 0, decodeFail: 0, lastError: '', errorsLogged: 0 };
-
-async function extractImageFromBytes(bytes: Uint8Array, name?: string): Promise<THREE.Texture | null> {
-  _extractDiag.calls++;
+async function extractImageFromBytes(bytes: Uint8Array): Promise<THREE.Texture | null> {
   // Primary: scan for magic bytes (handles FPT's variable-length headers).
   const found = scanForImageMagic(bytes);
   if (found) {
-    _extractDiag.scanFound++;
-    try {
-      const t = await bytesToTexture(bytes.slice(found.off), found.mime, name);
-      _extractDiag.decodeOk++;
-      return t;
-    } catch (e: any) {
-      _extractDiag.decodeFail++;
-      _extractDiag.lastError = e?.message || String(e);
-      if (_extractDiag.errorsLogged < 3) {
-        logMsg(`🔬 decode FAIL "${name || '?'}" mime=${found.mime} off=${found.off} size=${bytes.length}: ${_extractDiag.lastError}`, 'warn');
-        _extractDiag.errorsLogged++;
-      }
-    }
+    try { return await bytesToTexture(bytes.slice(found.off), found.mime); } catch { /* try fallback */ }
   }
-  // Fallback: try LZO decompression then scan again.
+  // Fallback: try fixed-offset LZO decompression then scan again. Only handles
+  // the simplest legacy FP layouts; the more complex zLZO+BMP variants need
+  // a dedicated decoder path that's still in progress (see Phase B0.5).
   const decompressed = tryLZOExtract(bytes);
   if (decompressed) {
     const found2 = scanForImageMagic(decompressed);
     if (found2) {
-      try { return await bytesToTexture(decompressed.slice(found2.off), found2.mime); } catch { /* try next */ }
+      try { return await bytesToTexture(decompressed.slice(found2.off), found2.mime); } catch { /* give up */ }
     }
   }
   return null;
-}
-
-export function reportExtractDiag(): void {
-  logMsg(`🔬 EXTRACT-DIAG: calls=${_extractDiag.calls} scanFound=${_extractDiag.scanFound} decodeOk=${_extractDiag.decodeOk} decodeFail=${_extractDiag.decodeFail}`, 'info');
 }
 
 // ─── Phase 3: Audio Streaming for Large Files ──────────────────────────────────
@@ -432,9 +403,6 @@ export async function parseCFBResources(
     logMsg(`  • ${type}: ${count} stream${count>1?'s':''}`);
   });
 
-  // DIAGNOSTIC v3: Confirm new code path is running
-  logMsg('🔬 DIAG v3: scanForImageMagic active', 'info');
-
   // ─── Phase 1A: Separate streams by type for parallel processing ───
   const textureEntries: Array<{ name: string; bytes: Uint8Array }> = [];
   const soundEntries: Array<{ name: string; bytes: Uint8Array }> = [];
@@ -462,56 +430,16 @@ export async function parseCFBResources(
     }
   }
 
-  // DIAGNOSTIC v5: Image*-Streams are tiny (193B metadata records). PinModel*
-  // is 3D models, not images. We need to find where image bytes actually live.
-  // Scan EVERY stream for PNG/JPEG/BMP/GIF magic anywhere in first 4KB and
-  // report any hits — this tells us definitively which streams contain real
-  // image data (regardless of name).
-  const dumpHex = (b: Uint8Array, n = 32) => Array.from(b.slice(0, n))
-    .map(x => x.toString(16).padStart(2, '0')).join(' ');
-
-  let pngHits = 0, jpegHits = 0, bmpHits = 0, gifHits = 0, hitsLogged = 0;
-  let totalSize = 0;
-  for (const entry of entries) {
-    const raw = entry.content;
-    const b: Uint8Array = raw instanceof Uint8Array ? raw : new Uint8Array(raw as ArrayLike<number>);
-    totalSize += b.length;
-    const max = Math.min(b.length - 4, 4096);
-    for (let off = 0; off < max; off++) {
-      const a0 = b[off], a1 = b[off+1], a2 = b[off+2], a3 = b[off+3];
-      let mime: string | null = null;
-      if (a0===0x89 && a1===0x50 && a2===0x4E && a3===0x47) { pngHits++; mime = 'PNG'; }
-      // Match the same tightened JPEG check as scanForImageMagic
-      else if (a0===0xFF && a1===0xD8 && a2===0xFF &&
-               (a3===0xE0 || a3===0xE1 || a3===0xDB || a3===0xEE)) { jpegHits++; mime = 'JPEG'; }
-      else if (a0===0x42 && a1===0x4D && isBmpAt(b, off))    { bmpHits++; mime = 'BMP'; }
-      else if (a0===0x47 && a1===0x49 && a2===0x46 && a3===0x38) { gifHits++; mime = 'GIF'; }
-      if (mime) {
-        if (hitsLogged < 8) {
-          logMsg(`🔬 ${mime} HIT in "${entry.name}" @off=${off} (size=${b.length}B): ${dumpHex(b.slice(off, off+24))}`, 'ok');
-          hitsLogged++;
-        }
-        break; // first hit per stream is enough
-      }
-    }
-  }
-  logMsg(`🔬 SCAN-RESULT: PNG=${pngHits}  JPEG=${jpegHits}  BMP=${bmpHits}  GIF=${gifHits} (totalStreamBytes=${(totalSize/1024/1024).toFixed(1)}MB / fileSize=${(arrayBuffer.byteLength/1024/1024).toFixed(1)}MB)`, hitsLogged > 0 ? 'ok' : 'warn');
-
   // ─── Phase 1B: Parallel decoding by type using Promise.all() ───
   const startTime = performance.now();
 
   // Phase 2: Notify phase start
   callbacks?.onPhaseStart?.('images');
 
-  // Reset extract diagnostics for this run
-  _extractDiag.calls = 0; _extractDiag.scanFound = 0; _extractDiag.decodeOk = 0;
-  _extractDiag.decodeFail = 0; _extractDiag.lastError = ''; _extractDiag.errorsLogged = 0;
-  _trimDiag.logged = 0;
-
   // Decode all textures in parallel
   const textureDecodes = Promise.all(
     textureEntries.map(async (entry, idx) => {
-      const tex = await extractImageFromBytes(entry.bytes, entry.name);
+      const tex = await extractImageFromBytes(entry.bytes);
       // Phase 2: Notify resource loaded
       callbacks?.onResourceLoaded?.('image', entry.name, {
         current: idx + 1,
@@ -672,7 +600,6 @@ export async function parseCFBResources(
 
   const elapsedMs = performance.now() - startTime;
   logMsg(`⏱️ Phase 1 Parallel Loading: ${elapsedMs.toFixed(0)}ms (Textures: ${textureResults.length}, Sounds: ${soundResults.length})`, 'ok');
-  reportExtractDiag();
 
   return {
     textureCount: Object.keys(fptResources.textures).length,
