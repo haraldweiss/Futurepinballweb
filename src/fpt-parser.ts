@@ -338,28 +338,38 @@ export async function parseCFBResources(
     }
   }
 
-  // DIAGNOSTIC v4: Image* streams are tiny metadata records (193B etc).
-  // The real image data must be in "Other" streams. Dump the 5 LARGEST
-  // "Other" streams to find where image bytes actually live.
+  // DIAGNOSTIC v5: Image*-Streams are tiny (193B metadata records). PinModel*
+  // is 3D models, not images. We need to find where image bytes actually live.
+  // Scan EVERY stream for PNG/JPEG/BMP/GIF magic anywhere in first 4KB and
+  // report any hits — this tells us definitively which streams contain real
+  // image data (regardless of name).
   const dumpHex = (b: Uint8Array, n = 32) => Array.from(b.slice(0, n))
     .map(x => x.toString(16).padStart(2, '0')).join(' ');
-  const dumpAscii = (b: Uint8Array, n = 32) => Array.from(b.slice(0, n))
-    .map(x => (x >= 32 && x < 127) ? String.fromCharCode(x) : '.').join('');
 
-  // First 3 Image* metadata records (for record format reference)
-  let imgDumped = 0;
-  for (const { name, bytes } of textureEntries) {
-    if (imgDumped >= 3) break;
-    if (!name.includes('Image')) continue;
-    logMsg(`🔬 IMG-meta "${name}" (${bytes.length}B): ${dumpHex(bytes)} | ${dumpAscii(bytes)}`, 'info');
-    imgDumped++;
+  let pngHits = 0, jpegHits = 0, bmpHits = 0, gifHits = 0, hitsLogged = 0;
+  let totalSize = 0;
+  for (const entry of entries) {
+    const raw = entry.content;
+    const b: Uint8Array = raw instanceof Uint8Array ? raw : new Uint8Array(raw as ArrayLike<number>);
+    totalSize += b.length;
+    const max = Math.min(b.length - 4, 4096);
+    for (let off = 0; off < max; off++) {
+      const a0 = b[off], a1 = b[off+1], a2 = b[off+2], a3 = b[off+3];
+      let mime: string | null = null;
+      if (a0===0x89 && a1===0x50 && a2===0x4E && a3===0x47) { pngHits++; mime = 'PNG'; }
+      else if (a0===0xFF && a1===0xD8 && a2===0xFF)         { jpegHits++; mime = 'JPEG'; }
+      else if (off === 0 && a0===0x42 && a1===0x4D)         { bmpHits++; mime = 'BMP'; }
+      else if (a0===0x47 && a1===0x49 && a2===0x46 && a3===0x38) { gifHits++; mime = 'GIF'; }
+      if (mime) {
+        if (hitsLogged < 8) {
+          logMsg(`🔬 ${mime} HIT in "${entry.name}" @off=${off} (size=${b.length}B): ${dumpHex(b.slice(off, off+24))}`, 'ok');
+          hitsLogged++;
+        }
+        break; // first hit per stream is enough
+      }
+    }
   }
-
-  // Top-5 largest "Other" streams (likely contains real image data)
-  const otherSorted = [...otherEntries].sort((a, b) => b.bytes.length - a.bytes.length).slice(0, 5);
-  for (const { name, bytes } of otherSorted) {
-    logMsg(`🔬 OTHER-big "${name}" (${(bytes.length/1024).toFixed(1)}KB): ${dumpHex(bytes)} | ${dumpAscii(bytes)}`, 'info');
-  }
+  logMsg(`🔬 SCAN-RESULT: PNG=${pngHits}  JPEG=${jpegHits}  BMP=${bmpHits}  GIF=${gifHits} (totalStreamBytes=${(totalSize/1024/1024).toFixed(1)}MB / fileSize=${(arrayBuffer.byteLength/1024/1024).toFixed(1)}MB)`, hitsLogged > 0 ? 'ok' : 'warn');
 
   // ─── Phase 1B: Parallel decoding by type using Promise.all() ───
   const startTime = performance.now();
