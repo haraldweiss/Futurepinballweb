@@ -267,6 +267,22 @@
     #menu-close-btn { position: absolute; top: 16px; right: 20px; background: none; border: none; color: #00aaff; font-size: 28px; cursor: pointer; padding: 8px; transition: all 0.2s; }
     #menu-close-btn:hover { color: #00ff88; transform: scale(1.2); }
 
+    /* Phase B0: FPT Tables section */
+    #qm-fpt-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(0,170,255,0.3); }
+    #qm-fpt-section h3 { color: #00aaff; font-size: 14px; letter-spacing: 2px; text-align: center; margin-bottom: 12px; }
+    #qm-fpt-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+    #qm-fpt-search { flex: 1; padding: 8px 12px; background: rgba(0,30,60,0.6); border: 1px solid #335; border-radius: 6px; color: #ccc; font-family: 'Courier New', monospace; font-size: 13px; }
+    #qm-fpt-search:focus { outline: none; border-color: #00aaff; }
+    #qm-fpt-sort { padding: 8px 10px; background: rgba(0,30,60,0.6); border: 1px solid #335; border-radius: 6px; color: #ccc; font-family: 'Courier New', monospace; font-size: 12px; cursor: pointer; }
+    #qm-fpt-set-path { padding: 8px 12px; background: rgba(0,100,50,0.3); border: 1px solid #00cc66; color: #00cc66; border-radius: 6px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 1px; }
+    #qm-fpt-set-path:hover { background: rgba(0,150,80,0.4); }
+    #qm-fpt-list { max-height: 360px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+    #qm-fpt-list:empty::after { content: 'No tables found. Click "Set path" to choose a directory.'; display: block; padding: 30px; text-align: center; color: #556; font-style: italic; }
+    .qm-fpt-card { background: rgba(0,30,60,0.4); border: 1px solid #224; border-radius: 8px; padding: 10px 12px; cursor: pointer; transition: all 0.15s; }
+    .qm-fpt-card:hover { border-color: #00aaff; background: rgba(0,60,100,0.5); }
+    .qm-fpt-card .qm-fpt-name { color: #ccc; font-size: 13px; margin-bottom: 4px; word-break: break-word; }
+    .qm-fpt-card .qm-fpt-meta { color: #557; font-size: 10px; }
+
     /* ─── RESPONSIVE MEDIA QUERIES ─── */
     @media (max-width: 768px) {
       #loader-box { width: 95vw; padding: clamp(16px, 2vh, 24px); }
@@ -375,6 +391,20 @@
           <div class="emoji">🌴</div>
           <h3>Jungle Expedition</h3>
         </div>
+      </div>
+
+      <div id="qm-fpt-section">
+        <h3>📁 FPT Tables</h3>
+        <div id="qm-fpt-controls">
+          <input id="qm-fpt-search" type="text" placeholder="Search by name…" />
+          <select id="qm-fpt-sort">
+            <option value="name">Name ↑</option>
+            <option value="size">Size ↓</option>
+            <option value="mtime">Last modified ↓</option>
+          </select>
+          <button id="qm-fpt-set-path" type="button">⚙ Set path</button>
+        </div>
+        <div id="qm-fpt-list"></div>
       </div>
 
       <div class="quick-actions">
