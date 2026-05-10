@@ -33,3 +33,44 @@ export function sortEntries(entries: FPTFileEntry[], key: SortKey): FPTFileEntry
   }
   return copy;
 }
+
+/**
+ * Render entries as cards inside a container element.
+ *
+ * Uses textContent (never innerHTML) for all user-controlled strings — FPT
+ * filenames come from the user's filesystem and could in principle contain
+ * HTML metacharacters; we never inject them as markup.
+ */
+export function renderTableList(
+  container: HTMLElement,
+  entries: FPTFileEntry[],
+  onClick: (entry: FPTFileEntry) => void
+): void {
+  // Clear previous content (preserves the empty-state ::after pseudo if list
+  // is empty — see CSS in index.html).
+  container.replaceChildren();
+
+  for (const entry of entries) {
+    const card = document.createElement('div');
+    card.className = 'qm-fpt-card';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'qm-fpt-name';
+    nameEl.textContent = entry.name;
+    card.appendChild(nameEl);
+
+    const metaEl = document.createElement('div');
+    metaEl.className = 'qm-fpt-meta';
+    metaEl.textContent = formatMeta(entry);
+    card.appendChild(metaEl);
+
+    card.addEventListener('click', () => onClick(entry));
+    container.appendChild(card);
+  }
+}
+
+function formatMeta(entry: FPTFileEntry): string {
+  const sizeMb = (entry.size / (1024 * 1024)).toFixed(1);
+  const date = new Date(entry.mtime).toISOString().slice(0, 10);
+  return `${sizeMb} MB · ${date}`;
+}
