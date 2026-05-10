@@ -128,18 +128,42 @@ async function bytesToTexture(slice: Uint8Array, mime: string): Promise<THREE.Te
   } finally { URL.revokeObjectURL(url); }
 }
 
-async function extractImageFromBytes(bytes: Uint8Array): Promise<THREE.Texture | null> {
-  for (const off of [8,0,4,12,16,32,64]) {
-    const mime = detectImageMime(bytes, off);
-    if (!mime) continue;
-    try { return await bytesToTexture(bytes.slice(off), mime); } catch { /* try next */ }
+/**
+ * Scan a byte buffer for image magic-bytes. FPT image streams have a
+ * variable-length header (image name, type, dims) before the actual file
+ * payload, so a fixed offset list misses most of them. Scanning the first
+ * 4KB catches names up to ~3.5KB which is well beyond anything FP writes.
+ */
+function scanForImageMagic(bytes: Uint8Array, maxScan = 4096): { mime: string; off: number } | null {
+  const max = Math.min(bytes.length - 4, maxScan);
+  for (let off = 0; off < max; off++) {
+    const a = bytes[off], b = bytes[off + 1], c = bytes[off + 2], d = bytes[off + 3];
+    if (a === 0x89 && b === 0x50 && c === 0x4E && d === 0x47) return { mime: 'image/png', off };
+    if (a === 0xFF && b === 0xD8 && c === 0xFF)               return { mime: 'image/jpeg', off };
+    if (a === 0x47 && b === 0x49 && c === 0x46 && d === 0x38) return { mime: 'image/gif', off };
+    // BMP "BM" — only at off=0 to avoid false positives (2-byte sig is too weak)
+    if (off === 0 && a === 0x42 && b === 0x4D)                return { mime: 'image/bmp', off };
+    // WebP RIFF...WEBP
+    if (a === 0x52 && b === 0x49 && c === 0x46 && d === 0x46 &&
+        off + 9 < bytes.length && bytes[off + 8] === 0x57 && bytes[off + 9] === 0x45) {
+      return { mime: 'image/webp', off };
+    }
   }
+  return null;
+}
+
+async function extractImageFromBytes(bytes: Uint8Array): Promise<THREE.Texture | null> {
+  // Primary: scan for magic bytes (handles FPT's variable-length headers).
+  const found = scanForImageMagic(bytes);
+  if (found) {
+    try { return await bytesToTexture(bytes.slice(found.off), found.mime); } catch { /* fall through */ }
+  }
+  // Fallback: try LZO decompression then scan again.
   const decompressed = tryLZOExtract(bytes);
   if (decompressed) {
-    for (const off of [0,8,4]) {
-      const mime = detectImageMime(decompressed, off);
-      if (!mime) continue;
-      try { return await bytesToTexture(decompressed.slice(off), mime); } catch { /* try next */ }
+    const found2 = scanForImageMagic(decompressed);
+    if (found2) {
+      try { return await bytesToTexture(decompressed.slice(found2.off), found2.mime); } catch { /* try next */ }
     }
   }
   return null;
