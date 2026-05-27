@@ -369,6 +369,7 @@ See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for the full setup.
 ```
 src/
 ├── main.ts                      # Game entry point
+├── window-api.ts                # Typed window global API layer
 ├── table.ts                     # Table builder
 ├── game.ts                      # Game state machine
 ├── physics/                     # Physics systems
@@ -376,6 +377,8 @@ src/
 ├── integrated-editor.ts         # Table editor
 ├── backglass.ts                 # Backglass renderer
 ├── dmd.ts                       # LED display
+├── types/                       # Type declarations
+│   └── three.d.ts               # Three.js addon types
 └── [other modules]
 
 public/
@@ -391,7 +394,8 @@ public/
 ### Build Status
 - **Modules**: 60 (optimized)
 - **Build Time**: ~1.1 seconds
-- **TypeScript Errors**: 0 ✓ (strict clean)
+- **TypeScript**: full strict mode ✓ (strict: true)
+- **TypeScript Errors**: 0 ✓
 - **Code Size**: ~27.8K lines
 - **VBScript Functions**: 179+
 - **Tests**: 582 passing across 20 vitest files
@@ -501,6 +505,7 @@ npm run security:check
 - **Total Source Code**: ~27.8K lines (TypeScript + VBScript)
 - **TypeScript Modules**: 60 (optimized)
 - **TypeScript Files**: 50+
+- **TypeScript**: full strict mode (`strict: true`) — 0 errors
 - **VBScript Functions**: 179+ (142+ game API functions)
 - **Graphics Modules**: 15+ (volumetric lighting, cascaded shadows, DOF, particle system, etc.)
 - **Supported Tables**: 6 demo tables (themed, progressive difficulty)
@@ -522,15 +527,19 @@ npm install
 # Start development server
 npm run dev
 
+# Type-check
+npx tsc --noEmit
+
 # Build and test
 npm run build
 npm run preview
 ```
 
 ### Code Guidelines
-- Use TypeScript for type safety
+- Use TypeScript for type safety (strict mode enforced)
 - Follow existing code style
-- Add comments for complex logic
+- No silent `catch {}` blocks — always log or handle the error
+- Prefer module exports over `(window as any).X` globals
 - Test changes before commit
 - Update documentation
 
@@ -562,14 +571,14 @@ MIT License - See LICENSE file for details
 
 ---
 
-## 🎉 What's New in v0.18.0 (Phase 18)
+## 🎉 What's New in v0.20.21 (Code Quality & Strict Mode)
 
-### Core Features ⭐
-- 🎬 **Comprehensive Video System** — 28+ game events with video triggers
-- 🖼️ **Integrated Table Editor** — Playfield, Backglass, DMD, Video editors
-- 💾 **Multi-Screen Architecture** — True arcade cabinet support
-- 📺 **DMD Drag-to-Resize** — Interactive resizing with corner handles
-- 🎨 **Advanced Graphics Pipeline** — Volumetric lighting, cascaded shadows, DOF, film effects
+### Code Quality & Type Safety ⭐
+- 🔒 **Full TypeScript Strict Mode** — `strict: true` enabled, 101+ errors fixed
+- 🧹 **Window API Layer** — 70+ globals consolidated into typed `src/window-api.ts`
+- 📋 **Error Handling** — 66 empty `catch {}` blocks now log diagnostics
+- 🎯 **0 TypeScript Errors** — Across the entire codebase
+- 🚀 **Debug Hygiene** — 27 console.log calls wrapped in DEV-only guards
 
 ### Multi-Screen & Cabinet Features 🆕
 - 🎮 **Flexible Screen Assignment** — Assign playfield, backglass, or DMD to any screen
@@ -626,7 +635,7 @@ MIT License - See LICENSE file for details
 
 **Made with ❤️ by Future Pinball Contributors**
 
-Last Updated: May 27, 2026 | Version 0.20.21 | Phase 18 Complete ✅
+Last Updated: May 27, 2026 | Version 0.20.21 | Strict Mode ✅
 
 ---
 
