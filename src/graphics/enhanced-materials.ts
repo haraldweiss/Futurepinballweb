@@ -49,7 +49,7 @@ export class EnhancedMaterialFactory {
       side: THREE.FrontSide,
     });
 
-    material.onBeforeCompile = (shader) => {
+    material.onBeforeCompile = (shader: any) => {
       // Add custom lighting enhancement
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <lights_fragment_begin>',

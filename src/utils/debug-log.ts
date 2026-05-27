@@ -19,7 +19,8 @@ try {
   if (!enabled && globalThis.localStorage?.getItem('fpw.debug') === '1') enabled = true;
   // Vite inlines import.meta.env at build time. Guarded for non-Vite contexts.
   if (!enabled && (import.meta as ImportMeta & { env?: { VITE_FPW_DEBUG?: string } }).env?.VITE_FPW_DEBUG === '1') enabled = true;
-} catch {
+} catch (e) {
+  console.debug('[debug-log] Non-browser context, debug disabled:', (e || 'unknown'));
   // Non-browser context (worker without location, SSR, tests) — leave disabled.
 }
 
@@ -27,7 +28,7 @@ export const isDebugEnabled = (): boolean => enabled;
 
 export function setDebugEnabled(on: boolean): void {
   enabled = on;
-  try { globalThis.localStorage?.setItem('fpw.debug', on ? '1' : '0'); } catch { /* ignore */ }
+  try { globalThis.localStorage?.setItem('fpw.debug', on ? '1' : '0'); } catch { /* ignore */ void 0; }
 }
 
 export function dlog(...args: unknown[]): void {

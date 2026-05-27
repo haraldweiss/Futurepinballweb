@@ -1549,7 +1549,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
 
   if (tableGroup) {
     scene.remove(tableGroup);
-    tableGroup.traverse(obj => {
+    tableGroup.traverse((obj: THREE.Object3D) => {
       if ((obj as THREE.Mesh).geometry) (obj as THREE.Mesh).geometry.dispose();
       if ((obj as THREE.Mesh).material) {
         const m = (obj as THREE.Mesh).material;

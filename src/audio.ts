@@ -108,7 +108,7 @@ export function playSound(type: 'bumper' | 'flipper' | 'drain' | 'coin' | string
         osc.start(now); osc.stop(now + 0.7);
       }
     }
-  } catch { /* Audio nicht verfügbar */ }
+  } catch { /* Audio nicht verfügbar */ void 0; }
 }
 
 /**
@@ -168,7 +168,7 @@ export function playBumperSoundWithIntensity(intensity: number): void {
 
     osc.start(now);
     osc.stop(now + 0.15);
-  } catch { /* Audio nicht verfügbar */ }
+  } catch { /* Audio nicht verfügbar */ void 0; }
 }
 
 // ── Hintergrundmusik ──────────────────────────────────────────────────────────
@@ -223,10 +223,10 @@ export function startBGMusic(): void {
 export function stopBGMusic(): void {
   bgMusicActive = false;
   // Phase 3: Stop BufferSource if active
-  if (bgMusicSource) { try { bgMusicSource.stop(); } catch { /* ignore */ } bgMusicSource = null; }
+  if (bgMusicSource) { try { bgMusicSource.stop(); } catch { /* ignore */ void 0; } bgMusicSource = null; }
   // Phase 3: Stop streaming audio element if active
   if (bgMusicElement) {
-    try { bgMusicElement.pause(); bgMusicElement.currentTime = 0; } catch { /* ignore */ }
+    try { bgMusicElement.pause(); bgMusicElement.currentTime = 0; } catch { /* ignore */ void 0; }
     bgMusicElement = null;
   }
   if (bgMusicGain) {

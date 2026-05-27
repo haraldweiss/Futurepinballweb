@@ -1,0 +1,281 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// © 2026 Harald Weiss
+/**
+ * window-api.ts — Typed Window API surface for HTML inline event handlers.
+ *
+ * All functions / values that used to live as bare `(window as any).X = …`
+ * assignments in `main.ts` are now registered through a single typed entry
+ * point.  This eliminates global‑namespace pollution and gives us full
+ * type‑safety for the dozens of properties that HTML `onclick`/etc. handlers
+ * rely on.
+ *
+ * Usage
+ * -----
+ *   import { setupWindowAPI, type WindowAPI } from './window-api';
+ *   setupWindowAPI(window, {
+ *     showNotification,
+ *     switchTab,
+ *     // … every other property listed below …
+ *   });
+ */
+
+// ─── Global interface augmentation ─────────────────────────────────────────────
+// Every property that may be accessed via `window.X` in HTML or in script.
+declare global {
+  interface Window {
+    // ── Startup flags ──────────────────────────────────────────────────────
+    FPW_MODULE_LOADED:      boolean;
+    FPW_ROLE:               string;
+    FPW_SCREEN_INDEX:       string;
+    FPW_DEVICE:             'mobile' | 'tablet' | 'desktop';
+    _startupScreenConfig:   number | 'auto' | undefined;
+
+    // ── View / Tab ─────────────────────────────────────────────────────────
+    switchTab:              (tab: string) => void;
+    toggleViewPanel:        () => void;
+    applyViewSettings:      () => void;
+    resetViewSettings:      () => void;
+
+    // ── File browsing ──────────────────────────────────────────────────────
+    browseTableDirectory:   () => Promise<void>;
+    browseLibraryDirectory: () => Promise<void>;
+    loadSelectedTable:      () => Promise<void>;
+    loadDemoTable:          (key: string) => void;
+    closeLoader:            () => void;
+
+    // ── Notifications / Selectors ───────────────────────────────────────────
+    showNotification:       (msg: string) => void;
+    showLibrarySelector:    (lib: any) => void;
+
+    // ── Multi‑screen ──────────────────────────────────────────────────────
+    selectMsLayout:         (n: number) => void;
+    openMultiscreenModal:   () => void;
+    closeMultiscreenModal:  () => void;
+    applyMsLayout:          () => Promise<void>;
+    autoDetectScreens:      () => Promise<void>;
+    applyStartupScreenConfig: () => Promise<void>;
+
+    // ── Screen roles ──────────────────────────────────────────────────────
+    resetScreenRoles:        (screenCount: number) => void;
+    swapScreenRoles:         (screen1: number, screen2: number) => void;
+
+    // ── Fullscreen / DMD ──────────────────────────────────────────────────
+    toggleFullscreen:       () => void;
+    toggleDMDMode:          () => void;
+    toggleHideDMD:          () => void;
+
+    // ── Cabinet / Rotation ────────────────────────────────────────────────
+    changeCabinetProfile:           (profileId: string) => void;
+    rotatePlayfield:                (degrees: 0 | 90 | 180 | 270, animated?: boolean) => Promise<void>;
+    getCabinetProfiles:             () => { id: string; name: string; description: string; rotation: number }[];
+    getCurrentCabinetProfile:       () => { id: string; name: string; rotation: number; screenRatio: 'vertical' | 'horizontal' | 'wide' };
+    applyRotationProfile:           (profileId: string) => Promise<void>;
+    rotatePlayfieldAnimated:        (degrees: 0 | 90 | 180 | 270) => Promise<void>;
+    getCurrentPlayfieldRotation:    () => number;
+
+    // ── Editor ────────────────────────────────────────────────────────────
+    openIntegratedEditor:   () => void;
+
+    // ── PWA ────────────────────────────────────────────────────────────────
+    installPWA:             () => void;
+
+    // ── Quality / Performance ─────────────────────────────────────────────
+    setQualityPreset:           (name: string) => void;
+    getQualityPreset:           () => any;
+    getAvailableQualityPresets: () => string[];
+    toggleAutoQuality:          () => void;
+    getPerformanceMetrics:      () => any;
+    togglePerformanceMonitor:   () => void;
+
+    // ── Graphics pipeline ──────────────────────────────────────────────────
+    getGraphicsPipeline:    () => any;
+    getGeometryPool:        () => any;
+    getMaterialFactory:     () => any;
+    getLightManager:        () => any;
+
+    // ── Resource manager ───────────────────────────────────────────────────
+    getResourceManager:     () => any;
+    getResourceStats:       () => any;
+    logResourceStats:       () => void;
+    resetResourceManager:   () => void;
+
+    // ── Library cache ──────────────────────────────────────────────────────
+    getLibraryCache:        () => any;
+    getLibraryCacheStats:   () => any;
+    logLibraryCacheStats:   () => void;
+    cleanupLibraryCache:    () => void;
+    resetLibraryCache:      () => void;
+
+    // ── Audio source pool ──────────────────────────────────────────────────
+    getAudioSourcePool:         () => any;
+    getAudioSourcePoolStats:    () => any;
+    logAudioSourcePoolStats:    () => void;
+
+    // ── Integration testing ────────────────────────────────────────────────
+    runIntegrationTests:    () => Promise<any>;
+    benchmark:              any;
+    memoryProfiler:         any;
+
+    // ── Performance reports ────────────────────────────────────────────────
+    generatePerformanceReport:      () => Promise<any>;
+    getPerformanceReportGenerator:  () => any;
+    comparePerformanceReports:      (report1: any, report2: any) => any;
+
+    // ── Favourites / Batch ──────────────────────────────────────────────────
+    addToFavorites:             (filename: string, type: 'table' | 'library') => void;
+    getAdvancedFavoritesCount:  () => number;
+    getRecentTables:            () => any[];
+    createBatchLoadJob:         (tableNames: string[]) => string;
+    getBatchJobStatus:          (jobId: string) => any;
+    setupTableDragDrop:         () => void;
+    sortTableFiles:             (field: string, files?: any[]) => any[];
+    runFullTestSuite:           () => Promise<any>;
+  }
+}
+
+// ─── Typed bag of implementations ──────────────────────────────────────────────
+// This lets `main.ts` construct closures (which capture local state like
+// `scene`, `profiler`, `camera`, …) and pass them in while retaining full
+// type‑safety.
+export interface WindowAPI {
+  showNotification:               Window['showNotification'];
+  showLibrarySelector:            Window['showLibrarySelector'];
+  switchTab:                      Window['switchTab'];
+  loadDemoTable:                  Window['loadDemoTable'];
+  closeLoader:                    Window['closeLoader'];
+  toggleViewPanel:                Window['toggleViewPanel'];
+  applyViewSettings:              Window['applyViewSettings'];
+  resetViewSettings:              Window['resetViewSettings'];
+  toggleFullscreen:               Window['toggleFullscreen'];
+  toggleDMDMode:                  Window['toggleDMDMode'];
+  toggleHideDMD:                  Window['toggleHideDMD'];
+  browseTableDirectory:           Window['browseTableDirectory'];
+  browseLibraryDirectory:         Window['browseLibraryDirectory'];
+  loadSelectedTable:              Window['loadSelectedTable'];
+  selectMsLayout:                 Window['selectMsLayout'];
+  openMultiscreenModal:           Window['openMultiscreenModal'];
+  closeMultiscreenModal:          Window['closeMultiscreenModal'];
+  applyMsLayout:                  Window['applyMsLayout'];
+  resetScreenRoles:               Window['resetScreenRoles'];
+  swapScreenRoles:                Window['swapScreenRoles'];
+  autoDetectScreens:              Window['autoDetectScreens'];
+  applyStartupScreenConfig:       Window['applyStartupScreenConfig'];
+  changeCabinetProfile:           Window['changeCabinetProfile'];
+  rotatePlayfield:                Window['rotatePlayfield'];
+  getCabinetProfiles:             Window['getCabinetProfiles'];
+  getCurrentCabinetProfile:       Window['getCurrentCabinetProfile'];
+  applyRotationProfile:           Window['applyRotationProfile'];
+  rotatePlayfieldAnimated:        Window['rotatePlayfieldAnimated'];
+  getCurrentPlayfieldRotation:    Window['getCurrentPlayfieldRotation'];
+  openIntegratedEditor:           Window['openIntegratedEditor'];
+  installPWA:                     Window['installPWA'];
+  setQualityPreset:               Window['setQualityPreset'];
+  getQualityPreset:               Window['getQualityPreset'];
+  getAvailableQualityPresets:     Window['getAvailableQualityPresets'];
+  toggleAutoQuality:              Window['toggleAutoQuality'];
+  getPerformanceMetrics:          Window['getPerformanceMetrics'];
+  togglePerformanceMonitor:       Window['togglePerformanceMonitor'];
+  getGraphicsPipeline:            Window['getGraphicsPipeline'];
+  getGeometryPool:                Window['getGeometryPool'];
+  getMaterialFactory:             Window['getMaterialFactory'];
+  getLightManager:                Window['getLightManager'];
+  getResourceManager:             Window['getResourceManager'];
+  getResourceStats:               Window['getResourceStats'];
+  logResourceStats:               Window['logResourceStats'];
+  resetResourceManager:           Window['resetResourceManager'];
+  getLibraryCache:                Window['getLibraryCache'];
+  getLibraryCacheStats:           Window['getLibraryCacheStats'];
+  logLibraryCacheStats:           Window['logLibraryCacheStats'];
+  cleanupLibraryCache:            Window['cleanupLibraryCache'];
+  resetLibraryCache:              Window['resetLibraryCache'];
+  getAudioSourcePool:             Window['getAudioSourcePool'];
+  getAudioSourcePoolStats:        Window['getAudioSourcePoolStats'];
+  logAudioSourcePoolStats:        Window['logAudioSourcePoolStats'];
+  runIntegrationTests:            Window['runIntegrationTests'];
+  benchmark:                      Window['benchmark'];
+  memoryProfiler:                 Window['memoryProfiler'];
+  generatePerformanceReport:      Window['generatePerformanceReport'];
+  getPerformanceReportGenerator:  Window['getPerformanceReportGenerator'];
+  comparePerformanceReports:      Window['comparePerformanceReports'];
+  addToFavorites:                 Window['addToFavorites'];
+  getAdvancedFavoritesCount:      Window['getAdvancedFavoritesCount'];
+  getRecentTables:                Window['getRecentTables'];
+  createBatchLoadJob:             Window['createBatchLoadJob'];
+  getBatchJobStatus:              Window['getBatchJobStatus'];
+  setupTableDragDrop:             Window['setupTableDragDrop'];
+  sortTableFiles:                 Window['sortTableFiles'];
+  runFullTestSuite:               Window['runFullTestSuite'];
+}
+
+// ─── Registration helper ───────────────────────────────────────────────────────
+// Call once after all implementations are ready, typically at the end of the
+// async IIFE in main.ts.
+export function setupWindowAPI(win: Window, api: WindowAPI): void {
+  win.showNotification          = api.showNotification;
+  win.showLibrarySelector       = api.showLibrarySelector;
+  win.switchTab                 = api.switchTab;
+  win.loadDemoTable             = api.loadDemoTable;
+  win.closeLoader               = api.closeLoader;
+  win.toggleViewPanel           = api.toggleViewPanel;
+  win.applyViewSettings         = api.applyViewSettings;
+  win.resetViewSettings         = api.resetViewSettings;
+  win.toggleFullscreen          = api.toggleFullscreen;
+  win.toggleDMDMode             = api.toggleDMDMode;
+  win.toggleHideDMD             = api.toggleHideDMD;
+  win.browseTableDirectory      = api.browseTableDirectory;
+  win.browseLibraryDirectory    = api.browseLibraryDirectory;
+  win.loadSelectedTable         = api.loadSelectedTable;
+  win.selectMsLayout            = api.selectMsLayout;
+  win.openMultiscreenModal      = api.openMultiscreenModal;
+  win.closeMultiscreenModal     = api.closeMultiscreenModal;
+  win.applyMsLayout             = api.applyMsLayout;
+  win.resetScreenRoles          = api.resetScreenRoles;
+  win.swapScreenRoles           = api.swapScreenRoles;
+  win.autoDetectScreens         = api.autoDetectScreens;
+  win.applyStartupScreenConfig  = api.applyStartupScreenConfig;
+  win.changeCabinetProfile      = api.changeCabinetProfile;
+  win.rotatePlayfield           = api.rotatePlayfield;
+  win.getCabinetProfiles        = api.getCabinetProfiles;
+  win.getCurrentCabinetProfile  = api.getCurrentCabinetProfile;
+  win.applyRotationProfile      = api.applyRotationProfile;
+  win.rotatePlayfieldAnimated   = api.rotatePlayfieldAnimated;
+  win.getCurrentPlayfieldRotation = api.getCurrentPlayfieldRotation;
+  win.openIntegratedEditor      = api.openIntegratedEditor;
+  win.installPWA                = api.installPWA;
+  win.setQualityPreset          = api.setQualityPreset;
+  win.getQualityPreset          = api.getQualityPreset;
+  win.getAvailableQualityPresets = api.getAvailableQualityPresets;
+  win.toggleAutoQuality         = api.toggleAutoQuality;
+  win.getPerformanceMetrics     = api.getPerformanceMetrics;
+  win.togglePerformanceMonitor  = api.togglePerformanceMonitor;
+  win.getGraphicsPipeline       = api.getGraphicsPipeline;
+  win.getGeometryPool           = api.getGeometryPool;
+  win.getMaterialFactory        = api.getMaterialFactory;
+  win.getLightManager           = api.getLightManager;
+  win.getResourceManager        = api.getResourceManager;
+  win.getResourceStats          = api.getResourceStats;
+  win.logResourceStats          = api.logResourceStats;
+  win.resetResourceManager      = api.resetResourceManager;
+  win.getLibraryCache           = api.getLibraryCache;
+  win.getLibraryCacheStats      = api.getLibraryCacheStats;
+  win.logLibraryCacheStats      = api.logLibraryCacheStats;
+  win.cleanupLibraryCache       = api.cleanupLibraryCache;
+  win.resetLibraryCache         = api.resetLibraryCache;
+  win.getAudioSourcePool        = api.getAudioSourcePool;
+  win.getAudioSourcePoolStats   = api.getAudioSourcePoolStats;
+  win.logAudioSourcePoolStats   = api.logAudioSourcePoolStats;
+  win.runIntegrationTests       = api.runIntegrationTests;
+  win.benchmark                 = api.benchmark;
+  win.memoryProfiler            = api.memoryProfiler;
+  win.generatePerformanceReport = api.generatePerformanceReport;
+  win.getPerformanceReportGenerator = api.getPerformanceReportGenerator;
+  win.comparePerformanceReports = api.comparePerformanceReports;
+  win.addToFavorites            = api.addToFavorites;
+  win.getAdvancedFavoritesCount = api.getAdvancedFavoritesCount;
+  win.getRecentTables           = api.getRecentTables;
+  win.createBatchLoadJob        = api.createBatchLoadJob;
+  win.getBatchJobStatus         = api.getBatchJobStatus;
+  win.setupTableDragDrop        = api.setupTableDragDrop;
+  win.sortTableFiles            = api.sortTableFiles;
+  win.runFullTestSuite          = api.runFullTestSuite;
+}

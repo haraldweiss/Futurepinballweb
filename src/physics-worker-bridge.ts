@@ -81,11 +81,11 @@ export class PhysicsWorkerBridge {
           if (event.data.type === 'worker-ready' || event.data.type === 'ready') {
             clearTimeout(readyTimeout);
             this.initialized = true;
-            this.worker!.onmessage = originalHandler?.bind(this);
+            this.worker!.onmessage = originalHandler?.bind(this as unknown as Worker);
             console.log('[Physics Bridge] Worker initialized');
             resolve();
           } else if (originalHandler) {
-            originalHandler.call(this, event);
+            (originalHandler as (this: Worker, ev: MessageEvent) => void).call(this as unknown as Worker, event);
           }
         };
       } catch (error) {

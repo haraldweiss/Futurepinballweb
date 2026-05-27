@@ -42,8 +42,10 @@ export class FileSystemBrowser {
     if ('showDirectoryPicker' in window) {
       try {
         this.tableDirectory = await (window as any).showDirectoryPicker();
-        console.log('✓ Table directory selected (FSA):', this.tableDirectory.name);
-        return this.scanDirectory(this.tableDirectory, '.fpt');
+        if (this.tableDirectory) {
+          console.log('✓ Table directory selected (FSA):', this.tableDirectory.name);
+          return this.scanDirectory(this.tableDirectory, '.fpt');
+        }
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
         console.warn(`⚠️ FSA failed: ${errMsg}, trying fallback...`);
@@ -64,8 +66,10 @@ export class FileSystemBrowser {
     if ('showDirectoryPicker' in window) {
       try {
         this.libraryDirectory = await (window as any).showDirectoryPicker();
-        console.log('✓ Library directory selected (FSA):', this.libraryDirectory.name);
-        return this.scanDirectory(this.libraryDirectory, ['.fpl', '.lib']);
+        if (this.libraryDirectory) {
+          console.log('✓ Library directory selected (FSA):', this.libraryDirectory.name);
+          return this.scanDirectory(this.libraryDirectory, ['.fpl', '.lib']);
+        }
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
         console.warn(`⚠️ FSA failed: ${errMsg}, trying fallback...`);

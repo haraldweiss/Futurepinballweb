@@ -699,7 +699,7 @@ function buildFPScriptAPI() {
 
     ListElements: (type?: string) => {
       const t = String(type || 'all').toLowerCase();
-      const elements = [];
+      const elements: Array<{type: string; index: number; name: string}> = [];
 
       if (t === 'bumper' || t === 'all') {
         bumpers.forEach((b, i) => {
@@ -1184,7 +1184,7 @@ function buildFPScriptAPI() {
                 const k = parts.slice(1).join('_');
                 result.push({ section: sec, key: k, value });
               }
-            } catch { /* ignore parse errors */ }
+            } catch { /* ignore parse errors */ void 0; }
           }
         }
       } catch (e) {
@@ -1444,7 +1444,8 @@ function buildFPScriptAPI() {
       try {
         const angVel = physics.ballBody.angvel();
         return { x: 0, y: 0, z: angVel || 0 };
-      } catch {
+      } catch (e) {
+        console.debug('[script-engine] GetBallSpin failed:', (e || 'unknown'));
         return { x: 0, y: 0, z: 0 };
       }
     },
@@ -1454,7 +1455,8 @@ function buildFPScriptAPI() {
       try {
         const angVel = physics.ballBody.angvel();
         return { x: 0, y: 0, z: angVel || 0 };
-      } catch {
+      } catch (e) {
+        console.debug('[script-engine] GetBallAngularVelocity failed:', (e || 'unknown'));
         return { x: 0, y: 0, z: 0 };
       }
     },
@@ -1493,7 +1495,7 @@ function buildFPScriptAPI() {
         try {
           const vel = obj.body.linvel();
           return { x: vel.x || 0, y: vel.y || 0, z: vel.z || 0 };
-        } catch { /* physics may be disposed */ }
+        } catch { /* physics may be disposed */ void 0; }
       }
       // Default to stationary
       return { x: 0, y: 0, z: 0 };
@@ -1511,7 +1513,7 @@ function buildFPScriptAPI() {
           const vel = physics.rFlipperBody.linvel();
           return Math.sqrt((vel.x || 0) ** 2 + (vel.y || 0) ** 2);
         }
-      } catch { /* physics may be disposed */ }
+      } catch { /* physics may be disposed */ void 0; }
       return 0;
     },
 
@@ -1526,7 +1528,8 @@ function buildFPScriptAPI() {
           y: (pos.y || 0) + (vel.y || 0) * t,
           z: 0,
         };
-      } catch {
+      } catch (e) {
+        console.debug('[script-engine] GetBallTrajectory failed:', (e || 'unknown'));
         return { x: 0, y: 0, z: 0 };
       }
     },
@@ -1538,7 +1541,8 @@ function buildFPScriptAPI() {
         const v2 = (vel.x || 0) ** 2 + (vel.y || 0) ** 2;
         const mass = 0.0265;  // kg
         return 0.5 * mass * v2;  // Joules
-      } catch {
+      } catch (e) {
+        console.debug('[script-engine] GetBallKineticEnergy failed:', (e || 'unknown'));
         return 0;
       }
     },
@@ -1552,7 +1556,8 @@ function buildFPScriptAPI() {
         const mass = 0.0265;  // kg
         const g = 9.81;  // m/s²
         return mass * g * (y - refY);  // Joules (relative to ref_y)
-      } catch {
+      } catch (e) {
+        console.debug('[script-engine] GetBallPotentialEnergy failed:', (e || 'unknown'));
         return 0;
       }
     },
@@ -1571,7 +1576,8 @@ function buildFPScriptAPI() {
         const ke = 0.5 * mass * v2;
         const pe = mass * g * (y - refY);
         return ke + pe;  // Joules
-      } catch {
+      } catch (e) {
+        console.debug('[script-engine] GetBallTotalEnergy failed:', (e || 'unknown'));
         return 0;
       }
     },

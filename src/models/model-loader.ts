@@ -77,11 +77,11 @@ export class ModelLibrary {
    * Clear entire cache
    */
   clear(): void {
-    this.cache.forEach(entry => {
+          this.cache.forEach(entry => {
       if (entry.mesh) {
         entry.mesh.geometry.dispose();
         if (Array.isArray(entry.mesh.material)) {
-          entry.mesh.material.forEach(m => m.dispose());
+          entry.mesh.material.forEach((m: any) => m.dispose());
         } else {
           entry.mesh.material.dispose();
         }
@@ -111,7 +111,7 @@ export class ModelLibrary {
       if (entry.mesh) {
         entry.mesh.geometry.dispose();
         if (Array.isArray(entry.mesh.material)) {
-          entry.mesh.material.forEach(m => m.dispose());
+          entry.mesh.material.forEach((m: any) => m.dispose());
         } else {
           entry.mesh.material.dispose();
         }
@@ -146,7 +146,7 @@ export class ModelLibrary {
       if (entry.mesh) {
         entry.mesh.geometry.dispose();
         if (Array.isArray(entry.mesh.material)) {
-          entry.mesh.material.forEach(m => m.dispose());
+          entry.mesh.material.forEach((m: any) => m.dispose());
         } else {
           entry.mesh.material.dispose();
         }
@@ -282,7 +282,7 @@ export function getModelMesh(modelName: string, cloneGeometry: boolean = true): 
   // Clone geometry and material for independent instances
   const clonedGeo = cached.geometry.clone();
   const clonedMat = Array.isArray(cached.material)
-    ? cached.material.map(m => m.clone())
+    ? cached.material.map((m: any) => m.clone())
     : cached.material.clone();
 
   const cloned = new THREE.Mesh(clonedGeo, clonedMat);

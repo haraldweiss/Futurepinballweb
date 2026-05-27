@@ -314,7 +314,7 @@ export class AdvancedFileBrowserManager {
 
       row.onmouseover = () => {
         row.style.background = 'rgba(0, 150, 100, 0.1)';
-        row.style.color = fav.iconColor;
+        row.style.color = fav.iconColor || '';
       };
       row.onmouseout = () => {
         row.style.background = '';
@@ -386,7 +386,7 @@ export class AdvancedFileBrowserManager {
 
     const descEl = document.createElement('div');
     descEl.style.cssText = 'color: #556; font-size: 9px;';
-    descEl.textContent = preview.description;
+    descEl.textContent = preview.description ?? '';
 
     card.appendChild(nameEl);
     card.appendChild(descEl);

@@ -43,7 +43,7 @@ export class MusicManager {
       const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
       this.audioContext = new AudioContextClass();
 
-      if (this.audioContext.state === 'suspended') {
+      if (this.audioContext?.state === 'suspended') {
         document.addEventListener('click', () => {
           if (this.audioContext?.state === 'suspended') {
             this.audioContext.resume();

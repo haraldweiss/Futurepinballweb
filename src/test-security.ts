@@ -309,7 +309,8 @@ export async function testStorageSecurity(): Promise<void> {
           if (typeof data !== 'object' || !Array.isArray(data)) {
             // Error handling would catch this in real code
           }
-        } catch {
+        } catch (e) {
+          console.debug('[test-security] Expected malformed JSON:', (e || 'unknown'));
           // Expected: malformed JSON should fail to parse
         }
       }
@@ -514,7 +515,7 @@ export async function testEventHandlerSecurity(): Promise<void> {
       parent.appendChild(child2);
 
       let triggeredId: string | null = null;
-      parent.addEventListener('click', (e: any) => {
+      parent.addEventListener('click', function(this: any, e: any) {
         const btn = e && e.target ? e.target : this;
         triggeredId = btn.getAttribute('data-id');
       });

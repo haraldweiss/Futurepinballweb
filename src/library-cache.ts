@@ -272,7 +272,8 @@ export class LibraryCache {
     try {
       const jsonSize = JSON.stringify(obj).length;
       return jsonSize * 2;  // 2x for object structure overhead
-    } catch {
+    } catch (e) {
+      console.debug('[library-cache] JSON stringify failed:', (e || 'unknown'));
       return 1024 * 1024;  // Fallback: estimate 1MB if JSON fails
     }
   }
@@ -287,7 +288,8 @@ export class LibraryCache {
       // Create simple hash: first 32 chars + entry count + length
       const count = Object.keys(obj).length;
       return `${json.substring(0, 32)}_${count}_${json.length}`;
-    } catch {
+    } catch (e) {
+      console.debug('[library-cache] Hash failed:', (e || 'unknown'));
       return `error_${Date.now()}`;
     }
   }

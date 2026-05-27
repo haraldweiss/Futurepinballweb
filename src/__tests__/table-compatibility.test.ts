@@ -368,7 +368,7 @@ describe('Table Compatibility', () => {
     });
 
     it('should not leak memory on repeated loads', () => {
-      const counts = [];
+      const counts: number[] = [];
 
       for (let i = 0; i < 5; i++) {
         manager.loadTable('tables/wide-table.fpt');

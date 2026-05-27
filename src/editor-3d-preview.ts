@@ -101,7 +101,7 @@ export class Editor3DPreview {
       if (mesh instanceof THREE.Mesh) {
         mesh.geometry.dispose();
         if (Array.isArray(mesh.material)) {
-          mesh.material.forEach(m => m.dispose());
+          mesh.material.forEach((m: any) => m.dispose());
         } else {
           mesh.material.dispose();
         }
@@ -188,7 +188,7 @@ export class Editor3DPreview {
   private updatePreview(): void {
     // Clear old elements
     const toRemove: THREE.Object3D[] = [];
-    this.previewGroup.children.forEach(child => {
+    this.previewGroup.children.forEach((child: THREE.Object3D) => {
       if (child.userData.isElement) {
         toRemove.push(child);
       }
@@ -309,8 +309,8 @@ export class Editor3DPreview {
       // Subtle rotation of light for visual interest
       const time = Date.now() * 0.0001;
       if (this.scene.children.length > 0) {
-        const lights = this.scene.children.filter(child => child instanceof THREE.Light);
-        lights.forEach(light => {
+        const lights = this.scene.children.filter((child: THREE.Object3D) => child instanceof THREE.Light);
+        lights.forEach((light: any) => {
           if (light instanceof THREE.PointLight) {
             light.position.x = Math.sin(time) * 3;
             light.position.z = Math.cos(time * 0.7) * 2;

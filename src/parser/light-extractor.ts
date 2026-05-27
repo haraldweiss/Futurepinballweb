@@ -102,7 +102,8 @@ function scanForLightPositions(bytes: Uint8Array): Array<{ x: number; y: number;
           if (positions.length >= TYPICAL_LIGHT_COUNT * 2) break; // Limit search
         }
       }
-    } catch {
+    } catch (e) {
+      console.debug('[light-extractor] Skip invalid read:', (e || 'unknown'));
       // Skip invalid reads
     }
   }
@@ -137,7 +138,8 @@ function extractLightColors(
         colors.push({ r, g, b });
         if (colors.length >= expectedCount) break;
       }
-    } catch {
+    } catch (e) {
+      console.debug('[light-extractor] Skip invalid RGB read:', (e || 'unknown'));
       // Skip
     }
   }
@@ -183,7 +185,8 @@ function extractLightIntensities(bytes: Uint8Array, expectedCount: number): numb
         intensities.push(val);
         if (intensities.length >= expectedCount) break;
       }
-    } catch {
+    } catch (e) {
+      console.debug('[light-extractor] Skip intensity read:', (e || 'unknown'));
       // Skip
     }
   }
@@ -207,7 +210,8 @@ function extractFalloffDistances(bytes: Uint8Array, expectedCount: number): numb
         falloffs.push(val);
         if (falloffs.length >= expectedCount) break;
       }
-    } catch {
+    } catch (e) {
+      console.debug('[light-extractor] Skip falloff read:', (e || 'unknown'));
       // Skip
     }
   }

@@ -85,7 +85,8 @@ export class AudioMixer {
           item.category
         );
         return true;
-      } catch {
+      } catch (e) {
+        console.debug('[audio-enhanced] Node may have been removed:', (e || 'unknown'));
         // Node may have been removed
         return false;
       }
@@ -155,12 +156,14 @@ export function playLayeredSound(
 
           osc.start(now);
           osc.stop(now + layer.duration);
-        } catch {
+        } catch (e) {
+          console.debug('[audio-enhanced] Audio context may have been destroyed:', (e || 'unknown'));
           // Audio context may have been destroyed
         }
       }, layer.delay);
     });
-  } catch {
+  } catch (e) {
+    console.debug('[audio-enhanced] Audio not available:', (e || 'unknown'));
     // Audio not available
   }
 }
@@ -387,7 +390,8 @@ export class AmbienceManager {
       osc.start();
 
       this.ambienceActive = true;
-    } catch {
+    } catch (e) {
+      console.debug('[audio-enhanced] Audio not available:', (e || 'unknown'));
       // Audio not available
     }
   }
@@ -464,7 +468,8 @@ export function applyStereooPanning(gainNode: GainNode, pan: number): void {
       // This is a simplified approach for compatibility
       gainNode.connect(ctx.destination);
     }
-  } catch {
+  } catch (e) {
+    console.warn('[audio-enhanced] Spatial audio fallback:', (e || 'unknown'));
     // Fallback: just connect normally
     gainNode.connect(getAudioCtx().destination);
   }

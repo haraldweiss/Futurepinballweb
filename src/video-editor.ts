@@ -195,7 +195,7 @@ export class VideoEditor {
         </div>
         <div class="video-item-meta">
           <span class="video-duration">⏱️ ${video.duration.toFixed(1)}s</span>
-          <span class="video-volume">🔊 ${Math.round(video.volume * 100)}%</span>
+          <span class="video-volume">🔊 ${Math.round((video.volume ?? 0) * 100)}%</span>
         </div>
         <div class="video-item-url">
           <small>${escapeHtml(video.url)}</small>
@@ -305,7 +305,7 @@ export class VideoEditor {
           <label>Volume</label>
           <input type="range" min="0" max="1" step="0.1" value="${video.volume}"
             onchange="this.parentElement.querySelector('.volume-value').textContent = Math.round(this.value * 100) + '%'" />
-          <span class="volume-value">${Math.round(video.volume * 100)}%</span>
+          <span class="volume-value">${Math.round((video.volume ?? 0) * 100)}%</span>
         </div>
 
         <div class="detail-row">

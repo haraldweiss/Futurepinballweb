@@ -77,7 +77,7 @@ export function lzo1xDecompress(src: Uint8Array, sizeHint?: number): Uint8Array 
       t=src[ip++]; if(t<16) t=m1(t);
     }
     return out.subarray(0, op);
-  } catch { return null; }
+  } catch (e) { console.debug('[fpt-parser] Decompression failed:', (e || 'unknown')); return null; }
 }
 
 function tryLZOExtract(bytes: Uint8Array): Uint8Array | null {
@@ -85,7 +85,7 @@ function tryLZOExtract(bytes: Uint8Array): Uint8Array | null {
     if (bytes.length <= dataOff) continue;
     const view = new DataView(bytes.buffer, bytes.byteOffset);
     let hint = 0;
-    try { hint = view.getUint32(sizeOff, true); } catch { /* ignore */ }
+    try { hint = view.getUint32(sizeOff, true); } catch { /* ignore */ void 0; }
     if (hint > 64*1024*1024 || hint < 0) hint = 0;
     const result = lzo1xDecompress(bytes.slice(dataOff), hint || undefined);
     if (result && result.length > 4) return result;
@@ -131,14 +131,14 @@ async function extractImageFromBytes(bytes: Uint8Array): Promise<THREE.Texture |
   for (const off of [8,0,4,12,16,32,64]) {
     const mime = detectImageMime(bytes, off);
     if (!mime) continue;
-    try { return await bytesToTexture(bytes.slice(off), mime); } catch { /* try next */ }
+    try { return await bytesToTexture(bytes.slice(off), mime); } catch (e) { console.debug('[fpt-parser] Image decode retry:', (e || 'unknown')); /* try next */ }
   }
   const decompressed = tryLZOExtract(bytes);
   if (decompressed) {
     for (const off of [0,8,4]) {
       const mime = detectImageMime(decompressed, off);
       if (!mime) continue;
-      try { return await bytesToTexture(decompressed.slice(off), mime); } catch { /* try next */ }
+      try { return await bytesToTexture(decompressed.slice(off), mime); } catch (e) { console.debug('[fpt-parser] Image decode retry:', (e || 'unknown')); /* try next */ }
     }
   }
   return null;
@@ -204,13 +204,13 @@ async function extractSoundFromBytes(
   if (!shouldStream) {
     for (const off of [8,0,4,12,16,32]) {
       if (!detectAudioMime(bytes, off)) continue;
-      try { return await tryDecode(bytes.slice(off)); } catch { /* try next */ }
+      try { return await tryDecode(bytes.slice(off)); } catch (e) { console.debug('[fpt-parser] Audio decode retry:', (e || 'unknown')); /* try next */ }
     }
     const decompressed = tryLZOExtract(bytes);
     if (decompressed) {
       for (const off of [0,8,4]) {
         if (!detectAudioMime(decompressed, off)) continue;
-        try { return await tryDecode(decompressed.slice(off)); } catch { /* try next */ }
+        try { return await tryDecode(decompressed.slice(off)); } catch (e) { console.debug('[fpt-parser] Audio decode retry:', (e || 'unknown')); /* try next */ }
       }
     }
   }
@@ -224,7 +224,7 @@ async function extractSoundFromBytes(
         const mime = detectAudioMime(bytes, off)!;
         const blobUrl = URL.createObjectURL(new Blob([bytes.slice(off)], { type: mime }));
         return blobUrl;  // Return Blob URL for streaming playback
-      } catch { /* try next */ }
+      } catch (e) { console.debug('[fpt-parser] Stream retry:', (e || 'unknown')); /* try next */ }
     }
 
     // Try decompressed data
@@ -236,7 +236,7 @@ async function extractSoundFromBytes(
           const mime = detectAudioMime(decompressed, off)!;
           const blobUrl = URL.createObjectURL(new Blob([decompressed.slice(off)], { type: mime }));
           return blobUrl;
-        } catch { /* try next */ }
+        } catch (e) { console.debug('[fpt-parser] Stream retry:', (e || 'unknown')); /* try next */ }
       }
     }
   }
@@ -409,7 +409,7 @@ export async function parseCFBResources(
           logMsg(`  Script: "${name}" (${text.split('\n').length} Zeilen VBScript)`, 'ok');
           break;
         }
-      } catch { /* ignore */ }
+      } catch { /* ignore */ void 0; }
     }
   }
 
@@ -424,7 +424,7 @@ export async function parseCFBResources(
           logMsg(`  Script (heuristisch): "${entry.name || '?'}"`, 'ok');
           break;
         }
-      } catch { /* ignore */ }
+      } catch { /* ignore */ void 0; }
     }
   }
 
@@ -447,7 +447,7 @@ export async function parseCFBResources(
                 break;
               }
             }
-          } catch { /* ignore */ }
+          } catch { /* ignore */ void 0; }
         }
         if (fptResources.script) break;
       }
@@ -527,7 +527,7 @@ function tryExtractVBScriptFromData(bytes: Uint8Array): string | null {
       if (subMatches.length > 0 || funcMatches.length > 0 || dimMatches.length > 5) {
         return text;
       }
-    } catch { /* try next encoding */ }
+    } catch (e) { console.debug('[fpt-parser] Encoding retry:', (e || 'unknown')); /* try next encoding */ }
   }
 
   // Fallback: extract ASCII strings and concatenate to find VBScript
@@ -552,7 +552,7 @@ function tryExtractVBScriptFromData(bytes: Uint8Array): string | null {
         (allText.match(/\bDim\s+\w+/gi) || []).length > 5) {
       return allText;
     }
-  } catch { /* ignore */ }
+  } catch { /* ignore */ void 0; }
 
   // Ultra-fallback: look for VBScript substrings in the raw bytes
   // This handles cases where encoding is mixed or text is embedded in binary data
@@ -579,7 +579,7 @@ function tryExtractVBScriptFromData(bytes: Uint8Array): string | null {
         }
       }
     }
-  } catch { /* ignore */ }
+  } catch { /* ignore */ void 0; }
 
   return null;
 }
@@ -597,7 +597,7 @@ function extractFPCoords(bytes: Uint8Array): Array<{x:number;y:number}> {
     const found: Array<{fpX:number;fpY:number;i:number}> = [];
     for (let i = 0; i < bytes.length - 8; i += 4) {
       let x: number, y: number;
-      try { x = view.getFloat32(i, true); y = view.getFloat32(i+4, true); } catch { continue; }
+      try { x = view.getFloat32(i, true); y = view.getFloat32(i+4, true); } catch (e) { console.debug('[fpt-parser] Coord read failed:', (e || 'unknown')); continue; }
 
       // Improved: stricter range check to reduce noise
       if (isFinite(x) && isFinite(y) &&
@@ -752,7 +752,7 @@ export function extractFPTPhysics(bytes: Uint8Array, coords: Array<{x:number;y:n
       if (!isDuplicate) {
         candidates.push(candidate);
       }
-    } catch { /* ignore */ }
+    } catch { /* ignore */ void 0; }
   }
 
   // Select top candidates
@@ -934,7 +934,8 @@ export function suggestTableLights(texture: THREE.Texture): Array<{ color: numbe
     }
 
     return lights;
-  } catch {
+  } catch (e) {
+    console.debug('[fpt-parser] Light extraction failed:', (e || 'unknown'));
     return [];
   }
 }
@@ -975,7 +976,8 @@ export function extractDominantColors(texture: THREE.Texture): { primary: number
     const accent = sorted[1] ? sorted[1][0] : (primary ^ 0xffffff);
 
     return { primary, accent };
-  } catch {
+  } catch (e) {
+    console.debug('[fpt-parser] Color extraction failed:', (e || 'unknown'));
     return null;
   }
 }
@@ -1031,7 +1033,8 @@ export function extractElementColors(texture: THREE.Texture, coords: Array<{x:nu
     });
 
     return elementColors;
-  } catch {
+  } catch (e) {
+    console.debug('[fpt-parser] Element color extraction failed:', (e || 'unknown'));
     return elementColors;
   }
 }
@@ -1076,7 +1079,7 @@ export async function parseFPTFile(
       const cfg = JSON.parse(await file.text());
       logMsg('✓ JSON geparst', 'ok');
       if (cfg.name && cfg.bumpers && cfg.tableColor !== null) {
-        buildTableFn(cfg); closeLoaderFn();
+        buildTableFn?.(cfg); closeLoaderFn?.();
       } else { logMsg('⚠ Kein gültiges Tisch-Format', 'warn'); }
     } catch(e: any) { logMsg(`✗ JSON Fehler: ${  e.message}`, 'error'); }
     return;
@@ -1363,10 +1366,10 @@ export async function parseFPTFile(
   const confidence = calcConfidence(sig, allStrings.length, coords.length, file.size);
   logMsg(`Konfidenz: ${confidence}%`, confidence>60?'ok':confidence>30?'warn':'error');
 
-  buildTableFn({ name: tableName, tableColor, accentColor: accent, bumpers: bumpCfg, targets: targetCfg,
+  buildTableFn?.({ name: tableName, tableColor, accentColor: accent, bumpers: bumpCfg, targets: targetCfg,
     lights: [{ color:accent,intensity:0.8,dist:10,x:0,y:2,z:4 }, { color:accent,intensity:0.4,dist:8,x:-2,y:-2,z:3 }]
   });
-  closeLoaderFn();
+  closeLoaderFn?.();
 
   // Detect library dependencies (heuristic path)
   const dependencies = detectLibraryDependencies(tableName, null, coords.length);
@@ -1484,7 +1487,7 @@ export async function parseFPLFile(
             categories.scripts++;
             logMsg(`  📝 Script: "${name}" (${text.split('\n').length} lines)`, 'ok');
           }
-        } catch { /* ignore */ }
+        } catch { /* ignore */ void 0; }
       }
       // Physics presets (JSON)
       else if (/physics|preset|config/i.test(nameL) && nameL.endsWith('.json')) {
@@ -1494,7 +1497,7 @@ export async function parseFPLFile(
           const presetName = name.replace(/\.json$/i, '');
           library.physicsPresets[presetName] = preset;
           logMsg(`  ⚙️ Physics: "${presetName}"`, 'ok');
-        } catch { /* ignore invalid JSON */ }
+        } catch { /* ignore invalid JSON */ void 0; }
       }
       else {
         categories.other++;
@@ -1772,7 +1775,7 @@ export function extractAnimationSequencesFromCFB(arrayBuffer: ArrayBuffer): Map<
             animations.set(name, json);
             logMsg(`  Animation (JSON): "${name}" (${json.frames.length} Frames)`, 'ok');
           }
-        } catch { /* not JSON */ }
+        } catch { /* not JSON */ void 0; }
       }
     } catch (e: any) {
       // Might be binary format - log and skip for now

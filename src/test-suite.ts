@@ -321,14 +321,14 @@ export class TestSuite {
     this.addResult({
       name: 'selectTableDirectory method available',
       category,
-      status: browser?.selectTableDirectory ? 'passed' : 'failed',
+      status: typeof browser?.selectTableDirectory === 'function' ? 'passed' : 'failed',
       duration: 1,
     });
 
     this.addResult({
       name: 'selectLibraryDirectory method available',
       category,
-      status: browser?.selectLibraryDirectory ? 'passed' : 'failed',
+      status: typeof browser?.selectLibraryDirectory === 'function' ? 'passed' : 'failed',
       duration: 1,
     });
 
@@ -336,7 +336,7 @@ export class TestSuite {
     this.addResult({
       name: 'Directory scanning capability',
       category,
-      status: browser?.scanDirectory ? 'passed' : 'failed',
+      status: typeof browser?.scanDirectory === 'function' ? 'passed' : 'failed',
       duration: 1,
     });
 
@@ -374,14 +374,14 @@ export class TestSuite {
     this.addResult({
       name: 'File row creation',
       category,
-      status: uiMgr?.createFileRow ? 'passed' : 'failed',
+      status: typeof uiMgr?.createFileRow === 'function' ? 'passed' : 'failed',
       duration: 1,
     });
 
     this.addResult({
       name: 'Library checkbox creation',
       category,
-      status: uiMgr?.createLibraryCheckbox ? 'passed' : 'failed',
+      status: typeof uiMgr?.createLibraryCheckbox === 'function' ? 'passed' : 'failed',
       duration: 1,
     });
 
@@ -389,7 +389,7 @@ export class TestSuite {
     this.addResult({
       name: 'File filtering functionality',
       category,
-      status: uiMgr?.filterFiles ? 'passed' : 'failed',
+      status: typeof uiMgr?.filterFiles === 'function' ? 'passed' : 'failed',
       duration: 1,
     });
 
@@ -397,7 +397,7 @@ export class TestSuite {
     this.addResult({
       name: 'File overview summary panel',
       category,
-      status: uiMgr?.createOverviewSummary ? 'passed' : 'failed',
+      status: typeof uiMgr?.createOverviewSummary === 'function' ? 'passed' : 'failed',
       duration: 1,
     });
   }
@@ -420,7 +420,7 @@ export class TestSuite {
     this.addResult({
       name: 'Favorites add/remove functionality',
       category,
-      status: advMgr?.addFavorite ? 'passed' : 'failed',
+      status: typeof advMgr?.addFavorite === 'function' ? 'passed' : 'failed',
       duration: 1,
     });
 
@@ -428,7 +428,7 @@ export class TestSuite {
     this.addResult({
       name: 'localStorage persistence (saveFavoritesFromStorage)',
       category,
-      status: advMgr?.saveFavoritesToStorage ? 'passed' : 'failed',
+      status: typeof advMgr?.saveFavoritesToStorage === 'function' ? 'passed' : 'failed',
       duration: 1,
     });
 
@@ -436,14 +436,14 @@ export class TestSuite {
     this.addResult({
       name: 'Batch job creation',
       category,
-      status: advMgr?.createBatchJob ? 'passed' : 'failed',
+      status: typeof advMgr?.createBatchJob === 'function' ? 'passed' : 'failed',
       duration: 1,
     });
 
     this.addResult({
       name: 'Batch progress tracking',
       category,
-      status: advMgr?.updateBatchProgress ? 'passed' : 'failed',
+      status: typeof advMgr?.updateBatchProgress === 'function' ? 'passed' : 'failed',
       duration: 1,
     });
 
@@ -451,7 +451,7 @@ export class TestSuite {
     this.addResult({
       name: 'Drag & drop setup',
       category,
-      status: advMgr?.setupDragDrop ? 'passed' : 'failed',
+      status: typeof advMgr?.setupDragDrop === 'function' ? 'passed' : 'failed',
       duration: 1,
     });
 
@@ -459,7 +459,7 @@ export class TestSuite {
     this.addResult({
       name: 'File sorting (by name, size, date, type)',
       category,
-      status: advMgr?.sortFiles ? 'passed' : 'failed',
+      status: typeof advMgr?.sortFiles === 'function' ? 'passed' : 'failed',
       duration: 1,
     });
 
@@ -467,7 +467,7 @@ export class TestSuite {
     this.addResult({
       name: 'Recent files tracking',
       category,
-      status: advMgr?.trackUsage ? 'passed' : 'failed',
+      status: typeof advMgr?.trackUsage === 'function' ? 'passed' : 'failed',
       duration: 1,
     });
   }

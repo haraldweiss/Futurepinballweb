@@ -31,7 +31,7 @@ interface BrowserCapabilities {
  */
 class GraphicsRenderer {
   capabilities: BrowserCapabilities;
-  renderMode: 'webgl2' | 'webgl1' | 'canvas2d';
+  renderMode!: 'webgl2' | 'webgl1' | 'canvas2d';
   textureCache: Map<string, any> = new Map();
   drawCallCount = 0;
 

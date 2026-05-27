@@ -262,7 +262,8 @@ function scanFloat32Range(
           if (results.length >= maxResults) break;
         }
       }
-    } catch {
+    } catch (e) {
+      console.debug('[playfield-extractor] Skip invalid read:', (e || 'unknown'));
       // Skip invalid reads
     }
   }
@@ -287,7 +288,8 @@ function findFloat32Value(
       if (Math.abs(val - targetValue) <= tolerance) {
         positions.push(i);
       }
-    } catch {
+    } catch (e) {
+      console.debug('[playfield-extractor] Skip float32 read:', (e || 'unknown'));
       // Skip
     }
   }
@@ -315,7 +317,8 @@ function findRepeatingFloat32(
         const key = val.toFixed(3);
         frequency.set(key, (frequency.get(key) || 0) + 1);
       }
-    } catch {
+    } catch (e) {
+      console.debug('[playfield-extractor] Skip repeating float32 read:', (e || 'unknown'));
       // Skip
     }
   }

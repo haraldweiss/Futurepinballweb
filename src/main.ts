@@ -138,6 +138,7 @@ import { DirectoryPathManager } from './directory-path-manager';
 import { escapeHtml, setInnerHTMLSafe } from './utils/html-escape';
 import { loadFpwConfig } from './utils/fpw-config';
 import { initializeEventHandlers } from './event-handlers-init';
+import { setupWindowAPI, type WindowAPI } from './window-api';
 import { getDefaultPhysicsConfig, logPhysicsConfig, validatePhysicsConfig } from './physics-config-enhancer';
 import { getInputOptimizer, disposeInputOptimizer } from './input-optimizer';
 import { getPerformanceDashboard } from './performance-dashboard';
@@ -641,7 +642,7 @@ document.body.appendChild(renderer.domElement);
 // ─── WebGL context loss / restore ────────────────────────────────────────────
 // VPIN cabinets idle for hours and the GPU sometimes resets the WebGL context.
 // Without these listeners the canvas turns black until the user reloads.
-renderer.domElement.addEventListener('webglcontextlost', (e) => {
+renderer.domElement.addEventListener('webglcontextlost', (e: Event) => {
   e.preventDefault();
   console.warn('[fpw] WebGL context lost — rendering paused until restore');
 }, false);
@@ -1244,7 +1245,8 @@ function resetBall(): void {
     const bridge = getPhysicsWorker();
     bridge.updateBallPosition(2.65, -5.2, 0, 0);
     bridge.setBallGravityScale(0.0);
-  } catch {
+  } catch (e) {
+    console.warn('[main] Falling back to direct physics:', (e || 'unknown'));
     // Fallback: Direct physics access (single-threaded)
     if (physics) {
       physics.ballBody.setGravityScale(0.0, true);
@@ -1282,16 +1284,18 @@ function resetGameState(): void {
 
 // ─── Phase 15: Initialize Physics Worker (after table build) ──────────────────────
 async function setupPhysicsWorker(): Promise<void> {
-  (window as any).SETUP_WORKER_START = Date.now();
+  if (import.meta.env.DEV) { (window as any).SETUP_WORKER_START = Date.now(); }
   try {
-    (window as any).SETUP_WORKER_INIT_START = Date.now();
+    if (import.meta.env.DEV) { (window as any).SETUP_WORKER_INIT_START = Date.now(); }
     const bridge = await initializePhysicsWorker();
-    (window as any).SETUP_WORKER_INIT_OK = Date.now();
-    (window as any).SETUP_WORKER_INIT_TIME = (window as any).SETUP_WORKER_INIT_OK - (window as any).SETUP_WORKER_INIT_START;
+    if (import.meta.env.DEV) {
+      (window as any).SETUP_WORKER_INIT_OK = Date.now();
+      (window as any).SETUP_WORKER_INIT_TIME = (window as any).SETUP_WORKER_INIT_OK - (window as any).SETUP_WORKER_INIT_START;
+    }
 
     // Configure physics world with current table settings
     if (physics) {
-      (window as any).SETUP_WORKER_CONFIG_START = Date.now();
+      if (import.meta.env.DEV) { (window as any).SETUP_WORKER_CONFIG_START = Date.now(); }
 
       // ─── Phase 24: Use Enhanced Physics Configuration ───
       const physicsConfig = getDefaultPhysicsConfig();
@@ -1372,26 +1376,28 @@ async function setupPhysicsWorker(): Promise<void> {
         targetMap: cleanTargetMap,
         slingshotMap: physics.slingshotMap,
       });
-      (window as any).SETUP_WORKER_CONFIG_OK = Date.now();
+      if (import.meta.env.DEV) { (window as any).SETUP_WORKER_CONFIG_OK = Date.now(); }
 
       // Setup callback for physics frame updates
-      (window as any).SETUP_WORKER_CALLBACK_START = Date.now();
+      if (import.meta.env.DEV) { (window as any).SETUP_WORKER_CALLBACK_START = Date.now(); }
       bridge.setFrameCallback((frame: PhysicsFrameData) => {
         handlePhysicsFrame(frame);
       });
-      (window as any).SETUP_WORKER_CALLBACK_OK = Date.now();
+      if (import.meta.env.DEV) { (window as any).SETUP_WORKER_CALLBACK_OK = Date.now(); }
 
-      console.log('✓ Physics worker initialized and ready');
-      (window as any).SETUP_WORKER_COMPLETE = true;
+      if (import.meta.env.DEV) {
+        console.log('✓ Physics worker initialized and ready');
+        (window as any).SETUP_WORKER_COMPLETE = true;
+      }
     } else {
-      (window as any).SETUP_WORKER_NO_PHYSICS = true;
+      if (import.meta.env.DEV) { (window as any).SETUP_WORKER_NO_PHYSICS = true; }
     }
   } catch (error) {
-    (window as any).SETUP_WORKER_ERROR = (error as Error).message;
+    if (import.meta.env.DEV) { (window as any).SETUP_WORKER_ERROR = (error as Error).message; }
     console.error('Failed to initialize physics worker:', error);
     console.warn('Falling back to single-threaded physics');
   }
-  (window as any).SETUP_WORKER_END = Date.now();
+  if (import.meta.env.DEV) { (window as any).SETUP_WORKER_END = Date.now(); }
 }
 
 // ─── Phase 15: Handle Physics Frame Updates ────────────────────────────────────
@@ -1470,33 +1476,41 @@ function applyEnhancedVisualsToTable(sceneTarget: THREE.Scene): void {
 
 // ─── Phase 15: Helper function to load table with physics worker ────────────────
 async function loadTableWithPhysicsWorker(tableConfig: any, sceneTarget: THREE.Scene, library?: any): Promise<void> {
-  console.log('[loadTableWithPhysicsWorker] START');
+  if (import.meta.env.DEV) {
+    console.log('[loadTableWithPhysicsWorker] START');
+    (window as any).BUILD_TABLE_START = Date.now();
+    console.log('[loadTableWithPhysicsWorker] Building table...');
+  }
   // Build the table geometry and physics
-  (window as any).BUILD_TABLE_START = Date.now();
-  console.log('[loadTableWithPhysicsWorker] Building table...');
   buildTable(tableConfig, sceneTarget, library, playgroundGroup);
-  (window as any).BUILD_TABLE_OK = Date.now();
-  (window as any).BUILD_TABLE_TIME_MS = (window as any).BUILD_TABLE_OK - (window as any).BUILD_TABLE_START;
-  console.log('[loadTableWithPhysicsWorker] Table built in', (window as any).BUILD_TABLE_TIME_MS, 'ms');
+  if (import.meta.env.DEV) {
+    (window as any).BUILD_TABLE_OK = Date.now();
+    (window as any).BUILD_TABLE_TIME_MS = (window as any).BUILD_TABLE_OK - (window as any).BUILD_TABLE_START;
+    console.log('[loadTableWithPhysicsWorker] Table built in', (window as any).BUILD_TABLE_TIME_MS, 'ms');
+  }
 
   // ─── Phase 16+: Apply enhanced visuals after table construction ─────────────────
   applyEnhancedVisualsToTable(sceneTarget);
 
   // Initialize physics worker after table is built
-  (window as any).PHYSICS_WORKER_START = Date.now();
-  console.log('[loadTableWithPhysicsWorker] Setting up physics worker...');
+  if (import.meta.env.DEV) {
+    (window as any).PHYSICS_WORKER_START = Date.now();
+    console.log('[loadTableWithPhysicsWorker] Setting up physics worker...');
+  }
   try {
     await setupPhysicsWorker();
-    (window as any).PHYSICS_WORKER_OK = Date.now();
-    (window as any).PHYSICS_WORKER_TIME_MS = (window as any).PHYSICS_WORKER_OK - (window as any).PHYSICS_WORKER_START;
-    console.log('[loadTableWithPhysicsWorker] Physics worker setup OK in', (window as any).PHYSICS_WORKER_TIME_MS, 'ms');
-    (window as any).LOAD_TABLE_COMPLETE = true;
+    if (import.meta.env.DEV) {
+      (window as any).PHYSICS_WORKER_OK = Date.now();
+      (window as any).PHYSICS_WORKER_TIME_MS = (window as any).PHYSICS_WORKER_OK - (window as any).PHYSICS_WORKER_START;
+      console.log('[loadTableWithPhysicsWorker] Physics worker setup OK in', (window as any).PHYSICS_WORKER_TIME_MS, 'ms');
+      (window as any).LOAD_TABLE_COMPLETE = true;
+    }
   } catch (error) {
-    (window as any).PHYSICS_WORKER_ERROR = error?.message;
+    if (import.meta.env.DEV) { (window as any).PHYSICS_WORKER_ERROR = (error as Error)?.message; }
     console.error('Physics worker setup failed:', error);
     // Continue with single-threaded physics fallback
   }
-  console.log('[loadTableWithPhysicsWorker] COMPLETE');
+  if (import.meta.env.DEV) { console.log('[loadTableWithPhysicsWorker] COMPLETE'); }
 }
 
 // ─── Phase 17+: Video Event Trigger System ───────────────────────────────────
@@ -1577,7 +1591,8 @@ function nudgeTable(direction: number): void {
       // Set velocity directly for immediate tilt effect
       const currentBall = physics?.ballBody.linvel() ?? { x: 0, y: 0 };
       bridge.updateBallPosition(state.ballPos.x, state.ballPos.y, direction*1.5, -3.0);
-    } catch {
+    } catch (e) {
+      console.warn('[main] Physics worker fallback (tilt):', (e || 'unknown'));
       // Fallback: Direct physics access (single-threaded)
       if (physics) physics.ballBody.setLinvel({ x:direction*1.5, y:-3.0 }, true);
       else { state.ballVel.x = direction*1.5; state.ballVel.y = -3.0; }
@@ -1599,7 +1614,8 @@ function nudgeTable(direction: number): void {
       const newVx = state.ballVel.x + direction * force;
       const newVy = state.ballVel.y + 0.5;
       bridge.updateBallPosition(state.ballPos.x, state.ballPos.y, newVx, newVy);
-    } catch {
+    } catch (e) {
+      console.warn('[main] Physics worker fallback (nudge):', (e || 'unknown'));
       // Fallback: Direct physics access (single-threaded)
       if (physics) physics.ballBody.applyImpulse({ x:direction*force, y:0.5 }, true);
       else { state.ballVel.x += direction*force; state.ballVel.y += 0.5; }
@@ -1621,7 +1637,7 @@ function launchMultiBall(): void {
   mesh.castShadow = true; scene.add(mesh);
 
   const startX = (Math.random()-0.5)*1.2, startY = 2.5+Math.random();
-  let rapierBody = null;
+  let rapierBody: any = null;
   if (physics && RAPIER) {
     rapierBody = physics.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(startX,startY).setLinearDamping(0.0).setAngularDamping(0.9).setCcdEnabled(true));
     physics.world.createCollider(RAPIER.ColliderDesc.ball(0.22).setRestitution(0.5).setFriction(0.3), rapierBody);
@@ -1719,7 +1735,8 @@ function updateFlippers(): void {
     const bridge = getPhysicsWorker();
     bridge.updateLeftFlipperRotation(leftFlipperGroup.rotation.z);
     bridge.updateRightFlipperRotation(rightFlipperGroup.rotation.z);
-  } catch {
+  } catch (e) {
+    console.warn('[main] Flipper physics worker fallback:', (e || 'unknown'));
     // Fallback: Direct physics access (single-threaded)
     if (physics) {
       // Sync both position and rotation for kinematic bodies to prevent sticking
@@ -1797,7 +1814,7 @@ function showNotification(msg: string): void {
   const clean = msg.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
   if (clean.length > 1) dmdEvent(clean.substring(0, 22).toUpperCase());
 }
-(window as any).showNotification = showNotification;
+// see window-api.ts — showNotification
 
 // ─── Library Selector ─────────────────────────────────────────────────────────
 function showLibrarySelector(lib: any): void {
@@ -1825,7 +1842,7 @@ function showLibrarySelector(lib: any): void {
 
   selector.style.display = 'block';
 }
-(window as any).showLibrarySelector = showLibrarySelector;
+// see window-api.ts — showLibrarySelector
 
 // ─── Callbacks registrieren ───────────────────────────────────────────────────
 cb.updateHUD        = updateHUD;
@@ -2063,7 +2080,7 @@ cb.triggerMultiballVisual = () => {
 /**
  * Change cabinet profile (Vertical/Horizontal/Wide/Inverted)
  */
-(window as any).changeCabinetProfile = (profileId: string) => {
+const changeCabinetProfile = (profileId: string) => {
   const success = setActiveCabinetProfile(profileId);
   if (success) {
     const profile = getActiveCabinetProfile();
@@ -2078,11 +2095,11 @@ cb.triggerMultiballVisual = () => {
     showNotification(`❌ Cabinet profile not found: ${profileId}`);
   }
 };
-
+// see window-api.ts
 /**
  * Rotate playfield to specified angle (0/90/180/270)
  */
-(window as any).rotatePlayfield = async (degrees: 0 | 90 | 180 | 270, animated: boolean = true) => {
+const rotatePlayfield = async (degrees: 0 | 90 | 180 | 270, animated: boolean = true) => {
   if (cabinetSystem) {
     const duration = animated ? 600 : 0;
     await rotatePlayfieldTo(degrees, duration);
@@ -2090,10 +2107,7 @@ cb.triggerMultiballVisual = () => {
   }
 };
 
-/**
- * Get all available cabinet profiles for UI selection
- */
-(window as any).getCabinetProfiles = () => {
+const getCabinetProfiles = () => {
   return CabinetSystem.getAllProfiles().map(p => ({
     id: p.id,
     name: p.name,
@@ -2102,10 +2116,7 @@ cb.triggerMultiballVisual = () => {
   }));
 };
 
-/**
- * Get current cabinet profile
- */
-(window as any).getCurrentCabinetProfile = () => {
+const getCurrentCabinetProfile = () => {
   const profile = getActiveCabinetProfile();
   return {
     id: profile.id,
@@ -2115,12 +2126,14 @@ cb.triggerMultiballVisual = () => {
   };
 };
 
+// see window-api.ts — rotatePlayfield, getCabinetProfiles, getCurrentCabinetProfile
+
 // ─── Phase 10+: Playfield Rotation Callbacks ───────────────────────────────────
 
 /**
  * Apply cabinet profile and update playfield rotation
  */
-(window as any).applyRotationProfile = async (profileId: string) => {
+const applyRotationProfile = async (profileId: string) => {
   const success = setActiveCabinetProfile(profileId);
   if (success) {
     const profile = getActiveCabinetProfile();
@@ -2135,16 +2148,12 @@ cb.triggerMultiballVisual = () => {
   }
 };
 
-/**
- * Rotate playfield with smooth animation
- */
-(window as any).rotatePlayfieldAnimated = async (degrees: 0 | 90 | 180 | 270) => {
+const rotatePlayfieldAnimated = async (degrees: 0 | 90 | 180 | 270) => {
   if (rotationEngine) {
     showNotification(`🎮 Rotating playfield to ${degrees}°...`);
     await rotateAndRedraw(degrees, 600);
     // ─── Phase 10+ Task 3: Also update UI display ───
     if (uiRotationManager) {
-      // Create a temporary profile-like object for UI rotation
       const currentProfile = getActiveCabinetProfile();
       applyUIRotation(currentProfile);
       // ─── Phase 10+ Task 5: Also apply input mapping ───
@@ -2154,15 +2163,14 @@ cb.triggerMultiballVisual = () => {
   }
 };
 
-/**
- * Get current playfield rotation
- */
-(window as any).getCurrentPlayfieldRotation = () => {
+const getCurrentPlayfieldRotation = () => {
   if (rotationEngine) {
     return rotationEngine.getCurrentRotation();
   }
   return 0;
 };
+
+// see window-api.ts — applyRotationProfile, rotatePlayfieldAnimated, getCurrentPlayfieldRotation
 
 // ─── Input ────────────────────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
@@ -2401,7 +2409,7 @@ document.addEventListener('keyup', e => {
       const bridge = getPhysicsWorker();
       bridge.setBallGravityScale(1.0);
       bridge.updateBallPosition(2.65, -5.0, vx, vy);
-      console.log('✅ Ball launched via physics worker');
+      if (import.meta.env.DEV) { console.log('✅ Ball launched via physics worker'); }
     } catch (e) {
       // Fallback: Direct physics access (single-threaded)
       console.warn('⚠️ Physics worker error, using fallback:', e);
@@ -2409,7 +2417,7 @@ document.addEventListener('keyup', e => {
         physics.ballBody.setGravityScale(1.0, true);
         physics.ballBody.setTranslation({ x:2.65, y:-5.0 }, true);
         physics.ballBody.setLinvel({ x:vx, y:vy }, true);
-        console.log('✅ Ball launched via fallback (main thread physics)');
+        if (import.meta.env.DEV) { console.log('✅ Ball launched via fallback (main thread physics)'); }
       } else {
         console.error('❌ No physics system available!');
         state.ballVel.x = vx;
@@ -2519,7 +2527,7 @@ let pixelRatioTarget = Math.min(devicePixelRatio, 2);
 let animateCallCount = 0;
 function animate(): void {
   animateCallCount++;
-  if (animateCallCount === 1 || animateCallCount % 300 === 0) {
+  if (import.meta.env.DEV && (animateCallCount === 1 || animateCallCount % 300 === 0)) {
     console.log(`🎬 Animate loop running... (call #${animateCallCount})`);
   }
   requestAnimationFrame(animate);
@@ -2567,7 +2575,8 @@ function animate(): void {
       try {
         const bridge = getPhysicsWorker();
         bridge.setBallGravityScale(0.0);
-      } catch {
+      } catch (e) {
+        console.warn('[main] Physics worker fallback (in-lane):', (e || 'unknown'));
         // Fallback
         physics.ballBody.setGravityScale(0.0, true);
         physics.ballBody.setLinvel({ x:0, y:0 }, true);
@@ -2582,7 +2591,8 @@ function animate(): void {
         const substeps = currentFps > 55 ? 6 : (currentFps > 45 ? 5 : 4);
         bridge.step(dt, substeps);
         // Physics results arrive async via callback (handlePhysicsFrame)
-      } catch {
+      } catch (e) {
+        console.warn('[main] Physics worker step fallback:', (e || 'unknown'));
         // Fallback: Single-threaded physics (original code)
         physics.world.step(physics.eventQueue);
 
@@ -2858,7 +2868,7 @@ function animate(): void {
   // ─── Phase 14: Render Frame ───
   // Render through graphics pipeline (EffectComposer) to enable Polish Suite post-processing
   if (renderer && scene && camera) {
-    if (animateCallCount === 1 || animateCallCount % 300 === 0) {
+    if (import.meta.env.DEV && (animateCallCount === 1 || animateCallCount % 300 === 0)) {
       console.log(`🎨 Rendering frame #${animateCallCount}`, {
         rendererExists: !!renderer,
         sceneChildren: scene?.children.length,
@@ -2875,7 +2885,7 @@ function animate(): void {
     // Render through graphics pipeline for post-processing (SSR, Motion Blur, Shadows, Bloom, Film Effects, DoF)
     try {
       const pipeline = getGraphicsPipeline();
-      if (animateCallCount === 1) {
+      if (import.meta.env.DEV && animateCallCount === 1) {
         console.log('🔄 Pipeline status:', { exists: !!pipeline, type: pipeline?.constructor.name });
       }
       if (pipeline) {
@@ -3019,11 +3029,11 @@ function drawInlineBackglass(): void {
 
 // ─── View Settings ─────────────────────────────────────────────────────────────
 const VIEW_KEY = 'fpw_view';
-let viewSettings: Record<string,number> = (() => { try { return JSON.parse(localStorage.getItem(VIEW_KEY)??'{}')??{}; } catch { return {}; } })();
+let viewSettings: Record<string,number> = (() => { try { return JSON.parse(localStorage.getItem(VIEW_KEY)??'{}')??{}; } catch (e) { console.debug('[main] View settings parse failed:', (e || 'unknown')); return {}; } })();
 
-window.toggleViewPanel = () => document.getElementById('view-panel')!.classList.toggle('open');
+const toggleViewPanel = () => document.getElementById('view-panel')!.classList.toggle('open');
 
-window.applyViewSettings = () => {
+const applyViewSettings = () => {
   const zoom = parseFloat((document.getElementById('vp-zoom') as HTMLInputElement).value);
   const tilt = parseFloat((document.getElementById('vp-tilt') as HTMLInputElement).value);
   const fov  = parseFloat((document.getElementById('vp-fov')  as HTMLInputElement).value);
@@ -3035,12 +3045,14 @@ window.applyViewSettings = () => {
   viewSettings={zoom,tilt,fov}; localStorage.setItem(VIEW_KEY, JSON.stringify(viewSettings));
 };
 
-window.resetViewSettings = () => {
+const resetViewSettings = () => {
   (document.getElementById('vp-zoom') as HTMLInputElement).value='16';
   (document.getElementById('vp-tilt') as HTMLInputElement).value='0.5';
   (document.getElementById('vp-fov')  as HTMLInputElement).value='58';
-  window.applyViewSettings();
+  applyViewSettings();
 };
+
+// see window-api.ts — toggleViewPanel, applyViewSettings, resetViewSettings
 
 function initViewSettings(): void {
   const {zoom=16, tilt=0.5, fov=58} = viewSettings;
@@ -3054,11 +3066,12 @@ function initViewSettings(): void {
 }
 
 // ─── Global UI Callbacks ───────────────────────────────────────────────────────
-window.switchTab = (tab: string) => {
+const switchTab = (tab: string) => {
   document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['demo','import','browser','info','script'][i]===tab));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   (document.getElementById(`tab-${tab}`) as HTMLElement)?.classList.add('active');
 };
+// see window-api.ts — switchTab
 
 // ─── Phase 4: Setup Backglass After Table Load ──────────────────────────────────
 function setupBackglassForTable(): void {
@@ -3073,31 +3086,27 @@ function setupBackglassForTable(): void {
   }
 }
 
-window.loadDemoTable = async (key: string) => {
+const loadDemoTable = async (key: string) => {
   resetGameState();
-  resetCoinSystem();  // Reset coin state for new table
+  resetCoinSystem();
   await loadTableWithPhysicsWorker(TABLE_CONFIGS[key], scene);
   setupBackglassForTable();
-  window.closeLoader();
+  closeLoader();
 
-  // ─── DMD boot sequence ──────────────────────────────────────────────────
-  // Show TABLENAME · BY AUTHOR · YEAR for ~5 seconds, then fall through to
-  // attract mode (INSERT COIN cycle). dmdUpdate handles the auto-transition
-  // when bootTimer hits 0.
   dmdState.mode = 'tableinfo';
-  dmdState.bootTimer = 300;  // 5 sec at 60 fps
+  dmdState.bootTimer = 300;
   dmdState.animFrame = 0;
 
-  // Show coin insert screen (delay for better UX)
   setTimeout(() => {
     showCoinScreen();
   }, 300);
 };
+// see window-api.ts — loadDemoTable
 
-window.closeLoader = async function closeLoader() {
+const closeLoader = async () => {
   (document.getElementById('loader-modal') as HTMLElement).style.display='none';
-  // Don't auto-load a table - user should select one from Quick Menu or Loader Modal
 };
+// see window-api.ts — closeLoader
 
 (document.getElementById('open-loader') as HTMLElement).onclick = () => {
   (document.getElementById('loader-modal') as HTMLElement).style.display='flex';
@@ -3236,7 +3245,7 @@ function updateFileBrowserUI(): void {
   }
 }
 
-window.browseTableDirectory = async function() {
+const browseTableDirectoryFS = async () => {
   try {
     const browser = getFileSystemBrowser();
     const uiManager = getFileBrowserUIManager();
@@ -3246,7 +3255,6 @@ window.browseTableDirectory = async function() {
     fileBrowserState.selectedTableFile = null;
     fileBrowserState.selectedLibraryFiles = [];
 
-    // Update table list UI
     const tablesList = document.getElementById('tables-list')!;
     const tablesEmpty = document.getElementById('tables-empty')!;
 
@@ -3258,7 +3266,6 @@ window.browseTableDirectory = async function() {
     tablesList.style.display = 'block';
     tablesList.innerHTML = '';
 
-    // Add filter input
     const filterContainer = document.createElement('div');
     filterContainer.style.cssText = 'margin-bottom: 8px;';
     const filterInput = document.createElement('input');
@@ -3279,7 +3286,6 @@ window.browseTableDirectory = async function() {
     filterContainer.appendChild(filterInput);
     tablesList.parentElement?.insertBefore(filterContainer, tablesList);
 
-    // Render table rows
     const renderRows = (filesToRender: FileInfo[]) => {
       tablesList.innerHTML = '';
       for (const table of filesToRender) {
@@ -3290,7 +3296,6 @@ window.browseTableDirectory = async function() {
 
     renderRows(tables);
 
-    // Filter on input
     filterInput.oninput = () => {
       const filtered = uiManager.filterFiles(tables, filterInput.value);
       renderRows(filtered);
@@ -3301,18 +3306,17 @@ window.browseTableDirectory = async function() {
     console.error('❌ Failed to browse table directory:', error);
   }
 };
+// see window-api.ts — browseTableDirectory
 
-window.browseLibraryDirectory = async function() {
+const browseLibraryDirectoryFS = async () => {
   try {
     const browser = getFileSystemBrowser();
     const uiManager = getFileBrowserUIManager();
     const libraries = await browser.selectLibraryDirectory();
 
     fileBrowserState.libraryDirectory = browser.getSelectedDirectories().libraryDirectory;
-    // Start with all libraries selected
     fileBrowserState.selectedLibraryFiles = [...libraries];
 
-    // Update library list UI
     const libsList = document.getElementById('libraries-list')!;
     const libsEmpty = document.getElementById('libraries-empty')!;
 
@@ -3324,7 +3328,6 @@ window.browseLibraryDirectory = async function() {
     libsList.style.display = 'block';
     libsList.innerHTML = '';
 
-    // Add filter input
     const filterContainer = document.createElement('div');
     filterContainer.style.cssText = 'margin-bottom: 8px;';
     const filterInput = document.createElement('input');
@@ -3345,7 +3348,6 @@ window.browseLibraryDirectory = async function() {
     filterContainer.appendChild(filterInput);
     libsList.parentElement?.insertBefore(filterContainer, libsList);
 
-    // Render library rows with checkboxes
     const renderRows = (filesToRender: FileInfo[]) => {
       libsList.innerHTML = '';
       for (const lib of filesToRender) {
@@ -3377,6 +3379,7 @@ window.browseLibraryDirectory = async function() {
     console.error('❌ Failed to browse library directory:', error);
   }
 };
+// see window-api.ts — browseLibraryDirectory
 
 function selectTableFile(fileInfo: FileInfo): void {
   fileBrowserState.selectedTableFile = fileInfo;
@@ -3399,7 +3402,7 @@ function selectTableFile(fileInfo: FileInfo): void {
   updateFileBrowserUI();
 }
 
-window.loadSelectedTable = async function() {
+const loadSelectedTable = async () => {
   if (!fileBrowserState.selectedTableFile) {
     console.warn('⚠️ No table file selected');
     return;
@@ -3412,10 +3415,8 @@ window.loadSelectedTable = async function() {
 
     logMsg(`Loading FPT: ${file.name} (${formatFileSize(file.size)})...`);
 
-    // Show loading overlay
     showLoadingOverlay();
 
-    // Phase 2: Create progress callbacks
     const loadingCallbacks = {
       onPhaseStart: (phase: string) => {
         updateLoadingProgress(phase, 0, 1);
@@ -3428,25 +3429,21 @@ window.loadSelectedTable = async function() {
       }
     };
 
-    // Parse the FPT file with loading callbacks
     resetGameState();
     await parseFPTFile(
       file,
       async (cfg: any) => {
-        // Build table callback
         await loadTableWithPhysicsWorker(cfg, scene);
         setupBackglassForTable();
       },
       () => {
-        // Close loader callback
         hideLoadingOverlay();
-        window.closeLoader();
+        closeLoader();
       },
       (tab: string) => {
-        // Switch tab callback
-        window.switchTab(tab);
+        switchTab(tab);
       },
-      loadingCallbacks  // Phase 2: Pass callbacks
+      loadingCallbacks
     );
 
     logMsg(`✓ Loaded: ${file.name}`, 'ok');
@@ -3457,6 +3454,7 @@ window.loadSelectedTable = async function() {
     logMsg(`❌ Error: ${error instanceof Error ? error.message : String(error)}`, 'error');
   }
 };
+// see window-api.ts — loadSelectedTable
 
 function logMsg(msg: string, className: string = 'log-info'): void {
   const parseLog = document.getElementById('parse-log');
@@ -3470,7 +3468,7 @@ function logMsg(msg: string, className: string = 'log-info'): void {
 }
 
 // ─── Advanced File Browser Features (Option A) ──────────────────────────────────
-window.addToFavorites = function(filename: string, type: 'table' | 'library') {
+const addToFavorites = (filename: string, type: 'table' | 'library') => {
   const advancedMgr = getAdvancedFileBrowserManager();
   const targetList = type === 'table' ? fileBrowserState.selectedTableFile : fileBrowserState.selectedLibraryFiles.find(f => f.name === filename);
 
@@ -3482,17 +3480,17 @@ window.addToFavorites = function(filename: string, type: 'table' | 'library') {
   }
 };
 
-window.getAdvancedFavoritesCount = function(): number {
+const getAdvancedFavoritesCount = (): number => {
   const advancedMgr = getAdvancedFileBrowserManager();
   return advancedMgr.getFavorites().length;
 };
 
-window.getRecentTables = function(): FileInfo[] {
+const getRecentTables = (): FileInfo[] => {
   const advancedMgr = getAdvancedFileBrowserManager();
   return advancedMgr.getRecent();
 };
 
-window.createBatchLoadJob = function(tableNames: string[]): string {
+const createBatchLoadJob = (tableNames: string[]): string => {
   const advancedMgr = getAdvancedFileBrowserManager();
   const files = fileBrowserState.selectedTableFile
     ? [fileBrowserState.selectedTableFile]
@@ -3503,42 +3501,41 @@ window.createBatchLoadJob = function(tableNames: string[]): string {
   return job.id;
 };
 
-window.getBatchJobStatus = function(jobId: string): BatchJob | undefined {
+const getBatchJobStatus = (jobId: string): BatchJob | undefined => {
   const advancedMgr = getAdvancedFileBrowserManager();
   return advancedMgr.getBatchJob(jobId);
 };
 
-window.setupTableDragDrop = function() {
+const setupTableDragDrop = () => {
   const advancedMgr = getAdvancedFileBrowserManager();
   const dropZone = document.getElementById('game-canvas');
 
   if (dropZone) {
     advancedMgr.setupDragDrop(dropZone, async (files: File[], type: 'table' | 'library') => {
       logMsg(`📂 Dropped ${files.length} ${type} file${files.length !== 1 ? 's' : ''}`, 'log-info');
-      // Files can be handled here (would need File to FileInfo conversion)
     });
     logMsg('✓ Drag & drop enabled for game canvas', 'log-ok');
   }
 };
 
-window.sortTableFiles = function(field: string, files?: FileInfo[]): FileInfo[] {
+const sortTableFiles = (field: string, files?: FileInfo[]): FileInfo[] => {
   const advancedMgr = getAdvancedFileBrowserManager();
   const filesToSort = files || (fileBrowserState.selectedTableFile ? [fileBrowserState.selectedTableFile] : []);
   return advancedMgr.sortFiles(filesToSort, field);
 };
 
 // ─── Option B: Testing & Validation ────────────────────────────────────────────
-window.runFullTestSuite = async function(): Promise<any> {
+const runFullTestSuite = async (): Promise<any> => {
   const testSuite = getTestSuite();
   return await testSuite.runAllTests();
 };
 
-window.toggleFullscreen = () => {
+const toggleFullscreen = () => {
   if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(()=>{});
   else document.exitFullscreen?.();
 };
 
-window.toggleDMDMode = toggleDMDMode;
+// see window-api.ts — toggleDMDMode (direct import reference)
 
 let _dmdHidden = false;
 
@@ -3556,12 +3553,13 @@ const initDMDVisibility = () => {
   }
 };
 
-window.toggleHideDMD = () => {
+const toggleHideDMD = () => {
   _dmdHidden = !_dmdHidden;
   const wrap=document.getElementById('dmd-wrap')!, btn=document.getElementById('hide-dmd-btn')!;
   wrap.style.display=_dmdHidden?'none':'';
   btn.classList.toggle('dmd-hidden',_dmdHidden);
 };
+// see window-api.ts — toggleHideDMD
 
 // ─── Initialize DMD visibility based on multi-screen configuration ───
 document.addEventListener('DOMContentLoaded', () => {
@@ -3679,7 +3677,7 @@ let _msLayout = 1;
 const _msWindows: Record<string,Window|null> = {};
 const _msWindowStatus: Record<string,{opened: boolean; verified: boolean}> = {};
 
-window.selectMsLayout = (n: number) => {
+const selectMsLayout = (n: number) => {
   _msLayout=n;
   [1,2,3].forEach(i => document.getElementById(`ms-card-${i}`)?.classList.toggle('selected',i===n));
 
@@ -3741,8 +3739,9 @@ window.selectMsLayout = (n: number) => {
     roleConfig.style.display = 'none';
   }
 };
-window.openMultiscreenModal  = () => document.getElementById('multiscreen-modal')!.classList.add('open');
-window.closeMultiscreenModal = () => document.getElementById('multiscreen-modal')!.classList.remove('open');
+const openMultiscreenModal  = () => document.getElementById('multiscreen-modal')!.classList.add('open');
+const closeMultiscreenModal = () => document.getElementById('multiscreen-modal')!.classList.remove('open');
+// see window-api.ts — openMultiscreenModal, closeMultiscreenModal
 
 // ─── Helper function to open windows with verification ───
 function openMultiScreenWindow(url: string, name: string, features: string, role: string): Window | null {
@@ -3782,60 +3781,57 @@ function openMultiScreenWindow(url: string, name: string, features: string, role
 }
 
 // ─── Screen Role Management ───
-window.resetScreenRoles = (screenCount?: number) => {
+const resetScreenRoles = (screenCount?: number) => {
   const count = screenCount || _msLayout;
   getScreenRoleManager().resetToDefault(count);
-  window.selectMsLayout?.(count);
+  selectMsLayout(count);
 };
 
-window.swapScreenRoles = (screen1: number, screen2: number) => {
+const swapScreenRoles = (screen1: number, screen2: number) => {
   getScreenRoleManager().swapRoles(screen1, screen2);
-  window.selectMsLayout?.(_msLayout);
+  selectMsLayout(_msLayout);
 };
 
-window.autoDetectScreens = async () => {
+// see window-api.ts — resetScreenRoles, swapScreenRoles
+
+const autoDetectScreens = async () => {
   const info=document.getElementById('ms-detect-info')!; info.classList.add('visible'); info.innerHTML='<span>Scanning...</span>';
   let screenCount=1;
   try {
     if ('getScreenDetails' in window) { const d=await (window as any).getScreenDetails(); screenCount=d.screens.length; }
     else if ((window.screen as any).isExtended) screenCount=2;
-  } catch { /* ignore */ }
-  // eslint-disable-next-line no-unsanitized/property -- screenCount is a number from window.getScreenDetails()
-  if(screenCount>=3){info.innerHTML=`<span>✓ ${screenCount} screens</span> — 3-screen empfohlen`;window.selectMsLayout(3);}
-  else if(screenCount===2){info.innerHTML=`<span>✓ 2 screens</span> — 2-screen empfohlen`;window.selectMsLayout(2);}
-  else {info.innerHTML=`<span>1 screen</span>`;window.selectMsLayout(1);}
+  } catch { /* ignore */ void 0; }
+  if(screenCount>=3){info.innerHTML=`<span>✓ ${screenCount} screens</span> — 3-screen empfohlen`;selectMsLayout(3);}
+  else if(screenCount===2){info.innerHTML=`<span>✓ 2 screens</span> — 2-screen empfohlen`;selectMsLayout(2);}
+  else {info.innerHTML=`<span>1 screen</span>`;selectMsLayout(1);}
 };
 
-// ─── Apply startup screen configuration from URL parameter ───────────────────
-window.applyStartupScreenConfig = async () => {
+const applyStartupScreenConfig = async () => {
   const config = (window as any)._startupScreenConfig;
   const tableParam = new URLSearchParams(location.search).get('table');
 
-  if (!config) return; // No startup config
+  if (!config) return;
 
-  // Load table ONLY if explicitly passed as URL parameter, otherwise show Quick Menu
   if (tableParam) {
     const demoTable = tableParam;
-    // Load the table first, then apply screen config
-    window.loadDemoTable?.(demoTable);
-    await new Promise(resolve => setTimeout(resolve, 500)); // Wait for table to load
+    loadDemoTable(demoTable);
+    await new Promise(resolve => setTimeout(resolve, 500));
   }
-  // Otherwise: Let Quick Menu be shown by HTML window.load event
 
   if (config === 'auto') {
-    // Auto-detect and apply
-    await window.autoDetectScreens?.();
-    setTimeout(() => window.applyMsLayout?.(), 500);
+    await autoDetectScreens();
+    setTimeout(() => applyMsLayout(), 500);
   } else if ([1, 2, 3].includes(config)) {
-    // Apply specific screen count
-    window.selectMsLayout?.(config);
-    setTimeout(() => window.applyMsLayout?.(), 300);
+    selectMsLayout(config);
+    setTimeout(() => applyMsLayout(), 300);
   }
 };
 
+// see window-api.ts — autoDetectScreens, applyStartupScreenConfig
+
 function _winSpec(role: string, dw: number, dh: number, screenIdx?: number): string {
   // Try to use saved position first
-  try { const s=JSON.parse(localStorage.getItem(`fpw_winpos_${role}`)??'null'); if(s?.w>100) return `width=${s.w},height=${s.h},left=${s.x},top=${s.y}`; } catch { /* ignore */ }
+  try { const s=JSON.parse(localStorage.getItem(`fpw_winpos_${role}`)??'null'); if(s?.w>100) return `width=${s.w},height=${s.h},left=${s.x},top=${s.y}`; } catch { /* ignore */ void 0; }
 
   // If screen index provided, use that screen's position
   if (screenIdx !== undefined) {
@@ -3847,14 +3843,14 @@ function _winSpec(role: string, dw: number, dh: number, screenIdx?: number): str
           return `width=${dw},height=${dh},left=${scr.availLeft},top=${scr.availTop}`;
         }
       }
-    } catch { /* fallback */ }
+    } catch (e) { console.warn('[main] Screen detection fallback:', (e || 'unknown')); /* fallback */ }
   }
 
   return `width=${dw},height=${dh}`;
 }
 
-window.applyMsLayout = async () => {
-  window.closeMultiscreenModal?.();
+const applyMsLayout = async () => {
+  closeMultiscreenModal();
   ['dmd','backglass'].forEach(role=>{ if(_msWindows[role]&&!(_msWindows[role] as Window).closed)(_msWindows[role] as Window).close(); delete _msWindows[role]; });
   stopInlineBackglass();
   const btn=document.getElementById('multiscreen-btn')!, hdBtn=document.getElementById('hide-dmd-btn')!;
@@ -3966,12 +3962,13 @@ window.applyMsLayout = async () => {
     if (btn) btn.classList.toggle('dmd-hidden', _dmdHidden);
   }, 200);
 };
+// see window-api.ts — applyMsLayout
 
 // ─── Secondary Windows ────────────────────────────────────────────────────────
 function setupDMDWindow(): void {
   document.title='FPW — DMD';
   window.addEventListener('beforeunload',()=>{
-    try{localStorage.setItem('fpw_winpos_dmd',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{ /* localStorage can throw, ignore */ }
+    try{localStorage.setItem('fpw_winpos_dmd',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{ /* localStorage can throw, ignore */ void 0; }
     disposePhysicsWorker();
   });
   const wrap=document.getElementById('dmd-wrap')!, canvas=document.getElementById('dmd') as HTMLCanvasElement;
@@ -4008,7 +4005,7 @@ function setupDMDWindow(): void {
 
 function setupBackglassWindow(): void {
   document.title='FPW — Backglass';
-  window.addEventListener('beforeunload',()=>{try{localStorage.setItem('fpw_winpos_backglass',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{ /* localStorage can throw, ignore */ }
+  window.addEventListener('beforeunload',()=>{try{localStorage.setItem('fpw_winpos_backglass',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{ /* localStorage can throw, ignore */ void 0; }
 disposePhysicsWorker();});
   const canvas=document.getElementById('backglass-canvas') as HTMLCanvasElement;
   const showEmbedDMD=!new URLSearchParams(location.search).has('nodmd');
@@ -4408,13 +4405,14 @@ window.addEventListener('beforeunload', () => {
 });
 
 // ─── Integrated Editor: Open Editor Function ─────────────────────────────────
-(window as any).openIntegratedEditor = () => {
+const openIntegratedEditor = () => {
   if (currentTableConfig) {
     getIntegratedEditor().open(currentTableConfig);
   } else {
     showNotification('Load a table first!');
   }
 };
+// see window-api.ts — openIntegratedEditor
 
 // ─── Integrated Editor: Apply Changes Event ──────────────────────────────────
 window.addEventListener('editor:apply-changes', (event: any) => {
@@ -4433,7 +4431,7 @@ window.addEventListener('editor:apply-changes', (event: any) => {
   }
 
   // Rebuild the table in the scene
-  scene.children = scene.children.filter(child => {
+  scene.children = scene.children.filter((child: THREE.Object3D) => {
     if (child.userData && child.userData.isTableElement) {
       return false;  // Remove old table elements
     }
@@ -4450,49 +4448,59 @@ window.addEventListener('editor:apply-changes', (event: any) => {
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
-console.log('[INIT] FPW_ROLE:', FPW_ROLE, '- Starting main initialization');
+if (import.meta.env.DEV) { console.log('[INIT] FPW_ROLE:', FPW_ROLE, '- Starting main initialization'); }
 if (FPW_ROLE === 'dmd') {
-  console.log('[INIT] DMD role detected');
+  if (import.meta.env.DEV) { console.log('[INIT] DMD role detected'); }
   renderer.domElement.remove();
   setupDMDWindow();
 } else if (FPW_ROLE === 'backglass') {
-  console.log('[INIT] Backglass role detected');
+  if (import.meta.env.DEV) { console.log('[INIT] Backglass role detected'); }
   renderer.domElement.remove();
   setupBackglassWindow();
 } else {
-  console.log('[INIT] Main window role - starting async IIFE');
-  (window as any).INIT_ASYNC_IIFE_STARTED = true;
+  if (import.meta.env.DEV) { console.log('[INIT] Main window role - starting async IIFE'); }
+  if (import.meta.env.DEV) { (window as any).INIT_ASYNC_IIFE_STARTED = true; }
   (async () => {
-    (window as any).INIT_IN_ASYNC_IIFE = true;
+    if (import.meta.env.DEV) { (window as any).INIT_IN_ASYNC_IIFE = true; }
     try {
-      (window as any).INIT_PHYSICS_START = true;
+      if (import.meta.env.DEV) { (window as any).INIT_PHYSICS_START = true; }
       await initPhysics();
-      (window as any).INIT_PHYSICS_OK = true;
+      if (import.meta.env.DEV) { (window as any).INIT_PHYSICS_OK = true; }
     } catch(e) {
-      (window as any).INIT_PHYSICS_ERROR = e.message;
-      console.warn('Rapier init fehlgeschlagen:', e);
+      if (import.meta.env.DEV) {
+        (window as any).INIT_PHYSICS_ERROR = (e as Error).message;
+        console.warn('Rapier init fehlgeschlagen:', e);
+      }
     }
 
     // Skip initial table load during startup - let user select from loader
-    console.log('[INIT] Skipping initial table load - showing loader');
-    (window as any).INIT_TABLE_LOAD_OK = true;
+    if (import.meta.env.DEV) {
+      console.log('[INIT] Skipping initial table load - showing loader');
+      (window as any).INIT_TABLE_LOAD_OK = true;
+    }
 
     // Initialize B.A.M. Engine (after table is loaded and currentTableConfig is set)
-    (window as any).INIT_BAM_ENGINE_START = true;
-    console.log('🔄 About to initialize B.A.M. Engine...');
+    if (import.meta.env.DEV) {
+      (window as any).INIT_BAM_ENGINE_START = true;
+      console.log('🔄 About to initialize B.A.M. Engine...');
+    }
     const bam = new BAMEngine(currentTableConfig?.name || 'classic', mainSpot);
     setBAMEngine(bam);
-    console.log('✅ B.A.M. Engine initialized');
-    (window as any).INIT_BAM_ENGINE_OK = true;
+    if (import.meta.env.DEV) {
+      console.log('✅ B.A.M. Engine initialized');
+      (window as any).INIT_BAM_ENGINE_OK = true;
+    }
 
     // Phase 13 Task 2: Initialize BAM Bridge (connects VBScript to BAMEngine)
-    (window as any).INIT_BAM_BRIDGE_START = true;
+    if (import.meta.env.DEV) { (window as any).INIT_BAM_BRIDGE_START = true; }
     const bamBridge = initializeBamBridge(bam);
-    console.log('✅ B.A.M. Bridge initialized');
-    (window as any).INIT_BAM_BRIDGE_OK = true;
+    if (import.meta.env.DEV) {
+      console.log('✅ B.A.M. Bridge initialized');
+      (window as any).INIT_BAM_BRIDGE_OK = true;
+    }
 
     // Phase 13: Load animations from FPT resources into BAM engine
-    (window as any).INIT_ANIM_LOAD_START = true;
+    if (import.meta.env.DEV) { (window as any).INIT_ANIM_LOAD_START = true; }
     if (fptResources.animations && fptResources.animations.size > 0) {
       const bamSequencer = bam.getAnimationSequencer();
       let loadedCount = 0;
@@ -4511,45 +4519,55 @@ if (FPW_ROLE === 'dmd') {
         console.log(`✅ ${loadedCount} animation(s) loaded into BAM engine`);
       }
     }
-    (window as any).INIT_ANIM_LOAD_OK = true;
+    if (import.meta.env.DEV) { (window as any).INIT_ANIM_LOAD_OK = true; }
 
     // Phase 13 Task 3: Initialize animation binding system
-    (window as any).INIT_ANIM_BINDING_START = true;
-    console.log('🔄 About to initialize animation binding...');
+    if (import.meta.env.DEV) {
+      (window as any).INIT_ANIM_BINDING_START = true;
+      console.log('🔄 About to initialize animation binding...');
+    }
     const animationBindingMgr = initializeAnimationBinding();
     const animationScheduler = initializeAnimationScheduler();
-    console.log('✅ Animation binding system initialized');
-    (window as any).INIT_ANIM_BINDING_OK = true;
+    if (import.meta.env.DEV) {
+      console.log('✅ Animation binding system initialized');
+      (window as any).INIT_ANIM_BINDING_OK = true;
+    }
 
     // Phase 13 Task 5: Initialize animation debugger (Ctrl+D to toggle)
-    (window as any).INIT_ANIM_DEBUGGER_START = true;
+    if (import.meta.env.DEV) { (window as any).INIT_ANIM_DEBUGGER_START = true; }
     const animationDebugger = initializeAnimationDebugger();
     if (bamEngine) {
       animationDebugger.setBamEngine(bamEngine);
     }
-    console.log('✅ Animation debugger initialized (Ctrl+D to toggle)');
-    (window as any).INIT_ANIM_DEBUGGER_OK = true;
-
-    // ─── Phase 5: Apply initial quality preset ───
-    (window as any).INIT_BEFORE_QUALITY_PRESET = true;
-    try {
-      applyQualityPreset();
-      console.log('✅ Quality preset applied successfully');
-      (window as any).INIT_QUALITY_PRESET_OK = true;
-    } catch (err) {
-      console.error('❌ Error in applyQualityPreset:', err);
-      (window as any).INIT_QUALITY_PRESET_ERROR = err.message;
+    if (import.meta.env.DEV) {
+      console.log('✅ Animation debugger initialized (Ctrl+D to toggle)');
+      (window as any).INIT_ANIM_DEBUGGER_OK = true;
     }
 
-    (window as any).INIT_BEFORE_ANIMATE_CALL = true;
+    // ─── Phase 5: Apply initial quality preset ───
+    if (import.meta.env.DEV) { (window as any).INIT_BEFORE_QUALITY_PRESET = true; }
     try {
-      console.log('🎬 Starting animate loop...');
+      applyQualityPreset();
+      if (import.meta.env.DEV) {
+        console.log('✅ Quality preset applied successfully');
+        (window as any).INIT_QUALITY_PRESET_OK = true;
+      }
+    } catch (err) {
+      console.error('❌ Error in applyQualityPreset:', err);
+      if (import.meta.env.DEV) { (window as any).INIT_QUALITY_PRESET_ERROR = (err as Error).message; }
+    }
+
+    if (import.meta.env.DEV) { (window as any).INIT_BEFORE_ANIMATE_CALL = true; }
+    try {
+      if (import.meta.env.DEV) { console.log('🎬 Starting animate loop...'); }
       animate();
-      (window as any).INIT_ANIMATE_CALLED = true;
-      console.log('✅ Animate loop started');
+      if (import.meta.env.DEV) {
+        (window as any).INIT_ANIMATE_CALLED = true;
+        console.log('✅ Animate loop started');
+      }
     } catch (err) {
       console.error('❌ Error starting animate:', err);
-      (window as any).INIT_ANIMATE_ERROR = err.message;
+      if (import.meta.env.DEV) { (window as any).INIT_ANIMATE_ERROR = (err as Error).message; }
     }
     initInlineBackglass();
     document.getElementById('multiscreen-btn')?.classList.add('active-multi');
@@ -4582,169 +4600,167 @@ function installPWA() {
   _installPrompt.prompt();
   _installPrompt.userChoice.then(() => { _installPrompt = null; });
 }
-(window as any).installPWA = installPWA;
+// see window-api.ts — installPWA
 
 // ─── Phase 5: Quality System Exports ──────────────────────────────────────────
-// Public API for quality and performance management
-(window as any).setQualityPreset = (name: string) => {
+const setQualityPreset = (name: string) => {
   profiler.setQualityPreset(name);
   applyQualityPreset();
   console.log(`✅ Quality preset changed to: ${name}`);
 };
 
-(window as any).getQualityPreset = () => profiler.getQualityPreset();
-(window as any).getAvailableQualityPresets = () => Object.keys(QUALITY_PRESETS);
-(window as any).toggleAutoQuality = () => {
+const getQualityPreset = () => profiler.getQualityPreset();
+const getAvailableQualityPresets = () => Object.keys(QUALITY_PRESETS);
+const toggleAutoQuality = () => {
   const current = profiler.isAutoAdjusting();
   profiler.setAutoAdjust(!current);
   console.log(`🎯 Auto-quality adjustment: ${!current ? 'ON' : 'OFF'}`);
 };
 
-(window as any).getPerformanceMetrics = () => profiler.getMetrics();
-(window as any).togglePerformanceMonitor = () => {
+const getPerformanceMetrics = () => profiler.getMetrics();
+const togglePerformanceMonitor = () => {
   showProfiler = !showProfiler;
   localStorage.setItem('fpw_show_profiler', showProfiler.toString());
   console.log(`📊 Performance monitor: ${showProfiler ? 'ON' : 'OFF'}`);
 };
 
 // ─── Phase 14: Graphics Pipeline System Exports ──────────────────────────────────
-// Public API for graphics system management (geometry pooling, materials, lighting)
-(window as any).getGraphicsPipeline = getGraphicsPipeline;
-(window as any).getGeometryPool = () => getGraphicsPipeline()?.getGeometryPool?.();
-(window as any).getMaterialFactory = () => getGraphicsPipeline()?.getMaterialFactory?.();
-(window as any).getLightManager = () => getGraphicsPipeline()?.getLightManager?.();
+const getGeometryPool = () => getGraphicsPipeline()?.getGeometryPool?.();
+const getMaterialFactory = () => getGraphicsPipeline()?.getMaterialFactory?.();
+const getLightManager = () => getGraphicsPipeline()?.getLightManager?.();
 
 // ─── Phase 4: Resource Manager System Exports ───────────────────────────────────
-// Public API for memory budget and resource tracking
-(window as any).getResourceManager = getResourceManager;
-(window as any).getResourceStats = () => {
+const getResourceStats = () => {
   const mgr = getResourceManager();
   return mgr.getStats();
 };
-(window as any).logResourceStats = () => {
+const logResourceStats = () => {
   const mgr = getResourceManager();
   mgr.logStats();
 };
-(window as any).resetResourceManager = () => {
+const resetResourceManagerWrap = () => {
   resetResourceManager();
   resourceManager = initializeResourceManager();
   logMsg(`💾 ResourceManager reset with fresh budget`, 'ok');
 };
 
 // ─── Phase 5: Library Cache System Exports ──────────────────────────────────────
-// Public API for library caching with TTL and validation
-(window as any).getLibraryCache = getLibraryCache;
-(window as any).getLibraryCacheStats = () => {
+const getLibraryCacheStats = () => {
   const cache = getLibraryCache();
   return cache.getStats();
 };
-(window as any).logLibraryCacheStats = () => {
+const logLibraryCacheStats = () => {
   const cache = getLibraryCache();
   cache.logStats();
 };
-(window as any).cleanupLibraryCache = () => {
+const cleanupLibraryCache = () => {
   const cache = getLibraryCache();
   const removed = cache.cleanup();
   logMsg(`🧹 Manual cache cleanup: removed ${removed} expired entries`, 'ok');
 };
-(window as any).resetLibraryCache = () => {
+const resetLibraryCacheWrap = () => {
   resetLibraryCache();
   libraryCache = initializeLibraryCache();
   logMsg(`📚 LibraryCache reset with fresh TTL`, 'ok');
 };
 
 // ─── Phase 6: Audio Source Pool System Exports ───────────────────────────────
-// Public API for audio source pooling and GC pressure reduction
-(window as any).getAudioSourcePool = getAudioSourcePool;
-(window as any).getAudioSourcePoolStats = () => {
+const getAudioSourcePoolStats = () => {
   const pool = getAudioSourcePool();
   return pool.getStats();
 };
-(window as any).logAudioSourcePoolStats = () => {
+const logAudioSourcePoolStats = () => {
   const pool = getAudioSourcePool();
   pool.logStats();
 };
 
 // ─── Integration Testing Framework ──────────────────────────────────────────
-// Public API for testing all optimization phases
-(window as any).runIntegrationTests = () => integrationTesting.runTests();
-(window as any).benchmark = integrationTesting.benchmark;
-(window as any).memoryProfiler = integrationTesting.memory;
+const runIntegrationTests = () => integrationTesting.runTests();
+const benchmark = integrationTesting.benchmark;
+const memoryProfiler = integrationTesting.memory;
 
 // ─── Performance Report Generator ───────────────────────────────────────────
-// Public API for comprehensive performance analysis and reporting
-(window as any).generatePerformanceReport = async () => {
+const wrapGeneratePerformanceReport = async () => {
   const report = await generatePerformanceReport();
   const generator = getPerformanceReportGenerator();
   generator.printReport(report);
   return report;
 };
-(window as any).getPerformanceReportGenerator = getPerformanceReportGenerator;
-(window as any).comparePerformanceReports = (report1: any, report2: any) => {
+const comparePerformanceReports = (report1: any, report2: any) => {
   const generator = getPerformanceReportGenerator();
   return generator.compareReports(report1, report2);
 };
 
-// TypeScript: globale Funktionen
-declare global {
-  interface Window {
-    switchTab:           (tab: string) => void;
-    loadDemoTable:       (key: string) => void;
-    closeLoader:         () => void;
-    toggleFullscreen:    () => void;
-    toggleDMDMode:       () => void;
-    toggleHideDMD:       () => void;
-    toggleViewPanel:     () => void;
-    applyViewSettings:   () => void;
-    resetViewSettings:   () => void;
-    showNotification:    (msg: string) => void;
-    openMultiscreenModal:  () => void;
-    closeMultiscreenModal: () => void;
-    autoDetectScreens:     () => Promise<void>;
-    selectMsLayout:        (n: number) => void;
-    applyMsLayout:         () => void;
-    applyStartupScreenConfig: () => Promise<void>;
-    setQualityPreset:      (name: string) => void;
-    getQualityPreset:      () => any;
-    getAvailableQualityPresets: () => string[];
-    toggleAutoQuality:     () => void;
-    getPerformanceMetrics: () => any;
-    togglePerformanceMonitor: () => void;
-    getGraphicsPipeline:   () => any;
-    getGeometryPool:       () => any;
-    getMaterialFactory:    () => any;
-    getLightManager:       () => any;
-    browseTableDirectory:  () => Promise<void>;
-    browseLibraryDirectory: () => Promise<void>;
-    loadSelectedTable:     () => Promise<void>;
-    getResourceManager:    () => any;
-    getResourceStats:      () => any;
-    logResourceStats:      () => void;
-    resetResourceManager:  () => void;
-    getLibraryCache:       () => any;
-    getLibraryCacheStats:  () => any;
-    logLibraryCacheStats:  () => void;
-    cleanupLibraryCache:   () => void;
-    resetLibraryCache:     () => void;
-    getAudioSourcePool:    () => any;
-    getAudioSourcePoolStats: () => any;
-    logAudioSourcePoolStats: () => void;
-    runIntegrationTests:   () => Promise<any>;
-    benchmark:             any;
-    memoryProfiler:        any;
-    generatePerformanceReport: () => Promise<any>;
-    getPerformanceReportGenerator: () => any;
-    comparePerformanceReports: (report1: any, report2: any) => any;
-    addToFavorites: (filename: string, type: 'table' | 'library') => void;
-    getAdvancedFavoritesCount: () => number;
-    getRecentTables: () => any[];
-    createBatchLoadJob: (tableNames: string[]) => string;
-    getBatchJobStatus: (jobId: string) => any;
-    setupTableDragDrop: () => void;
-    sortTableFiles: (field: string, files?: any[]) => any[];
-    runFullTestSuite: () => Promise<any>;
-  }
-}
+// ─── Register all public API on window ─────────────────────────────────────────
+setupWindowAPI(window, {
+  showNotification,
+  showLibrarySelector,
+  switchTab,
+  loadDemoTable,
+  closeLoader,
+  toggleViewPanel,
+  applyViewSettings,
+  resetViewSettings,
+  toggleFullscreen,
+  toggleDMDMode,
+  toggleHideDMD,
+  browseTableDirectory: browseTableDirectoryFS,
+  browseLibraryDirectory: browseLibraryDirectoryFS,
+  loadSelectedTable,
+  selectMsLayout,
+  openMultiscreenModal,
+  closeMultiscreenModal,
+  applyMsLayout,
+  resetScreenRoles,
+  swapScreenRoles,
+  autoDetectScreens,
+  applyStartupScreenConfig,
+  changeCabinetProfile,
+  rotatePlayfield,
+  getCabinetProfiles,
+  getCurrentCabinetProfile,
+  applyRotationProfile,
+  rotatePlayfieldAnimated,
+  getCurrentPlayfieldRotation,
+  openIntegratedEditor,
+  installPWA,
+  setQualityPreset,
+  getQualityPreset,
+  getAvailableQualityPresets,
+  toggleAutoQuality,
+  getPerformanceMetrics,
+  togglePerformanceMonitor,
+  getGraphicsPipeline,
+  getGeometryPool,
+  getMaterialFactory,
+  getLightManager,
+  getResourceManager,
+  getResourceStats,
+  logResourceStats,
+  resetResourceManager: resetResourceManagerWrap,
+  getLibraryCache,
+  getLibraryCacheStats,
+  logLibraryCacheStats,
+  cleanupLibraryCache,
+  resetLibraryCache: resetLibraryCacheWrap,
+  getAudioSourcePool,
+  getAudioSourcePoolStats,
+  logAudioSourcePoolStats,
+  runIntegrationTests,
+  benchmark,
+  memoryProfiler,
+  generatePerformanceReport: wrapGeneratePerformanceReport,
+  getPerformanceReportGenerator,
+  comparePerformanceReports,
+  addToFavorites,
+  getAdvancedFavoritesCount,
+  getRecentTables,
+  createBatchLoadJob,
+  getBatchJobStatus,
+  setupTableDragDrop,
+  sortTableFiles,
+  runFullTestSuite,
+});
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;

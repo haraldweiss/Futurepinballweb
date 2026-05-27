@@ -42,7 +42,7 @@ export function createMetallicBallMaterial(config?: Partial<MetallicMaterialConf
   });
 
   // Enhance specular highlights via shader hook
-  material.onBeforeCompile = (shader) => {
+  material.onBeforeCompile = (shader: any) => {
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <lights_fragment_begin>',
       `
@@ -76,7 +76,7 @@ export function createMetallicFlipperMaterial(config?: Partial<MetallicMaterialC
     envMapIntensity: finalConfig.envMapIntensity,
   });
 
-  material.onBeforeCompile = (shader) => {
+  material.onBeforeCompile = (shader: any) => {
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <lights_fragment_begin>',
       `
@@ -102,13 +102,13 @@ export function createMetallicBumperMaterial(color: number = 0xff3333): THREE.Me
     emissiveIntensity: 0.1,  // Subtle glow
   });
 
-  material.onBeforeCompile = (shader) => {
+  material.onBeforeCompile = (shader: any) => {
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <lights_fragment_begin>',
       `
       #include <lights_fragment_begin>
-      // Enhanced highlights for bumper ring
-      reflectedLight.specular *= 1.15;
+      // Enhanced specular for bumper surface
+      reflectedLight.specular *= 1.3;
       `
     );
   };
@@ -128,7 +128,7 @@ export function createMetallicTargetMaterial(color: number = 0x00ccff): THREE.Me
     emissiveIntensity: 0.15,  // Moderate glow
   });
 
-  material.onBeforeCompile = (shader) => {
+  material.onBeforeCompile = (shader: any) => {
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <lights_fragment_begin>',
       `
@@ -143,7 +143,7 @@ export function createMetallicTargetMaterial(color: number = 0x00ccff): THREE.Me
 }
 
 /**
- * Create glossy ramp material with metallic properties
+ * Create enhanced metallic material for ramps
  */
 export function createMetallicRampMaterial(config?: Partial<MetallicMaterialConfig>): THREE.MeshStandardMaterial {
   const defaultConfig: MetallicMaterialConfig = {
@@ -162,7 +162,7 @@ export function createMetallicRampMaterial(config?: Partial<MetallicMaterialConf
     envMapIntensity: finalConfig.envMapIntensity,
   });
 
-  material.onBeforeCompile = (shader) => {
+  material.onBeforeCompile = (shader: any) => {
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <lights_fragment_begin>',
       `
@@ -261,7 +261,7 @@ export class EnhancedMetallicMaterialFactory {
         envMapIntensity: config.envMapIntensity,
       });
 
-      material.onBeforeCompile = (shader) => {
+      material.onBeforeCompile = (shader: any) => {
         shader.fragmentShader = shader.fragmentShader.replace(
           '#include <lights_fragment_begin>',
           `

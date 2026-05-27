@@ -88,7 +88,7 @@ export class SoundManager {
       this.audioContext = new AudioContextClass();
       
       // Resume on user interaction (required by browsers)
-      if (this.audioContext.state === 'suspended') {
+      if (this.audioContext?.state === 'suspended') {
         document.addEventListener('click', () => {
           if (this.audioContext?.state === 'suspended') {
             this.audioContext.resume();

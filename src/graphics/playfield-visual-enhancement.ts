@@ -184,7 +184,7 @@ export class PlayfieldVisualEnhancement {
    */
   private initializeImprovedLighting(): void {
     // Enhance existing lights
-    const lights = this.scene.children.filter(c => c instanceof THREE.Light);
+    const lights = this.scene.children.filter((c: THREE.Object3D) => c instanceof THREE.Light);
 
     for (const light of lights) {
       if (light instanceof THREE.DirectionalLight) {
@@ -296,7 +296,7 @@ export class PlayfieldVisualEnhancement {
    * Update visual intensity based on game state
    */
   updateLightingIntensity(intensity: number): void {
-    const lights = this.scene.children.filter(c => c instanceof THREE.Light);
+    const lights = this.scene.children.filter((c: THREE.Object3D) => c instanceof THREE.Light);
 
     for (const light of lights) {
       if (light instanceof THREE.Light) {

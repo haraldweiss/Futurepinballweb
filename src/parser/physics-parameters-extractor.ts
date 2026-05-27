@@ -97,7 +97,8 @@ function scanForPhysicsBlocks(bytes: Uint8Array): Array<{ offset: number; data: 
         });
         i += 20; // Skip ahead to avoid overlaps
       }
-    } catch {
+    } catch (e) {
+      console.debug('[physics-parameters-extractor] Skip invalid read:', (e || 'unknown'));
       // Skip invalid reads
     }
   }
@@ -141,7 +142,8 @@ function scanPhysicsRange(
           if (values.length >= maxResults) break;
         }
       }
-    } catch {
+    } catch (e) {
+      console.debug('[physics-parameters-extractor] Skip physics range read:', (e || 'unknown'));
       // Skip
     }
   }
