@@ -2,13 +2,14 @@
 
 **Modern cross-platform 3D pinball game in your browser — with VPX-competitive graphics, advanced physics, multi-screen arcade cabinet support, and comprehensive video editing**
 
-![Version](https://img.shields.io/badge/Version-0.20.0-blue)
+![Version](https://img.shields.io/badge/Version-0.20.21-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)
 ![Modules](https://img.shields.io/badge/Modules-60-orange)
 ![Code](https://img.shields.io/badge/Code-27.8K%20Lines-purple)
 ![Tests](https://img.shields.io/badge/Tests-582%20passing-success)
+![TypeScript](https://img.shields.io/badge/TS_Errors-0-success)
 ![Parser](https://img.shields.io/badge/Enhanced_FPT_Parser-v1.0-success)
 
 ---
@@ -390,7 +391,7 @@ public/
 ### Build Status
 - **Modules**: 60 (optimized)
 - **Build Time**: ~1.1 seconds
-- **TypeScript Errors**: 0 ✓
+- **TypeScript Errors**: 0 ✓ (strict clean)
 - **Code Size**: ~27.8K lines
 - **VBScript Functions**: 179+
 - **Tests**: 582 passing across 20 vitest files
@@ -625,7 +626,7 @@ MIT License - See LICENSE file for details
 
 **Made with ❤️ by Future Pinball Contributors**
 
-Last Updated: March 12, 2026 | Version 0.18.0 | Phase 18 Complete ✅
+Last Updated: May 27, 2026 | Version 0.20.21 | Phase 18 Complete ✅
 
 ---
 

@@ -217,7 +217,27 @@ export class EditorModal {
 
     // Add backglass settings if editor exists
     if (this.backglassEditor) {
-      changes.backglassSettings = this.backglassEditor.getSettings();
+      const bgSettings = this.backglassEditor.getSettings();
+      changes.backglassSettings = {
+        cabinetColor: bgSettings.cabinetColor,
+        decorativeLights: bgSettings.decorativeLights.map(l => ({
+          color: l.color,
+          intensity: l.intensity,
+          x: l.position.x,
+          y: l.position.y,
+          z: l.position.z,
+        })),
+        enableParallax: bgSettings.enableParallax,
+        artworkTexture: bgSettings.artworkTexture,
+        textOverlays: bgSettings.textOverlays.map(t => ({
+          text: t.text,
+          color: t.color,
+          fontSize: t.fontSize,
+          x: t.position.x,
+          y: t.position.y,
+          opacity: t.opacity,
+        })),
+      };
     }
 
     // Add DMD settings if editor exists
@@ -305,15 +325,13 @@ export class EditorModal {
    */
   async loadFPTFile(file: File): Promise<void> {
     try {
-      // Parse the FPT file
-      const config = await parseFPTFile(file);
-      if (!config) {
-        alert('Failed to parse FPT file');
-        return;
-      }
+      // Parse the FPT file (relies on callbacks)
+      await parseFPTFile(file);
 
-      // Load the config into the editor
-      this.loadTableConfig(config);
+      // Load current table config into the editor
+      if (this.originalConfig) {
+        this.loadTableConfig(this.originalConfig);
+      }
       this.updateEditor();
 
       // Show success notification
@@ -458,7 +476,7 @@ export class EditorModal {
     // Attach canvas events
     this.canvas.addEventListener('mousemove', (e) => this.onCanvasMouseMove(e));
     this.canvas.addEventListener('mousedown', (e) => this.onCanvasMouseDown(e));
-    this.canvas.addEventListener('mouseup', (e) => this.onCanvasMouseUp(e));
+    this.canvas.addEventListener('mouseup', () => this.onCanvasMouseUp());
     this.canvas.addEventListener('click', (e) => this.onCanvasClick(e));
 
     // Toolbar events
@@ -944,7 +962,7 @@ export class EditorModal {
     if (this.canvas) {
       this.canvas.removeEventListener('mousemove', (e) => this.onCanvasMouseMove(e));
       this.canvas.removeEventListener('mousedown', (e) => this.onCanvasMouseDown(e));
-      this.canvas.removeEventListener('mouseup', (e) => this.onCanvasMouseUp(e));
+      this.canvas.removeEventListener('mouseup', () => this.onCanvasMouseUp());
       this.canvas.removeEventListener('click', (e) => this.onCanvasClick(e));
     }
 

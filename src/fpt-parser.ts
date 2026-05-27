@@ -1093,7 +1093,7 @@ export async function parseFPTFile(
 
     if (textureCount > 0 || soundCount > 0) {
       logMsg(`✓ CFB erfolgreich: ${textureCount} Textur(en), ${soundCount} Sound(s), ${streamCount} Stream(s) total`, 'ok');
-      if (soundCount > 0) { logMsg('Mappe Sounds...', 'info'); mapFPTSounds(fptResources.sounds); }
+      if (soundCount > 0) { logMsg('Mappe Sounds...', 'info'); mapFPTSounds(fptResources.sounds as Record<string, AudioBuffer>); }
       if (fptResources.playfield) logMsg('✓ Spielfeld-Textur geladen', 'ok');
 
       if (fptResources.script) {
@@ -1259,8 +1259,10 @@ export async function parseFPTFile(
 
       if (fptResources.playfield) logMsg('🖼️ Spielfeld-Textur angewendet', 'ok');
       if (fptResources.musicTrack) {
-        logMsg(`🎵 FPT-Musik ${fptResources.musicTrack.duration.toFixed(1)}s`, 'ok');
-        playFPTMusic(fptResources.musicTrack);
+        const musicTrack = fptResources.musicTrack;
+        const duration = typeof musicTrack === 'object' && 'duration' in musicTrack ? (musicTrack as AudioBuffer).duration.toFixed(1) : '?';
+        logMsg(`🎵 FPT-Musik ${duration}s`, 'ok');
+        playFPTMusic(musicTrack);
       }
 
       // Detect library dependencies
@@ -1386,7 +1388,7 @@ export async function parseFPTFile(
 export type { FPLLibrary } from './types';
 
 // Phase 5: Import library cache with TTL support
-import { getLibraryCache, getLibraryByName } from './library-cache';
+import { getLibraryCache, getLibraryByName as getCachedLibraryByName } from './library-cache';
 
 export async function parseFPLFile(
   file: File,
@@ -1440,7 +1442,7 @@ export async function parseFPLFile(
         if (sound) {
           library.soundLibrary[name] = sound;
           categories.music++;
-          logMsg(`  🎵 Music: "${name}" (${sound.duration.toFixed(1)}s)`, 'ok');
+          logMsg(`  🎵 Music: "${name}" (${(sound as AudioBuffer).duration.toFixed(1)}s)`, 'ok');
         }
       }
       // Sound Effects (SND, SFX, SOUND, AUDIO)
@@ -1449,7 +1451,7 @@ export async function parseFPLFile(
         if (sound) {
           library.soundLibrary[name] = sound;
           categories.sounds++;
-          logMsg(`  🔊 Sound: "${name}" (${sound.duration.toFixed(2)}s)`, 'ok');
+          logMsg(`  🔊 Sound: "${name}" (${(sound as AudioBuffer).duration.toFixed(2)}s)`, 'ok');
         }
       }
       // Voices (VOC, VO, VOICE, SPEECH, NARRATOR)
@@ -1458,7 +1460,7 @@ export async function parseFPLFile(
         if (sound) {
           library.voiceLibrary[name] = sound;
           categories.voices++;
-          logMsg(`  🗣️ Voice: "${name}" (${sound.duration.toFixed(2)}s)`, 'ok');
+          logMsg(`  🗣️ Voice: "${name}" (${(sound as AudioBuffer).duration.toFixed(2)}s)`, 'ok');
         }
       }
       // Models (MOD, MODEL, OBJ, 3D)

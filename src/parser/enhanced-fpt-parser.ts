@@ -56,10 +56,11 @@ export async function extractEnhancedFPTData(
     // ─── Phase 2: Game Elements ───────────────────────────────────────────
     log('🎮 Classifying game elements...');
     let elements: any[] = [];
+    let elementValidation = { valid: 0, invalid: 0, warnings: [] as string[] };
     if (coordinates && coordinates.length > 0) {
       const scriptFunctions = scriptCode ? extractScriptFunctionNames(scriptCode) : undefined;
       elements = extractGameElements(coordinates, undefined, colors, scriptFunctions);
-      const elementValidation = validateExtractedElements(elements);
+      elementValidation = validateExtractedElements(elements);
       log(`✅ ${elementValidation.valid} valid elements, ${elementValidation.invalid} invalid`);
       if (elementValidation.warnings.length > 0) {
         log(`⚠️  Element warnings: ${elementValidation.warnings.slice(0, 3).join('; ')}`);

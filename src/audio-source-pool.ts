@@ -3,10 +3,10 @@
 /**
  * audio-source-pool.ts — Phase 6: Audio Buffer Source Pooling
  *
- * Implements a pool of reusable AudioBufferSource objects to reduce
+ * Implements a pool of reusable AudioBufferSourceNode objects to reduce
  * garbage collection pressure and improve audio playback performance.
  *
- * Instead of creating new AudioBufferSource for each sound:
+ * Instead of creating new AudioBufferSourceNode for each sound:
  * Before: allocate → play → disconnect → GC
  * After: acquire from pool → play → disconnect → return to pool
  */
@@ -23,7 +23,7 @@ import { logMsg } from './fpt-parser';
  * - Better performance during heavy audio usage
  */
 export class AudioSourcePool {
-  private pool: AudioBufferSource[] = [];
+  private pool: AudioBufferSourceNode[] = [];
   private poolSize: number;
   private ctx: AudioContext;
   private stats = {
@@ -52,8 +52,8 @@ export class AudioSourcePool {
    * Acquire a source from the pool
    * Returns a source from pool if available, or creates a new one
    */
-  acquireSource(): AudioBufferSource {
-    let source: AudioBufferSource;
+  acquireSource(): AudioBufferSourceNode {
+    let source: AudioBufferSourceNode;
 
     if (this.pool.length > 0) {
       source = this.pool.pop()!;
@@ -71,7 +71,7 @@ export class AudioSourcePool {
    * Release a source back to the pool
    * Clears connections and returns to pool if under poolSize
    */
-  releaseSource(source: AudioBufferSource): void {
+  releaseSource(source: AudioBufferSourceNode): void {
     try {
       // Disconnect from all nodes
       source.disconnect();

@@ -87,6 +87,7 @@ const SSAOShader = {
  * SSAOPass — Screen-Space Ambient Occlusion effect for playfield depth
  */
 export class SSAOPass extends ShaderPass {
+  declare uniforms: Record<string, { value: any }>;
   private renderTargetNormal: THREE.WebGLRenderTarget;
   private renderTargetDepth: THREE.WebGLRenderTarget;
   private normalMaterial: THREE.ShaderMaterial;

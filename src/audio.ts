@@ -266,7 +266,7 @@ export function playFPTMusic(audioResource: AudioBuffer | string): void {
     // Connect audio element to Web Audio API for effects/control
     // Note: Direct connection requires CORS. Fallback: use element's native volume
     try {
-      const source = ctx.createMediaElementAudioSource(bgMusicElement);
+      const source = ctx.createMediaElementSource(bgMusicElement);
       source.connect(bgMusicGain);
     } catch (e) {
       // Fallback: use element volume control directly

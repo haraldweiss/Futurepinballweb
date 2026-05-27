@@ -182,7 +182,7 @@ export class FileSystemBrowser {
     const filterArray = Array.isArray(filters) ? filters : [filters];
 
     try {
-      for await (const entry of dirHandle.values()) {
+      for await (const entry of (dirHandle as any).values()) {
         if (entry.kind === 'file') {
           // Apply extension filter
           if (filterArray.length > 0) {

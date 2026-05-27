@@ -136,7 +136,7 @@ export class AnimationDebugger {
     status += `⚙️ Queue: ${queue?.size() || 0} pending\n`;
     status += `▶️ Current: ${queue?.getCurrent()?.sequenceId || 'none'}\n`;
     status += `🎯 Playing: ${bridge?.isAnimationPlaying() ? 'YES' : 'NO'}\n`;
-    status += `📊 Bindings: ${bindingMgr?.getQueueContents?.().length || 0}\n`;
+    status += `📊 Queue: ${queue?.getQueueContents().length || 0}\n`;
 
     this.statusDisplay.textContent = status;
 

@@ -3,7 +3,7 @@
 /**
  * script-engine.ts — VBScript → JavaScript Transpiler + FP Script API
  */
-import { state, fptResources, setFpScriptHandlers, bumpers, targets, cb } from './game';
+import { state, fptResources, setFpScriptHandlers, bumpers, targets, cb, physics } from './game';
 import { getAudioCtx, playSound, playFPTMusic, startBGMusic, stopBGMusic } from './audio-system';
 import { dmdEvent } from './dmd';
 import { getBamBridge } from './bam-bridge';
@@ -345,7 +345,7 @@ function buildFPScriptAPI() {
       if (buf) {
         const ctx = getAudioCtx();
         const src = ctx.createBufferSource(), gain = ctx.createGain();
-        src.buffer = buf; src.loop = !!loop;
+        if (buf instanceof AudioBuffer) { src.buffer = buf; src.loop = !!loop; } else { return; }
         gain.gain.value = Math.max(0, Math.min(1, (+vol || 100) / 100));
         src.connect(gain); gain.connect(ctx.destination); src.start();
       } else {
@@ -1443,7 +1443,7 @@ function buildFPScriptAPI() {
       if (!physics || !physics.ballBody) return { x: 0, y: 0, z: 0 };
       try {
         const angVel = physics.ballBody.angvel();
-        return { x: angVel.x || 0, y: angVel.y || 0, z: angVel.z || 0 };
+        return { x: 0, y: 0, z: angVel || 0 };
       } catch {
         return { x: 0, y: 0, z: 0 };
       }
@@ -1453,7 +1453,7 @@ function buildFPScriptAPI() {
       if (!physics || !physics.ballBody) return { x: 0, y: 0, z: 0 };
       try {
         const angVel = physics.ballBody.angvel();
-        return { x: angVel.x || 0, y: angVel.y || 0, z: angVel.z || 0 };
+        return { x: 0, y: 0, z: angVel || 0 };
       } catch {
         return { x: 0, y: 0, z: 0 };
       }
@@ -1471,19 +1471,19 @@ function buildFPScriptAPI() {
 
     GetCollisionForce: () => {
       // Return cached collision force from last frame (physics engine would set this)
-      return physics?.__lastCollisionForce || 0;
+      return (physics as any)?.__lastCollisionForce || 0;
     },
 
     GetCollisionNormal: () => {
       // Return cached collision normal from last frame
-      const normal = physics?.__lastCollisionNormal;
-      return normal ? { x: normal.x, y: normal.y, z: normal.z } : { x: 0, y: 1, z: 0 };
+      const normal = (physics as any)?.__lastCollisionNormal;
+      return normal ? { x: normal.x, y: normal.y, z: normal.z || 0 } : { x: 0, y: 1, z: 0 };
     },
 
     GetCollisionPoint: () => {
       // Return cached collision point in world space
-      const point = physics?.__lastCollisionPoint;
-      return point ? { x: point.x, y: point.y, z: point.z } : { x: 0, y: 0, z: 0 };
+      const point = (physics as any)?.__lastCollisionPoint;
+      return point ? { x: point.x, y: point.y, z: point.z || 0 } : { x: 0, y: 0, z: 0 };
     },
 
     GetElementVelocity: (obj: any) => {
@@ -1524,7 +1524,7 @@ function buildFPScriptAPI() {
         return {
           x: (pos.x || 0) + (vel.x || 0) * t,
           y: (pos.y || 0) + (vel.y || 0) * t,
-          z: (pos.z || 0) + (vel.z || 0) * t,
+          z: 0,
         };
       } catch {
         return { x: 0, y: 0, z: 0 };
@@ -1535,7 +1535,7 @@ function buildFPScriptAPI() {
       if (!physics || !physics.ballBody) return 0;
       try {
         const vel = physics.ballBody.linvel();
-        const v2 = (vel.x || 0) ** 2 + (vel.y || 0) ** 2 + (vel.z || 0) ** 2;
+        const v2 = (vel.x || 0) ** 2 + (vel.y || 0) ** 2;
         const mass = 0.0265;  // kg
         return 0.5 * mass * v2;  // Joules
       } catch {
@@ -1562,7 +1562,7 @@ function buildFPScriptAPI() {
       try {
         const vel = physics.ballBody.linvel();
         const pos = physics.ballBody.translation();
-        const v2 = (vel.x || 0) ** 2 + (vel.y || 0) ** 2 + (vel.z || 0) ** 2;
+        const v2 = (vel.x || 0) ** 2 + (vel.y || 0) ** 2;
         const mass = 0.0265;  // kg
         const g = 9.81;  // m/s²
         const y = pos.y || 0;
@@ -1579,7 +1579,7 @@ function buildFPScriptAPI() {
     SetBallSpin: (x: number, y: number, z: number) => {
       if (!physics || !physics.ballBody) return;
       try {
-        physics.ballBody.setAngvel({ x: Number(x) || 0, y: Number(y) || 0, z: Number(z) || 0 }, true);
+        physics.ballBody.setAngvel(Number(z) || 0, true);
         fpScriptLog(`SetBallSpin: (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})`);
       } catch (e) {
         fpScriptLog(`SetBallSpin ERROR: ${e}`);
@@ -1589,10 +1589,11 @@ function buildFPScriptAPI() {
     ApplyBallForce: (x: number, y: number, z: number, dt?: number) => {
       if (!physics || !physics.ballBody) return;
       try {
-        const force = { x: Number(x) || 0, y: Number(y) || 0, z: Number(z) || 0 };
+        const fx = Number(x) || 0;
+        const fy = Number(y) || 0;
         const duration = Math.max(0.001, Number(dt) || 0.016);  // Minimum 1ms
         physics.ballBody.applyImpulse(
-          { x: force.x * duration, y: force.y * duration, z: force.z * duration },
+          { x: fx * duration, y: fy * duration },
           true
         );
         fpScriptLog(`ApplyBallForce: (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}) for ${duration.toFixed(3)}s`);

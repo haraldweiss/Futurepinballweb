@@ -192,7 +192,7 @@ export class TestSuite {
       category,
       status: stats ? 'passed' : 'failed',
       duration: 1,
-      message: stats ? `Total budget: ${stats.totalBudget}` : 'N/A',
+      message: stats ? `Total budget: ${stats.total.budget}` : 'N/A',
     });
 
     // Test 4.3: LRU eviction available
@@ -209,7 +209,7 @@ export class TestSuite {
       category,
       status: stats ? 'passed' : 'failed',
       duration: 1,
-      message: stats ? `${stats.entries} resources tracked` : 'N/A',
+      message: stats ? `${stats.textures.items + stats.audioBuffers.items + stats.models.items} resources tracked` : 'N/A',
     });
   }
 
@@ -492,21 +492,25 @@ export class TestSuite {
     });
 
     // Test P.2: Load time estimate
-    const loadTimeImprovement = report?.benchmarks?.estimatedLoadTimeImprovement || 0;
+    const loadTimeImprovement = report?.benchmarks
+      ? ((1 - report.benchmarks.estimated_load_time_after / report.benchmarks.estimated_load_time_before) * 100).toFixed(0)
+      : '0';
     this.addResult({
       name: 'Load time improvement estimate (40%+)',
       category,
-      status: loadTimeImprovement >= 40 ? 'passed' : 'failed',
+      status: parseFloat(loadTimeImprovement) >= 40 ? 'passed' : 'failed',
       duration: 1,
       message: `${loadTimeImprovement}%`,
     });
 
     // Test P.3: Memory reduction estimate
-    const memoryReduction = report?.benchmarks?.estimatedMemoryReduction || 0;
+    const memoryReduction = report?.benchmarks
+      ? ((1 - report.benchmarks.estimated_memory_after / report.benchmarks.estimated_memory_before) * 100).toFixed(0)
+      : '0';
     this.addResult({
       name: 'Memory reduction estimate (50%+)',
       category,
-      status: memoryReduction >= 50 ? 'passed' : 'failed',
+      status: parseFloat(memoryReduction) >= 50 ? 'passed' : 'failed',
       duration: 1,
       message: `${memoryReduction}%`,
     });
@@ -515,9 +519,9 @@ export class TestSuite {
     this.addResult({
       name: 'Device capability detection',
       category,
-      status: report?.deviceProfile ? 'passed' : 'failed',
+      status: report?.device_profile ? 'passed' : 'failed',
       duration: 1,
-      message: report?.deviceProfile?.type || 'Unknown',
+      message: report?.device_profile?.type || 'Unknown',
     });
 
     // Test P.5: Phase metrics aggregation

@@ -51,7 +51,7 @@ export function extractDetailedLights(
       intensity: intensities[i] || 1.0,
       falloffDistance: falloffs[i] || 5.0,
       falloffType: 'quadratic',
-      behavior: behaviors[i]?.behavior || 'static',
+      behavior: (behaviors[i]?.behavior as 'static' | 'pulse' | 'flashing' | 'fade') || 'static',
       behaviorRate: behaviors[i]?.rate,
       behaviorPhase: Math.random(),
     };

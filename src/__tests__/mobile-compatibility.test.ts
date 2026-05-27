@@ -631,7 +631,7 @@ describe('Mobile Device Compatibility', () => {
         tester.simulateTouchInput('flipper-right');
         tester.simulateTouchInput('plunger');
 
-        const info = tester.getDeviceInfo();
+        const info = tester.getDeviceInfo() as any;
         expect(info.touchEvents).toBe(3);
         expect(info.performanceMetrics.fps).toBeGreaterThanOrEqual(45);
       }

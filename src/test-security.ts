@@ -520,11 +520,11 @@ export async function testEventHandlerSecurity(): Promise<void> {
       });
 
       const clickEvent1 = { target: child1 };
-      parent.listeners['click']?.forEach((cb: (...args: any[]) => any) => cb.call(parent, clickEvent1));
+      (parent as any).listeners['click']?.forEach((cb: (...args: any[]) => any) => cb.call(parent, clickEvent1));
       assert(triggeredId === '1', 'Event delegation failed for child1');
 
       const clickEvent2 = { target: child2 };
-      parent.listeners['click']?.forEach((cb: (...args: any[]) => any) => cb.call(parent, clickEvent2));
+      (parent as any).listeners['click']?.forEach((cb: (...args: any[]) => any) => cb.call(parent, clickEvent2));
       assert(triggeredId === '2', 'Event delegation failed for child2');
 
       logTest('Event handlers: Event delegation', true, 'Delegation works correctly', performance.now() - start, 'xss');

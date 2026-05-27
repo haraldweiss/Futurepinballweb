@@ -30,6 +30,12 @@ export const state: GameState = {
   lastRank:        0,
   lastScore:       0,
 
+  // ─── Arcade Mode: Player & Coin System ───
+  credits: 0,
+  numPlayers: 0,
+  currentPlayer: 0,
+  playerScores: [0, 0, 0, 0],
+
   // ─── Enhanced Physics & Game Mechanics ───
   // Phase 1: Bumper Combo
   bumperCombo:         0,

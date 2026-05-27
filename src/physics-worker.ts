@@ -46,7 +46,7 @@ function initializePhysics(config: any): void {
   const ballDesc = RAPIER.RigidBodyDesc.dynamic()
     .setTranslation(config.ballInitialPos.x, config.ballInitialPos.y)
     .setLinvel(0, 0)
-    .setGravityScale(1.0, true)
+    .setGravityScale(1.0)
     .setCanSleep(false)
     .setLinearDamping(0.002)
     .setAngularDamping(0.1)
@@ -138,7 +138,7 @@ function initializePhysics(config: any): void {
  */
 function stepPhysics(dt: number, substeps: number): PhysicsFrame {
   if (!world || !eventQueue || !ballBody) {
-    return { ballPos: { x: 0, y: 0 }, ballVel: { x: 0, y: 0 }, collisions: [] };
+    return { ballPos: { x: 0, y: 0, z: 0 }, ballVel: { x: 0, y: 0 }, collisions: [] };
   }
 
   frameCount++;

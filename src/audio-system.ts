@@ -70,5 +70,4 @@ export {
   disposeSoundManager,
 } from './sound-manager';
 
-// ─── Unified Type Exports ───────────────────────────────────────────────
-export type { AudioContext, GainNode, OscillatorNode } from './audio';
+// AudioContext, GainNode, OscillatorNode are Web API globals - no re-export needed

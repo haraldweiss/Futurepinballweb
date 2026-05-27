@@ -8,7 +8,7 @@
 import { GameElement } from './enhanced-fpt-types';
 
 // ─── Type Definitions ──────────────────────────────────────────────────────
-export type ElementType = 'bumper' | 'target' | 'flipper' | 'ramp' | 'wall' | 'slingshot' | 'spinner' | 'kickback' | 'drain' | 'plunger' | 'trough' | 'kicker';
+export type ElementType = 'bumper' | 'target' | 'flipper' | 'ramp' | 'wall' | 'slingshot' | 'spinner' | 'kickback' | 'drain' | 'plunger' | 'trough' | 'kicker' | 'habitrail';
 
 interface ElementClassificationScore {
   type: ElementType;

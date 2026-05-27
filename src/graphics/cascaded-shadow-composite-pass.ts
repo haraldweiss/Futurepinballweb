@@ -151,6 +151,7 @@ const CascadedShadowCompositeShader = {
  * Applies cascaded shadow maps to the scene
  */
 export class CascadedShadowCompositePass extends ShaderPass {
+  declare material: THREE.ShaderMaterial;
   private shadowMaps: THREE.Texture[] = [];
   private cascadeCount: number = 4;
   private shadowIntensity: number = 0.6;
@@ -264,7 +265,7 @@ export function getCascadedShadowCompositePass(): CascadedShadowCompositePass | 
 
 export function disposeCascadedShadowComposite(): void {
   if (globalCascadedShadowCompositePass) {
-    globalCascadedShadowCompositePass.dispose();
+    (globalCascadedShadowCompositePass as any).dispose();
     globalCascadedShadowCompositePass = null;
   }
 }

@@ -44,7 +44,7 @@ import {
 import { getTopScores, recordScore } from './highscore';
 import { TABLE_CONFIGS, buildTable, buildPhysicsTable, buildRealisticFlipper, scoreBumperHit, scoreTargetHit, scoreSlingshotHit, checkRolloverLanes, updateSpinnerPhysics, getAdvancedLighting } from './table';
 import { runFPScript, callScriptFlipper, callScriptDrain } from './script-engine';
-import { parseFPTFile, parseFPLFile, logMsg, getBackglassArtwork } from './fpt-parser';
+import { parseFPTFile, parseFPLFile, getBackglassArtwork } from './fpt-parser';
 import { getBackglassRenderer, disposeBackglass } from './backglass';
 import { getProfiler, QUALITY_PRESETS } from './profiler';
 import { initializeGPUDiagnostics } from './gpu-diagnostics';
@@ -101,7 +101,7 @@ import {
   type PhysicsFrameData,
 } from './physics-worker-bridge';
 import {
-  GraphicsPipeline, initializeGraphicsPipeline, getGraphicsPipeline, QUALITY_PRESETS,
+  initializeGraphicsPipeline, getGraphicsPipeline,
 } from './graphics/graphics-pipeline';
 import {
   initializePlayfieldVisualEnhancement, getPlayfieldVisualEnhancement, disposePlayfieldVisualEnhancement,
@@ -275,7 +275,8 @@ function applyOptimizedTableView(): void {
   // Apply quality preset if changed
   const currentQuality = localStorage.getItem('fpw_quality_preset') || 'auto';
   if (currentQuality !== view.quality) {
-    applyQualityPreset(view.quality);
+    profiler.setQualityPreset(view.quality);
+    applyQualityPreset();
     localStorage.setItem('fpw_quality_preset', view.quality);
   }
 }
@@ -1127,7 +1128,8 @@ function spawnParticles(wx: number, wy: number, hexColor: number, count = 14): v
   const adaptCount = currentFps < 45 ? Math.floor(count * 0.5) : count;
 
   // Use advanced particle system if enabled
-  if (particleSystem && currentPreset.advancedParticlesEnabled) {
+  const preset = profiler.getQualityPreset();
+  if (particleSystem && preset.advancedParticlesEnabled) {
     const color = new THREE.Color(hexColor);
     particleSystem.emit(new THREE.Vector3(wx, wy, 0.55), 'generic', adaptCount, color);
     return;
@@ -2481,7 +2483,7 @@ function applyQualityPreset(): void {
 
     // ─── Volumetric Lighting ───
     if (volumetricPass) {
-      volumetricPass.enabled = currentPreset.volumetricEnabled;
+      (volumetricPass as any).enabled = currentPreset.volumetricEnabled;
       if (currentPreset.volumetricEnabled) {
         volumetricPass.setExposure(currentPreset.volumetricIntensity);
         logMsg(`  └─ Volumetric: ${(currentPreset.volumetricIntensity * 100).toFixed(0)}%`, 'ok');
@@ -3382,15 +3384,15 @@ function selectTableFile(fileInfo: FileInfo): void {
   // Update visual selection
   const tablesList = document.getElementById('tables-list')!;
   for (const row of tablesList.querySelectorAll('div[style*="border-bottom"]')) {
-    row.style.background = '';
+    (row as HTMLElement).style.background = '';
   }
 
   // Find and highlight selected row
   for (const row of tablesList.querySelectorAll('div[style*="border-bottom"]')) {
-    const nameEl = row.querySelector('div') as HTMLElement;
+    const nameEl = (row as HTMLElement).querySelector('div') as HTMLElement;
     if (nameEl && nameEl.textContent?.includes(fileInfo.name)) {
-      row.style.background = 'rgba(0,200,100,0.2)';
-      row.style.borderLeft = '3px solid #00ff88';
+      (row as HTMLElement).style.background = 'rgba(0,200,100,0.2)';
+      (row as HTMLElement).style.borderLeft = '3px solid #00ff88';
     }
   }
 

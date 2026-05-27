@@ -9,6 +9,9 @@ release/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 
+# Claude Code worktrees (embedded git repos)
+.claude/worktrees/
+
 # OS / editor cruft
 .DS_Store
 *.log

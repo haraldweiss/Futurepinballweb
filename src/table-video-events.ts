@@ -11,7 +11,8 @@
  * - Special sequences
  */
 
-import { getVideoManager, getVideoBindingManager } from './video-manager';
+import { getVideoManager } from './video-manager';
+import { getVideoBindingManager } from './mechanics/video-binding';
 
 /**
  * Extended Event Types

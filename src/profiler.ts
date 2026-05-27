@@ -74,10 +74,6 @@ export interface QualityPreset {
   backglassEnabled: boolean;
   backglass3D: boolean;
 
-  // Volumetric lighting settings
-  volumetricEnabled: boolean;
-  volumetricIntensity: number;
-
   // Adaptive settings
   targetFPS: number;
   pixelRatioCap: number;
