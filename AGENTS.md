@@ -1,0 +1,121 @@
+# AGENTS.md — Futurepinball Web
+
+Shared instructions for all AI coding agents working in this repo. Both `CLAUDE.md` and `AGENTS.md` point here.
+
+---
+
+## 0. Before your first commit in a session
+
+```bash
+git config user.email   # must be: harald.weiss@wolfinisoftware.de
+git config user.name    # must be: Harald Weiss
+git fetch origin        # never work on stale main — past incident wiped a merged PR
+```
+
+If `user.email` is unset, empty, or fake — **stop, fix it, then proceed**.
+
+---
+
+## 1. What this project is
+
+- **Browser-based pinball simulator** that loads Future Pinball `.fpt` tables
+- TypeScript + Vite + three.js (renderer) + Rapier2D (physics) + CodeMirror (in-app VBScript editor)
+- Optional **Electron shell** for multi-screen cabinet mode (`electron-main.cjs`, `electron-preload.cjs`)
+- 33 test files (vitest), 691 tests as of 2026-05-28 — **must stay green**
+- Default branch: `main`, remote: `github.com:haraldweiss/Futurepinballweb`
+
+---
+
+## 2. Agent routing
+
+### opencode (Throughput — DeepSeek V4 Flash)
+- TypeScript strict-mode passes (catch blocks, type narrowing, `as any` removal)
+- Dead-code removal, debug-log gating behind `import.meta.env.DEV`
+- Granular feature commits (3–8 per topic)
+- Bulk lint cleanup
+
+### Claude Code (Care — Opus 4.7)
+- Anything touching the physics worker bridge or Rapier2D integration
+- `force-push` (a ruleset blocks it for non-bypass users — flag the human first)
+- Electron security / preload-context changes
+- Changes to the `runSandboxed` script-sandbox (VBScript → JS transpilation)
+- Cabinet-PR-style large merges with conflicts
+
+---
+
+## 3. Hard rules
+
+### 3.1 TypeScript discipline
+- `tsconfig.json` has `strict: true`. **Do not flip it back to `strict: false`** to bypass errors. Fix the type instead.
+- `npx tsc --noEmit` **must pass** before commit. Record in commit body: `Verified: tsc clean, NN/NN tests`.
+- Prefer `src/window-api.ts` typed surface over `(window as any).X = ...`. Debug-only breadcrumbs may use `as any` but gate behind `import.meta.env.DEV`.
+- `as any` introductions need justification in the commit body.
+
+### 3.2 Tests
+- `npm test` must stay green. If you intentionally skip a test, comment why and add a TODO.
+- Don't disable a test to make CI green. Fix the underlying issue or mark `it.skip` with a written reason.
+
+### 3.3 Physics / script sandbox
+- `src/script-engine.ts` runs untrusted VBScript via `runSandboxed`. Never widen the sandbox to access `window`, `document`, network APIs, or filesystem.
+- `physics` from `./game` is the Rapier2D state. Don't reach into it from UI code — go through helpers.
+
+### 3.4 Force-push
+- `main` is protected by a "prevent unauthorized deletion" ruleset (deletion + non_fast_forward). Bypass is allowed for the repo owner, but **always confirm with the human** before force-push — a careless force-push in this repo already cost a merged PR once.
+
+### 3.5 Electron build
+- Don't bump `electron-updater` without testing on macOS arm64 build. Past releases broke auto-update.
+- `electron-preload.cjs` is the only IPC bridge — don't expose new `ipcRenderer` channels without considering the cabinet-mode multi-window security model.
+
+---
+
+## 4. Verification standards (write in commit body)
+
+```
+Verified: tsc clean, 691/691 tests, manual smoke test in dev browser ✓
+```
+or
+```
+Verified: tsc clean, tests N/A (touched only docs), NOT manually tested
+```
+
+Don't fake verification. State explicitly what you ran and what you skipped.
+
+---
+
+## 5. Commit style
+
+- Granular: 3–8 small commits per topic
+- Concrete numbers: "Fix 66 empty catch blocks" not "improve error handling"
+- Bug reproducer in body when fixing
+- Polish/code-review fixes as **separate** commit after feature lands
+- Flag security tradeoffs with `⚠ Security:` prefix
+
+---
+
+## 6. Quick reference
+
+| What | Command / path |
+|---|---|
+| Dev server | `npm run dev` |
+| Build | `npm run build` |
+| Tests | `npm test` |
+| Type check | `npx tsc --noEmit` |
+| Electron dev | `npm run electron-dev` |
+| Electron mac build | `npm run electron-mac` |
+| Multi-screen test | `npm run start:auto` (auto-detects screen count) |
+| Window API | `src/window-api.ts` — register HTML inline handlers here |
+| Asset catalog | `src/assets/` — Cabinet-PR added this layer |
+| Sample tables | `public/tables/` |
+
+---
+
+## 7. Handoff zone (free-form, append-only)
+
+<!-- Example:
+### 2026-05-28 — strict-mode pass landed
+- Branch is on `main` after merge of recovery-cabinet-pr
+- Net `as any` reduction: -24 (83 removed, 59 added — most new ones are
+  DEV-gated debug breadcrumbs in main.ts, see lines ~3200–4200)
+- TODO: Consolidate the ~50 (window as any).INIT_* debug flags into a
+  typed `DebugWindow` interface
+-->
