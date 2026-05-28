@@ -3,12 +3,46 @@
 /**
  * script-engine.ts — VBScript → JavaScript Transpiler + FP Script API
  */
-import { state, fptResources, setFpScriptHandlers, bumpers, targets, cb, physics } from './game';
+import { state, fptResources, setFpScriptHandlers, bumpers, targets, cb, physics, globalAssetCatalog } from './game';
 import { getAudioCtx, playSound, playFPTMusic, startBGMusic, stopBGMusic } from './audio-system';
 import { dmdEvent } from './dmd';
 import { getBamBridge } from './bam-bridge';
 import { runSandboxed, ScriptSandboxError } from './utils/script-sandbox';
 import { magnetSystem } from './mechanics/magnet-system';
+
+// ─── Phase 2: Catalog-first sound resolution ──────────────────────────────────
+
+/**
+ * Resolve a sound for playback by exact or substring name match (case-insensitive).
+ * Returns null if not found in catalog or if catalog returns a placeholder.
+ * Caller is responsible for fallback behavior.
+ */
+export function resolveSoundForPlayback(name: string): AudioBuffer | null {
+  const cat = globalAssetCatalog();
+  if (!cat) return null;
+  const wanted = String(name).toLowerCase();
+
+  for (const candidate of cat.registeredSoundNames()) {
+    const lower = candidate.toLowerCase();
+    if (lower === wanted || lower.includes(wanted)) {
+      const buf = cat.getSound(candidate);
+      if (cat.isPlaceholder(buf)) continue;
+      // Only accept real AudioBuffer (not SilentBuffer placeholders).
+      // typeof guard for test environments where AudioBuffer may be undefined.
+      if (typeof AudioBuffer !== 'undefined' && buf instanceof AudioBuffer) {
+        return buf;
+      }
+      // Test-environment duck-type fallback: real AudioBuffers always have a non-zero length AND a getChannelData
+      // function that returns a Float32Array of that length. SilentBuffer's getChannelData returns Float32Array(1)
+      // regardless. So we additionally require length > 1 to filter SilentBuffers.
+      const candidate_buf = buf as AudioBuffer;
+      if (candidate_buf && typeof candidate_buf.getChannelData === 'function' && candidate_buf.length > 1) {
+        return candidate_buf;
+      }
+    }
+  }
+  return null;
+}
 
 // ─── VBScript → JS Transpiler ─────────────────────────────────────────────────
 
@@ -340,8 +374,14 @@ function buildFPScriptAPI() {
     get BallInPlay() { return state.ballNum; },
 
     PlaySound: (name: string, loop = 0, vol = 100) => {
-      const key = Object.keys(sounds).find(k => k === name || k.toLowerCase().includes(String(name).toLowerCase()));
-      const buf = key ? sounds[key] : null;
+      // Phase 2: Catalog-first lookup
+      let buf: AudioBuffer | null = resolveSoundForPlayback(name);
+      // Legacy fallback: direct fptResources.sounds (covers paths where catalog isn't populated)
+      if (!buf) {
+        const key = Object.keys(sounds).find(k => k === name || k.toLowerCase().includes(String(name).toLowerCase()));
+        const v = key ? sounds[key] : null;
+        if (v && typeof v !== 'string') buf = v;
+      }
       if (buf) {
         const ctx = getAudioCtx();
         const src = ctx.createBufferSource(), gain = ctx.createGain();

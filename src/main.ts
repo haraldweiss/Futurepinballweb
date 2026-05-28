@@ -284,9 +284,95 @@ function applyOptimizedTableView(): void {
 
 
 // ─── Phase 13.3: Rotation with Redraw ───
+// Persists the chosen rotation so a cabinet doesn't need re-rotation on every cold start.
+const ROTATION_KEY = 'fpw_playfield_rotation';
+function saveRotation(deg: number): void {
+  try { localStorage.setItem(ROTATION_KEY, String(deg)); } catch { /* localStorage may throw */ }
+}
+function loadSavedRotation(): 0 | 90 | 180 | 270 | null {
+  try {
+    const v = localStorage.getItem(ROTATION_KEY);
+    if (v === '90' || v === '180' || v === '270' || v === '0') return Number(v) as 0 | 90 | 180 | 270;
+  } catch { /* ignore */ }
+  return null;
+}
+
+// Rotate the physics gravity vector to match the visual rotation. The scene
+// is rotated visually around Z by `deg` clockwise; for the ball to *appear*
+// to fall toward the player's bottom-of-screen, gravity in physics space
+// must be the inverse rotation of (0, -9.8). Without this, after a 90°
+// visual rotation the ball physically falls in the unrotated -Y direction —
+// which on the rotated screen looks like sideways drift, ball goes out of
+// bounds before reaching bumpers, no scoring → no animations to display.
+function applyPhysicsGravityForRotation(deg: 0 | 90 | 180 | 270): void {
+  const G = 9.8;
+  let gx = 0, gy = -G;
+  switch (deg) {
+    case 0:   gx = 0;   gy = -G; break;
+    case 90:  gx = -G;  gy = 0;  break;  // visual CW 90° → physics gravity left
+    case 180: gx = 0;   gy = G;  break;
+    case 270: gx = G;   gy = 0;  break;
+  }
+  // The physics worker is created lazily during table load. If we get here
+  // before that (e.g. saved-rotation restore on startup) the worker call
+  // throws — wrap in try/catch and rely on the next rotation pass after
+  // table load to get the gravity right.
+  try {
+    const bridge = getPhysicsWorker();
+    bridge?.setWorldGravity?.(gx, gy);
+  } catch (e) {
+    console.warn('[gravity] physics worker not ready yet, will retry after table load:', (e as Error).message);
+  }
+}
+
+// Runtime gravity tester — call from DevTools console.
+(window as any).testGravity = (x: number, y: number) => {
+  const bridge = getPhysicsWorker();
+  if (!bridge) {
+    console.warn('[testGravity] physics worker not ready');
+    return;
+  }
+  bridge.setWorldGravity?.(x, y);
+  console.log(`[testGravity] world gravity set to (${x}, ${y})`);
+};
+
+// Force-set the score to bypass the physics/bumper chain — used to isolate
+// "does the cross-window state bridge work?" from "does the ball actually
+// hit bumpers?". Call from playfield DevTools:
+//   forceScore(123456)   // sets state.score, then dmdState.mode = 'playing'
+// If after this call DMD/Backglass display 123456, the bridge is fine and
+// the only remaining issue is the physics not letting the ball score.
+// If they still show 0, there's a separate render bug to chase.
+(window as any).forceScore = (n: number) => {
+  state.score = n;
+  state.ballNum = Math.max(1, state.ballNum);
+  state.multiplier = Math.max(1, state.multiplier);
+  // Push DMD into 'playing' so dmdRenderPlaying displays the score
+  if (dmdState.mode === 'attract') dmdState.mode = 'playing';
+  console.log(`[forceScore] state.score = ${n}, dmdState.mode = ${dmdState.mode}`);
+  console.log(`              expecting Backglass + DMD windows to show ${n} within 1 frame`);
+};
+
+// Debug: dump current state diagnostics
+(window as any).dumpState = () => {
+  const diag = (window as any)._msDiag || {};
+  console.log('=== STATE DIAGNOSTICS ===');
+  console.log(`state.score = ${state.score}`);
+  console.log(`state.ballNum = ${state.ballNum}`);
+  console.log(`state.multiplier = ${state.multiplier}`);
+  console.log(`state.bumperHits = ${state.bumperHits}`);
+  console.log(`dmdState.mode = ${dmdState.mode}`);
+  console.log(`dmdState.animFrame = ${dmdState.animFrame}`);
+  console.log(`outgoing total = ${diag.outgoing_total}, bc=${diag.outgoing_bc_ok}, ipc=${diag.outgoing_ipc_ok}, ls=${diag.outgoing_ls_ok}`);
+  console.log(`bridge_present = ${diag.bridge_present}`);
+  console.log(`ipc_error = ${diag.outgoing_ipc_error}`);
+};
+
 async function rotateAndRedraw(targetDegrees: 0 | 90 | 180 | 270, duration: number = 400): Promise<void> {
   // Rotate the playfield smoothly
   await rotatePlayfieldSmooth(targetDegrees, duration);
+  saveRotation(targetDegrees);
+  applyPhysicsGravityForRotation(targetDegrees);
   
   // After rotation completes, redraw with optimized view for new orientation
   requestAnimationFrame(() => {
@@ -461,6 +547,84 @@ if (screenParam && ['1', '2', '3', 'auto'].includes(screenParam)) {
 // ─── BroadcastChannel ────────────────────────────────────────────────────────
 const multiChannel: BroadcastChannel | null = typeof BroadcastChannel !== 'undefined'
   ? new BroadcastChannel('fpw-multiscreen') : null;
+
+// Electron's IPC relay (electron-preload.cjs). Used as a fallback / parallel
+// transport because BroadcastChannel does NOT cross independent BrowserWindow
+// instances opened via main-process IPC — DMD/Backglass child windows therefore
+// never receive playfield state updates and stay frozen. The relay always works
+// in Electron and is undefined in plain browsers (where BroadcastChannel does
+// the right thing). Both fire in parallel; receivers dedup naturally because
+// they always overwrite local state with the latest payload.
+const electronAPIRef: any = (typeof window !== 'undefined') ? (window as any).electronAPI : null;
+// Diagnostic counters reachable from any window's DevTools as `_msDiag`.
+// In playfield console: `_msDiag` shows outgoing counts.
+// In DMD/Backglass console: `_msStateMessages` shows incoming counts.
+(window as any)._msDiag = {
+  outgoing_total: 0,
+  outgoing_bc_ok: 0,
+  outgoing_ipc_ok: 0,
+  outgoing_ls_ok: 0,
+  outgoing_ipc_error: null as string | null,
+  bridge_present: false,
+};
+
+// Throttle localStorage writes — every frame would be 60 writes/sec which
+// thrashes IO. Once every 4 frames is plenty for DMD/Backglass animation.
+const LS_KEY = 'fpw_ms_state';
+let _lsThrottleCounter = 0;
+
+function emitMultiscreenState(payload: any): void {
+  const diag = (window as any)._msDiag;
+  diag.outgoing_total++;
+  // Transport 1: BroadcastChannel (browser tabs / same browsing context group)
+  if (multiChannel) {
+    try { multiChannel.postMessage(payload); diag.outgoing_bc_ok++; }
+    catch { /* channel closed */ }
+  }
+  // Transport 2: Electron IPC (cross-window via main process)
+  if (electronAPIRef?.broadcastState) {
+    diag.bridge_present = true;
+    try { electronAPIRef.broadcastState(payload); diag.outgoing_ipc_ok++; }
+    catch (e: any) { diag.outgoing_ipc_error = String(e?.message || e); }
+  }
+  // Transport 3: localStorage `storage` event — fires across all same-origin
+  // BrowserWindow instances in the same Electron session. Belt-and-suspenders
+  // fallback in case BroadcastChannel doesn't bridge BCGs and IPC has a race.
+  if (++_lsThrottleCounter >= 4) {
+    _lsThrottleCounter = 0;
+    try {
+      // Stamp with timestamp so the value differs every write — otherwise
+      // localStorage doesn't fire 'storage' for identical writes.
+      localStorage.setItem(LS_KEY, JSON.stringify({ ...payload, _ts: Date.now() }));
+      diag.outgoing_ls_ok++;
+    } catch { /* localStorage may throw under strict mode */ }
+  }
+}
+
+(window as any)._msStateMessages = { broadcastChannel: 0, electronIPC: 0, localStorage: 0 };
+function subscribeMultiscreenState(handler: (data: any) => void): void {
+  if (multiChannel) {
+    multiChannel.onmessage = ({ data }) => {
+      (window as any)._msStateMessages.broadcastChannel++;
+      handler(data);
+    };
+  }
+  if (electronAPIRef?.onStateBroadcast) {
+    electronAPIRef.onStateBroadcast((data: any) => {
+      (window as any)._msStateMessages.electronIPC++;
+      handler(data);
+    });
+  }
+  // localStorage `storage` event listener (transport 3)
+  window.addEventListener('storage', (ev) => {
+    if (ev.key !== LS_KEY || !ev.newValue) return;
+    try {
+      const data = JSON.parse(ev.newValue);
+      (window as any)._msStateMessages.localStorage++;
+      handler(data);
+    } catch { /* malformed payload */ }
+  });
+}
 
 // ─── Phase 5: Flipper Power Variations ────────────────────────────────────────
 let leftFlipperChargeStart: number | null = null;   // Timestamp when left flipper pressed
@@ -784,6 +948,24 @@ const rotationEngine = initializeRotationEngine(playgroundGroup, camera);
 // Apply initial profile rotation
 applyProfileRotation(activeCabinetProfile);
 console.log(`✓ Rotation engine initialized with profile: ${activeCabinetProfile.name}`);
+
+// Restore saved rotation preference (Ctrl+Q/E or VIEW panel buttons persist
+// the user's choice). Auto-detect picks 0° based on monitor aspect ratio,
+// but pinball cabinets commonly need 90°/270° to align the playfield with
+// the physical screen orientation — so on a real cabinet the user's saved
+// choice should win. Defer until after first render so physics + scene
+// graph are ready, and re-deferring also so the physics worker has had
+// time to receive 'init' (otherwise setWorldGravity is sent before the
+// world exists and is silently dropped).
+{
+  const savedRot = loadSavedRotation();
+  if (savedRot !== null && savedRot !== 0) {
+    setTimeout(() => {
+      console.log(`🎮 Restoring saved playfield rotation: ${savedRot}°`);
+      void rotateAndRedraw(savedRot, 0);
+    }, 1500);
+  }
+}
 
 // ─── Phase 10+: Initialize UI Rotation Manager ─────────────────────────────────
 const uiRotationManager = initializeUIRotation();
@@ -1129,6 +1311,12 @@ function spawnParticles(wx: number, wy: number, hexColor: number, count = 14): v
   const adaptCount = currentFps < 45 ? Math.floor(count * 0.5) : count;
 
   // Use advanced particle system if enabled
+  // NOTE: previously referenced a free variable `currentPreset` that only exists
+  // inside applyQualityPreset() — every call here threw `ReferenceError:
+  // currentPreset is not defined`. Because spawnParticles() runs inside the
+  // animate loop, the throw aborted the rest of the frame work — including
+  // emitMultiscreenState(), which is why DMD/Backglass child windows never
+  // received state updates and stayed frozen on the cabinet.
   const preset = profiler.getQualityPreset();
   if (particleSystem && preset.advancedParticlesEnabled) {
     const color = new THREE.Color(hexColor);
@@ -2305,15 +2493,21 @@ document.addEventListener('keydown', e => {
     showNotification('🎮 Rotated to 270°');
   }
 
-  // Q/E for quick rotation in either direction
-  if (e.key === 'q' || e.key === 'Q') {
+  // Ctrl+Q / Ctrl+E for quick playfield rotation (90° steps).
+  // The Q and E keys without modifier are reserved for cabinet hardware —
+  // many pinball cabinets remap front-buttons to Q/E, so a bare Q/E hotkey
+  // here causes every flipper press to rotate the playfield (the ball
+  // appears to fly randomly because the world is spinning under it).
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'q' || e.key === 'Q')) {
+    e.preventDefault();
     const rotEngine = getRotationEngine();
     const currentRotation = rotEngine?.getCurrentRotation() ?? 0;
     const nextRotation = (currentRotation + 90) % 360;
     rotateAndRedraw(nextRotation as any, 400);
     showNotification(`🎮 Rotated to ${nextRotation}°`);
   }
-  if (e.key === 'e' || e.key === 'E') {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'e' || e.key === 'E')) {
+    e.preventDefault();
     const rotEngine = getRotationEngine();
     const currentRotation = rotEngine?.getCurrentRotation() ?? 0;
     const nextRotation = (currentRotation - 90 + 360) % 360;
@@ -2917,19 +3111,17 @@ function animate(): void {
     flipperResponse: 0,  // Updated by flipper handler
   });
 
-  if (multiChannel) {
-    multiChannel.postMessage({
-      type:'state', score:state.score, ballNum:state.ballNum, multiplier:state.multiplier,
-      inLane:state.inLane, dmdMode:dmdState.mode, dmdEventText:dmdState.eventText,
-      dmdAnimFrame:dmdState.animFrame, dmdScrollX:dmdState.scrollX,
-      dmdEventTimer:dmdState.eventTimer, lastRank:state.lastRank, lastScore:state.lastScore,
-      bumperHits:state.bumperHits,
-      tableName:   currentTableConfig ? currentTableConfig.name : 'FUTURE PINBALL',
-      tableAccent: currentTableConfig ? currentTableConfig.accentColor : 0x00ff66,
-      tableColor:  currentTableConfig ? currentTableConfig.tableColor  : 0x1a4a15,
-      highScores: getTopScores(),
-    });
-  }
+  emitMultiscreenState({
+    type:'state', score:state.score, ballNum:state.ballNum, multiplier:state.multiplier,
+    inLane:state.inLane, dmdMode:dmdState.mode, dmdEventText:dmdState.eventText,
+    dmdAnimFrame:dmdState.animFrame, dmdScrollX:dmdState.scrollX,
+    dmdEventTimer:dmdState.eventTimer, lastRank:state.lastRank, lastScore:state.lastScore,
+    bumperHits:state.bumperHits,
+    tableName:   currentTableConfig ? currentTableConfig.name : 'FUTURE PINBALL',
+    tableAccent: currentTableConfig ? currentTableConfig.accentColor : 0x00ff66,
+    tableColor:  currentTableConfig ? currentTableConfig.tableColor  : 0x1a4a15,
+    highScores: getTopScores(),
+  });
 }
 
 // ─── Inline Backglass (1-Screen) ──────────────────────────────────────────────
@@ -3062,6 +3254,45 @@ function initViewSettings(): void {
   if(zEl){zEl.value=String(zoom);(document.getElementById('vp-zoom-val') as HTMLElement).textContent=String(zoom);}
   if(tEl){tEl.value=String(tilt);(document.getElementById('vp-tilt-val') as HTMLElement).textContent=String(tilt);}
   if(fEl){fEl.value=String(fov); (document.getElementById('vp-fov-val')  as HTMLElement).textContent=String(fov);}
+  // Inline `oninput="applyViewSettings()"` was previously in the HTML, but
+  // Electron's contextIsolation/CSP blocks inline JS handlers — sliders did
+  // nothing in the packaged build. Wire via addEventListener instead.
+  const onSlide = () => window.applyViewSettings?.();
+  zEl?.addEventListener('input', onSlide);
+  tEl?.addEventListener('input', onSlide);
+  fEl?.addEventListener('input', onSlide);
+  document.getElementById('vp-reset')?.addEventListener('click', () => window.resetViewSettings?.());
+
+  // Rotation buttons inside VIEW panel — keyboardless rotation for cabinets
+  // that don't have Ctrl mapped to any input. Sets the playfield to the
+  // exact angle and persists it (rotateAndRedraw saves to localStorage).
+  const rotValEl = document.getElementById('vp-rot-val');
+  const updateRotLabel = (forced?: number) => {
+    // Prefer explicit value (set immediately on click) over engine state,
+    // since rotateAndRedraw is async and would leave the UI showing the
+    // pre-rotation state until the animation completes.
+    const cur = forced ?? ((window as any).getCurrentRotation?.() ?? 0);
+    if (rotValEl) rotValEl.textContent = `${cur}°`;
+    document.querySelectorAll<HTMLElement>('.vp-rot-btn').forEach(b => {
+      const isActive = Number(b.dataset.rot) === cur;
+      // Use cssText so we override #view-panel button { background: ... }
+      // with !important — otherwise the panel-wide rule wins on some browsers.
+      b.style.setProperty('background', isActive ? 'rgba(0,220,120,0.8)' : 'rgba(0,80,40,0.3)', 'important');
+      b.style.setProperty('border-color', isActive ? '#00ff88' : '#00cc66', 'important');
+      b.style.setProperty('font-weight', isActive ? 'bold' : 'normal', 'important');
+    });
+  };
+  document.querySelectorAll<HTMLElement>('.vp-rot-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const deg = Number(btn.dataset.rot) as 0 | 90 | 180 | 270;
+      // Update UI immediately so the user sees feedback before the
+      // 300ms rotation animation completes.
+      updateRotLabel(deg);
+      await rotateAndRedraw(deg, 300);
+      updateRotLabel(deg);
+    });
+  });
+  updateRotLabel();
   if(zoom!==16||tilt!==0.5||fov!==58) window.applyViewSettings();
 }
 
@@ -3739,9 +3970,139 @@ const selectMsLayout = (n: number) => {
     roleConfig.style.display = 'none';
   }
 };
-const openMultiscreenModal  = () => document.getElementById('multiscreen-modal')!.classList.add('open');
+// Wire the multi-screen modal's click handlers exactly once. The HTML
+// (index.html) declares the cards / buttons but never had click listeners
+// attached — so clicking "3 SCREENS" or "APPLY LAYOUT" was a no-op,
+// which made the modal feel completely broken on the cabinet.
+let _msModalWired = false;
+function wireMultiscreenModalOnce() {
+  if (_msModalWired) return;
+  const modal = document.getElementById('multiscreen-modal');
+  if (!modal) return; // DOM not ready yet
+  for (const n of [1, 2, 3] as const) {
+    document.getElementById(`ms-card-${n}`)?.addEventListener('click', () => {
+      window.selectMsLayout?.(n);
+    });
+  }
+  document.getElementById('ms-apply')?.addEventListener('click', () => {
+    void window.applyMsLayout?.();
+  });
+  document.getElementById('ms-autodetect')?.addEventListener('click', () => {
+    void window.autoDetectScreens?.();
+  });
+  document.getElementById('ms-close')?.addEventListener('click', () => {
+    window.closeMultiscreenModal?.();
+  });
+  _msModalWired = true;
+}
+
+const openMultiscreenModal = () => {
+  wireMultiscreenModalOnce();
+  document.getElementById('multiscreen-modal')!.classList.add('open');
+};
 const closeMultiscreenModal = () => document.getElementById('multiscreen-modal')!.classList.remove('open');
 // see window-api.ts — openMultiscreenModal, closeMultiscreenModal
+
+// ─── Multi-Screen helpers (Phase 4: prefer Electron IPC over browser APIs) ───
+interface ScreenLike {
+  availLeft: number;
+  availTop: number;
+  availWidth: number;
+  availHeight: number;
+  isPrimary?: boolean;
+  label?: string;
+}
+
+// Stable, position-aware ordering: primary at index 0, remaining screens
+// sorted by horizontal position (then vertical, as a tiebreaker). This
+// matches typical pinball cabinet layouts where the Playfield (primary)
+// is at the bottom/center and Backglass + DMD are stacked or arranged
+// to the right. Without sorting, Electron returns displays in OS registration
+// order (HDMI in 3 before HDMI in 2 in the user's setup), which made
+// screens[1] the *furthest* display and swapped Backglass/DMD on the cabinet.
+function sortScreensByPosition(arr: ScreenLike[]): ScreenLike[] {
+  const primaryIdx = arr.findIndex(s => s.isPrimary);
+  const primary = primaryIdx >= 0 ? arr[primaryIdx] : null;
+  const rest = arr.filter((_, i) => i !== primaryIdx);
+  // Sort by x ascending, then y ascending — predictable left-to-right ordering.
+  rest.sort((a, b) => (a.availLeft - b.availLeft) || (a.availTop - b.availTop));
+  return primary ? [primary, ...rest] : rest;
+}
+
+async function getAllScreensForLayout(): Promise<ScreenLike[]> {
+  const api = (window as any).electronAPI;
+  if (api?.getAllDisplays) {
+    try {
+      const displays = await api.getAllDisplays();
+      if (Array.isArray(displays) && displays.length > 0) {
+        const mapped: ScreenLike[] = displays.map((d: any) => ({
+          availLeft: d.workArea?.x ?? d.bounds?.x ?? 0,
+          availTop: d.workArea?.y ?? d.bounds?.y ?? 0,
+          availWidth: d.workArea?.width ?? d.bounds?.width ?? 1920,
+          availHeight: d.workArea?.height ?? d.bounds?.height ?? 1080,
+          isPrimary: !!d.isPrimary,
+          label: d.label,
+        }));
+        return sortScreensByPosition(mapped);
+      }
+    } catch (e) {
+      console.warn('[multiscreen] electronAPI.getAllDisplays failed:', e);
+    }
+  }
+  if ('getScreenDetails' in window) {
+    try {
+      const details = await (window as any).getScreenDetails();
+      const mapped: ScreenLike[] = (details.screens || []).map((s: any) => ({
+        availLeft: s.availLeft,
+        availTop: s.availTop,
+        availWidth: s.availWidth,
+        availHeight: s.availHeight,
+        isPrimary: s.isPrimary,
+        label: s.label,
+      }));
+      return sortScreensByPosition(mapped);
+    } catch { /* fall through */ }
+  }
+  // Single-screen fallback
+  return [{
+    availLeft: 0,
+    availTop: 0,
+    availWidth: window.screen.availWidth,
+    availHeight: window.screen.availHeight,
+    isPrimary: true,
+  }];
+}
+
+async function openMultiscreenWindow(
+  url: string,
+  name: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  role: string
+): Promise<Window | null> {
+  const api = (window as any).electronAPI;
+  if (api?.openWindow) {
+    try {
+      await api.openWindow({
+        url,
+        x: Math.round(x),
+        y: Math.round(y),
+        width: Math.round(w),
+        height: Math.round(h),
+        role,
+      });
+      // Electron child windows aren't a renderer-accessible Window object.
+      // Return a stub the existing code can store/test for non-null.
+      return { closed: false, close: () => { /* main-process handles close */ } } as unknown as Window;
+    } catch (e) {
+      console.warn(`[multiscreen] electronAPI.openWindow failed for ${role}, falling back:`, e);
+    }
+  }
+  const features = `width=${Math.round(w)},height=${Math.round(h)},left=${Math.round(x)},top=${Math.round(y)},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
+  return window.open(url, name, features);
+}
 
 // ─── Helper function to open windows with verification ───
 function openMultiScreenWindow(url: string, name: string, features: string, role: string): Window | null {
@@ -3795,15 +4156,12 @@ const swapScreenRoles = (screen1: number, screen2: number) => {
 // see window-api.ts — resetScreenRoles, swapScreenRoles
 
 const autoDetectScreens = async () => {
-  const info=document.getElementById('ms-detect-info')!; info.classList.add('visible'); info.innerHTML='<span>Scanning...</span>';
-  let screenCount=1;
-  try {
-    if ('getScreenDetails' in window) { const d=await (window as any).getScreenDetails(); screenCount=d.screens.length; }
-    else if ((window.screen as any).isExtended) screenCount=2;
-  } catch { /* ignore */ void 0; }
-  if(screenCount>=3){info.innerHTML=`<span>✓ ${screenCount} screens</span> — 3-screen empfohlen`;selectMsLayout(3);}
-  else if(screenCount===2){info.innerHTML=`<span>✓ 2 screens</span> — 2-screen empfohlen`;selectMsLayout(2);}
-  else {info.innerHTML=`<span>1 screen</span>`;selectMsLayout(1);}
+  const info=document.getElementById('ms-detect-info')!; info.classList.add('visible'); info.textContent='Scanning...';
+  const screensList = await getAllScreensForLayout();
+  const screenCount = screensList.length;
+  if(screenCount>=3){info.textContent=`✓ ${screenCount} screens — 3-screen empfohlen`;selectMsLayout(3);}
+  else if(screenCount===2){info.textContent=`✓ 2 screens — 2-screen empfohlen`;selectMsLayout(2);}
+  else {info.textContent=`1 screen`;selectMsLayout(1);}
 };
 
 const applyStartupScreenConfig = async () => {
@@ -3860,23 +4218,12 @@ const applyMsLayout = async () => {
   const screenRoleMgr = getScreenRoleManager();
   const roleLayout = screenRoleMgr.getLayout();
 
-  // Try to get available screens
-  let screens: any[] = [];
-  try {
-    if ('getScreenDetails' in window) {
-      const details = await (window as any).getScreenDetails();
-      screens = details.screens || [];
-      console.log(`📺 Screen API detected: ${screens.length} screens found`);
-      screens.forEach((s, i) => {
-        console.log(`  Screen ${i}: ${s.availWidth}x${s.availHeight} @ (${s.availLeft},${s.availTop})`);
-      });
-    } else {
-      console.warn('⚠ getScreenDetails not available, screen positioning may not work');
-    }
-  } catch (e) {
-    console.error('⚠ Screen enumeration failed:', e);
-    /* Screen enumeration not available, fallback to manual positioning */
-  }
+  // Try to get available screens (Phase 4: uses Electron IPC if available)
+  const screens: ScreenLike[] = await getAllScreensForLayout();
+  console.log(`📺 Screen API detected: ${screens.length} screens found`);
+  screens.forEach((s, i) => {
+    console.log(`  Screen ${i}: ${s.availWidth}x${s.availHeight} @ (${s.availLeft},${s.availTop})${s.isPrimary ? ' [PRIMARY]' : ''}`);
+  });
 
   if(_msLayout===1){
     initInlineBackglass(); btn.classList.add('active-multi');
@@ -3889,11 +4236,10 @@ const applyMsLayout = async () => {
     if(screens.length > screenIdx) {
       const screen2 = screens[screenIdx];
       const x = screen2.availLeft, y = screen2.availTop, w = screen2.availWidth, h = screen2.availHeight;
-      const spec = `width=${w},height=${h},left=${x},top=${y},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
-      _msWindows['backglass']=window.open(`${base}?role=backglass`,'fpw_backglass', spec);
+      _msWindows['backglass']=await openMultiscreenWindow(`${base}?role=backglass`,'fpw_backglass', x, y, w, h, 'backglass');
       showNotification(`2-Screen: Backglass auf Screen ${screenIdx + 1} geöffnet`);
     } else {
-      _msWindows['backglass']=window.open(`${base}?role=backglass`,'fpw_backglass',`${_winSpec('backglass',sw,sh)},toolbar=no,menubar=no,scrollbars=no,resizable=yes`);
+      _msWindows['backglass']=await openMultiscreenWindow(`${base}?role=backglass`,'fpw_backglass', 0, 0, sw, sh, 'backglass');
       showNotification('2-Screen: Bitte Backglass-Fenster auf zweiten Monitor ziehen');
     }
     if(hdBtn){hdBtn.style.display='block';} btn.classList.add('active-multi');
@@ -3912,20 +4258,18 @@ const applyMsLayout = async () => {
       if (bgScreenIdx < screens.length) {
         const bgScreen = screens[bgScreenIdx];
         const xbg = bgScreen.availLeft, ybg = bgScreen.availTop, wbg = bgScreen.availWidth, hbg = bgScreen.availHeight;
-        const specBg = `width=${wbg},height=${hbg},left=${xbg},top=${ybg},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
-        _msWindows['backglass']=window.open(`${base}?role=backglass&nodmd=1`,'fpw_backglass', specBg);
+        _msWindows['backglass']=await openMultiscreenWindow(`${base}?role=backglass&nodmd=1`,'fpw_backglass', xbg, ybg, wbg, hbg, 'backglass');
       }
 
       // DMD on assigned screen
       if (dmdScreenIdx < screens.length) {
         const dmdScreen = screens[dmdScreenIdx];
         const xdmd = dmdScreen.availLeft, ydmd = dmdScreen.availTop, wdmd = dmdScreen.availWidth, hdmd = dmdScreen.availHeight;
-        const specDmd = `width=${wdmd},height=${hdmd},left=${xdmd},top=${ydmd},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
         console.log(`✓ Opening DMD on Screen ${dmdScreenIdx + 1}: ${wdmd}x${hdmd} at (${xdmd},${ydmd})`);
-        _msWindows['dmd']=window.open(`${base}?role=dmd`,'fpw_dmd', specDmd);
+        _msWindows['dmd']=await openMultiscreenWindow(`${base}?role=dmd`,'fpw_dmd', xdmd, ydmd, wdmd, hdmd, 'dmd');
         if (!_msWindows['dmd']) {
-          console.warn('⚠ Detailed positioning failed, trying basic window.open()');
-          _msWindows['dmd']=window.open(`${base}?role=dmd`,'fpw_dmd', 'toolbar=no,menubar=no,scrollbars=no,resizable=yes,width=1024,height=256');
+          console.warn('⚠ Detailed positioning failed, trying basic openMultiscreenWindow()');
+          _msWindows['dmd']=await openMultiscreenWindow(`${base}?role=dmd`,'fpw_dmd', 0, 0, 1024, 256, 'dmd');
         }
         if (!_msWindows['dmd']) console.error('⚠ DMD window failed to open - may be blocked by browser or popups disabled');
       } else {
@@ -3938,16 +4282,15 @@ const applyMsLayout = async () => {
       console.warn('⚠ Only 2 screens detected, opening Backglass+DMD both on Screen 2');
       const screen2 = screens[1];
       const x = screen2.availLeft, y = screen2.availTop, w = screen2.availWidth, h = screen2.availHeight;
-      const spec = `width=${w},height=${h},left=${x},top=${y},toolbar=no,menubar=no,scrollbars=no,resizable=yes`;
-      _msWindows['backglass']=window.open(`${base}?role=backglass&nodmd=1`,'fpw_backglass', spec);
+      _msWindows['backglass']=await openMultiscreenWindow(`${base}?role=backglass&nodmd=1`,'fpw_backglass', x, y, w, h, 'backglass');
       console.log(`✓ Backglass opened on Screen 2`);
-      _msWindows['dmd']=window.open(`${base}?role=dmd`,'fpw_dmd', spec);
+      _msWindows['dmd']=await openMultiscreenWindow(`${base}?role=dmd`,'fpw_dmd', x, y, w, h, 'dmd');
       console.log(`✓ DMD opened on Screen 2`);
       showNotification('3-Screen-Modus mit 2 Bildschirmen: Backglass+DMD auf Screen 2');
     } else {
       // Fallback for single screen: manual arrangement
-      _msWindows['backglass']=window.open(`${base}?role=backglass&nodmd=1`,'fpw_backglass',`${_winSpec('backglass',Math.round(sw*0.75),Math.round(sh*0.75))},toolbar=no,menubar=no,scrollbars=no,resizable=yes`);
-      _msWindows['dmd']=window.open(`${base}?role=dmd`,'fpw_dmd',`${_winSpec('dmd',Math.round(sw*0.55),Math.round(sh*0.28))},toolbar=no,menubar=no,scrollbars=no,resizable=yes`);
+      _msWindows['backglass']=await openMultiscreenWindow(`${base}?role=backglass&nodmd=1`,'fpw_backglass', 0, 0, Math.round(sw*0.75), Math.round(sh*0.75), 'backglass');
+      _msWindows['dmd']=await openMultiscreenWindow(`${base}?role=dmd`,'fpw_dmd', 0, 0, Math.round(sw*0.55), Math.round(sh*0.28), 'dmd');
       showNotification('3-Screen: Fenster auf gewünschte Bildschirme ziehen');
     }
     if(hdBtn) hdBtn.style.display='block'; btn.classList.add('active-multi');
@@ -3973,17 +4316,36 @@ function setupDMDWindow(): void {
   });
   const wrap=document.getElementById('dmd-wrap')!, canvas=document.getElementById('dmd') as HTMLCanvasElement;
 
-  // ─── Responsive DMD sizing ───
-  const resizeDMD=()=>{
-    const a=DMD_W/DMD_H;
-    const ww=innerWidth-60, wh=innerHeight-40;
-    let w=ww, h=ww/a;
-    if(h>wh){h=wh;w=h*a;}
-    canvas.style.width=`${w}px`;
-    canvas.style.height=`${h}px`;
+  // Frameless Electron child windows aren't draggable by default. Mark the
+  // entire body as a drag region so the user can grab any part of the DMD
+  // window with the mouse and reposition it freely across monitors.
+  // `app-region: no-drag` on resize handles preserves drag-to-resize.
+  document.body.style.setProperty('-webkit-app-region', 'drag');
+  document.body.style.setProperty('app-region', 'drag');
 
-    // Update DMD scale based on actual height
-    if((window as any).updateResponsiveDMDScale) {
+  // ─── DMD sizing for standalone window ───
+  // The DMD content is 4:1 aspect (128×32 dots). On a 16:9 1920×1080 monitor
+  // we maximize the *width* (full 1920px) which gives a 1920×480 strip — the
+  // largest the DMD content can be without distortion. Black bars above/below
+  // are the classic cabinet DMD look. (If the user later wants the DMD to
+  // share the screen with score panels / table info, this is where to do it.)
+  const resizeDMD=()=>{
+    const a = DMD_W / DMD_H;  // 4:1
+    const ww = innerWidth, wh = innerHeight;
+    // Fit-to-width first; if that overflows height, fall back to fit-to-height.
+    let w = ww, h = ww / a;
+    if (h > wh) { h = wh; w = h * a; }
+    // CSS display size
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    // Bitmap (drawing buffer) size — was missing before, leaving canvas
+    // empty on the standalone DMD window. dmdFlush() does
+    // `drawImage(dmdOff, 0, 0, canvas.width, canvas.height)` so we need
+    // these to be non-zero for anything to render.
+    canvas.width = Math.max(256, Math.floor(w));
+    canvas.height = Math.max(64, Math.floor(h));
+
+    if ((window as any).updateResponsiveDMDScale) {
       (window as any).updateResponsiveDMDScale();
     }
   };
@@ -3995,18 +4357,65 @@ function setupDMDWindow(): void {
   // Initialize drag-to-resize functionality
   initDMDResizing(canvas, wrap);
 
-  const dmdLoop=()=>{requestAnimationFrame(dmdLoop);dmdState.animFrame++;
-    switch(dmdState.mode){case'attract':dmdRenderAttract();break;case'playing':dmdRenderPlaying();break;case'event':dmdRenderEvent();break;case'gameover':dmdRenderGameOver();break;}
-    if(dmdState.mode==='event'){dmdState.eventTimer--;if(dmdState.eventTimer<=0)dmdState.mode='playing';}
+  // On-canvas diagnostic — visible WITHOUT DevTools. Shows in top-left:
+  //   F:1234 M:567
+  // F = render frame counter (proves DMD render loop runs)
+  // M = state messages received from playfield (any of BC/IPC/LS)
+  // If F grows but M stays 0 → playfield→DMD bridge is the problem.
+  // If both grow but score doesn't update → render-side issue.
+  // If neither grows → DMD render loop itself is dead.
+  let dmdRenderFrames = 0;
+  const dmdCtx = canvas.getContext('2d');
+  const drawDmdDiag = () => {
+    if (!dmdCtx) return;
+    const m = (window as any)._msStateMessages || {};
+    const total = (m.broadcastChannel || 0) + (m.electronIPC || 0) + (m.localStorage || 0);
+    dmdCtx.save();
+    dmdCtx.fillStyle = 'rgba(0,0,0,0.6)';
+    dmdCtx.fillRect(2, 2, 110, 14);
+    dmdCtx.fillStyle = '#0f0';
+    dmdCtx.font = '10px monospace';
+    dmdCtx.fillText(`F:${dmdRenderFrames} M:${total}`, 4, 12);
+    dmdCtx.restore();
+  };
+
+  const dmdLoop = () => {
+    requestAnimationFrame(dmdLoop);
+    dmdRenderFrames++;
+    dmdState.animFrame++;
+    switch (dmdState.mode) {
+      case 'attract': dmdRenderAttract(); break;
+      case 'playing': dmdRenderPlaying(); break;
+      case 'event': dmdRenderEvent(); break;
+      case 'gameover': dmdRenderGameOver(); break;
+    }
+    if (dmdState.mode === 'event') {
+      dmdState.eventTimer--;
+      if (dmdState.eventTimer <= 0) dmdState.mode = 'playing';
+    }
+    drawDmdDiag();
   };
   dmdLoop();
-  if(multiChannel) multiChannel.onmessage=({data})=>{if(data.type!=='state')return;Object.assign(dmdState,{mode:data.dmdMode,eventText:data.dmdEventText,animFrame:data.dmdAnimFrame,scrollX:data.dmdScrollX,eventTimer:data.dmdEventTimer});state.score=data.score;state.ballNum=data.ballNum;state.multiplier=data.multiplier;state.lastRank=data.lastRank;state.lastScore=data.lastScore;};
+  subscribeMultiscreenState((data: any) => {
+    if (data.type !== 'state') return;
+    Object.assign(dmdState, {
+      mode: data.dmdMode, eventText: data.dmdEventText, animFrame: data.dmdAnimFrame,
+      scrollX: data.dmdScrollX, eventTimer: data.dmdEventTimer,
+    });
+    state.score = data.score; state.ballNum = data.ballNum;
+    state.multiplier = data.multiplier; state.lastRank = data.lastRank;
+    state.lastScore = data.lastScore;
+  });
 }
 
 function setupBackglassWindow(): void {
   document.title='FPW — Backglass';
   window.addEventListener('beforeunload',()=>{try{localStorage.setItem('fpw_winpos_backglass',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{ /* localStorage can throw, ignore */ void 0; }
 disposePhysicsWorker();});
+  // Frameless Electron child window — make whole body a drag region so the
+  // Backglass can be repositioned freely across monitors.
+  document.body.style.setProperty('-webkit-app-region', 'drag');
+  document.body.style.setProperty('app-region', 'drag');
   const canvas=document.getElementById('backglass-canvas') as HTMLCanvasElement;
   const showEmbedDMD=!new URLSearchParams(location.search).has('nodmd');
   const bgState:any={score:0,ballNum:1,multiplier:1,tableName:'FUTURE PINBALL',tableAccent:0x00ff66,tableColor:0x1a4a15,dmdMode:'attract',dmdEventText:'',dmdAnimFrame:0,dmdScrollX:0,dmdEventTimer:0,lastRank:0,lastScore:0,highScores:[]};
@@ -4014,17 +4423,45 @@ disposePhysicsWorker();});
   const setSize=()=>{canvas.width=innerWidth;canvas.height=innerHeight;};
   setSize(); window.addEventListener('resize',setSize);
 
-  const bgLoop=()=>{
+  // On-canvas diagnostic for Backglass (see DMD comment for meaning).
+  let bgRenderFrames = 0;
+  const bgCtx = canvas.getContext('2d');
+  const drawBgDiag = () => {
+    if (!bgCtx) return;
+    const m = (window as any)._msStateMessages || {};
+    const total = (m.broadcastChannel || 0) + (m.electronIPC || 0) + (m.localStorage || 0);
+    bgCtx.save();
+    bgCtx.fillStyle = 'rgba(0,0,0,0.6)';
+    bgCtx.fillRect(2, 2, 130, 16);
+    bgCtx.fillStyle = '#0f0';
+    bgCtx.font = '11px monospace';
+    bgCtx.fillText(`F:${bgRenderFrames} M:${total}`, 4, 13);
+    bgCtx.restore();
+  };
+
+  const bgLoop = () => {
     requestAnimationFrame(bgLoop);
+    bgRenderFrames++;
     bgState.dmdAnimFrame++;
-    if(bgState.dmdEventTimer>0){bgState.dmdEventTimer--;bgState.dmdMode='event';}
-    else if(bgState.dmdMode==='event') bgState.dmdMode='playing';
-    Object.assign(state,{score:bgState.score,ballNum:bgState.ballNum,multiplier:bgState.multiplier,lastRank:bgState.lastRank,lastScore:bgState.lastScore});
-    Object.assign(dmdState,{mode:bgState.dmdMode,eventText:bgState.dmdEventText,animFrame:bgState.dmdAnimFrame,scrollX:bgState.dmdScrollX,eventTimer:bgState.dmdEventTimer});
-    drawBGCanvas(canvas,bgState,showEmbedDMD);
+    if (bgState.dmdEventTimer > 0) { bgState.dmdEventTimer--; bgState.dmdMode = 'event'; }
+    else if (bgState.dmdMode === 'event') bgState.dmdMode = 'playing';
+    Object.assign(state, { score: bgState.score, ballNum: bgState.ballNum, multiplier: bgState.multiplier, lastRank: bgState.lastRank, lastScore: bgState.lastScore });
+    Object.assign(dmdState, { mode: bgState.dmdMode, eventText: bgState.dmdEventText, animFrame: bgState.dmdAnimFrame, scrollX: bgState.dmdScrollX, eventTimer: bgState.dmdEventTimer });
+    drawBGCanvas(canvas, bgState, showEmbedDMD);
+    drawBgDiag();
   };
   bgLoop();
-  if(multiChannel) multiChannel.onmessage=({data})=>{if(data.type!=='state')return;Object.assign(bgState,{score:data.score,ballNum:data.ballNum,multiplier:data.multiplier,tableName:data.tableName,tableAccent:data.tableAccent,tableColor:data.tableColor,dmdMode:data.dmdMode,dmdEventText:data.dmdEventText,dmdAnimFrame:data.dmdAnimFrame,dmdScrollX:data.dmdScrollX,dmdEventTimer:data.dmdEventTimer,lastRank:data.lastRank,lastScore:data.lastScore,highScores:data.highScores||[]});};
+  subscribeMultiscreenState((data: any) => {
+    if (data.type !== 'state') return;
+    Object.assign(bgState, {
+      score: data.score, ballNum: data.ballNum, multiplier: data.multiplier,
+      tableName: data.tableName, tableAccent: data.tableAccent, tableColor: data.tableColor,
+      dmdMode: data.dmdMode, dmdEventText: data.dmdEventText, dmdAnimFrame: data.dmdAnimFrame,
+      dmdScrollX: data.dmdScrollX, dmdEventTimer: data.dmdEventTimer,
+      lastRank: data.lastRank, lastScore: data.lastScore,
+      highScores: data.highScores || [],
+    });
+  });
 }
 
 function drawBGCanvas(canvas: HTMLCanvasElement, bgState: any, showEmbedDMD: boolean): void {
@@ -4173,6 +4610,79 @@ function renderTableFileGrid(files: File[]): void {
     };
     grid.appendChild(card);
   }
+}
+
+// ─── Phase B0: FPT Browser Init ───────────────────────────────────────────────
+
+// Phase B0: FPT auto-scan + browser. Only runs when running under Electron
+// (electronAPI present); in plain browsers the section stays empty and the
+// user falls back to the existing drag-drop / file-picker UI.
+async function initializeFPTBrowser(): Promise<void> {
+  const api = (window as any).electronAPI;
+  if (!api?.scanFPTDirectory) {
+    // No Electron — hide the FPT section entirely
+    const section = document.getElementById('qm-fpt-section');
+    if (section) section.style.display = 'none';
+    return;
+  }
+
+  const { scanFPTDirectory } = await import('./fpt-render/fpt-table-scanner');
+  const { filterEntries, sortEntries, renderTableList } = await import('./fpt-render/fpt-table-browser');
+  type SortKey = 'name' | 'size' | 'mtime';
+  const { getFPTPath, setFPTPath } = await import('./fpt-render/fpt-path-config');
+
+  const listEl = document.getElementById('qm-fpt-list')!;
+  const searchEl = document.getElementById('qm-fpt-search') as HTMLInputElement;
+  const sortEl = document.getElementById('qm-fpt-sort') as HTMLSelectElement;
+  const pathBtn = document.getElementById('qm-fpt-set-path') as HTMLButtonElement;
+
+  let allEntries: import('./fpt-render/fpt-table-scanner').FPTFileEntry[] = [];
+
+  const refreshList = () => {
+    const filtered = filterEntries(allEntries, searchEl.value);
+    const sorted = sortEntries(filtered, sortEl.value as SortKey);
+    renderTableList(listEl, sorted, (entry) => {
+      void loadFPTFromPath(entry.path).catch((e) => {
+        console.error('[fpt-browser] load failed:', e);
+        showNotification(`Failed to load ${entry.name}: ${e.message}`);
+      });
+    });
+  };
+
+  const scan = async (path: string | null) => {
+    if (!path) { allEntries = []; refreshList(); return; }
+    allEntries = await scanFPTDirectory(path);
+    console.log(`[fpt-browser] scanned ${allEntries.length} files in ${path}`);
+    refreshList();
+  };
+
+  // Initial scan from saved path
+  await scan(getFPTPath());
+
+  // Wire controls
+  searchEl.addEventListener('input', refreshList);
+  sortEl.addEventListener('change', refreshList);
+  pathBtn.addEventListener('click', async () => {
+    const picked = await api.pickFPTDirectory?.();
+    if (picked) {
+      setFPTPath(picked);
+      await scan(picked);
+    }
+  });
+}
+
+async function loadFPTFromPath(filePath: string): Promise<void> {
+  const api = (window as any).electronAPI;
+  if (!api?.readFPTFile) throw new Error('not running in Electron');
+  const buf: ArrayBuffer = await api.readFPTFile(filePath);
+  const filename = filePath.split(/[\\/]/).pop() ?? 'table.fpt';
+  // parseFPTFile expects a File. Wrap the ArrayBuffer in one — the parser
+  // only uses .name, .size, and .arrayBuffer(), all of which a File provides.
+  const file = new File([buf], filename, { type: 'application/octet-stream' });
+  // Use the static import (parseFPTFile is already imported at the top of
+  // this file; redundant dynamic import was removed).
+  await parseFPTFile(file);
+  showNotification(`Loaded ${filename} — rendering polish in upcoming phases`);
 }
 
 // ─── Library Directory Browser ──────────────────────────────────────────────────
@@ -4397,6 +4907,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     // Apply startup screen configuration from URL parameter (if present)
     setTimeout(() => window.applyStartupScreenConfig?.(), 100);
   }
+
+  void initializeFPTBrowser();
 });
 
 // ─── Phase 15: Cleanup Physics Worker on Exit ──────────────────────────────────
@@ -4571,6 +5083,34 @@ if (FPW_ROLE === 'dmd') {
     }
     initInlineBackglass();
     document.getElementById('multiscreen-btn')?.classList.add('active-multi');
+
+    // ─── Auto-apply multi-screen layout on startup (Electron only) ───────────
+    // On a cabinet with 2 or 3 physical displays we want the matching layout
+    // to come up immediately, without the user having to open the modal and
+    // pick "3 SCREENS" every cold start. Behavior is opt-out via localStorage
+    // ("fpw_ms_autostart" = "off") so a dev laptop in 1-screen mode can disable it.
+    // We delay slightly so the renderer is fully up before opening child windows.
+    try {
+      const autostart = localStorage.getItem('fpw_ms_autostart');
+      const electronAvailable = !!(window as any).electronAPI?.getAllDisplays;
+      const startupConfig = (window as any)._startupScreenConfig; // URL ?screen=... override
+      if (electronAvailable && autostart !== 'off' && startupConfig === undefined) {
+        setTimeout(async () => {
+          try {
+            const screens = await getAllScreensForLayout();
+            const n = screens.length;
+            const target = n >= 3 ? 3 : n === 2 ? 2 : 1;
+            console.log(`🚀 Auto-multiscreen on startup: ${n} displays detected → applying ${target}-screen layout (disable via localStorage.setItem('fpw_ms_autostart','off'))`);
+            window.selectMsLayout?.(target);
+            if (target > 1) {
+              await window.applyMsLayout?.();
+            }
+          } catch (e) {
+            console.warn('[multiscreen] startup auto-detect failed:', e);
+          }
+        }, 800);
+      }
+    } catch { /* localStorage may throw in restricted contexts */ }
   })();
 }
 

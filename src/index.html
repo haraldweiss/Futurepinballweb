@@ -219,6 +219,28 @@
     body.role-dmd #multiscreen-modal { display: none !important; }
     body.role-dmd #loading-overlay { display: none !important; }
 
+    /* Backglass role: hide every chrome/UI/loader element so only the
+       backglass canvas (and its embedded DMD if not nodmd=1) is visible.
+       Without these the table-loader / quick-menu modal appears on the
+       backglass screen of a 3-screen cabinet, which the user sees as
+       "table selection on the backglass". */
+    body.role-backglass #hud { display: none !important; }
+    body.role-backglass #loader-modal { display: none !important; }
+    body.role-backglass #quick-menu { display: none !important; }
+    body.role-backglass #open-loader { display: none !important; }
+    body.role-backglass #controls { display: none !important; }
+    body.role-backglass #notification { display: none !important; }
+    body.role-backglass #install-btn { display: none !important; }
+    body.role-backglass #editor-btn { display: none !important; }
+    body.role-backglass #view-btn { display: none !important; }
+    body.role-backglass #view-panel { display: none !important; }
+    body.role-backglass #multiscreen-modal { display: none !important; }
+    body.role-backglass #loading-overlay { display: none !important; }
+    body.role-backglass canvas { display: block; }
+
+    /* DMD role: also hide quick-menu (already hides loader-modal above). */
+    body.role-dmd #quick-menu { display: none !important; }
+
     #backglass-canvas { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
     body.role-backglass #backglass-canvas { display: block; }
     body.role-backglass #dmd-wrap { display: none !important; }
@@ -244,6 +266,22 @@
 
     #menu-close-btn { position: absolute; top: 16px; right: 20px; background: none; border: none; color: #00aaff; font-size: 28px; cursor: pointer; padding: 8px; transition: all 0.2s; }
     #menu-close-btn:hover { color: #00ff88; transform: scale(1.2); }
+
+    /* Phase B0: FPT Tables section */
+    #qm-fpt-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(0,170,255,0.3); }
+    #qm-fpt-section h3 { color: #00aaff; font-size: 14px; letter-spacing: 2px; text-align: center; margin-bottom: 12px; }
+    #qm-fpt-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+    #qm-fpt-search { flex: 1; padding: 8px 12px; background: rgba(0,30,60,0.6); border: 1px solid #335; border-radius: 6px; color: #ccc; font-family: 'Courier New', monospace; font-size: 13px; }
+    #qm-fpt-search:focus { outline: none; border-color: #00aaff; }
+    #qm-fpt-sort { padding: 8px 10px; background: rgba(0,30,60,0.6); border: 1px solid #335; border-radius: 6px; color: #ccc; font-family: 'Courier New', monospace; font-size: 12px; cursor: pointer; }
+    #qm-fpt-set-path { padding: 8px 12px; background: rgba(0,100,50,0.3); border: 1px solid #00cc66; color: #00cc66; border-radius: 6px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 1px; }
+    #qm-fpt-set-path:hover { background: rgba(0,150,80,0.4); }
+    #qm-fpt-list { max-height: 360px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+    #qm-fpt-list:empty::after { content: 'No tables found. Click "Set path" to choose a directory.'; display: block; padding: 30px; text-align: center; color: #556; font-style: italic; }
+    .qm-fpt-card { background: rgba(0,30,60,0.4); border: 1px solid #224; border-radius: 8px; padding: 10px 12px; cursor: pointer; transition: all 0.15s; }
+    .qm-fpt-card:hover { border-color: #00aaff; background: rgba(0,60,100,0.5); }
+    .qm-fpt-card .qm-fpt-name { color: #ccc; font-size: 13px; margin-bottom: 4px; word-break: break-word; }
+    .qm-fpt-card .qm-fpt-meta { color: #557; font-size: 10px; }
 
     /* ─── RESPONSIVE MEDIA QUERIES ─── */
     @media (max-width: 768px) {
@@ -285,6 +323,22 @@
     @media (min-resolution: 150dpi) {
       body { font-size: 14px; }
     }
+
+    /* ─── SCRIPT EDITOR MODAL ─── */
+    .script-editor-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 10001; }
+    .script-editor-modal-dialog { background: #1c1c1f; color: #ddd; border: 1px solid #333; border-radius: 6px; padding: 20px; width: 80vw; max-width: 1100px; height: 80vh; display: flex; flex-direction: column; }
+    .script-editor-modal-title { margin: 0 0 12px; font-size: 16px; }
+    .script-editor-container { flex: 1; min-height: 300px; border: 1px solid #333; border-radius: 4px; overflow: hidden; }
+    .script-editor-container .cm-editor { height: 100%; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; }
+    .script-editor-modal-buttons { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+    .script-editor-modal-buttons button { padding: 6px 14px; background: #2a2a2e; color: #ddd; border: 1px solid #444; border-radius: 3px; cursor: pointer; }
+    .script-editor-modal-buttons button[data-action="apply"] { background: #2a5a3a; border-color: #4a8a5a; }
+    .script-editor-modal-buttons button:hover { filter: brightness(1.2); }
+    .btn-script { padding: 6px 12px; background: #2a3050; color: #ddd; border: 1px solid #4060a0; border-radius: 3px; cursor: pointer; }
+    .btn-script:hover { background: #3a4060; }
+    .btn-save-fpt { padding: 8px 16px; background: #2a5a3a; color: #ddd; border: 1px solid #4a8a5a; border-radius: 4px; cursor: pointer; margin-right: 6px; }
+    .btn-save-fpt-overwrite { padding: 8px 16px; background: #5a3a2a; color: #ddd; border: 1px solid #8a5a4a; border-radius: 4px; cursor: pointer; margin-right: 6px; }
+    .btn-save-fpt:hover, .btn-save-fpt-overwrite:hover { filter: brightness(1.2); }
   </style>
 </head>
 <body>
@@ -337,6 +391,20 @@
           <div class="emoji">🌴</div>
           <h3>Jungle Expedition</h3>
         </div>
+      </div>
+
+      <div id="qm-fpt-section">
+        <h3>📁 FPT Tables</h3>
+        <div id="qm-fpt-controls">
+          <input id="qm-fpt-search" type="text" placeholder="Search by name…" />
+          <select id="qm-fpt-sort">
+            <option value="name">Name ↑</option>
+            <option value="size">Size ↓</option>
+            <option value="mtime">Last modified ↓</option>
+          </select>
+          <button id="qm-fpt-set-path" type="button">⚙ Set path</button>
+        </div>
+        <div id="qm-fpt-list"></div>
       </div>
 
       <div class="quick-actions">
@@ -543,17 +611,26 @@
     <h4>⚙ ANSICHT</h4>
     <div class="vp-row">
       <label>ZOOM <span id="vp-zoom-val">16</span></label>
-      <input type="range" id="vp-zoom" min="8" max="28" step="0.5" value="16" oninput="applyViewSettings()">
+      <input type="range" id="vp-zoom" min="8" max="28" step="0.5" value="16">
     </div>
     <div class="vp-row">
       <label>NEIGUNG <span id="vp-tilt-val">0.5</span></label>
-      <input type="range" id="vp-tilt" min="-3" max="4" step="0.25" value="0.5" oninput="applyViewSettings()">
+      <input type="range" id="vp-tilt" min="-3" max="4" step="0.25" value="0.5">
     </div>
     <div class="vp-row">
       <label>BLICKWINKEL <span id="vp-fov-val">58</span></label>
-      <input type="range" id="vp-fov" min="35" max="85" step="1" value="58" oninput="applyViewSettings()">
+      <input type="range" id="vp-fov" min="35" max="85" step="1" value="58">
     </div>
-    <button>↺ RESET</button>
+    <div class="vp-row" style="margin-top:8px">
+      <label>ROTATION <span id="vp-rot-val">0°</span></label>
+      <div style="display:flex;gap:4px;margin-top:4px">
+        <button class="vp-rot-btn" data-rot="0" style="flex:1;padding:6px;font-size:11px">0°</button>
+        <button class="vp-rot-btn" data-rot="90" style="flex:1;padding:6px;font-size:11px">90°</button>
+        <button class="vp-rot-btn" data-rot="180" style="flex:1;padding:6px;font-size:11px">180°</button>
+        <button class="vp-rot-btn" data-rot="270" style="flex:1;padding:6px;font-size:11px">270°</button>
+      </div>
+    </div>
+    <button id="vp-reset">↺ RESET</button>
   </div>
 
   <div id="multiscreen-modal">

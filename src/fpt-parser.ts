@@ -5,7 +5,8 @@
  */
 import * as THREE from 'three';
 import * as CFB from 'cfb';
-import { fptResources } from './game';
+import { fptResources, fptRawBytes, resetFPTRawBytes, globalAssetCatalog, setGlobalAssetCatalog } from './game';
+import { AssetCatalog } from './assets/asset-catalog';
 import { getAudioCtx, playFPTMusic } from './audio-system';
 import { runFPScript } from './script-engine';
 
@@ -115,30 +116,149 @@ function detectAudioMime(buf: Uint8Array, off = 0): string | null {
   return null;
 }
 
+/**
+ * Find the EOI (FF D9) offset of a JPEG buffer.
+ *
+ * Strategy: locate the SOS (Start-of-Scan, FF DA) marker — entropy-coded
+ * image data follows it, and inside that data raw 0xFF is escaped as
+ * FF 00 so FFD9 is unambiguously the EOI marker. This is far simpler
+ * than walking every header section and tolerates non-standard markers
+ * before the SOS that a strict marker walker would reject.
+ *
+ * FPT image streams append a proprietary trailer (often ending in
+ * `BB B1 BB BD`) after the JPEG payload, so we cannot just scan the
+ * whole buffer for the last FF D9 — that trailer can contain FFD9
+ * byte pairs by chance. Anchoring to SOS avoids that confusion.
+ */
+function findJpegEoiOffset(bytes: Uint8Array): number {
+  if (bytes.length < 4 || bytes[0] !== 0xFF || bytes[1] !== 0xD8) return -1;
+  // Locate SOS marker (FF DA). Most JPEGs have it within the first few KB.
+  let sosPos = -1;
+  for (let i = 2; i < bytes.length - 1; i++) {
+    if (bytes[i] === 0xFF && bytes[i + 1] === 0xDA) { sosPos = i; break; }
+  }
+  if (sosPos < 0) return -1;
+  // Skip the SOS section header (length-prefixed) to get to entropy data.
+  if (sosPos + 4 > bytes.length) return -1;
+  const sosLen = (bytes[sosPos + 2] << 8) | bytes[sosPos + 3];
+  if (sosLen < 2) return -1;
+  let pos = sosPos + 2 + sosLen;
+  // In entropy-coded data, FF is escaped as FF 00, so FF D9 is unambiguously EOI.
+  while (pos < bytes.length - 1) {
+    if (bytes[pos] === 0xFF && bytes[pos + 1] === 0xD9) return pos + 2;
+    pos++;
+  }
+  return -1;
+}
+
+function trimJpegToEoi(bytes: Uint8Array): Uint8Array {
+  const eoi = findJpegEoiOffset(bytes);
+  return eoi > 0 ? bytes.subarray(0, eoi) : bytes;
+}
+
 async function bytesToTexture(slice: Uint8Array, mime: string): Promise<THREE.Texture> {
-  const blob = new Blob([slice.buffer.slice(slice.byteOffset, slice.byteOffset + slice.byteLength) as ArrayBuffer], { type: mime });
-  const url  = URL.createObjectURL(blob);
+  // For JPEGs, trim trailing FPT-specific bytes after the EOI marker so the
+  // browser decoder doesn't see proprietary garbage past the JPEG payload.
+  const payload = mime === 'image/jpeg' ? trimJpegToEoi(slice) : slice;
+  const blob = new Blob([payload as BlobPart], { type: mime });
+
+  // Primary path: createImageBitmap is more lenient than <img>-based decoders
+  // and gives a sensible error rather than a generic Event on failure.
   try {
-    const tex = await new THREE.TextureLoader().loadAsync(url);
+    const bitmap = await createImageBitmap(blob);
+    const tex = new THREE.Texture(bitmap as any);
     tex.flipY      = false;
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.needsUpdate = true;
     return tex;
-  } finally { URL.revokeObjectURL(url); }
+  } catch (bitmapErr) {
+    // Fall back to TextureLoader+ObjectURL for environments without
+    // createImageBitmap support. If that also fails, propagate that error.
+    const url = URL.createObjectURL(blob);
+    try {
+      const tex = await new THREE.TextureLoader().loadAsync(url);
+      tex.flipY      = false;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+      return tex;
+    } catch {
+      // Surface the createImageBitmap error since it has the most info
+      throw bitmapErr;
+    } finally { URL.revokeObjectURL(url); }
+  }
+}
+
+/**
+ * Scan a byte buffer for image magic-bytes. FPT image streams have a
+ * variable-length header (image name, type, dims) before the actual file
+ * payload, so a fixed offset list misses most of them. Scanning the first
+ * 4KB catches names up to ~3.5KB which is well beyond anything FP writes.
+ */
+/**
+ * Validate that a "BM" byte pair is actually a BMP file header.
+ *
+ * Real BMP headers have a fixed structure: "BM" + 4-byte file size +
+ * 4 bytes reserved (zero) + 4-byte pixel-data offset. Validating these
+ * fields rejects the random "BM" byte pairs that occur frequently in
+ * binary streams.
+ */
+function isBmpAt(bytes: Uint8Array, off: number): boolean {
+  if (off + 14 > bytes.length) return false;
+  if (bytes[off] !== 0x42 || bytes[off + 1] !== 0x4D) return false;
+  // bytes[off+6..off+9] reserved — must be zero
+  if (bytes[off + 6] !== 0 || bytes[off + 7] !== 0 ||
+      bytes[off + 8] !== 0 || bytes[off + 9] !== 0) return false;
+  // bytes[off+10..13] data offset (LE) — typical 54..4118 (with palette)
+  const dataOff = bytes[off + 10] | (bytes[off + 11] << 8) |
+                  (bytes[off + 12] << 16) | (bytes[off + 13] << 24);
+  if (dataOff < 26 || dataOff > 8192) return false;
+  // bytes[off+2..5] file size (LE) — should not exceed remaining buffer by much
+  const fileSize = bytes[off + 2] | (bytes[off + 3] << 8) |
+                   (bytes[off + 4] << 16) | (bytes[off + 5] << 24);
+  if (fileSize < dataOff || fileSize > bytes.length - off + 4096) return false;
+  return true;
+}
+
+function scanForImageMagic(bytes: Uint8Array, maxScan = 4096): { mime: string; off: number } | null {
+  const max = Math.min(bytes.length - 4, maxScan);
+  for (let off = 0; off < max; off++) {
+    const a = bytes[off], b = bytes[off + 1], c = bytes[off + 2], d = bytes[off + 3];
+    if (a === 0x89 && b === 0x50 && c === 0x4E && d === 0x47) return { mime: 'image/png', off };
+    // JPEG SOI is FF D8 FF, followed by APP marker FFEn (E0=JFIF, E1=EXIF) or
+    // FFDB (DQT). Tighter than just FFD8FF — rejects noise like FFD8FFF8 we
+    // saw in PinModel-stream data.
+    if (a === 0xFF && b === 0xD8 && c === 0xFF &&
+        (d === 0xE0 || d === 0xE1 || d === 0xDB || d === 0xEE)) {
+      return { mime: 'image/jpeg', off };
+    }
+    if (a === 0x47 && b === 0x49 && c === 0x46 && d === 0x38) return { mime: 'image/gif', off };
+    // BMP "BM" with full header validation — necessary to scan at variable
+    // offsets without false positives from random byte data.
+    if (a === 0x42 && b === 0x4D && isBmpAt(bytes, off)) return { mime: 'image/bmp', off };
+    // WebP RIFF...WEBP
+    if (a === 0x52 && b === 0x49 && c === 0x46 && d === 0x46 &&
+        off + 9 < bytes.length && bytes[off + 8] === 0x57 && bytes[off + 9] === 0x45) {
+      return { mime: 'image/webp', off };
+    }
+  }
+  return null;
 }
 
 async function extractImageFromBytes(bytes: Uint8Array): Promise<THREE.Texture | null> {
-  for (const off of [8,0,4,12,16,32,64]) {
-    const mime = detectImageMime(bytes, off);
-    if (!mime) continue;
-    try { return await bytesToTexture(bytes.slice(off), mime); } catch (e) { console.debug('[fpt-parser] Image decode retry:', (e || 'unknown')); /* try next */ }
+  // Primary: scan for magic bytes (handles FPT's variable-length headers).
+  const found = scanForImageMagic(bytes);
+  if (found) {
+    try { return await bytesToTexture(bytes.slice(found.off), found.mime); } catch (e) { console.debug('[fpt-parser] Image decode retry:', (e || 'unknown')); /* try fallback */ }
   }
+  // Fallback: try fixed-offset LZO decompression then scan again. Only handles
+  // the simplest legacy FP layouts; the more complex zLZO+BMP variants need
+  // a dedicated decoder path that's still in progress (see Phase B0.5).
   const decompressed = tryLZOExtract(bytes);
   if (decompressed) {
-    for (const off of [0,8,4]) {
-      const mime = detectImageMime(decompressed, off);
-      if (!mime) continue;
-      try { return await bytesToTexture(decompressed.slice(off), mime); } catch (e) { console.debug('[fpt-parser] Image decode retry:', (e || 'unknown')); /* try next */ }
+    const found2 = scanForImageMagic(decompressed);
+    if (found2) {
+      try { return await bytesToTexture(decompressed.slice(found2.off), found2.mime); } catch (e) { console.debug('[fpt-parser] Image decode retry:', (e || 'unknown')); /* give up */ }
     }
   }
   return null;
@@ -255,12 +375,19 @@ export async function parseCFBResources(
   fptResources.script    = null;
   fptResources.mapped    = { bumper: null, flipper: null, drain: null };
   delete fptResources.musicTrack;
+  resetFPTRawBytes();
 
   let cfb: any;
   try { cfb = (CFB as any).read(new Uint8Array(arrayBuffer), { type: 'array' }); }
   catch(e: any) { logMsg(`CFB Parse-Fehler: ${  e.message}`, 'warn'); return { textureCount: 0, soundCount: 0, streamCount: 0 }; }
 
-  const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.t === 2 && e.size > 0);
+  // The cfb library (v1.2.2) does not always populate `e.t` — for FPT files
+  // every entry comes back with `t === undefined`. Previously we filtered for
+  // `t === 2 && size > 0`, which silently dropped EVERY stream and left the
+  // parser thinking the file was empty (textures, sounds, models all unloaded).
+  // Trust `size > 0` and exclude the root storage by name instead — streams
+  // have a payload, the root storage entry never carries one we want to read.
+  const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.size > 0 && e.name && e.name !== 'Root Entry');
   logMsg(`📦 CFB-Streams gefunden: ${entries.length}`, entries.length > 0 ? 'ok' : 'warn');
 
   // Enhanced: Zeige Stream-Overview
@@ -284,7 +411,11 @@ export async function parseCFBResources(
 
   for (const entry of entries) {
     const name: string = entry.name || '';
-    const bytes: Uint8Array = entry.content;
+    // cfb library returns `entry.content` as plain Array<number> when
+    // `type: 'array'` is used. Code below uses `bytes.buffer` for DataView /
+    // LZO / typed-array ops which throws on plain arrays. Normalize to Uint8Array.
+    const raw = entry.content;
+    const bytes: Uint8Array = raw instanceof Uint8Array ? raw : new Uint8Array(raw as ArrayLike<number>);
     const nameL = name.toLowerCase();
 
     // Classify entry
@@ -353,6 +484,7 @@ export async function parseCFBResources(
       fptResources.textures[name] = tex;
       const bytes = textureEntries.find(e => e.name === name)?.bytes;
       if (bytes) {
+        fptRawBytes.textures[name] = bytes;
         logMsg(`  Textur: "${name}" (${(bytes.length/1024).toFixed(0)} KB)`, 'ok');
         if (bytes.length > largestTexSize) {
           largestTexSize = bytes.length;
@@ -371,6 +503,7 @@ export async function parseCFBResources(
 
       if (isMusicTrack) {
         if (!fptResources.musicTrack) fptResources.musicTrack = buf;
+        fptRawBytes.sounds[name] = bytes;
 
         // Phase 3: Log streaming status
         if (typeof buf === 'string') {
@@ -382,6 +515,7 @@ export async function parseCFBResources(
         }
       } else {
         fptResources.sounds[name] = buf;
+        fptRawBytes.sounds[name] = bytes;
 
         // Phase 3: Log streaming status
         if (typeof buf === 'string') {
@@ -406,6 +540,7 @@ export async function parseCFBResources(
         const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
         if (/\bSub\s+\w+/i.test(text) && /\bEnd\s+Sub\b/i.test(text)) {
           fptResources.script = text;
+          fptRawBytes.scriptOriginal = text;
           logMsg(`  Script: "${name}" (${text.split('\n').length} Zeilen VBScript)`, 'ok');
           break;
         }
@@ -420,7 +555,9 @@ export async function parseCFBResources(
       try {
         const text = new TextDecoder('utf-8', { fatal: false }).decode((entry.content as Uint8Array).slice(0, 8192));
         if (/\bSub\s+\w+.*?\bEnd\s+Sub\b/is.test(text)) {
-          fptResources.script = new TextDecoder('utf-8', { fatal: false }).decode(entry.content);
+          const fullText = new TextDecoder('utf-8', { fatal: false }).decode(entry.content);
+          fptResources.script = fullText;
+          fptRawBytes.scriptOriginal = fullText;
           logMsg(`  Script (heuristisch): "${entry.name || '?'}"`, 'ok');
           break;
         }
@@ -443,6 +580,7 @@ export async function parseCFBResources(
               const text = tryExtractVBScriptFromData(decompressed);
               if (text) {
                 fptResources.script = text;
+                fptRawBytes.scriptOriginal = text;
                 logMsg(`  Script (LZO): "${entry.name}" @ offset ${i} (${text.length} chars)`, 'ok');
                 break;
               }
@@ -453,6 +591,11 @@ export async function parseCFBResources(
       }
       if (fptResources.script) break;
     }
+  }
+
+  // Stash unknown streams for lossless write-back
+  for (const { name, bytes } of otherEntries) {
+    fptRawBytes.otherStreams.push({ name, data: bytes });
   }
 
   const elapsedMs = performance.now() - startTime;
@@ -476,6 +619,58 @@ export function mapFPTSounds(sounds: Record<string, AudioBuffer>): void {
   if (dk) { fptResources.mapped.drain   = sounds[dk]; logMsg(`  Drain-Sound: "${dk}"`, 'ok'); }
   if (!fptResources.mapped.bumper  && names[0]) fptResources.mapped.bumper  = sounds[names[0]];
   if (!fptResources.mapped.flipper && names[1]) fptResources.mapped.flipper = sounds[names[1]];
+
+  // Phase 2: auto-classify long sounds as music tracks.
+  // Threshold matches the primary classifier in parseCFBResources (8s)
+  // to avoid promoting a long SFX to music.
+  if (!fptResources.musicTrack) {
+    for (const [, buf] of Object.entries(sounds)) {
+      if (typeof buf === 'string') continue;
+      const duration = (buf as AudioBuffer).duration;
+      if (typeof duration === 'number' && duration > 8) {
+        fptResources.musicTrack = buf;
+        break;
+      }
+    }
+  }
+}
+
+/**
+ * Mirror current fptResources content into globalAssetCatalog.
+ * Lazily creates a catalog if one does not yet exist.
+ * Idempotent — safe to call multiple times.
+ */
+export function populateCatalogFromFPTResources(): void {
+  let cat = globalAssetCatalog();
+  if (!cat) {
+    cat = new AssetCatalog();
+    setGlobalAssetCatalog(cat);
+  }
+
+  // Reset catalog to match current fptResources state — each call replaces, not appends
+  cat.clear();
+
+  // Textures
+  for (const [name, tex] of Object.entries(fptResources.textures)) {
+    cat.registerTexture(name, tex);
+  }
+  if (fptResources.playfield) {
+    cat.registerTexture('playfield', fptResources.playfield);
+  }
+
+  // Models
+  if (fptResources.models) {
+    for (const [name, mesh] of fptResources.models.entries()) {
+      if (mesh) cat.registerModel(name, mesh);
+    }
+  }
+
+  // Sounds — only AudioBuffer entries, skip Blob URL strings
+  for (const [name, snd] of Object.entries(fptResources.sounds)) {
+    if (typeof snd !== 'string') {
+      cat.registerSound(name, snd);
+    }
+  }
 }
 
 // ─── Heuristischer Parser ─────────────────────────────────────────────────────
@@ -1097,6 +1292,8 @@ export async function parseFPTFile(
     if (textureCount > 0 || soundCount > 0) {
       logMsg(`✓ CFB erfolgreich: ${textureCount} Textur(en), ${soundCount} Sound(s), ${streamCount} Stream(s) total`, 'ok');
       if (soundCount > 0) { logMsg('Mappe Sounds...', 'info'); mapFPTSounds(fptResources.sounds as Record<string, AudioBuffer>); }
+      // Mirror extracted resources into AssetCatalog for renderer use
+      populateCatalogFromFPTResources();
       if (fptResources.playfield) logMsg('✓ Spielfeld-Textur geladen', 'ok');
 
       if (fptResources.script) {
@@ -1366,6 +1563,8 @@ export async function parseFPTFile(
   const confidence = calcConfidence(sig, allStrings.length, coords.length, file.size);
   logMsg(`Konfidenz: ${confidence}%`, confidence>60?'ok':confidence>30?'warn':'error');
 
+  // Optional callbacks — guard so callers like Phase B0's loadFPTFromPath
+  // can invoke parseFPTFile() purely for asset extraction (no rendering hookup).
   buildTableFn?.({ name: tableName, tableColor, accentColor: accent, bumpers: bumpCfg, targets: targetCfg,
     lights: [{ color:accent,intensity:0.8,dist:10,x:0,y:2,z:4 }, { color:accent,intensity:0.4,dist:8,x:-2,y:-2,z:3 }]
   });
@@ -1416,7 +1615,7 @@ export async function parseFPLFile(
     };
 
     const entries = ((cfb.FileIndex as any[]) || [])
-      .filter((e: any) => e.t === 2 && e.size > 0);
+      .filter((e: any) => e.size > 0 && e.name && e.name !== 'Root Entry');
 
     logMsg(`📚 FPL Parser: Found ${entries.length} streams in "${libName}"`);
 
@@ -1703,11 +1902,15 @@ export function extractMS3DModelsFromCFB(arrayBuffer: ArrayBuffer): Map<string, 
   try { cfb = (CFB as any).read(new Uint8Array(arrayBuffer), { type: 'array' }); }
   catch(e: any) { logMsg(`CFB Parse-Fehler beim Model-Extract: ${  e.message}`, 'warn'); return models; }
 
-  const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.t === 2 && e.size > 0);
+  const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.size > 0 && e.name && e.name !== 'Root Entry');
 
   for (const entry of entries) {
     const name: string = entry.name || '';
-    const bytes: Uint8Array = entry.content;
+    // cfb library returns `entry.content` as plain Array<number> when
+    // `type: 'array'` is used. Code below uses `bytes.buffer` for DataView /
+    // LZO / typed-array ops which throws on plain arrays. Normalize to Uint8Array.
+    const raw = entry.content;
+    const bytes: Uint8Array = raw instanceof Uint8Array ? raw : new Uint8Array(raw as ArrayLike<number>);
     const nameL = name.toLowerCase();
 
     // Look for MS3D models (by stream name or magic header)
@@ -1743,11 +1946,15 @@ export function extractAnimationSequencesFromCFB(arrayBuffer: ArrayBuffer): Map<
   try { cfb = (CFB as any).read(new Uint8Array(arrayBuffer), { type: 'array' }); }
   catch(e: any) { logMsg(`CFB Parse-Fehler beim Animation-Extract: ${  e.message}`, 'warn'); return animations; }
 
-  const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.t === 2 && e.size > 0);
+  const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.size > 0 && e.name && e.name !== 'Root Entry');
 
   for (const entry of entries) {
     const name: string = entry.name || '';
-    const bytes: Uint8Array = entry.content;
+    // cfb library returns `entry.content` as plain Array<number> when
+    // `type: 'array'` is used. Code below uses `bytes.buffer` for DataView /
+    // LZO / typed-array ops which throws on plain arrays. Normalize to Uint8Array.
+    const raw = entry.content;
+    const bytes: Uint8Array = raw instanceof Uint8Array ? raw : new Uint8Array(raw as ArrayLike<number>);
     const nameL = name.toLowerCase();
 
     // Look for animation streams (by name pattern)

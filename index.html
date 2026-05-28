@@ -1533,6 +1533,33 @@
       border-color: #ff8877;
       color: #ffaa99;
     }
+
+    /* ASSET BROWSER STYLES */
+    .asset-browser { padding: 16px; max-height: 600px; overflow-y: auto; }
+    .asset-section { margin-bottom: 24px; }
+    .asset-section-header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #333; padding-bottom: 4px; }
+    .asset-section-header h3 { margin: 0; font-size: 14px; color: #ccc; }
+    .asset-section-count { font-size: 12px; color: #888; }
+    .asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 8px; }
+    .asset-item { background: #222; border: 1px solid #333; border-radius: 4px; padding: 4px; cursor: pointer; transition: background 0.1s; }
+    .asset-item:hover { background: #2a2a2a; }
+    .asset-thumbnail { width: 100%; aspect-ratio: 1; object-fit: contain; image-rendering: pixelated; }
+    .asset-name { font-size: 11px; color: #aaa; word-break: break-all; padding-top: 4px; }
+    .asset-list .asset-item { display: flex; align-items: center; gap: 8px; padding: 6px; }
+    .asset-icon { font-size: 18px; }
+    .asset-duration { color: #888; font-size: 11px; margin-left: auto; }
+    .asset-browser-empty { padding: 32px; text-align: center; color: #888; }
+    /* PropertyModal */
+    .property-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 10000; }
+    .property-modal-dialog { background: #1c1c1f; color: #ddd; border: 1px solid #333; border-radius: 6px; padding: 20px 24px; min-width: 300px; max-width: 480px; }
+    .property-modal-title { margin: 0 0 16px; font-size: 16px; text-transform: capitalize; }
+    .property-modal-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .property-modal-row label { flex: 0 0 64px; text-transform: capitalize; color: #aaa; }
+    .property-modal-row input { flex: 1; background: #0e0e10; border: 1px solid #333; border-radius: 3px; padding: 4px 8px; color: #ddd; }
+    .property-modal-buttons { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    .property-modal-buttons button { padding: 6px 14px; background: #2a2a2e; color: #ddd; border: 1px solid #444; border-radius: 3px; cursor: pointer; }
+    .property-modal-buttons button[data-action="save"] { background: #2a5a3a; border-color: #4a8a5a; }
+    .property-modal-buttons button:hover { filter: brightness(1.2); }
   </style>
 </head>
 <body>

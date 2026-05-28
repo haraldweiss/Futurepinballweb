@@ -187,6 +187,16 @@ export class PhysicsWorkerBridge {
   }
 
   /**
+   * Rotate the physics world's gravity vector. Used to keep "down" pointing
+   * toward the player's perceived bottom-of-screen after a visual playfield
+   * rotation (cabinet mode). For a 0/90/180/270° visual rotation θ, gravity
+   * direction is the inverse rotation of (0, -1).
+   */
+  setWorldGravity(x: number, y: number): void {
+    this.postMessage({ type: 'setWorldGravity', x, y });
+  }
+
+  /**
    * Get the last physics frame (for immediate access if needed).
    */
   getLastFrame(): PhysicsFrameData | null {
