@@ -111,11 +111,9 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 
 ## 7. Handoff zone (free-form, append-only)
 
-<!-- Example:
-### 2026-05-28 — strict-mode pass landed
-- Branch is on `main` after merge of recovery-cabinet-pr
-- Net `as any` reduction: -24 (83 removed, 59 added — most new ones are
-  DEV-gated debug breadcrumbs in main.ts, see lines ~3200–4200)
-- TODO: Consolidate the ~50 (window as any).INIT_* debug flags into a
-  typed `DebugWindow` interface
--->
+### 2026-05-30 — INIT_* flags consolidated
+- Created `DebugWindow` interface in `src/window-api.ts` with all 22 typed INIT_* flags
+- Added `setDevFlag()` helper that gates behind `import.meta.env.DEV`
+- Replaced all `(window as any).INIT_*` in `src/main.ts` with typed `setDevFlag('INIT_*', value)`
+- Net `as any` reduction: 22 removed, 0 added
+- Verified: tsc clean, 691/691 tests

@@ -138,7 +138,7 @@ import { DirectoryPathManager } from './directory-path-manager';
 import { escapeHtml, setInnerHTMLSafe } from './utils/html-escape';
 import { loadFpwConfig } from './utils/fpw-config';
 import { initializeEventHandlers } from './event-handlers-init';
-import { setupWindowAPI, type WindowAPI } from './window-api';
+import { setupWindowAPI, setDevFlag, type WindowAPI } from './window-api';
 import { getDefaultPhysicsConfig, logPhysicsConfig, validatePhysicsConfig } from './physics-config-enhancer';
 import { getInputOptimizer, disposeInputOptimizer } from './input-optimizer';
 import { getPerformanceDashboard } from './performance-dashboard';
@@ -4971,16 +4971,16 @@ if (FPW_ROLE === 'dmd') {
   setupBackglassWindow();
 } else {
   if (import.meta.env.DEV) { console.log('[INIT] Main window role - starting async IIFE'); }
-  if (import.meta.env.DEV) { (window as any).INIT_ASYNC_IIFE_STARTED = true; }
+  setDevFlag('INIT_ASYNC_IIFE_STARTED', true);
   (async () => {
-    if (import.meta.env.DEV) { (window as any).INIT_IN_ASYNC_IIFE = true; }
+    setDevFlag('INIT_IN_ASYNC_IIFE', true);
     try {
-      if (import.meta.env.DEV) { (window as any).INIT_PHYSICS_START = true; }
+      setDevFlag('INIT_PHYSICS_START', true);
       await initPhysics();
-      if (import.meta.env.DEV) { (window as any).INIT_PHYSICS_OK = true; }
+      setDevFlag('INIT_PHYSICS_OK', true);
     } catch(e) {
       if (import.meta.env.DEV) {
-        (window as any).INIT_PHYSICS_ERROR = (e as Error).message;
+        setDevFlag('INIT_PHYSICS_ERROR', (e as Error).message);
         console.warn('Rapier init fehlgeschlagen:', e);
       }
     }
@@ -4988,31 +4988,31 @@ if (FPW_ROLE === 'dmd') {
     // Skip initial table load during startup - let user select from loader
     if (import.meta.env.DEV) {
       console.log('[INIT] Skipping initial table load - showing loader');
-      (window as any).INIT_TABLE_LOAD_OK = true;
+      setDevFlag('INIT_TABLE_LOAD_OK', true);
     }
 
     // Initialize B.A.M. Engine (after table is loaded and currentTableConfig is set)
     if (import.meta.env.DEV) {
-      (window as any).INIT_BAM_ENGINE_START = true;
+      setDevFlag('INIT_BAM_ENGINE_START', true);
       console.log('🔄 About to initialize B.A.M. Engine...');
     }
     const bam = new BAMEngine(currentTableConfig?.name || 'classic', mainSpot);
     setBAMEngine(bam);
     if (import.meta.env.DEV) {
       console.log('✅ B.A.M. Engine initialized');
-      (window as any).INIT_BAM_ENGINE_OK = true;
+      setDevFlag('INIT_BAM_ENGINE_OK', true);
     }
 
     // Phase 13 Task 2: Initialize BAM Bridge (connects VBScript to BAMEngine)
-    if (import.meta.env.DEV) { (window as any).INIT_BAM_BRIDGE_START = true; }
+    setDevFlag('INIT_BAM_BRIDGE_START', true);
     const bamBridge = initializeBamBridge(bam);
     if (import.meta.env.DEV) {
       console.log('✅ B.A.M. Bridge initialized');
-      (window as any).INIT_BAM_BRIDGE_OK = true;
+      setDevFlag('INIT_BAM_BRIDGE_OK', true);
     }
 
     // Phase 13: Load animations from FPT resources into BAM engine
-    if (import.meta.env.DEV) { (window as any).INIT_ANIM_LOAD_START = true; }
+    setDevFlag('INIT_ANIM_LOAD_START', true);
     if (fptResources.animations && fptResources.animations.size > 0) {
       const bamSequencer = bam.getAnimationSequencer();
       let loadedCount = 0;
@@ -5031,55 +5031,55 @@ if (FPW_ROLE === 'dmd') {
         console.log(`✅ ${loadedCount} animation(s) loaded into BAM engine`);
       }
     }
-    if (import.meta.env.DEV) { (window as any).INIT_ANIM_LOAD_OK = true; }
+    setDevFlag('INIT_ANIM_LOAD_OK', true);
 
     // Phase 13 Task 3: Initialize animation binding system
     if (import.meta.env.DEV) {
-      (window as any).INIT_ANIM_BINDING_START = true;
+      setDevFlag('INIT_ANIM_BINDING_START', true);
       console.log('🔄 About to initialize animation binding...');
     }
     const animationBindingMgr = initializeAnimationBinding();
     const animationScheduler = initializeAnimationScheduler();
     if (import.meta.env.DEV) {
       console.log('✅ Animation binding system initialized');
-      (window as any).INIT_ANIM_BINDING_OK = true;
+      setDevFlag('INIT_ANIM_BINDING_OK', true);
     }
 
     // Phase 13 Task 5: Initialize animation debugger (Ctrl+D to toggle)
-    if (import.meta.env.DEV) { (window as any).INIT_ANIM_DEBUGGER_START = true; }
+    setDevFlag('INIT_ANIM_DEBUGGER_START', true);
     const animationDebugger = initializeAnimationDebugger();
     if (bamEngine) {
       animationDebugger.setBamEngine(bamEngine);
     }
     if (import.meta.env.DEV) {
       console.log('✅ Animation debugger initialized (Ctrl+D to toggle)');
-      (window as any).INIT_ANIM_DEBUGGER_OK = true;
+      setDevFlag('INIT_ANIM_DEBUGGER_OK', true);
     }
 
     // ─── Phase 5: Apply initial quality preset ───
-    if (import.meta.env.DEV) { (window as any).INIT_BEFORE_QUALITY_PRESET = true; }
+    setDevFlag('INIT_BEFORE_QUALITY_PRESET', true);
     try {
       applyQualityPreset();
       if (import.meta.env.DEV) {
         console.log('✅ Quality preset applied successfully');
-        (window as any).INIT_QUALITY_PRESET_OK = true;
+        setDevFlag('INIT_QUALITY_PRESET_OK', true);
       }
     } catch (err) {
       console.error('❌ Error in applyQualityPreset:', err);
-      if (import.meta.env.DEV) { (window as any).INIT_QUALITY_PRESET_ERROR = (err as Error).message; }
+      setDevFlag('INIT_QUALITY_PRESET_ERROR', (err as Error).message);
     }
 
-    if (import.meta.env.DEV) { (window as any).INIT_BEFORE_ANIMATE_CALL = true; }
+    setDevFlag('INIT_BEFORE_ANIMATE_CALL', true);
     try {
       if (import.meta.env.DEV) { console.log('🎬 Starting animate loop...'); }
       animate();
       if (import.meta.env.DEV) {
-        (window as any).INIT_ANIMATE_CALLED = true;
+        setDevFlag('INIT_ANIMATE_CALLED', true);
         console.log('✅ Animate loop started');
       }
     } catch (err) {
       console.error('❌ Error starting animate:', err);
-      if (import.meta.env.DEV) { (window as any).INIT_ANIMATE_ERROR = (err as Error).message; }
+      setDevFlag('INIT_ANIMATE_ERROR', (err as Error).message);
     }
     initInlineBackglass();
     document.getElementById('multiscreen-btn')?.classList.add('active-multi');

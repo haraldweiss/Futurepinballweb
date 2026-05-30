@@ -21,8 +21,40 @@
 
 // ─── Global interface augmentation ─────────────────────────────────────────────
 // Every property that may be accessed via `window.X` in HTML or in script.
+// ─── Debug / INIT flags (DEV only) ──────────────────────────────────────────
+// Typed bag for the ~22 startup-phase instrumentation flags set during the
+// async IIFE in main.ts.  All properties are optional because they only exist
+// when `import.meta.env.DEV` is true.
+export interface DebugWindow {
+  INIT_ASYNC_IIFE_STARTED?:   boolean;
+  INIT_IN_ASYNC_IIFE?:        boolean;
+  INIT_PHYSICS_START?:        boolean;
+  INIT_PHYSICS_OK?:           boolean;
+  INIT_PHYSICS_ERROR?:        string;
+  INIT_TABLE_LOAD_OK?:        boolean;
+  INIT_BAM_ENGINE_START?:     boolean;
+  INIT_BAM_ENGINE_OK?:        boolean;
+  INIT_BAM_BRIDGE_START?:     boolean;
+  INIT_BAM_BRIDGE_OK?:        boolean;
+  INIT_ANIM_LOAD_START?:      boolean;
+  INIT_ANIM_LOAD_OK?:         boolean;
+  INIT_ANIM_BINDING_START?:   boolean;
+  INIT_ANIM_BINDING_OK?:      boolean;
+  INIT_ANIM_DEBUGGER_START?:  boolean;
+  INIT_ANIM_DEBUGGER_OK?:     boolean;
+  INIT_BEFORE_QUALITY_PRESET?: boolean;
+  INIT_QUALITY_PRESET_OK?:    boolean;
+  INIT_QUALITY_PRESET_ERROR?: string;
+  INIT_BEFORE_ANIMATE_CALL?:  boolean;
+  INIT_ANIMATE_CALLED?:       boolean;
+  INIT_ANIMATE_ERROR?:        string;
+}
+
 declare global {
   interface Window {
+    // ── Debug / INIT flags (DEV only) ────────────────────────────────────
+    debugWindow?:           DebugWindow;
+
     // ── Startup flags ──────────────────────────────────────────────────────
     FPW_MODULE_LOADED:      boolean;
     FPW_ROLE:               string;
@@ -130,6 +162,19 @@ declare global {
     setupTableDragDrop:         () => void;
     sortTableFiles:             (field: string, files?: any[]) => any[];
     runFullTestSuite:           () => Promise<any>;
+  }
+}
+
+// ─── DEV-only flag helper ──────────────────────────────────────────────────────
+// Sets a debug flag on `window.debugWindow`, but only when `import.meta.env.DEV`
+// is true, so production builds eliminate both the branch and the assignment.
+export function setDevFlag<K extends keyof DebugWindow>(
+  flag: K,
+  value: NonNullable<DebugWindow[K]>,
+): void {
+  if (import.meta.env.DEV) {
+    const dw = window.debugWindow ??= {} as DebugWindow;
+    dw[flag] = value as any;
   }
 }
 
