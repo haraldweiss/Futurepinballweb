@@ -20,7 +20,7 @@ export interface FPTFileEntry {
 }
 
 export async function scanFPTDirectory(dirPath: string): Promise<FPTFileEntry[]> {
-  const api = (window as any).electronAPI;
+  const api = window.electronAPI;
   if (!api?.scanFPTDirectory) return [];
   try {
     const entries = await api.scanFPTDirectory(dirPath);

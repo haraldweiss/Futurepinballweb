@@ -71,7 +71,7 @@ export class MultiScreenWindowManager {
    * Returns true if successful, false to indicate caller should fall back.
    */
   private async detectScreensElectron(): Promise<boolean> {
-    const api = (window as any).electronAPI;
+    const api = window.electronAPI;
     if (!api?.getAllDisplays) return false;
     try {
       const displays = await api.getAllDisplays();
@@ -286,7 +286,7 @@ export class MultiScreenWindowManager {
     spec: { left: number; top: number; width: number; height: number },
     role: string
   ): Promise<Window | null> {
-    const api = (window as any).electronAPI;
+    const api = window.electronAPI;
     if (api?.openWindow) {
       try {
         const id = await api.openWindow({
@@ -428,7 +428,7 @@ export class MultiScreenWindowManager {
     this.windowPositions.clear();
 
     // Electron child windows
-    const api = (window as any).electronAPI;
+    const api = window.electronAPI;
     if (api?.closeAllChildWindows) {
       try { await api.closeAllChildWindows(); } catch { /* ignore */ }
     }

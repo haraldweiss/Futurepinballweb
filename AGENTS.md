@@ -117,3 +117,13 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 - Replaced all `(window as any).INIT_*` in `src/main.ts` with typed `setDevFlag('INIT_*', value)`
 - Net `as any` reduction: 22 removed, 0 added
 - Verified: tsc clean, 691/691 tests
+
+### 2026-05-30 — Extended debug flags + electronAPI + browser API types
+- Added 20 more `SETUP_WORKER_*`, `BUILD_TABLE_*`, `PHYSICS_WORKER_*`, `LOAD_TABLE_*` flags to `DebugWindow`
+- Created typed `ElectronAPI` interface from `electron-preload.cjs` surface
+- Added browser API declarations (`showDirectoryPicker`, `getScreenDetails`, `screens`)
+- Added optional global helpers (`setDMDResolutionOption`, `setDMDGlow`, `updateResponsiveDMDScale`, `getCurrentRotation`)
+- Replaced all `(window as any).electronAPI` → `window.electronAPI` across 3 files
+- Replaced 12 Window-interface properties from `(window as any).X` → `window.X`
+- Gated debug console.log behind `import.meta.env.DEV` (testGravity, forceScore, dumpState, plunger launch)
+- Verified: tsc clean, 691/691 tests

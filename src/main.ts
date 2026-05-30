@@ -333,7 +333,7 @@ function applyPhysicsGravityForRotation(deg: 0 | 90 | 180 | 270): void {
     return;
   }
   bridge.setWorldGravity?.(x, y);
-  console.log(`[testGravity] world gravity set to (${x}, ${y})`);
+  if (import.meta.env.DEV) { console.log(`[testGravity] world gravity set to (${x}, ${y})`); }
 };
 
 // Force-set the score to bypass the physics/bumper chain — used to isolate
@@ -349,23 +349,25 @@ function applyPhysicsGravityForRotation(deg: 0 | 90 | 180 | 270): void {
   state.multiplier = Math.max(1, state.multiplier);
   // Push DMD into 'playing' so dmdRenderPlaying displays the score
   if (dmdState.mode === 'attract') dmdState.mode = 'playing';
-  console.log(`[forceScore] state.score = ${n}, dmdState.mode = ${dmdState.mode}`);
-  console.log(`              expecting Backglass + DMD windows to show ${n} within 1 frame`);
+  if (import.meta.env.DEV) { console.log(`[forceScore] state.score = ${n}, dmdState.mode = ${dmdState.mode}`); }
+  if (import.meta.env.DEV) { console.log(`              expecting Backglass + DMD windows to show ${n} within 1 frame`); }
 };
 
 // Debug: dump current state diagnostics
 (window as any).dumpState = () => {
   const diag = (window as any)._msDiag || {};
-  console.log('=== STATE DIAGNOSTICS ===');
-  console.log(`state.score = ${state.score}`);
-  console.log(`state.ballNum = ${state.ballNum}`);
-  console.log(`state.multiplier = ${state.multiplier}`);
-  console.log(`state.bumperHits = ${state.bumperHits}`);
-  console.log(`dmdState.mode = ${dmdState.mode}`);
-  console.log(`dmdState.animFrame = ${dmdState.animFrame}`);
-  console.log(`outgoing total = ${diag.outgoing_total}, bc=${diag.outgoing_bc_ok}, ipc=${diag.outgoing_ipc_ok}, ls=${diag.outgoing_ls_ok}`);
-  console.log(`bridge_present = ${diag.bridge_present}`);
-  console.log(`ipc_error = ${diag.outgoing_ipc_error}`);
+  if (import.meta.env.DEV) {
+    console.log('=== STATE DIAGNOSTICS ===');
+    console.log(`state.score = ${state.score}`);
+    console.log(`state.ballNum = ${state.ballNum}`);
+    console.log(`state.multiplier = ${state.multiplier}`);
+    console.log(`state.bumperHits = ${state.bumperHits}`);
+    console.log(`dmdState.mode = ${dmdState.mode}`);
+    console.log(`dmdState.animFrame = ${dmdState.animFrame}`);
+    console.log(`outgoing total = ${diag.outgoing_total}, bc=${diag.outgoing_bc_ok}, ipc=${diag.outgoing_ipc_ok}, ls=${diag.outgoing_ls_ok}`);
+    console.log(`bridge_present = ${diag.bridge_present}`);
+    console.log(`ipc_error = ${diag.outgoing_ipc_error}`);
+  }
 };
 
 async function rotateAndRedraw(targetDegrees: 0 | 90 | 180 | 270, duration: number = 400): Promise<void> {
@@ -523,25 +525,25 @@ function detectDeviceType(): 'mobile' | 'tablet' | 'desktop' {
 }
 
 // ─── Role Detection ───────────────────────────────────────────────────────────
-(window as any).FPW_MODULE_LOADED = true;  // Flag to confirm main.ts loaded
+window.FPW_MODULE_LOADED = true;  // Flag to confirm main.ts loaded
 const FPW_ROLE = new URLSearchParams(location.search).get('role');
 const FPW_SCREEN_INDEX = new URLSearchParams(location.search).get('screen');
 
 // Store role info globally
-(window as any).FPW_ROLE = FPW_ROLE || 'playfield';
-(window as any).FPW_SCREEN_INDEX = FPW_SCREEN_INDEX || '0';
+window.FPW_ROLE = FPW_ROLE || 'playfield';
+window.FPW_SCREEN_INDEX = FPW_SCREEN_INDEX || '0';
 
 if (FPW_ROLE) document.body.classList.add(`role-${  FPW_ROLE}`);
-(window as any).FPW_DEVICE = detectDeviceType();
+window.FPW_DEVICE = detectDeviceType();
 
-console.log(`🎮 FPW Window Started - Role: ${(window as any).FPW_ROLE}, Screen: ${(window as any).FPW_SCREEN_INDEX}, Size: ${window.innerWidth}x${window.innerHeight}`);
+console.log(`🎮 FPW Window Started - Role: ${window.FPW_ROLE}, Screen: ${window.FPW_SCREEN_INDEX}, Size: ${window.innerWidth}x${window.innerHeight}`);
 
 // ─── Screen Configuration from URL ────────────────────────────────────────────
 // Support for startup scripts: ?screens=1|2|3|auto
 const screenParam = new URLSearchParams(location.search).get('screens');
 if (screenParam && ['1', '2', '3', 'auto'].includes(screenParam)) {
   const screenVal = screenParam === 'auto' ? 'auto' : parseInt(screenParam, 10);
-  (window as any)._startupScreenConfig = screenVal;
+  window._startupScreenConfig = screenVal;
 }
 
 // ─── BroadcastChannel ────────────────────────────────────────────────────────
@@ -555,7 +557,7 @@ const multiChannel: BroadcastChannel | null = typeof BroadcastChannel !== 'undef
 // in Electron and is undefined in plain browsers (where BroadcastChannel does
 // the right thing). Both fire in parallel; receivers dedup naturally because
 // they always overwrite local state with the latest payload.
-const electronAPIRef: any = (typeof window !== 'undefined') ? (window as any).electronAPI : null;
+const electronAPIRef: any = (typeof window !== 'undefined') ? window.electronAPI : null;
 // Diagnostic counters reachable from any window's DevTools as `_msDiag`.
 // In playfield console: `_msDiag` shows outgoing counts.
 // In DMD/Backglass console: `_msStateMessages` shows incoming counts.
@@ -1472,18 +1474,17 @@ function resetGameState(): void {
 
 // ─── Phase 15: Initialize Physics Worker (after table build) ──────────────────────
 async function setupPhysicsWorker(): Promise<void> {
-  if (import.meta.env.DEV) { (window as any).SETUP_WORKER_START = Date.now(); }
+  setDevFlag('SETUP_WORKER_START', Date.now());
   try {
-    if (import.meta.env.DEV) { (window as any).SETUP_WORKER_INIT_START = Date.now(); }
+    setDevFlag('SETUP_WORKER_INIT_START', Date.now());
     const bridge = await initializePhysicsWorker();
     if (import.meta.env.DEV) {
-      (window as any).SETUP_WORKER_INIT_OK = Date.now();
-      (window as any).SETUP_WORKER_INIT_TIME = (window as any).SETUP_WORKER_INIT_OK - (window as any).SETUP_WORKER_INIT_START;
+      setDevFlag('SETUP_WORKER_INIT_OK', Date.now());
+      setDevFlag('SETUP_WORKER_INIT_TIME', (window.debugWindow?.SETUP_WORKER_INIT_OK ?? 0) - (window.debugWindow?.SETUP_WORKER_INIT_START ?? 0));
     }
 
-    // Configure physics world with current table settings
     if (physics) {
-      if (import.meta.env.DEV) { (window as any).SETUP_WORKER_CONFIG_START = Date.now(); }
+      setDevFlag('SETUP_WORKER_CONFIG_START', Date.now());
 
       // ─── Phase 24: Use Enhanced Physics Configuration ───
       const physicsConfig = getDefaultPhysicsConfig();
@@ -1496,7 +1497,6 @@ async function setupPhysicsWorker(): Promise<void> {
       }
       logPhysicsConfig(physicsConfig, 'Table Load');
 
-      // Clean maps to remove non-serializable data (mesh objects, functions)
       const cleanBumperMap = new Map();
       physics.bumperMap.forEach((value: any, key: any) => {
         cleanBumperMap.set(key, { x: value.x, y: value.y, index: value.index });
@@ -1507,45 +1507,18 @@ async function setupPhysicsWorker(): Promise<void> {
         cleanTargetMap.set(key, { x: value.x, y: value.y, index: value.index });
       });
 
-      // Perimeter walls — must be sent to the physics worker so the ball
-      // stays on the table. The main-thread world built by buildPhysicsTable()
-      // is now only used for legacy fallback; the worker has its own RAPIER
-      // world that needs its own collider definitions.
-      // Geometry mirrors buildPhysicsTable() in table.ts (do not change one
-      // without the other or main-thread fallback diverges from worker).
       const tableBodies = [
-        // ── PERIMETER ──
-        // Top wall
         { type: 'box', x: 0,     y: 6.3,  width: 3.3,  height: 0.2, restitution: 0.5, friction: 0.2 },
-        // Left wall
         { type: 'box', x: -3.15, y: 0,    width: 0.15, height: 7.0, restitution: 0.5, friction: 0.2 },
-        // Right wall
         { type: 'box', x: 3.15,  y: 0,    width: 0.15, height: 7.0, restitution: 0.5, friction: 0.2 },
-
-        // ── SLINGSHOTS (angled bumpers either side of flippers) ──
         { type: 'box', x: -2.2,  y: -1.5, width: 0.12, height: 0.9, rotation: -0.5,  restitution: 1.4, friction: 0.3 },
         { type: 'box', x:  2.2,  y: -1.5, width: 0.12, height: 0.9, rotation:  0.5,  restitution: 1.4, friction: 0.3 },
-
-        // ── DRAIN LANE WALLS (guide ball between flippers) ──
-        // Without these the ball escapes sideways instead of draining
         { type: 'box', x: -1.15, y: -5.05, width: 0.1, height: 1.0, restitution: 0.5, friction: 0.2 },
         { type: 'box', x:  1.15, y: -5.05, width: 0.1, height: 1.0, restitution: 0.5, friction: 0.2 },
-
-        // ── DRAIN BOTTOM (catches the ball — without this it falls forever) ──
         { type: 'box', x: 0,     y: -6.0, width: 3.2, height: 0.2, restitution: 0.3, friction: 0.1 },
-
-        // ── PLUNGER LANE ──
-        // Walls widened so the ball has lateral clearance: ball diameter is
-        // 0.44 and the previous gap was exactly 0.44 — the ball was wedged
-        // between left+right walls and any horizontal launch velocity bounced
-        // it back and forth without ever escaping. Now: gap 0.94, ball has
-        // 0.25 clearance each side. Walls also shortened (top at y=-4.0
-        // instead of -2.6) so a moderate launch clears the lane easily.
         { type: 'box', x: 2.10, y: -5.5, width: 0.08, height: 1.5, restitution: 0.5, friction: 0.3 },
         { type: 'box', x: 3.20, y: -5.5, width: 0.08, height: 1.5, restitution: 0.5, friction: 0.3 },
         { type: 'box', x: 2.65, y: -7.0, width: 0.55, height: 0.12, restitution: 0.5, friction: 0.5 },
-
-        // ── INLANE / APRON GUIDES ──
         { type: 'box', x: -1.55, y: -4.4, width: 0.35, height: 0.12, rotation: -0.35, restitution: 0.5, friction: 0.5 },
         { type: 'box', x:  1.55, y: -4.4, width: 0.35, height: 0.12, rotation:  0.35, restitution: 0.5, friction: 0.5 },
       ];
@@ -1564,28 +1537,27 @@ async function setupPhysicsWorker(): Promise<void> {
         targetMap: cleanTargetMap,
         slingshotMap: physics.slingshotMap,
       });
-      if (import.meta.env.DEV) { (window as any).SETUP_WORKER_CONFIG_OK = Date.now(); }
+      setDevFlag('SETUP_WORKER_CONFIG_OK', Date.now());
 
-      // Setup callback for physics frame updates
-      if (import.meta.env.DEV) { (window as any).SETUP_WORKER_CALLBACK_START = Date.now(); }
+      if (import.meta.env.DEV) { setDevFlag('SETUP_WORKER_CALLBACK_START', Date.now()); }
       bridge.setFrameCallback((frame: PhysicsFrameData) => {
         handlePhysicsFrame(frame);
       });
-      if (import.meta.env.DEV) { (window as any).SETUP_WORKER_CALLBACK_OK = Date.now(); }
+      setDevFlag('SETUP_WORKER_CALLBACK_OK', Date.now());
 
       if (import.meta.env.DEV) {
         console.log('✓ Physics worker initialized and ready');
-        (window as any).SETUP_WORKER_COMPLETE = true;
+        setDevFlag('SETUP_WORKER_COMPLETE', true);
       }
     } else {
-      if (import.meta.env.DEV) { (window as any).SETUP_WORKER_NO_PHYSICS = true; }
+      setDevFlag('SETUP_WORKER_NO_PHYSICS', true);
     }
   } catch (error) {
-    if (import.meta.env.DEV) { (window as any).SETUP_WORKER_ERROR = (error as Error).message; }
+    setDevFlag('SETUP_WORKER_ERROR', (error as Error).message);
     console.error('Failed to initialize physics worker:', error);
     console.warn('Falling back to single-threaded physics');
   }
-  if (import.meta.env.DEV) { (window as any).SETUP_WORKER_END = Date.now(); }
+  setDevFlag('SETUP_WORKER_END', Date.now());
 }
 
 // ─── Phase 15: Handle Physics Frame Updates ────────────────────────────────────
@@ -1666,37 +1638,33 @@ function applyEnhancedVisualsToTable(sceneTarget: THREE.Scene): void {
 async function loadTableWithPhysicsWorker(tableConfig: any, sceneTarget: THREE.Scene, library?: any): Promise<void> {
   if (import.meta.env.DEV) {
     console.log('[loadTableWithPhysicsWorker] START');
-    (window as any).BUILD_TABLE_START = Date.now();
+    setDevFlag('BUILD_TABLE_START', Date.now());
     console.log('[loadTableWithPhysicsWorker] Building table...');
   }
-  // Build the table geometry and physics
   buildTable(tableConfig, sceneTarget, library, playgroundGroup);
   if (import.meta.env.DEV) {
-    (window as any).BUILD_TABLE_OK = Date.now();
-    (window as any).BUILD_TABLE_TIME_MS = (window as any).BUILD_TABLE_OK - (window as any).BUILD_TABLE_START;
-    console.log('[loadTableWithPhysicsWorker] Table built in', (window as any).BUILD_TABLE_TIME_MS, 'ms');
+    setDevFlag('BUILD_TABLE_OK', Date.now());
+    setDevFlag('BUILD_TABLE_TIME_MS', (window.debugWindow?.BUILD_TABLE_OK ?? 0) - (window.debugWindow?.BUILD_TABLE_START ?? 0));
+    console.log('[loadTableWithPhysicsWorker] Table built in', window.debugWindow?.BUILD_TABLE_TIME_MS, 'ms');
   }
 
-  // ─── Phase 16+: Apply enhanced visuals after table construction ─────────────────
   applyEnhancedVisualsToTable(sceneTarget);
 
-  // Initialize physics worker after table is built
   if (import.meta.env.DEV) {
-    (window as any).PHYSICS_WORKER_START = Date.now();
+    setDevFlag('PHYSICS_WORKER_START', Date.now());
     console.log('[loadTableWithPhysicsWorker] Setting up physics worker...');
   }
   try {
     await setupPhysicsWorker();
     if (import.meta.env.DEV) {
-      (window as any).PHYSICS_WORKER_OK = Date.now();
-      (window as any).PHYSICS_WORKER_TIME_MS = (window as any).PHYSICS_WORKER_OK - (window as any).PHYSICS_WORKER_START;
-      console.log('[loadTableWithPhysicsWorker] Physics worker setup OK in', (window as any).PHYSICS_WORKER_TIME_MS, 'ms');
-      (window as any).LOAD_TABLE_COMPLETE = true;
+      setDevFlag('PHYSICS_WORKER_OK', Date.now());
+      setDevFlag('PHYSICS_WORKER_TIME_MS', (window.debugWindow?.PHYSICS_WORKER_OK ?? 0) - (window.debugWindow?.PHYSICS_WORKER_START ?? 0));
+      console.log('[loadTableWithPhysicsWorker] Physics worker setup OK in', window.debugWindow?.PHYSICS_WORKER_TIME_MS, 'ms');
+      setDevFlag('LOAD_TABLE_COMPLETE', true);
     }
   } catch (error) {
-    if (import.meta.env.DEV) { (window as any).PHYSICS_WORKER_ERROR = (error as Error)?.message; }
+    setDevFlag('PHYSICS_WORKER_ERROR', (error as Error)?.message ?? '');
     console.error('Physics worker setup failed:', error);
-    // Continue with single-threaded physics fallback
   }
   if (import.meta.env.DEV) { console.log('[loadTableWithPhysicsWorker] COMPLETE'); }
 }
@@ -2022,7 +1990,7 @@ function showLibrarySelector(lib: any): void {
     btn.onclick = async () => {
       resetGameState();
       await loadTableWithPhysicsWorker(templateConfig as any, scene, lib);
-      (window as any).closeLoader();
+      window.closeLoader();
       logMsg(`✓ Loaded: ${lib.name} / ${templateName}`);
     };
     tableEl.appendChild(btn);
@@ -2597,7 +2565,7 @@ document.addEventListener('keyup', e => {
     const vy = 13.0 + charge * 3.0;    // 13 (tap) → 16 (full) m/s up — clears wall + reaches upper half on tap
     const vx = -3.5 - charge * 2.5;    // -3.5 (tap) → -6 (full) m/s left — clears wall edge in time
 
-    console.log(`🎯 PLUNGER LAUNCH: charge=${charge.toFixed(2)}, vx=${vx.toFixed(2)}, vy=${vy.toFixed(2)}`);
+    if (import.meta.env.DEV) { console.log(`🎯 PLUNGER LAUNCH: charge=${charge.toFixed(2)}, vx=${vx.toFixed(2)}, vy=${vy.toFixed(2)}`); }
 
     try {
       const bridge = getPhysicsWorker();
@@ -2701,8 +2669,8 @@ function applyQualityPreset(): void {
 
     // ─── DMD Resolution ───
     if (currentPreset.dmdResolution) {
-      (window as any).setDMDResolutionOption?.(currentPreset.dmdResolution);
-      (window as any).setDMDGlow?.(currentPreset.dmdGlowEnabled, currentPreset.dmdGlowIntensity);
+      window.setDMDResolutionOption?.(currentPreset.dmdResolution);
+      window.setDMDGlow?.(currentPreset.dmdGlowEnabled, currentPreset.dmdGlowIntensity);
       logMsg(`  └─ DMD: ${currentPreset.dmdResolution} (glow: ${currentPreset.dmdGlowEnabled})`, 'ok');
     }
 
@@ -3271,7 +3239,7 @@ function initViewSettings(): void {
     // Prefer explicit value (set immediately on click) over engine state,
     // since rotateAndRedraw is async and would leave the UI showing the
     // pre-rotation state until the animation completes.
-    const cur = forced ?? ((window as any).getCurrentRotation?.() ?? 0);
+    const cur = forced ?? (window.getCurrentRotation?.() ?? 0);
     if (rotValEl) rotValEl.textContent = `${cur}°`;
     document.querySelectorAll<HTMLElement>('.vp-rot-btn').forEach(b => {
       const isActive = Number(b.dataset.rot) === cur;
@@ -3866,7 +3834,7 @@ window.addEventListener('resize', () => {
   }
 
   // Update device detection
-  (window as any).FPW_DEVICE = detectDeviceType();
+  window.FPW_DEVICE = detectDeviceType();
   } catch (error) {
     console.error('Error during secondary resize handler:', error);
   }
@@ -4030,7 +3998,7 @@ function sortScreensByPosition(arr: ScreenLike[]): ScreenLike[] {
 }
 
 async function getAllScreensForLayout(): Promise<ScreenLike[]> {
-  const api = (window as any).electronAPI;
+  const api = window.electronAPI;
   if (api?.getAllDisplays) {
     try {
       const displays = await api.getAllDisplays();
@@ -4051,7 +4019,7 @@ async function getAllScreensForLayout(): Promise<ScreenLike[]> {
   }
   if ('getScreenDetails' in window) {
     try {
-      const details = await (window as any).getScreenDetails();
+      const details = await window.getScreenDetails!();
       const mapped: ScreenLike[] = (details.screens || []).map((s: any) => ({
         availLeft: s.availLeft,
         availTop: s.availTop,
@@ -4082,7 +4050,7 @@ async function openMultiscreenWindow(
   h: number,
   role: string
 ): Promise<Window | null> {
-  const api = (window as any).electronAPI;
+  const api = window.electronAPI;
   if (api?.openWindow) {
     try {
       await api.openWindow({
@@ -4165,7 +4133,7 @@ const autoDetectScreens = async () => {
 };
 
 const applyStartupScreenConfig = async () => {
-  const config = (window as any)._startupScreenConfig;
+  const config = window._startupScreenConfig;
   const tableParam = new URLSearchParams(location.search).get('table');
 
   if (!config) return;
@@ -4195,7 +4163,7 @@ function _winSpec(role: string, dw: number, dh: number, screenIdx?: number): str
   if (screenIdx !== undefined) {
     try {
       if ('getScreenDetails' in window) {
-        const screens = (window as any).screens || [];
+        const screens = window.screens || [];
         if (screens.length > screenIdx) {
           const scr = screens[screenIdx];
           return `width=${dw},height=${dh},left=${scr.availLeft},top=${scr.availTop}`;
@@ -4345,8 +4313,8 @@ function setupDMDWindow(): void {
     canvas.width = Math.max(256, Math.floor(w));
     canvas.height = Math.max(64, Math.floor(h));
 
-    if ((window as any).updateResponsiveDMDScale) {
-      (window as any).updateResponsiveDMDScale();
+    if (window.updateResponsiveDMDScale) {
+      window.updateResponsiveDMDScale();
     }
   };
 
@@ -4499,7 +4467,7 @@ const handleFile = async (f: File) => {
       f,
       (lib: any) => {
         setLoadedLibrary(lib);
-        (window as any).showLibrarySelector(lib);
+        window.showLibrarySelector(lib);
         logMsg(`📚 Library loaded: ${lib.name} (${Object.keys(lib.tableTemplates).length} tables)`);
       },
       (err) => logMsg(`❌ FPL Error: ${err}`, 'error')
@@ -4525,7 +4493,7 @@ async function browseTableDirectory(): Promise<void> {
   if ('showDirectoryPicker' in window) {
     // Modern API: showDirectoryPicker (Chrome/Edge)
     try {
-      const dirHandle = await (window as any).showDirectoryPicker();
+      const dirHandle = await window.showDirectoryPicker!();
       dirPathInput.value = dirHandle.name || 'Tabellenverzeichnis';
 
       // Pfad speichern
@@ -4618,7 +4586,7 @@ function renderTableFileGrid(files: File[]): void {
 // (electronAPI present); in plain browsers the section stays empty and the
 // user falls back to the existing drag-drop / file-picker UI.
 async function initializeFPTBrowser(): Promise<void> {
-  const api = (window as any).electronAPI;
+  const api = window.electronAPI;
   if (!api?.scanFPTDirectory) {
     // No Electron — hide the FPT section entirely
     const section = document.getElementById('qm-fpt-section');
@@ -4672,7 +4640,7 @@ async function initializeFPTBrowser(): Promise<void> {
 }
 
 async function loadFPTFromPath(filePath: string): Promise<void> {
-  const api = (window as any).electronAPI;
+  const api = window.electronAPI;
   if (!api?.readFPTFile) throw new Error('not running in Electron');
   const buf: ArrayBuffer = await api.readFPTFile(filePath);
   const filename = filePath.split(/[\\/]/).pop() ?? 'table.fpt';
@@ -4695,7 +4663,7 @@ async function browseLibraryDirectory(): Promise<void> {
   if ('showDirectoryPicker' in window) {
     // Modern API: showDirectoryPicker (Chrome/Edge)
     try {
-      const dirHandle = await (window as any).showDirectoryPicker();
+      const dirHandle = await window.showDirectoryPicker!();
       dirPathInput.value = dirHandle.name || 'Bibliotheksverzeichnis';
 
       // Pfad speichern
@@ -4901,7 +4869,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   if (!currentTableConfig) {
     showTableSelector((tableKey: string) => {
       // Call existing loadDemoTable function
-      (window as any).loadDemoTable(tableKey);
+      window.loadDemoTable(tableKey);
     });
 
     // Apply startup screen configuration from URL parameter (if present)
@@ -5092,8 +5060,8 @@ if (FPW_ROLE === 'dmd') {
     // We delay slightly so the renderer is fully up before opening child windows.
     try {
       const autostart = localStorage.getItem('fpw_ms_autostart');
-      const electronAvailable = !!(window as any).electronAPI?.getAllDisplays;
-      const startupConfig = (window as any)._startupScreenConfig; // URL ?screen=... override
+      const electronAvailable = !!window.electronAPI?.getAllDisplays;
+      const startupConfig = window._startupScreenConfig; // URL ?screen=... override
       if (electronAvailable && autostart !== 'off' && startupConfig === undefined) {
         setTimeout(async () => {
           try {

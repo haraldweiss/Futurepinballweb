@@ -26,6 +26,7 @@
 // async IIFE in main.ts.  All properties are optional because they only exist
 // when `import.meta.env.DEV` is true.
 export interface DebugWindow {
+  // ── Async IIFE startup phases ─────────────────────────────────────────
   INIT_ASYNC_IIFE_STARTED?:   boolean;
   INIT_IN_ASYNC_IIFE?:        boolean;
   INIT_PHYSICS_START?:        boolean;
@@ -48,12 +49,63 @@ export interface DebugWindow {
   INIT_BEFORE_ANIMATE_CALL?:  boolean;
   INIT_ANIMATE_CALLED?:       boolean;
   INIT_ANIMATE_ERROR?:        string;
+
+  // ── Physics worker setup phases ───────────────────────────────────────
+  SETUP_WORKER_START?:         number;
+  SETUP_WORKER_INIT_START?:    number;
+  SETUP_WORKER_INIT_OK?:       number;
+  SETUP_WORKER_INIT_TIME?:     number;
+  SETUP_WORKER_CONFIG_START?:  number;
+  SETUP_WORKER_CONFIG_OK?:     number;
+  SETUP_WORKER_CALLBACK_START?: number;
+  SETUP_WORKER_CALLBACK_OK?:   number;
+  SETUP_WORKER_COMPLETE?:      boolean;
+  SETUP_WORKER_NO_PHYSICS?:    boolean;
+  SETUP_WORKER_ERROR?:         string;
+  SETUP_WORKER_END?:           number;
+
+  // ── Table build / physics worker timing ───────────────────────────────
+  BUILD_TABLE_START?:          number;
+  BUILD_TABLE_OK?:             number;
+  BUILD_TABLE_TIME_MS?:        number;
+  PHYSICS_WORKER_START?:       number;
+  PHYSICS_WORKER_OK?:          number;
+  PHYSICS_WORKER_TIME_MS?:     number;
+  PHYSICS_WORKER_ERROR?:       string;
+  LOAD_TABLE_COMPLETE?:        boolean;
+}
+
+// ─── Electron preload API ──────────────────────────────────────────────────────
+// Exposed by electron-preload.cjs via contextBridge.  All properties are
+// optional because they only exist in the Electron renderer, not in the browser.
+export interface ElectronAPI {
+  getAllDisplays:       () => Promise<any>;
+  openWindow:           (options: any) => Promise<any>;
+  closeWindow:          (id: any) => Promise<void>;
+  closeAllChildWindows: () => Promise<void>;
+  broadcastState:       (data: any) => void;
+  onStateBroadcast:     (callback: (data: any) => void) => () => void;
+  scanFPTDirectory:     (dirPath: string) => Promise<any>;
+  pickFPTDirectory:     () => Promise<any>;
+  readFPTFile:          (filePath: string) => Promise<any>;
+  openFile:             (options: any) => Promise<any>;
+  saveFile:             (options: any) => Promise<any>;
+  selectDirectory:      () => Promise<any>;
+  getVersion:           () => Promise<any>;
+  getPath:              (name: string) => Promise<any>;
+  checkForUpdates:      () => Promise<any>;
+  quitAndInstall:       () => Promise<void>;
+  onUpdateAvailable:    (callback: (...args: any[]) => void) => void;
+  onUpdateDownloaded:   (callback: (...args: any[]) => void) => void;
+  onUpdateError:        (callback: (message: string) => void) => void;
+  removeUpdateListeners: () => void;
 }
 
 declare global {
   interface Window {
     // ── Debug / INIT flags (DEV only) ────────────────────────────────────
     debugWindow?:           DebugWindow;
+    electronAPI?:           ElectronAPI;
 
     // ── Startup flags ──────────────────────────────────────────────────────
     FPW_MODULE_LOADED:      boolean;
@@ -162,6 +214,17 @@ declare global {
     setupTableDragDrop:         () => void;
     sortTableFiles:             (field: string, files?: any[]) => any[];
     runFullTestSuite:           () => Promise<any>;
+
+    // ── Browser APIs (non-standard / experimental) ─────────────────────────
+    showDirectoryPicker?:       () => Promise<any>;
+    getScreenDetails?:          () => Promise<any>;
+    screens?:                   any[];
+
+    // ── Optional global helpers (assigned by cross-window code) ─────────────
+    setDMDResolutionOption?:    (res: string) => void;
+    setDMDGlow?:                (enabled: boolean, intensity?: number) => void;
+    updateResponsiveDMDScale?:  () => void;
+    getCurrentRotation?:        () => number;
   }
 }
 
