@@ -856,21 +856,11 @@ function resetBall(): void {
   state.inLane = true; state.tiltWarnings = 0; state.tiltActive = false;
   state.plungerCharge = 0; state.plungerCharging = false;
 
-  // Phase 15: Update physics worker if available
   try {
     const bridge = getPhysicsWorker();
     bridge.updateBallPosition(2.65, -5.2, 0, 0);
     bridge.setBallGravityScale(0.0);
-  } catch (e) {
-    console.warn('[main] Falling back to direct physics:', (e || 'unknown'));
-    // Fallback: Direct physics access (single-threaded)
-    if (physics) {
-      physics.ballBody.setGravityScale(0.0, true);
-      physics.ballBody.setTranslation({ x:2.65, y:-5.2 }, true);
-      physics.ballBody.setLinvel({ x:0, y:0 }, true);
-      physics.ballBody.setAngvel(0, true);
-    }
-  }
+  } catch { /* physics worker not ready */ }
 }
 
 // ─── Game State Reset (on table load) ──────────────────────────────────────────
@@ -1167,18 +1157,10 @@ function nudgeTable(direction: number): void {
   if (state.tiltWarnings >= 3) {
     state.tiltActive = true;
 
-    // Phase 15: Apply tilt impulse via physics worker if available
     try {
       const bridge = getPhysicsWorker();
-      // Set velocity directly for immediate tilt effect
-      const currentBall = physics?.ballBody.linvel() ?? { x: 0, y: 0 };
       bridge.updateBallPosition(state.ballPos.x, state.ballPos.y, direction*1.5, -3.0);
-    } catch (e) {
-      console.warn('[main] Physics worker fallback (tilt):', (e || 'unknown'));
-      // Fallback: Direct physics access (single-threaded)
-      if (physics) physics.ballBody.setLinvel({ x:direction*1.5, y:-3.0 }, true);
-      else { state.ballVel.x = direction*1.5; state.ballVel.y = -3.0; }
-    }
+    } catch { /* physics worker not ready */ }
 
     dmdEvent('TILT!!!'); showNotification('⚠️ TILT!'); playSound('drain');
 
@@ -1189,19 +1171,12 @@ function nudgeTable(direction: number): void {
   } else {
     const force = 1.8 + state.tiltWarnings * 0.6;
 
-    // Phase 15: Apply nudge impulse via physics worker if available
     try {
       const bridge = getPhysicsWorker();
-      // For nudge, we apply velocity change to existing velocity
       const newVx = state.ballVel.x + direction * force;
       const newVy = state.ballVel.y + 0.5;
       bridge.updateBallPosition(state.ballPos.x, state.ballPos.y, newVx, newVy);
-    } catch (e) {
-      console.warn('[main] Physics worker fallback (nudge):', (e || 'unknown'));
-      // Fallback: Direct physics access (single-threaded)
-      if (physics) physics.ballBody.applyImpulse({ x:direction*force, y:0.5 }, true);
-      else { state.ballVel.x += direction*force; state.ballVel.y += 0.5; }
-    }
+    } catch { /* physics worker not ready */ }
 
     dmdEvent(state.tiltWarnings === 2 ? 'TILT WARNING!!' : 'TILT WARNING!');
     spawnParticles(state.ballPos.x, state.ballPos.y, 0xffaa00, 6);
@@ -2159,39 +2134,22 @@ function animate(): void {
 
   if (physics) {
     if (state.inLane) {
-      // Phase 15: Set in-lane gravity via physics worker
       try {
         const bridge = getPhysicsWorker();
         bridge.setBallGravityScale(0.0);
-      } catch (e) {
-        console.warn('[main] Physics worker fallback (in-lane):', (e || 'unknown'));
-        // Fallback
-        physics.ballBody.setGravityScale(0.0, true);
-        physics.ballBody.setLinvel({ x:0, y:0 }, true);
-        physics.ballBody.setAngvel(0, true);
-        physics.ballBody.setTranslation({ x:2.65, y:-5.0 }, true);
-      }
+      } catch { /* physics worker not ready */ }
     } else {
-      // Phase 15: Step physics via worker (non-blocking!)
-      // ─── Phase 24 Enhancement: Increased Physics Substeps for Better Accuracy ───
       try {
         const bridge = getPhysicsWorker();
         const substeps = currentFps > 55 ? 6 : (currentFps > 45 ? 5 : 4);
         bridge.step(dt, substeps);
-        // Physics results arrive async via callback (handlePhysicsFrame)
-      } catch (e) {
-        console.warn('[main] Physics worker step fallback:', (e || 'unknown'));
-        // Fallback: Single-threaded physics (original code)
-        physics.world.step(physics.eventQueue);
+      } catch { /* physics worker not ready — skipping frame */ }
 
-        // ─── Phase 6: Improved B.A.M. Engine Step with Adaptive Substeps ───
-        if (bamEngine) {
-          // Adaptive substeps: More steps at higher FPS for smoother physics
-          // This matches Newton's approach: more accurate simulation = better feel
-          // ─── Phase 24 Enhancement: Increased Physics Substeps for Better Accuracy ───
-          const substeps = currentFps > 55 ? 6 : (currentFps > 45 ? 5 : 4);
-          bamEngine.step(dt, substeps);
-        }
+      if (bamEngine) {
+        const substeps = currentFps > 55 ? 6 : (currentFps > 45 ? 5 : 4);
+        bamEngine.step(dt, substeps);
+      }
+      if (physics) {
         const pos = physics.ballBody.translation(), vel = physics.ballBody.linvel();
         state.ballPos.x=pos.x; state.ballPos.y=pos.y;
         state.ballVel.x=vel.x; state.ballVel.y=vel.y;
