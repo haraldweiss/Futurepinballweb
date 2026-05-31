@@ -190,3 +190,19 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 - Per PowerShell deploy via robocopy /MIR an gleichen Pfad
 - EXE: 222.973.952 Bytes, app.asar: 19.162.483 Bytes
 - taskkill fehlgeschlagen (Access Denied — App läuft nicht oder non-admin), robocopy dennoch erfolgreich
+
+### 2026-05-31 — FPT-Writer Roundtrip + Security Tests in vitest
+- 3 neue Roundtrip-Tests für Legacy-Format (TLV-Header, Table Elements bleiben erhalten)
+- `src/__tests__/html-escape.test.ts` — 15 vitest-Tests für escapeHtml/sanitizeFileName/isSafeText
+- `src/__tests__/system-integration.test.ts` — 7 vitest-Tests für ResourceManager/LibraryCache
+- Debug-Logs gegatet: physics-worker.ts (8), touch-controls-manager.ts (2), integrated-editor.ts (2)
+- Plan-Docs aktualisiert: 229 Checkboxen in 9 superpowers-Plänen
+
+### 2026-05-31 — Bugfix + CI + Cleanup
+- **Bugfix**: `scoring.ts` countdown-Bonus war immer aktiv (false `|| 5`)
+- **CI**: Test-Step vor Release-Build in `.github/workflows/build-release.yml` eingefügt
+- 10 obsolete research-Skripte archiviert, 3 Shell-Scripts von `scripts/research/` nach `scripts/` verschoben
+- Deprecation-Notices auf 3 standalone Test-Runnern
+- `npm run test:suite` und `npm run test:integration` Scripts in package.json
+
+**Gesamt heute**: 22 Commits, 757 Tests, 36 Testdateien, tsc clean, 0 lint errors
