@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, it, expect } from 'vitest';
 import { extractEmbeddedPayload, parseHeader, scanForPayloadStart } from '../fpt/legacy-container';
+import { parseTableElement, extractTableCoordsFromCFB } from '../fpt/table-elements';
 
 function makeBmpHeader(): Uint8Array {
   return new Uint8Array([
@@ -317,5 +318,122 @@ describe('scanForPayloadStart', () => {
     const buf = new Uint8Array(100);
     for (let i = 0; i < 100; i++) buf[i] = 0xaa;
     expect(scanForPayloadStart(buf, 0)).toBe(-1);
+  });
+});
+
+describe('parseTableElement (FP v1.x geometry stream)', () => {
+
+  function makeTlvBlock(tagBytes: number[], value: Uint8Array): Uint8Array {
+    const blockLen = 4 + value.length;
+    const buf = new Uint8Array(4 + blockLen);
+    buf[0] = blockLen; buf[1] = 0; buf[2] = 0; buf[3] = 0;
+    for (let i = 0; i < 4; i++) buf[4 + i] = tagBytes[i];
+    buf.set(value, 8);
+    return buf;
+  }
+
+  function makeUtf16Block(tagBytes: number[], str: string): Uint8Array {
+    const encoded = new Uint8Array(str.length * 2);
+    for (let i = 0; i < str.length; i++) {
+      encoded[i * 2] = str.charCodeAt(i) & 0xff;
+      encoded[i * 2 + 1] = (str.charCodeAt(i) >> 8) & 0xff;
+    }
+    const strLen = encoded.length;
+    const value = new Uint8Array(4 + strLen);
+    value[0] = strLen; value[1] = 0; value[2] = 0; value[3] = 0;
+    value.set(encoded, 4);
+    return makeTlvBlock(tagBytes, value);
+  }
+
+  function makeCoordBlock(x: number, y: number): Uint8Array {
+    const value = new Uint8Array(8);
+    const view = new DataView(value.buffer);
+    view.setFloat32(0, x, true);
+    view.setFloat32(4, y, true);
+    return makeTlvBlock([0xaa, 0xbc, 0xba, 0xb1], value);
+  }
+
+  function makeTableElementStream(opts: {
+    type: number;
+    name: string;
+    x?: number;
+    y?: number;
+    extraBlocks?: number;
+  }): Uint8Array {
+    const parts: Uint8Array[] = [];
+    // Element type at offset 0
+    const typeBytes = new Uint8Array(4);
+    typeBytes[0] = opts.type;
+    parts.push(typeBytes);
+    // NAME block (UTF-16-LE)
+    parts.push(makeUtf16Block([0xb2, 0xbe, 0xb2, 0xba], opts.name));
+    // Optional coordinate block
+    if (opts.x !== undefined && opts.y !== undefined) {
+      parts.push(makeCoordBlock(opts.x, opts.y));
+    }
+    // Extra unknown blocks
+    for (let i = 0; i < (opts.extraBlocks ?? 0); i++) {
+      parts.push(new Uint8Array([8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]));
+    }
+    const totalLen = parts.reduce((s, p) => s + p.length, 0);
+    const result = new Uint8Array(totalLen);
+    let off = 0;
+    for (const p of parts) { result.set(p, off); off += p.length; }
+    return result;
+  }
+
+  it('parses a Bumper element with coordinates', () => {
+    const stream = makeTableElementStream({ type: 8, name: 'Bumper1', x: 288.83, y: 364.67 });
+    const el = parseTableElement(stream);
+    expect(el).not.toBeNull();
+    expect(el!.type).toBe(8);
+    expect(el!.name).toBe('Bumper1');
+    expect(el!.x).toBeCloseTo(288.83, 2);
+    expect(el!.y).toBeCloseTo(364.67, 2);
+  });
+
+  it('parses a Light element', () => {
+    const stream = makeTableElementStream({ type: 3, name: 'LightJackpot', x: 170.67, y: 536.67 });
+    const el = parseTableElement(stream);
+    expect(el).not.toBeNull();
+    expect(el!.type).toBe(3);
+    expect(el!.name).toBe('LightJackpot');
+    expect(el!.x).toBeCloseTo(170.67, 1);
+  });
+
+  it('parses a Target element', () => {
+    const stream = makeTableElementStream({ type: 10, name: 'TargetSciFi_I1', x: 219.23, y: 280.72 });
+    const el = parseTableElement(stream);
+    expect(el).not.toBeNull();
+    expect(el!.name).toBe('TargetSciFi_I1');
+  });
+
+  it('returns null for a stream with no NAME block', () => {
+    const stream = new Uint8Array(8);
+    expect(parseTableElement(stream)).toBeNull();
+  });
+
+  it('returns null for empty buffer', () => {
+    expect(parseTableElement(new Uint8Array(0))).toBeNull();
+  });
+
+  it('returns null for a stream with NAME but no coordinates', () => {
+    const stream = makeTableElementStream({ type: 2, name: 'Surface2' });
+    expect(parseTableElement(stream)).toBeNull();
+  });
+
+  it('handles extra unknown blocks after NAME and COORD', () => {
+    const stream = makeTableElementStream({ type: 8, name: 'Bumper2', x: 359.08, y: 242.08, extraBlocks: 3 });
+    const el = parseTableElement(stream);
+    expect(el).not.toBeNull();
+    expect(el!.name).toBe('Bumper2');
+    expect(el!.x).toBeCloseTo(359.08, 1);
+  });
+
+  it('parses UTF-16-LE name correctly', () => {
+    const stream = makeTableElementStream({ type: 6, name: 'Peg24', x: 35, y: 649.25 });
+    const el = parseTableElement(stream);
+    expect(el).not.toBeNull();
+    expect(el!.name).toBe('Peg24');
   });
 });
