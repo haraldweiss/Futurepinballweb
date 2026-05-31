@@ -15,6 +15,7 @@ import {
   bytesToTexture, scanForImageMagic, extractImageFromBytes,
   extractSoundFromBytes,
 } from './fpt/media';
+import { extractTableCoordsFromCFB } from './fpt/table-elements';
 
 // ─── Phase 2: Resource Loading Progress Callbacks ──────────────────────────────
 export interface ResourceLoadingCallbacks {
@@ -1003,9 +1004,17 @@ export async function parseFPTFile(
       const tableName = file.name.replace(/\.(fpt|fp)$/i, '');
 
       // Extrahiere Koordinaten für Bumper/Targets/Rampen
-      const bytes = new Uint8Array(buffer);
-      const coords = extractFPCoords(bytes);
-      logMsg(`📍 Koordinaten extrahiert: ${coords.length} Punkte`, coords.length > 5 ? 'ok' : 'warn');
+      // Try Table Element parser first (FP v1.x legacy), fall back to heuristic
+      let coords: Array<{x:number;y:number}>;
+      const tableCoords = extractTableCoordsFromCFB(buffer);
+      if (tableCoords.length > 0) {
+        coords = tableCoords;
+        logMsg(`📍 Koordinaten aus Table Elements: ${coords.length} Punkte`, 'ok');
+      } else {
+        const bytes = new Uint8Array(buffer);
+        coords = extractFPCoords(bytes);
+        logMsg(`📍 Koordinaten (Heuristik): ${coords.length} Punkte`, coords.length > 5 ? 'ok' : 'warn');
+      }
 
       // Analysiere Texture-Farben für bessere Ästhetik
       let bumperColors = [0xff2200,0xff9900,0x00aaff,0xff00cc,0x00ff88];  // Fallback
