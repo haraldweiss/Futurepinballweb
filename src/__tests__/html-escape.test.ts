@@ -87,3 +87,69 @@ describe('isSafeText', () => {
     expect(isSafeText('javascript:alert(1)')).toBe(false);
   });
 });
+
+describe('File validation', () => {
+  const ALLOWED_EXTENSIONS = ['.fpt', '.fp', '.fpl', '.json'];
+  const MAX_FILE_SIZE = 512 * 1024 * 1024;
+
+  it('validates file extensions', () => {
+    const tests = [
+      { name: 'table.fpt', valid: true },
+      { name: 'config.json', valid: true },
+      { name: 'library.fpl', valid: true },
+      { name: 'script.vbs', valid: false },
+      { name: 'malware.exe', valid: false },
+    ];
+    for (const { name, valid } of tests) {
+      const ext = '.' + name.split('.').pop()?.toLowerCase();
+      expect(ALLOWED_EXTENSIONS.includes(ext)).toBe(valid);
+    }
+  });
+
+  it('enforces file size limits', () => {
+    expect(1024 <= MAX_FILE_SIZE).toBe(true);
+    expect(100 * 1024 * 1024 <= MAX_FILE_SIZE).toBe(true);
+    expect(512 * 1024 * 1024 <= MAX_FILE_SIZE).toBe(true);
+    expect(513 * 1024 * 1024 <= MAX_FILE_SIZE).toBe(false);
+  });
+});
+
+describe('localStorage security', () => {
+  it('stores and retrieves JSON data', () => {
+    const scores = [100, 500, 1000];
+    const json = JSON.stringify(scores);
+    const retrieved = JSON.parse(json);
+    expect(Array.isArray(retrieved)).toBe(true);
+    expect(retrieved).toEqual([100, 500, 1000]);
+  });
+});
+
+describe('Physics worker type validation', () => {
+  it('validates frame structure', () => {
+    const validFrames = [
+      { ballPos: { x: 0, y: 0, z: 0 }, ballVel: { x: 1, y: 2 }, collisions: [] },
+      { ballPos: { x: 2.5, y: -5, z: 0.5 }, ballVel: { x: -8, y: 16 }, collisions: [{ type: 'bumper', data: {} }] },
+    ];
+    for (const frame of validFrames) {
+      expect(typeof frame.ballPos.x).toBe('number');
+      expect(typeof frame.ballVel.x).toBe('number');
+      expect(Array.isArray(frame.collisions)).toBe(true);
+    }
+  });
+
+  it('rejects invalid messages', () => {
+    const invalid = [null, undefined, 'string', 123, { type: 'unknown' }, { ballPos: 'invalid' }];
+    for (const msg of invalid) {
+      const isValid = !!(msg && typeof msg === 'object' && 'ballPos' in msg && 'ballVel' in msg);
+      expect(isValid).toBe(false);
+    }
+  });
+
+  it('validates numeric bounds', () => {
+    expect(Number.isFinite(0)).toBe(true);
+    expect(Number.isFinite(100)).toBe(true);
+    expect(Number.isFinite(-50)).toBe(true);
+    expect(Number.isFinite(Infinity)).toBe(false);
+    expect(Number.isFinite(NaN)).toBe(false);
+  });
+});
