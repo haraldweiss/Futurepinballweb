@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.22.0] - 2026-05-31
+
+### 🎮 New Features
+
+#### 🧩 FP v1.x (BAM Legacy) Format Support
+- **Legacy Container Extractor**: New `src/fpt/legacy-container.ts` with `extractEmbeddedPayload()` for TLV-wrapped zLZO/OGG assets
+- **Container Header Parser**: `parseHeader()` extracts name, displayName, sourcePath from legacy TLV blocks
+- **Table Element Geometry**: `src/fpt/table-elements.ts` parses `Table Element N` streams for real bumper/target/light coordinates (368 coords from 10_ALIEN)
+
+### 🔧 Changes
+- **src/fpt/media.ts**: `extractImageFromBytes`/`extractSoundFromBytes` call legacy container helper before offset scan
+- **src/fpt-parser.ts**: `table` removed from texture regex — prevents "Table Data" misclassification
+- **src/fpt-parser.ts**: Coordinate extraction now uses parsed Table Elements first, falls back to heuristic
+- **Tests**: 34 new tests for legacy format (732 total, 34 files)
+
+### ✅ Verification
+- Smoke test 10_ALIEN: 6 textures, 26 sounds, 368 coordinates
+- `tsc --noEmit` clean
+- All 732 tests green
+
+---
+
 ## [0.21.0] - 2026-03-14
 
 ### 🎮 New Features

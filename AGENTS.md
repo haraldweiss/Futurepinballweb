@@ -169,3 +169,18 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 - Fallstricke aufgedeckt (siehe §3.7): `ssh-copy-id` legt Key auf Windows OpenSSH falsch in `administrators_authorized_keys` ab; `vpx` ist non-admin → musste `~/.ssh/authorized_keys` manuell anlegen
 - Verknüpfungen (Desktop OneDrive + Startmenü) per WScript.Shell-Shortcut erstellt
 - Verified: EXE 222.973.952 bytes auf Cabinet, app.asar 19 MB, passwortloser Login bestätigt
+
+### 2026-05-31 — FP v1.x Legacy-Format (Phasen A+B+C)
+- `src/fpt/legacy-container.ts` — `extractEmbeddedPayload()`, `parseHeader()`, `scanForPayloadStart()`
+- `src/fpt/media.ts` — Integration für Image/Sound-Extraktion aus Legacy-TLV-Containern
+- `src/fpt-parser.ts:96` — `table` aus Texture-Regex entfernt
+- `src/fpt/table-elements.ts` — `parseTableElement()`, `extractTableCoordsFromCFB()` für Geometrie
+- 7 Commits (b11e258e..d33d6622), 34 neue Tests
+- Smoke 10_ALIEN: 6 Texturen, 26 Sounds, 368 Koordinaten (vorher: 0)
+- Verified: tsc clean, 732/732 tests
+
+### 2026-05-31 — Release 0.22.0
+- Version bump 0.21.0 → 0.22.0
+- Changelog updated with FP v1.x legacy format support + plan-doc housekeeping
+- 11 commits since 0.21.0
+- Verified: build succeeds, 732/732 tests, tsc clean, manual smoke on 10_ALIEN
