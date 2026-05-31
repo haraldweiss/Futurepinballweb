@@ -30,7 +30,7 @@
 **Files:**
 - Modify: `package.json`, `package-lock.json`
 
-- [ ] **Step 1: Install dependencies**
+- [x] **Step 1: Install dependencies**
 
 ```bash
 npm install --save @codemirror/state @codemirror/view @codemirror/commands @codemirror/language @codemirror/search @codemirror/autocomplete @codemirror/lint
@@ -38,7 +38,7 @@ npm install --save @codemirror/state @codemirror/view @codemirror/commands @code
 
 (`@codemirror/basic-setup` is sometimes a separate package; on CM6 the standard is to compose features manually.)
 
-- [ ] **Step 2: Verify build still works**
+- [x] **Step 2: Verify build still works**
 
 ```
 npx vite build
@@ -46,7 +46,7 @@ npx vite build
 
 Expected: build succeeds (CodeMirror is tree-shakable; should add ~80-150KB gzipped to the bundle).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add package.json package-lock.json
@@ -61,7 +61,7 @@ git commit -m "build(deps): add CodeMirror 6 for VBScript editor"
 - Create: `src/editor/script-editor-modal.ts`
 - Test: `src/__tests__/script-editor-modal.test.ts`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `src/__tests__/script-editor-modal.test.ts`:
 
@@ -123,7 +123,7 @@ describe('ScriptEditorModal', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 ```
 npx vitest run src/__tests__/script-editor-modal.test.ts
@@ -131,7 +131,7 @@ npx vitest run src/__tests__/script-editor-modal.test.ts
 
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Implement ScriptEditorModal**
+- [x] **Step 3: Implement ScriptEditorModal**
 
 Create `src/editor/script-editor-modal.ts`:
 
@@ -248,7 +248,7 @@ export class ScriptEditorModal {
 }
 ```
 
-- [ ] **Step 4: Run tests + build**
+- [x] **Step 4: Run tests + build**
 
 ```
 npx vitest run src/__tests__/script-editor-modal.test.ts
@@ -258,7 +258,7 @@ npx vite build
 
 Expected: 5 new tests pass, full suite green, build succeeds (slightly larger bundle from CodeMirror).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/editor/script-editor-modal.ts src/__tests__/script-editor-modal.test.ts
@@ -272,7 +272,7 @@ git commit -m "feat(editor): add ScriptEditorModal with CodeMirror 6"
 **Files:**
 - Modify: `src/integrated-editor.ts`
 
-- [ ] **Step 1: Add import + field**
+- [x] **Step 1: Add import + field**
 
 ```typescript
 import { ScriptEditorModal } from './editor/script-editor-modal';
@@ -283,7 +283,7 @@ import { runFPScript } from './script-engine';
 private scriptEditorModal: ScriptEditorModal = new ScriptEditorModal();
 ```
 
-- [ ] **Step 2: Add "Script" button in toolbar**
+- [x] **Step 2: Add "Script" button in toolbar**
 
 Find the toolbar section (search for `data-tool=` lines). Add after the existing tool buttons:
 
@@ -293,7 +293,7 @@ Find the toolbar section (search for `data-tool=` lines). Add after the existing
 
 (Use the same onclick-via-window pattern that already exists for other actions.)
 
-- [ ] **Step 3: Add openScriptEditor method**
+- [x] **Step 3: Add openScriptEditor method**
 
 ```typescript
 public openScriptEditor(): void {
@@ -312,7 +312,7 @@ public openScriptEditor(): void {
 }
 ```
 
-- [ ] **Step 4: Run tests + build, commit**
+- [x] **Step 4: Run tests + build, commit**
 
 ```
 npx vitest run && npx vite build
@@ -348,12 +348,12 @@ git commit -m "feat(editor): add CSS for ScriptEditorModal"
 
 ## Task 5: Manual verification
 
-- [ ] Start dev server, load FPT, open editor
-- [ ] Click "📝 Script" button → modal opens with current VBScript
-- [ ] Edit script (line numbers visible, basic editing works)
-- [ ] Click Apply → modal closes, console log confirms reload
-- [ ] Verify modified script behavior (e.g., bumper hit triggers updated logic)
-- [ ] Click Cancel on second open → no changes applied
+- [x] Start dev server, load FPT, open editor
+- [x] Click "📝 Script" button → modal opens with current VBScript
+- [x] Edit script (line numbers visible, basic editing works)
+- [x] Click Apply → modal closes, console log confirms reload
+- [x] Verify modified script behavior (e.g., bumper hit triggers updated logic)
+- [x] Click Cancel on second open → no changes applied
 
 ---
 

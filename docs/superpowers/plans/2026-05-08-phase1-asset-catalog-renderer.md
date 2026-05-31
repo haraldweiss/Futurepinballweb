@@ -39,7 +39,7 @@
 - Create: `src/assets/placeholders.ts`
 - Test: `src/__tests__/asset-catalog.test.ts` (placeholder tests only this task)
 
-- [ ] **Step 1: Write failing test for placeholder texture**
+- [x] **Step 1: Write failing test for placeholder texture**
 
 Create `src/__tests__/asset-catalog.test.ts`:
 
@@ -73,7 +73,7 @@ describe('Placeholders', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```
 npx vitest run src/__tests__/asset-catalog.test.ts
@@ -81,7 +81,7 @@ npx vitest run src/__tests__/asset-catalog.test.ts
 
 Expected: FAIL — `Cannot find module '../assets/placeholders'`
 
-- [ ] **Step 3: Implement asset-types.ts**
+- [x] **Step 3: Implement asset-types.ts**
 
 Create `src/assets/asset-types.ts`:
 
@@ -113,7 +113,7 @@ export interface SilentBuffer {
 export type AnyAsset = THREE.Texture | THREE.Mesh | AudioBuffer | SilentBuffer;
 ```
 
-- [ ] **Step 4: Implement placeholders.ts**
+- [x] **Step 4: Implement placeholders.ts**
 
 Create `src/assets/placeholders.ts`:
 
@@ -166,7 +166,7 @@ export function _resetPlaceholderCache(): void {
 }
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 ```
 npx vitest run src/__tests__/asset-catalog.test.ts
@@ -174,7 +174,7 @@ npx vitest run src/__tests__/asset-catalog.test.ts
 
 Expected: PASS — all 3 tests green.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/assets/asset-types.ts src/assets/placeholders.ts src/__tests__/asset-catalog.test.ts
@@ -189,7 +189,7 @@ git commit -m "feat(assets): add asset types and placeholder fallbacks"
 - Create: `src/assets/asset-catalog.ts`
 - Test: `src/__tests__/asset-catalog.test.ts` (extend)
 
-- [ ] **Step 1: Write failing tests for AssetCatalog basic API**
+- [x] **Step 1: Write failing tests for AssetCatalog basic API**
 
 Append to `src/__tests__/asset-catalog.test.ts`:
 
@@ -247,7 +247,7 @@ describe('AssetCatalog (in-memory)', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 ```
 npx vitest run src/__tests__/asset-catalog.test.ts
@@ -255,7 +255,7 @@ npx vitest run src/__tests__/asset-catalog.test.ts
 
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Implement AssetCatalog (in-memory only, no cache yet)**
+- [x] **Step 3: Implement AssetCatalog (in-memory only, no cache yet)**
 
 Create `src/assets/asset-catalog.ts`:
 
@@ -363,7 +363,7 @@ export class AssetCatalog {
 }
 ```
 
-- [ ] **Step 4: Run test to verify pass**
+- [x] **Step 4: Run test to verify pass**
 
 ```
 npx vitest run src/__tests__/asset-catalog.test.ts
@@ -371,7 +371,7 @@ npx vitest run src/__tests__/asset-catalog.test.ts
 
 Expected: PASS — all tests (placeholders + catalog basic API).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/assets/asset-catalog.ts src/__tests__/asset-catalog.test.ts
@@ -387,13 +387,13 @@ git commit -m "feat(assets): add AssetCatalog in-memory class with placeholder f
 - Create: `src/__tests__/asset-cache.test.ts`
 - Modify: `package.json` (add `fake-indexeddb` dev dep)
 
-- [ ] **Step 1: Add fake-indexeddb dev dependency**
+- [x] **Step 1: Add fake-indexeddb dev dependency**
 
 ```bash
 npm install --save-dev fake-indexeddb
 ```
 
-- [ ] **Step 2: Write failing tests**
+- [x] **Step 2: Write failing tests**
 
 Create `src/__tests__/asset-cache.test.ts`:
 
@@ -440,7 +440,7 @@ describe('AssetCache (IndexedDB)', () => {
 });
 ```
 
-- [ ] **Step 3: Run test to verify failure**
+- [x] **Step 3: Run test to verify failure**
 
 ```
 npx vitest run src/__tests__/asset-cache.test.ts
@@ -448,7 +448,7 @@ npx vitest run src/__tests__/asset-cache.test.ts
 
 Expected: FAIL — module not found.
 
-- [ ] **Step 4: Implement AssetCache**
+- [x] **Step 4: Implement AssetCache**
 
 Create `src/assets/asset-cache.ts`:
 
@@ -534,7 +534,7 @@ export class AssetCache {
 }
 ```
 
-- [ ] **Step 5: Run test to verify pass**
+- [x] **Step 5: Run test to verify pass**
 
 ```
 npx vitest run src/__tests__/asset-cache.test.ts
@@ -542,7 +542,7 @@ npx vitest run src/__tests__/asset-cache.test.ts
 
 Expected: PASS — all 4 tests green.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/assets/asset-cache.ts src/__tests__/asset-cache.test.ts package.json package-lock.json
@@ -557,7 +557,7 @@ git commit -m "feat(assets): add IndexedDB cache layer with fake-indexeddb tests
 - Modify: `src/types.ts` (no functional change in this task, just import path)
 - Modify: `src/game.ts` (add globalAssetCatalog export)
 
-- [ ] **Step 1: Write failing test for global catalog access**
+- [x] **Step 1: Write failing test for global catalog access**
 
 Append to `src/__tests__/asset-catalog.test.ts`:
 
@@ -579,7 +579,7 @@ describe('globalAssetCatalog', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 ```
 npx vitest run src/__tests__/asset-catalog.test.ts
@@ -587,7 +587,7 @@ npx vitest run src/__tests__/asset-catalog.test.ts
 
 Expected: FAIL — `globalAssetCatalog`/`setGlobalAssetCatalog` not exported from `../game`.
 
-- [ ] **Step 3: Modify src/game.ts to add catalog reference**
+- [x] **Step 3: Modify src/game.ts to add catalog reference**
 
 Find the section starting `export let physics:` (around line 107) and add after the existing `let` exports (after line 113):
 
@@ -601,7 +601,7 @@ export function setGlobalAssetCatalog(c: AssetCatalog | null): void { _globalAss
 
 (Place the `import` near the top with other imports; place the function exports near the other setters around line 129.)
 
-- [ ] **Step 4: Run test to verify pass**
+- [x] **Step 4: Run test to verify pass**
 
 ```
 npx vitest run src/__tests__/asset-catalog.test.ts
@@ -609,7 +609,7 @@ npx vitest run src/__tests__/asset-catalog.test.ts
 
 Expected: PASS — all tests including the two new ones.
 
-- [ ] **Step 5: Verify no existing tests broke**
+- [x] **Step 5: Verify no existing tests broke**
 
 ```
 npx vitest run
@@ -617,7 +617,7 @@ npx vitest run
 
 Expected: ALL existing 563+ tests still pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/game.ts src/__tests__/asset-catalog.test.ts
@@ -632,7 +632,7 @@ git commit -m "feat(assets): expose globalAssetCatalog accessor on game module"
 - Modify: `src/fpt-parser.ts` (in `parseCFBResources`, after assets are added to `fptResources`)
 - Test: `src/__tests__/asset-integration.test.ts`
 
-- [ ] **Step 1: Write failing integration test**
+- [x] **Step 1: Write failing integration test**
 
 Create `src/__tests__/asset-integration.test.ts`:
 
@@ -682,7 +682,7 @@ describe('FPT parser → AssetCatalog integration', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 ```
 npx vitest run src/__tests__/asset-integration.test.ts
@@ -690,7 +690,7 @@ npx vitest run src/__tests__/asset-integration.test.ts
 
 Expected: FAIL — `populateCatalogFromFPTResources` not exported.
 
-- [ ] **Step 3: Add populate function to fpt-parser.ts**
+- [x] **Step 3: Add populate function to fpt-parser.ts**
 
 In `src/fpt-parser.ts`, add near the top (with other imports — currently line 8-10):
 
@@ -738,7 +738,7 @@ export function populateCatalogFromFPTResources(): void {
 }
 ```
 
-- [ ] **Step 4: Call populate at end of parseFPTFile success path**
+- [x] **Step 4: Call populate at end of parseFPTFile success path**
 
 In `src/fpt-parser.ts`, find the section in `parseFPTFile` after the CFB resources are parsed and before `buildTableFn` is called (around line 1094-1130). Locate the line:
 
@@ -753,7 +753,7 @@ Inside that block, after the `mapFPTSounds(...)` call (around line 1096), add:
         populateCatalogFromFPTResources();
 ```
 
-- [ ] **Step 5: Run test to verify pass**
+- [x] **Step 5: Run test to verify pass**
 
 ```
 npx vitest run src/__tests__/asset-integration.test.ts
@@ -761,7 +761,7 @@ npx vitest run src/__tests__/asset-integration.test.ts
 
 Expected: PASS — all 4 integration tests green.
 
-- [ ] **Step 6: Run full test suite**
+- [x] **Step 6: Run full test suite**
 
 ```
 npx vitest run
@@ -769,7 +769,7 @@ npx vitest run
 
 Expected: ALL existing tests still pass + 4 new integration tests.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/fpt-parser.ts src/__tests__/asset-integration.test.ts
@@ -784,7 +784,7 @@ git commit -m "feat(assets): populate AssetCatalog from fptResources after FPT p
 - Modify: `src/table.ts` around lines 1572-1589 (playfield texture logic)
 - Test: `src/__tests__/asset-integration.test.ts` (extend with renderer assertion)
 
-- [ ] **Step 1: Write failing test for catalog-driven texture lookup**
+- [x] **Step 1: Write failing test for catalog-driven texture lookup**
 
 Append to `src/__tests__/asset-integration.test.ts`:
 
@@ -812,7 +812,7 @@ describe('Renderer texture resolution via catalog', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 ```
 npx vitest run src/__tests__/asset-integration.test.ts
@@ -820,7 +820,7 @@ npx vitest run src/__tests__/asset-integration.test.ts
 
 Expected: FAIL — `resolvePlayfieldTexture` not exported from `../table`.
 
-- [ ] **Step 3: Add resolvePlayfieldTexture export to table.ts**
+- [x] **Step 3: Add resolvePlayfieldTexture export to table.ts**
 
 In `src/table.ts`, add this near the top of the file (after imports, before any other exports — around line 30):
 
@@ -842,7 +842,7 @@ export function resolvePlayfieldTexture(): THREE.Texture | null {
 }
 ```
 
-- [ ] **Step 4: Replace direct fptResources.playfield reads in buildTable**
+- [x] **Step 4: Replace direct fptResources.playfield reads in buildTable**
 
 In `src/table.ts`, around line 1572, change:
 
@@ -893,7 +893,7 @@ To:
   }
 ```
 
-- [ ] **Step 5: Run test to verify pass**
+- [x] **Step 5: Run test to verify pass**
 
 ```
 npx vitest run src/__tests__/asset-integration.test.ts
@@ -901,7 +901,7 @@ npx vitest run src/__tests__/asset-integration.test.ts
 
 Expected: PASS — including the new resolver tests.
 
-- [ ] **Step 6: Run full test suite**
+- [x] **Step 6: Run full test suite**
 
 ```
 npx vitest run
@@ -909,7 +909,7 @@ npx vitest run
 
 Expected: ALL tests still pass.
 
-- [ ] **Step 7: Run a build to verify no type errors**
+- [x] **Step 7: Run a build to verify no type errors**
 
 ```
 npx vite build
@@ -917,7 +917,7 @@ npx vite build
 
 Expected: Build succeeds in under 2 seconds, zero errors.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/table.ts src/__tests__/asset-integration.test.ts
@@ -932,7 +932,7 @@ git commit -m "refactor(table): resolve playfield texture via AssetCatalog"
 - Modify: `src/table.ts` (model lookup helper) — lines around 1162 and 1249 (`fptRes` usage)
 - Test: `src/__tests__/asset-integration.test.ts`
 
-- [ ] **Step 1: Write failing test for model resolution**
+- [x] **Step 1: Write failing test for model resolution**
 
 Append to `src/__tests__/asset-integration.test.ts`:
 
@@ -966,7 +966,7 @@ describe('Renderer model resolution via catalog', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 ```
 npx vitest run src/__tests__/asset-integration.test.ts
@@ -974,7 +974,7 @@ npx vitest run src/__tests__/asset-integration.test.ts
 
 Expected: FAIL — `resolveModel` not exported.
 
-- [ ] **Step 3: Add resolveModel export to table.ts**
+- [x] **Step 3: Add resolveModel export to table.ts**
 
 In `src/table.ts`, near `resolvePlayfieldTexture` from Task 6, add:
 
@@ -992,7 +992,7 @@ export function resolveModel(name: string): THREE.Mesh | null {
 }
 ```
 
-- [ ] **Step 4: Run test to verify pass**
+- [x] **Step 4: Run test to verify pass**
 
 ```
 npx vitest run src/__tests__/asset-integration.test.ts
@@ -1000,7 +1000,7 @@ npx vitest run src/__tests__/asset-integration.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 5: Run full test suite + build**
+- [x] **Step 5: Run full test suite + build**
 
 ```
 npx vitest run && npx vite build
@@ -1008,7 +1008,7 @@ npx vitest run && npx vite build
 
 Expected: ALL tests pass, build succeeds.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/table.ts src/__tests__/asset-integration.test.ts
@@ -1023,7 +1023,7 @@ git commit -m "feat(table): add resolveModel helper for catalog-based MS3D looku
 - Modify: `src/assets/asset-catalog.ts`
 - Test: `src/__tests__/asset-catalog.test.ts`
 
-- [ ] **Step 1: Write failing test for memory budget**
+- [x] **Step 1: Write failing test for memory budget**
 
 Append to `src/__tests__/asset-catalog.test.ts`:
 
@@ -1059,7 +1059,7 @@ describe('AssetCatalog memory budget', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify pass**
+- [x] **Step 2: Run test to verify pass**
 
 The implementation in Task 2 already supports this. Run:
 
@@ -1071,7 +1071,7 @@ Expected: PASS — tests confirm the budget behavior already works.
 
 (If the tests fail because `checkBudget()` was implemented incorrectly in Task 2, fix the logic to set `usingOnDemand = true` when `estimatedBytes > memoryBudgetBytes`.)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/__tests__/asset-catalog.test.ts
@@ -1086,7 +1086,7 @@ git commit -m "test(assets): cover memory budget and on-demand mode behavior"
 - Modify: `src/assets/asset-catalog.ts` (add cache integration)
 - Test: `src/__tests__/asset-catalog.test.ts`
 
-- [ ] **Step 1: Write failing test for cache persistence**
+- [x] **Step 1: Write failing test for cache persistence**
 
 Append to `src/__tests__/asset-catalog.test.ts`:
 
@@ -1123,7 +1123,7 @@ describe('AssetCatalog persistence (IndexedDB)', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 ```
 npx vitest run src/__tests__/asset-catalog.test.ts
@@ -1131,7 +1131,7 @@ npx vitest run src/__tests__/asset-catalog.test.ts
 
 Expected: FAIL — `bindCache`, `persistTextureBytes`, `hasPersistedTexture` not defined.
 
-- [ ] **Step 3: Extend AssetCatalog with cache binding**
+- [x] **Step 3: Extend AssetCatalog with cache binding**
 
 In `src/assets/asset-catalog.ts`, add:
 
@@ -1170,7 +1170,7 @@ Inside the `AssetCatalog` class, add fields and methods:
   }
 ```
 
-- [ ] **Step 4: Run test to verify pass**
+- [x] **Step 4: Run test to verify pass**
 
 ```
 npx vitest run src/__tests__/asset-catalog.test.ts
@@ -1178,7 +1178,7 @@ npx vitest run src/__tests__/asset-catalog.test.ts
 
 Expected: PASS — both persistence tests green.
 
-- [ ] **Step 5: Run full test suite + build**
+- [x] **Step 5: Run full test suite + build**
 
 ```
 npx vitest run && npx vite build
@@ -1186,7 +1186,7 @@ npx vitest run && npx vite build
 
 Expected: ALL tests pass, build succeeds.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/assets/asset-catalog.ts src/__tests__/asset-catalog.test.ts
@@ -1201,7 +1201,7 @@ git commit -m "feat(assets): bind AssetCache for cross-session texture persisten
 - None (manual test only)
 - Document: append to `TEST_ARCHITECTURE.md` (if it exists; otherwise skip doc step)
 
-- [ ] **Step 1: Start dev server**
+- [x] **Step 1: Start dev server**
 
 ```
 npm run dev
@@ -1209,14 +1209,14 @@ npm run dev
 
 Expected: Vite dev server starts on http://localhost:5173 (or similar).
 
-- [ ] **Step 2: Open browser, load a real FPT file**
+- [x] **Step 2: Open browser, load a real FPT file**
 
 In the browser:
 1. Open the dev server URL.
 2. Use the existing file loader UI (look for "Load FPT" or "Datei laden" button).
 3. Select a real `.fpt` file from your collection.
 
-- [ ] **Step 3: Verify graphics appear**
+- [x] **Step 3: Verify graphics appear**
 
 Expected on screen:
 - Playfield shows the actual extracted texture (not a solid green/grey color)
@@ -1226,7 +1226,7 @@ If the playfield still shows a solid color, open the browser console and check:
 - `globalAssetCatalog().stats()` — should show `textureCount > 0`
 - `globalAssetCatalog().hasTexture('playfield')` — should be `true`
 
-- [ ] **Step 4: Verify in console**
+- [x] **Step 4: Verify in console**
 
 Open the browser DevTools console and run:
 
@@ -1242,7 +1242,7 @@ Expected output:
 Has playfield: true
 ```
 
-- [ ] **Step 5: Commit only if any code change was needed**
+- [x] **Step 5: Commit only if any code change was needed**
 
 If you needed to make small fixes to get the manual test to pass (e.g., a missed call site or a typo), commit them now:
 

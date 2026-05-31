@@ -34,7 +34,7 @@
 - Create: `src/fpt-render/fpt-table-scanner.ts`
 - Test: `src/__tests__/fpt-table-scanner.test.ts`
 
-- [ ] **Step 1: Create the scanner test file**
+- [x] **Step 1: Create the scanner test file**
 
 ```ts
 // src/__tests__/fpt-table-scanner.test.ts
@@ -54,12 +54,12 @@ describe('scanFPTDirectory', () => {
 });
 ```
 
-- [ ] **Step 2: Run test, verify it fails**
+- [x] **Step 2: Run test, verify it fails**
 
 Run: `npx vitest run src/__tests__/fpt-table-scanner.test.ts`
 Expected: FAIL with "Cannot find module" or similar.
 
-- [ ] **Step 3: Implement scanner skeleton**
+- [x] **Step 3: Implement scanner skeleton**
 
 ```ts
 // src/fpt-render/fpt-table-scanner.ts
@@ -97,12 +97,12 @@ export async function scanFPTDirectory(dirPath: string): Promise<FPTFileEntry[]>
 }
 ```
 
-- [ ] **Step 4: Verify test passes**
+- [x] **Step 4: Verify test passes**
 
 Run: `npx vitest run src/__tests__/fpt-table-scanner.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/fpt-render/fpt-table-scanner.ts src/__tests__/fpt-table-scanner.test.ts
@@ -119,7 +119,7 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 - Modify: `src/__tests__/fpt-table-scanner.test.ts` (add tests)
 - Already created: `src/fpt-render/fpt-table-scanner.ts` (no changes — existing impl forwards)
 
-- [ ] **Step 1: Add tests covering the IPC path**
+- [x] **Step 1: Add tests covering the IPC path**
 
 Append to `src/__tests__/fpt-table-scanner.test.ts`:
 
@@ -154,12 +154,12 @@ describe('scanFPTDirectory with electronAPI', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests**
+- [x] **Step 2: Run tests**
 
 Run: `npx vitest run src/__tests__/fpt-table-scanner.test.ts`
 Expected: PASS — all 4 tests green (the existing impl from Task 1 already handles all cases).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/__tests__/fpt-table-scanner.test.ts
@@ -176,7 +176,7 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 - Modify: `electron-main.cjs` (add IPC handler)
 - Modify: `electron-preload.cjs` (expose to renderer)
 
-- [ ] **Step 1: Add IPC handler in `electron-main.cjs`**
+- [x] **Step 1: Add IPC handler in `electron-main.cjs`**
 
 Find the existing `ipcMain.handle('window:closeAllChildren', ...)` block at the end of the IPC handlers section. Insert AFTER it:
 
@@ -209,11 +209,11 @@ ipcMain.handle('fpt:scanDirectory', async (_event, dirPath) => {
 });
 ```
 
-- [ ] **Step 2: Verify `fs` is imported at top of file**
+- [x] **Step 2: Verify `fs` is imported at top of file**
 
 Open `electron-main.cjs` lines 1-30 and check that `const fs = require('fs');` is present (it should be from existing code). If missing, add it next to the existing `path` import.
 
-- [ ] **Step 3: Expose IPC in `electron-preload.cjs`**
+- [x] **Step 3: Expose IPC in `electron-preload.cjs`**
 
 Find the existing `electronAPI` object in `electron-preload.cjs`. Add this entry alongside the other IPC bindings (e.g. next to `getAllDisplays`):
 
@@ -222,12 +222,12 @@ Find the existing `electronAPI` object in `electron-preload.cjs`. Add this entry
 scanFPTDirectory: (dirPath) => ipcRenderer.invoke('fpt:scanDirectory', dirPath),
 ```
 
-- [ ] **Step 4: Type-check the build still passes**
+- [x] **Step 4: Type-check the build still passes**
 
 Run: `npm run build`
 Expected: build succeeds with no TypeScript errors.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add electron-main.cjs electron-preload.cjs
@@ -244,7 +244,7 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 - Create: `src/fpt-render/fpt-path-config.ts`
 - Test: `src/__tests__/fpt-path-config.test.ts`
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 ```ts
 // src/__tests__/fpt-path-config.test.ts
@@ -278,12 +278,12 @@ describe('fpt-path-config', () => {
 });
 ```
 
-- [ ] **Step 2: Run, verify failure**
+- [x] **Step 2: Run, verify failure**
 
 Run: `npx vitest run src/__tests__/fpt-path-config.test.ts`
 Expected: FAIL — module doesn't exist.
 
-- [ ] **Step 3: Implement the module**
+- [x] **Step 3: Implement the module**
 
 ```ts
 // src/fpt-render/fpt-path-config.ts
@@ -323,12 +323,12 @@ export function clearFPTPath(): void {
 }
 ```
 
-- [ ] **Step 4: Run tests, verify pass**
+- [x] **Step 4: Run tests, verify pass**
 
 Run: `npx vitest run src/__tests__/fpt-path-config.test.ts`
 Expected: PASS — all 4 tests green.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/fpt-render/fpt-path-config.ts src/__tests__/fpt-path-config.test.ts
@@ -345,7 +345,7 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 - Modify: `electron-main.cjs`
 - Modify: `electron-preload.cjs`
 
-- [ ] **Step 1: Add the IPC handler to `electron-main.cjs`**
+- [x] **Step 1: Add the IPC handler to `electron-main.cjs`**
 
 Add right after the `fpt:scanDirectory` handler from Task 3:
 
@@ -361,7 +361,7 @@ ipcMain.handle('fpt:pickDirectory', async () => {
 });
 ```
 
-- [ ] **Step 2: Expose in preload**
+- [x] **Step 2: Expose in preload**
 
 In `electron-preload.cjs`, alongside `scanFPTDirectory`, add:
 
@@ -369,12 +369,12 @@ In `electron-preload.cjs`, alongside `scanFPTDirectory`, add:
 pickFPTDirectory: () => ipcRenderer.invoke('fpt:pickDirectory'),
 ```
 
-- [ ] **Step 3: Build to verify**
+- [x] **Step 3: Build to verify**
 
 Run: `npm run build`
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add electron-main.cjs electron-preload.cjs
@@ -391,7 +391,7 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 - Create: `src/fpt-render/fpt-table-browser.ts` (just filter/sort first; UI later)
 - Test: `src/__tests__/fpt-table-browser.test.ts`
 
-- [ ] **Step 1: Write tests**
+- [x] **Step 1: Write tests**
 
 ```ts
 // src/__tests__/fpt-table-browser.test.ts
@@ -448,12 +448,12 @@ describe('sortEntries', () => {
 });
 ```
 
-- [ ] **Step 2: Run, verify failure**
+- [x] **Step 2: Run, verify failure**
 
 Run: `npx vitest run src/__tests__/fpt-table-browser.test.ts`
 Expected: FAIL — module missing.
 
-- [ ] **Step 3: Implement the module**
+- [x] **Step 3: Implement the module**
 
 ```ts
 // src/fpt-render/fpt-table-browser.ts
@@ -494,12 +494,12 @@ export function sortEntries(entries: FPTFileEntry[], key: SortKey): FPTFileEntry
 }
 ```
 
-- [ ] **Step 4: Run tests, verify pass**
+- [x] **Step 4: Run tests, verify pass**
 
 Run: `npx vitest run src/__tests__/fpt-table-browser.test.ts`
 Expected: PASS — all 8 tests green.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/fpt-render/fpt-table-browser.ts src/__tests__/fpt-table-browser.test.ts
@@ -515,7 +515,7 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 **Files:**
 - Modify: `src/index.html`
 
-- [ ] **Step 1: Add CSS for the new section**
+- [x] **Step 1: Add CSS for the new section**
 
 Find the existing `#quick-menu-box` CSS block in `src/index.html` (around line 253). Add these rules right after the existing Quick Menu rules:
 
@@ -537,7 +537,7 @@ Find the existing `#quick-menu-box` CSS block in `src/index.html` (around line 2
     .qm-fpt-card .qm-fpt-meta { color: #557; font-size: 10px; }
 ```
 
-- [ ] **Step 2: Add HTML markup**
+- [x] **Step 2: Add HTML markup**
 
 Find the existing `<div id="quick-menu-box">` content in `src/index.html` (around line 348). Right BEFORE the existing `<div class="quick-actions">` block, insert the new section:
 
@@ -557,12 +557,12 @@ Find the existing `<div id="quick-menu-box">` content in `src/index.html` (aroun
       </div>
 ```
 
-- [ ] **Step 3: Verify build still works**
+- [x] **Step 3: Verify build still works**
 
 Run: `npm run build`
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/index.html
@@ -579,7 +579,7 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 - Modify: `src/fpt-render/fpt-table-browser.ts` (add render function)
 - Test: extend `src/__tests__/fpt-table-browser.test.ts`
 
-- [ ] **Step 1: Add render-function tests**
+- [x] **Step 1: Add render-function tests**
 
 Append to `src/__tests__/fpt-table-browser.test.ts`. Note the new top-level imports needed:
 
@@ -632,12 +632,12 @@ describe('renderTableList', () => {
 });
 ```
 
-- [ ] **Step 2: Run, verify failure**
+- [x] **Step 2: Run, verify failure**
 
 Run: `npx vitest run src/__tests__/fpt-table-browser.test.ts`
 Expected: FAIL — `renderTableList` doesn't exist.
 
-- [ ] **Step 3: Implement render function**
+- [x] **Step 3: Implement render function**
 
 Append to `src/fpt-render/fpt-table-browser.ts`:
 
@@ -684,12 +684,12 @@ function formatMeta(entry: FPTFileEntry): string {
 }
 ```
 
-- [ ] **Step 4: Run tests, verify pass**
+- [x] **Step 4: Run tests, verify pass**
 
 Run: `npx vitest run src/__tests__/fpt-table-browser.test.ts`
 Expected: PASS — all tests green (filter+sort tests still pass, render tests new and green).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/fpt-render/fpt-table-browser.ts src/__tests__/fpt-table-browser.test.ts
@@ -706,7 +706,7 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 - Modify: `electron-main.cjs`
 - Modify: `electron-preload.cjs`
 
-- [ ] **Step 1: Add IPC handler**
+- [x] **Step 1: Add IPC handler**
 
 In `electron-main.cjs`, add after the `fpt:pickDirectory` handler from Task 5:
 
@@ -725,7 +725,7 @@ ipcMain.handle('fpt:readFile', async (_event, filePath) => {
 });
 ```
 
-- [ ] **Step 2: Expose in preload**
+- [x] **Step 2: Expose in preload**
 
 Add to `electron-preload.cjs` alongside `scanFPTDirectory`:
 
@@ -733,12 +733,12 @@ Add to `electron-preload.cjs` alongside `scanFPTDirectory`:
 readFPTFile: (filePath) => ipcRenderer.invoke('fpt:readFile', filePath),
 ```
 
-- [ ] **Step 3: Build to verify**
+- [x] **Step 3: Build to verify**
 
 Run: `npm run build`
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add electron-main.cjs electron-preload.cjs
@@ -754,11 +754,11 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 **Files:**
 - Modify: `src/main.ts`
 
-- [ ] **Step 1: Find the Quick Menu init point**
+- [x] **Step 1: Find the Quick Menu init point**
 
 In `src/main.ts`, locate the existing `DOMContentLoaded` listener at the bottom of the file (it currently calls `showTableSelector` and `applyStartupScreenConfig`). We'll add the FPT-browser init right next to it.
 
-- [ ] **Step 2: Add a new `initializeFPTBrowser` function**
+- [x] **Step 2: Add a new `initializeFPTBrowser` function**
 
 Add this function near the other top-level helpers in `src/main.ts` (e.g. after `browseTableDirectory`):
 
@@ -832,7 +832,7 @@ async function loadFPTFromPath(filePath: string): Promise<void> {
 }
 ```
 
-- [ ] **Step 3: Call `initializeFPTBrowser` from the existing `DOMContentLoaded` block**
+- [x] **Step 3: Call `initializeFPTBrowser` from the existing `DOMContentLoaded` block**
 
 Find the existing `document.addEventListener('DOMContentLoaded', () => { ... })` at the bottom of `src/main.ts`. Inside that handler, after the existing `showTableSelector` + `applyStartupScreenConfig` calls, add:
 
@@ -840,12 +840,12 @@ Find the existing `document.addEventListener('DOMContentLoaded', () => { ... })`
   void initializeFPTBrowser();
 ```
 
-- [ ] **Step 4: Build, verify TypeScript passes**
+- [x] **Step 4: Build, verify TypeScript passes**
 
 Run: `npm run build`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main.ts
@@ -862,19 +862,19 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 
 This task has no automated test — Electron + filesystem can't be fully simulated in unit tests. We verify by running the app and checking the Quick Menu.
 
-- [ ] **Step 1: Start the dev server**
+- [x] **Step 1: Start the dev server**
 
 Run: `npm run electron-dev`
 Expected: Electron window opens, Quick Menu visible.
 
-- [ ] **Step 2: Verify the empty FPT section**
+- [x] **Step 2: Verify the empty FPT section**
 
 In the Quick Menu, confirm:
 - The "📁 FPT Tables" section is visible below the Demo Tables.
 - Search box, sort dropdown, "⚙ Set path" button render.
 - The list area shows the empty-state hint text.
 
-- [ ] **Step 3: Set a path**
+- [x] **Step 3: Set a path**
 
 - Click "⚙ Set path".
 - Native folder picker opens.
@@ -882,32 +882,32 @@ In the Quick Menu, confirm:
 - Confirm the FPT list populates with table names.
 - Confirm size + last-modified shows on each card.
 
-- [ ] **Step 4: Verify search**
+- [x] **Step 4: Verify search**
 
 - Type "willow" (or any partial name) into the search box.
 - Confirm the list narrows live.
 - Clear the search → full list reappears.
 
-- [ ] **Step 5: Verify sort**
+- [x] **Step 5: Verify sort**
 
 - Change the sort dropdown to "Size ↓".
 - Confirm largest tables appear first.
 - Change to "Last modified ↓".
 - Confirm newest tables appear first.
 
-- [ ] **Step 6: Verify click → load**
+- [x] **Step 6: Verify click → load**
 
 - Click any FPT card.
 - Confirm the parser runs (DevTools console should show parser log lines like `Textur: "..."` and `Sound: "..."`).
 - Confirm a notification appears: `"Loaded Willow Pinball 1.5.fpt — rendering polish in upcoming phases"`.
 
-- [ ] **Step 7: Restart app and verify path persistence**
+- [x] **Step 7: Restart app and verify path persistence**
 
 - Close Electron.
 - Run `npm run electron-dev` again.
 - Confirm the FPT section auto-populates from the previously chosen path (no re-set required).
 
-- [ ] **Step 8: If anything fails**
+- [x] **Step 8: If anything fails**
 
 Diagnose, fix, commit. If everything passes, no commit needed.
 

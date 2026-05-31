@@ -32,7 +32,7 @@ No new modules — only refactoring + tests.
 **Files:**
 - Test: `src/__tests__/audio-integration.test.ts` (NEW)
 
-- [ ] **Step 1: Write characterization tests for current mapFPTSounds behavior**
+- [x] **Step 1: Write characterization tests for current mapFPTSounds behavior**
 
 Create `src/__tests__/audio-integration.test.ts`:
 
@@ -111,7 +111,7 @@ describe('mapFPTSounds: name-based mapping', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests**
+- [x] **Step 2: Run tests**
 
 ```
 npx vitest run src/__tests__/audio-integration.test.ts
@@ -121,7 +121,7 @@ Expected: PASS — these characterize **existing** behavior of `mapFPTSounds`.
 
 If any fail, the existing logic doesn't match the assumption documented in the test name. Adjust the test to match real behavior (don't change `mapFPTSounds`).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/__tests__/audio-integration.test.ts
@@ -136,7 +136,7 @@ git commit -m "test(audio): characterize current mapFPTSounds name-based mapping
 - Modify: `src/script-engine.ts` (the `PlaySound` handler around line 342)
 - Test: `src/__tests__/audio-integration.test.ts` (extend)
 
-- [ ] **Step 1: Write failing test for catalog-driven PlaySound**
+- [x] **Step 1: Write failing test for catalog-driven PlaySound**
 
 This test is hard to write without a real AudioContext. Instead, isolate the **lookup** logic. Append to `src/__tests__/audio-integration.test.ts`:
 
@@ -177,7 +177,7 @@ describe('resolveSoundForPlayback (catalog-first lookup)', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 ```
 npx vitest run src/__tests__/audio-integration.test.ts
@@ -185,7 +185,7 @@ npx vitest run src/__tests__/audio-integration.test.ts
 
 Expected: FAIL — `resolveSoundForPlayback` not exported.
 
-- [ ] **Step 3: Add resolveSoundForPlayback to script-engine.ts**
+- [x] **Step 3: Add resolveSoundForPlayback to script-engine.ts**
 
 In `src/script-engine.ts`, near the top (after imports), add:
 
@@ -230,7 +230,7 @@ Also add `registeredSoundNames()` method in `src/assets/asset-catalog.ts`:
 
 (Place near `registeredModelNames()` from Phase 1b, or add it standalone if Phase 1b isn't merged yet — the method is identical-pattern.)
 
-- [ ] **Step 4: Modify the existing PlaySound handler to use it**
+- [x] **Step 4: Modify the existing PlaySound handler to use it**
 
 In `src/script-engine.ts` line 342, the current handler is:
 
@@ -275,7 +275,7 @@ Replace the lookup with the catalog-first helper, falling back to legacy `sounds
     },
 ```
 
-- [ ] **Step 5: Run tests + full suite + build**
+- [x] **Step 5: Run tests + full suite + build**
 
 ```
 npx vitest run && npx vite build
@@ -283,7 +283,7 @@ npx vitest run && npx vite build
 
 Expected: ALL tests pass, build succeeds.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/script-engine.ts src/assets/asset-catalog.ts src/__tests__/audio-integration.test.ts
@@ -300,7 +300,7 @@ git commit -m "feat(audio): catalog-first sound lookup in PlaySound handler"
 
 The intent: if any extracted sound is longer than 5 seconds, treat it as a music track (set `fptResources.musicTrack`) so the table's intended background music plays automatically.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Append to `src/__tests__/audio-integration.test.ts`:
 
@@ -341,7 +341,7 @@ describe('mapFPTSounds: music auto-classification', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 ```
 npx vitest run src/__tests__/audio-integration.test.ts
@@ -349,7 +349,7 @@ npx vitest run src/__tests__/audio-integration.test.ts
 
 Expected: FAIL — current `mapFPTSounds` doesn't set `musicTrack`.
 
-- [ ] **Step 3: Extend mapFPTSounds**
+- [x] **Step 3: Extend mapFPTSounds**
 
 In `src/fpt-parser.ts`, find `mapFPTSounds` (around line 469). At the END of the function (after the existing fallback assignments to bumper/flipper/drain), add:
 
@@ -369,7 +369,7 @@ In `src/fpt-parser.ts`, find `mapFPTSounds` (around line 469). At the END of the
   }
 ```
 
-- [ ] **Step 4: Run test to verify pass**
+- [x] **Step 4: Run test to verify pass**
 
 ```
 npx vitest run src/__tests__/audio-integration.test.ts
@@ -377,13 +377,13 @@ npx vitest run src/__tests__/audio-integration.test.ts
 
 Expected: PASS — all 3 music-classification tests green.
 
-- [ ] **Step 5: Run full suite + build**
+- [x] **Step 5: Run full suite + build**
 
 ```
 npx vitest run && npx vite build
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/fpt-parser.ts src/__tests__/audio-integration.test.ts
@@ -398,7 +398,7 @@ git commit -m "feat(audio): auto-classify sounds longer than 5s as music track"
 - Modify: `src/script-engine.ts` — `PlayMusic` handler (line ~356)
 - Test: existing tests cover this; no new tests needed unless behavior changes
 
-- [ ] **Step 1: Inspect current PlayMusic handler**
+- [x] **Step 1: Inspect current PlayMusic handler**
 
 Use Read on `src/script-engine.ts` lines 354-360 to see current code:
 
@@ -408,7 +408,7 @@ Use Read on `src/script-engine.ts` lines 354-360 to see current code:
 
 This is already reasonable: try named sound first, fall back to `musicTrack`, fall back to generic background music. **No change needed in this task** — the auto-classification from Task 3 ensures `musicTrack` is now usually populated.
 
-- [ ] **Step 2: Verify with full test run**
+- [x] **Step 2: Verify with full test run**
 
 ```
 npx vitest run
@@ -424,13 +424,13 @@ If the existing audio test file behavior changed because of Task 3, document it 
 
 **Files:** None (manual)
 
-- [ ] **Step 1: Start dev server**
+- [x] **Step 1: Start dev server**
 
 ```
 npm run dev
 ```
 
-- [ ] **Step 2: Load real FPT file and start a game**
+- [x] **Step 2: Load real FPT file and start a game**
 
 Open browser, load FPT, start a ball.
 
@@ -440,7 +440,7 @@ Expected behaviors:
 - Background music plays automatically (if FPT had a long sound)
 - Ball drain → drain sound plays
 
-- [ ] **Step 3: Verify in DevTools console**
+- [x] **Step 3: Verify in DevTools console**
 
 ```js
 const game = await import('/src/game.ts');
@@ -452,7 +452,7 @@ console.log('musicTrack set:', !!game.fptResources.musicTrack);
 
 Expected: at least one sound, `musicTrack` set if FPT has long audio.
 
-- [ ] **Step 4: Commit any wire-up fixes**
+- [x] **Step 4: Commit any wire-up fixes**
 
 If something's broken and you fix it inline, commit. Otherwise no commit.
 

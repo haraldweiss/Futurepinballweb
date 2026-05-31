@@ -371,13 +371,13 @@ git commit -m "feat(multiscreen): use electronAPI bridge for displays + windows"
 
 ## Task 4: Manual verification
 
-- [ ] Run `npm run electron-win`
-- [ ] Copy `.exe` to cabinet
-- [ ] Start app on cabinet
-- [ ] Verify console (F12 if available) shows `Detected 3 screen(s)` with correct dimensions
-- [ ] Click "3-screen mode" toggle in UI → verify backglass + DMD windows open on the correct displays
-- [ ] Verify nothing breaks in single-screen mode (default)
-- [ ] Verify dev mode (`npm run electron-dev` on Mac) still works (should fall through to browser fallback or list 1 macOS display)
+- [x] Run `npm run electron-win`
+- [x] Copy `.exe` to cabinet
+- [x] Start app on cabinet
+- [x] Verify console (F12 if available) shows `Detected 3 screen(s)` with correct dimensions
+- [x] Click "3-screen mode" toggle in UI → verify backglass + DMD windows open on the correct displays
+- [x] Verify nothing breaks in single-screen mode (default)
+- [x] Verify dev mode (`npm run electron-dev` on Mac) still works (should fall through to browser fallback or list 1 macOS display)
 
 ---
 

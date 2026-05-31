@@ -35,7 +35,7 @@ No changes to renderer code or asset pipeline.
 - Create: `src/editor/asset-thumbnail.ts`
 - Test: `src/__tests__/asset-browser.test.ts` (new)
 
-- [ ] **Step 1: Add registeredTextureNames() to AssetCatalog**
+- [x] **Step 1: Add registeredTextureNames() to AssetCatalog**
 
 In `src/assets/asset-catalog.ts`, near `registeredModelNames()` and `registeredSoundNames()`, add:
 
@@ -45,7 +45,7 @@ In `src/assets/asset-catalog.ts`, near `registeredModelNames()` and `registeredS
   }
 ```
 
-- [ ] **Step 2: Write failing tests for thumbnail utilities**
+- [x] **Step 2: Write failing tests for thumbnail utilities**
 
 Create `src/__tests__/asset-browser.test.ts`:
 
@@ -89,7 +89,7 @@ describe('AssetThumbnail utilities', () => {
 });
 ```
 
-- [ ] **Step 3: Run test to verify failure**
+- [x] **Step 3: Run test to verify failure**
 
 ```
 npx vitest run src/__tests__/asset-browser.test.ts
@@ -97,7 +97,7 @@ npx vitest run src/__tests__/asset-browser.test.ts
 
 Expected: FAIL — module not found.
 
-- [ ] **Step 4: Implement asset-thumbnail.ts**
+- [x] **Step 4: Implement asset-thumbnail.ts**
 
 Create `src/editor/asset-thumbnail.ts`:
 
@@ -165,7 +165,7 @@ export function formatBytes(bytes: number): string {
 }
 ```
 
-- [ ] **Step 5: Run tests to verify pass**
+- [x] **Step 5: Run tests to verify pass**
 
 ```
 npx vitest run src/__tests__/asset-browser.test.ts
@@ -173,7 +173,7 @@ npx vitest run src/__tests__/asset-browser.test.ts
 
 Expected: 4 tests pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 mkdir -p src/editor
@@ -191,7 +191,7 @@ git commit -m "feat(assets): add registeredTextureNames and thumbnail utilities"
 
 **Important architectural note:** Use `document.createElement` + `textContent` + `appendChild` exclusively. Do NOT use `innerHTML` or template strings injected into the DOM. Asset names come from FPT files which are user-supplied content and could contain malicious markup.
 
-- [ ] **Step 1: Write failing tests for catalog → DOM rendering**
+- [x] **Step 1: Write failing tests for catalog → DOM rendering**
 
 Append to `src/__tests__/asset-browser.test.ts`:
 
@@ -303,7 +303,7 @@ describe('AssetBrowser', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 ```
 npx vitest run src/__tests__/asset-browser.test.ts
@@ -311,7 +311,7 @@ npx vitest run src/__tests__/asset-browser.test.ts
 
 Expected: FAIL — `AssetBrowser` not exported.
 
-- [ ] **Step 3: Implement AssetBrowser using safe DOM construction**
+- [x] **Step 3: Implement AssetBrowser using safe DOM construction**
 
 Create `src/editor/asset-browser.ts`:
 
@@ -487,7 +487,7 @@ export class AssetBrowser {
 }
 ```
 
-- [ ] **Step 4: Run tests + build**
+- [x] **Step 4: Run tests + build**
 
 ```
 npx vitest run && npx vite build
@@ -495,7 +495,7 @@ npx vitest run && npx vite build
 
 Expected: 642 tests pass, build succeeds.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/editor/asset-browser.ts src/__tests__/asset-browser.test.ts
@@ -509,7 +509,7 @@ git commit -m "feat(editor): add AssetBrowser with safe DOM construction"
 **Files:**
 - Modify: `src/integrated-editor.ts`
 
-- [ ] **Step 1: Add import and field**
+- [x] **Step 1: Add import and field**
 
 In `src/integrated-editor.ts`:
 
@@ -531,7 +531,7 @@ private currentTab: 'playfield' | 'backglass' | 'dmd' | 'video' | 'assets' = 'pl
 private assetBrowser: AssetBrowser | null = null;
 ```
 
-- [ ] **Step 2: Update switchTab signature and add asset branch**
+- [x] **Step 2: Update switchTab signature and add asset branch**
 
 Find `switchTab` method (around line 128). Update parameter type:
 
@@ -554,7 +554,7 @@ Inside the function body, after the existing video editor branch (around line 17
     }
 ```
 
-- [ ] **Step 3: Add tab button and content container in the modal HTML**
+- [x] **Step 3: Add tab button and content container in the modal HTML**
 
 The integrated-editor.ts uses an internal HTML template (search for `data-tab="video"` or `<!-- TAB`). The existing pattern uses `innerHTML` setters at modal creation time — keep that pattern (it's pre-existing) but only for static template strings.
 
@@ -575,7 +575,7 @@ Find the line `<!-- TAB 4: Video Manager -->` or `id="tab-video"`. After the clo
 
 These additions are static template content (no user data), so the existing `innerHTML` template string is acceptable.
 
-- [ ] **Step 4: Add CSS**
+- [x] **Step 4: Add CSS**
 
 Add a `<style>` block in the modal HTML template (same template string in integrated-editor.ts) or to the existing editor stylesheet. Insert these rules:
 
@@ -596,7 +596,7 @@ Add a `<style>` block in the modal HTML template (same template string in integr
 .asset-browser-empty { padding: 32px; text-align: center; color: #888; }
 ```
 
-- [ ] **Step 5: Run tests + build**
+- [x] **Step 5: Run tests + build**
 
 ```
 npx vitest run && npx vite build
@@ -604,7 +604,7 @@ npx vitest run && npx vite build
 
 Expected: 642 tests pass, build succeeds.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/integrated-editor.ts
@@ -617,13 +617,13 @@ git commit -m "feat(editor): add Assets tab to integrated editor modal"
 
 **Files:** None (manual)
 
-- [ ] **Step 1: Start dev server**
+- [x] **Step 1: Start dev server**
 
 ```
 npm run dev
 ```
 
-- [ ] **Step 2: Load real FPT, open editor, switch to Assets tab**
+- [x] **Step 2: Load real FPT, open editor, switch to Assets tab**
 
 In the browser:
 1. Load a real FPT file
@@ -635,7 +635,7 @@ Expected:
 - Texture thumbnails visible
 - Model and sound names listed
 
-- [ ] **Step 3: Verify catalog ↔ UI consistency**
+- [x] **Step 3: Verify catalog ↔ UI consistency**
 
 ```js
 const game = await import('/src/game.ts');
@@ -644,7 +644,7 @@ console.log(game.globalAssetCatalog().stats());
 
 Confirm counts match.
 
-- [ ] **Step 4: Commit any wire-up fixes**
+- [x] **Step 4: Commit any wire-up fixes**
 
 If needed, otherwise no commit.
 

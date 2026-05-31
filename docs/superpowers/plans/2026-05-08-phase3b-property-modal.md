@@ -38,7 +38,7 @@ The modal renders different fields based on element type:
 | Position Y | ✓ | ✓ | (y1, y2) |
 | Color | ✓ | ✓ | ✓ |
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `src/__tests__/property-modal.test.ts`:
 
@@ -133,7 +133,7 @@ describe('PropertyModal', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 ```
 npx vitest run src/__tests__/property-modal.test.ts
@@ -141,7 +141,7 @@ npx vitest run src/__tests__/property-modal.test.ts
 
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Implement PropertyModal**
+- [x] **Step 3: Implement PropertyModal**
 
 Create `src/editor/property-modal.ts`:
 
@@ -287,7 +287,7 @@ export class PropertyModal {
 }
 ```
 
-- [ ] **Step 4: Run tests + build**
+- [x] **Step 4: Run tests + build**
 
 ```
 npx vitest run && npx vite build
@@ -295,7 +295,7 @@ npx vitest run && npx vite build
 
 Expected: ~649 tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/editor/property-modal.ts src/__tests__/property-modal.test.ts
@@ -309,7 +309,7 @@ git commit -m "feat(editor): add PropertyModal for editing element properties"
 **Files:**
 - Modify: `src/integrated-editor.ts`
 
-- [ ] **Step 1: Add import + field**
+- [x] **Step 1: Add import + field**
 
 ```typescript
 import { PropertyModal } from './editor/property-modal';
@@ -318,7 +318,7 @@ import { PropertyModal } from './editor/property-modal';
 private propertyModal: PropertyModal = new PropertyModal();
 ```
 
-- [ ] **Step 2: Add dblclick handler**
+- [x] **Step 2: Add dblclick handler**
 
 In `setupCanvases` (around line 451):
 
@@ -351,7 +351,7 @@ private pickElementAt(cx: number, cy: number): number {
 
 Read the existing `onCanvasMouseDown` to see how it sets `selectedIdx` — that logic is the hit-test. Extract or duplicate it in `pickElementAt`.
 
-- [ ] **Step 3: Run tests + build, commit**
+- [x] **Step 3: Run tests + build, commit**
 
 ```
 npx vitest run && npx vite build
@@ -388,10 +388,10 @@ git commit -m "feat(editor): add CSS for PropertyModal"
 
 ## Task 4: Manual verification
 
-- [ ] Start dev server, load FPT, open editor
-- [ ] Double-click any element on canvas → modal appears with correct fields
-- [ ] Edit values, click Save → changes appear in canvas + 3D preview
-- [ ] Click Cancel → changes discarded
+- [x] Start dev server, load FPT, open editor
+- [x] Double-click any element on canvas → modal appears with correct fields
+- [x] Edit values, click Save → changes appear in canvas + 3D preview
+- [x] Click Cancel → changes discarded
 
 ---
 

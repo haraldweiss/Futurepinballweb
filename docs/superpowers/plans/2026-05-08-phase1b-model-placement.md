@@ -30,7 +30,7 @@ No new source modules — Phase 1a already provides everything needed.
 - Modify: `src/table.ts` — `buildBumper` function (lines 1187-1218)
 - Test: `src/__tests__/asset-integration.test.ts` (extend)
 
-- [ ] **Step 1: Write failing test for catalog-based model usage in buildBumper**
+- [x] **Step 1: Write failing test for catalog-based model usage in buildBumper**
 
 Append to `src/__tests__/asset-integration.test.ts`:
 
@@ -75,7 +75,7 @@ describe('buildBumper uses AssetCatalog for MS3D models', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 ```
 npx vitest run src/__tests__/asset-integration.test.ts
@@ -94,7 +94,7 @@ Replace the `fptResources.models!.set(...)` line with a direct catalog registrat
 
 Re-run the test — now it should FAIL because current `buildBumper` doesn't query the catalog.
 
-- [ ] **Step 3: Refactor buildBumper to use resolveModel**
+- [x] **Step 3: Refactor buildBumper to use resolveModel**
 
 In `src/table.ts`, find the `buildBumper` function (line 1187). The current Phase-7 block is:
 
@@ -194,7 +194,7 @@ with:
 
 (Remove the outer `if (fptResources.models)` guard since `cat` is the source of truth now.)
 
-- [ ] **Step 4: Run test to verify pass**
+- [x] **Step 4: Run test to verify pass**
 
 ```
 npx vitest run src/__tests__/asset-integration.test.ts
@@ -202,7 +202,7 @@ npx vitest run src/__tests__/asset-integration.test.ts
 
 Expected: Both new tests pass.
 
-- [ ] **Step 5: Run full suite + build**
+- [x] **Step 5: Run full suite + build**
 
 ```
 npx vitest run && npx vite build
@@ -210,7 +210,7 @@ npx vitest run && npx vite build
 
 Expected: All tests pass, build succeeds.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/table.ts src/assets/asset-catalog.ts src/__tests__/asset-integration.test.ts
@@ -225,7 +225,7 @@ git commit -m "refactor(table): use AssetCatalog.resolveModel in buildBumper"
 - Modify: `src/table.ts` — `buildTarget` function (find via grep for `buildTarget` definition)
 - Test: `src/__tests__/asset-integration.test.ts` (extend)
 
-- [ ] **Step 1: Verify whether buildTarget currently uses extracted models**
+- [x] **Step 1: Verify whether buildTarget currently uses extracted models**
 
 Run:
 
@@ -235,7 +235,7 @@ grep -n "buildTarget\|fptRes.models" src/table.ts | head -10
 
 If `buildTarget` accesses `fptResources.models` directly (Phase 7-style block), proceed with the refactor. If it only uses procedural geometry, **skip this task** (no change needed) and move on.
 
-- [ ] **Step 2: If applicable, write failing test**
+- [x] **Step 2: If applicable, write failing test**
 
 Mirror Task 1's first test but for buildTarget:
 
@@ -262,11 +262,11 @@ describe('buildTarget uses AssetCatalog', () => {
 
 (Adjust the import line at top of file to include `buildTarget`.)
 
-- [ ] **Step 3: Apply the same refactor pattern as Task 1**
+- [x] **Step 3: Apply the same refactor pattern as Task 1**
 
 Replace the Phase-7 block in buildTarget with a catalog lookup using `cat.registeredModelNames()` and `resolveModel(name)`. Match name on `'target'` substring instead of `'bumper'`.
 
-- [ ] **Step 4: Run test, full suite, build, commit**
+- [x] **Step 4: Run test, full suite, build, commit**
 
 ```
 npx vitest run && npx vite build
@@ -284,7 +284,7 @@ git commit -m "refactor(table): use AssetCatalog.resolveModel in buildTarget"
 - Create: `src/__tests__/physics-integration.test.ts`
 - Modify: nothing else (verification task)
 
-- [ ] **Step 1: Write integration test for physics flow**
+- [x] **Step 1: Write integration test for physics flow**
 
 Create `src/__tests__/physics-integration.test.ts`:
 
@@ -321,7 +321,7 @@ describe('FPT physics parameter extraction', () => {
 });
 ```
 
-- [ ] **Step 2: Run test**
+- [x] **Step 2: Run test**
 
 ```
 npx vitest run src/__tests__/physics-integration.test.ts
@@ -331,7 +331,7 @@ Expected: PASS — both tests confirm the existing physics extractor works.
 
 If they FAIL, the extractor has a real bug — investigate and report (don't try to fix the extractor in this task; that's out of scope).
 
-- [ ] **Step 3: Verify config.elementPhysics is honored**
+- [x] **Step 3: Verify config.elementPhysics is honored**
 
 Add a second describe block to the test file:
 
@@ -353,7 +353,7 @@ describe('elementPhysics overrides reach Rapier collider config', () => {
 });
 ```
 
-- [ ] **Step 4: Run full suite + commit**
+- [x] **Step 4: Run full suite + commit**
 
 ```
 npx vitest run
@@ -367,7 +367,7 @@ git commit -m "test(physics): cover FPT physics extraction and elementPhysics fl
 
 **Files:** None (manual)
 
-- [ ] **Step 1: Start dev server and load real FPT**
+- [x] **Step 1: Start dev server and load real FPT**
 
 ```
 npm run dev
@@ -375,7 +375,7 @@ npm run dev
 
 Open browser, load a real FPT file with bumpers.
 
-- [ ] **Step 2: Verify in DevTools console**
+- [x] **Step 2: Verify in DevTools console**
 
 ```js
 const game = await import('/src/game.ts');
@@ -386,11 +386,11 @@ console.log('Bumper models:', cat.registeredModelNames().filter(n => n.toLowerCa
 
 Expected: at least one bumper-named model in the list (if the FPT contains MS3D bumper models).
 
-- [ ] **Step 3: Visual check**
+- [x] **Step 3: Visual check**
 
 Confirm bumpers in the rendered scene look like the real FPT bumpers (extracted geometry), not the procedural pink/grey 3-mesh fallback.
 
-- [ ] **Step 4: Commit if any wire-up fixes needed**
+- [x] **Step 4: Commit if any wire-up fixes needed**
 
 If you needed to make a small fix during verification, commit it now. Otherwise no commit.
 

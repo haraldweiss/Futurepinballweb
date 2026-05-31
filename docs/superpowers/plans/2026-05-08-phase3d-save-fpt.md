@@ -36,7 +36,7 @@ The serialization rewrites the CFB container with current `fptResources` state (
 
 The writer produces a CFB container that the existing `parseFPTFile` can re-parse. We focus on the streams that matter for editor changes: VBScript, sound files, texture files, model files. We **preserve unknown streams as-is** by reading them from the original parsed CFB state.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Create `src/__tests__/fpt-writer.test.ts`:
 
@@ -106,7 +106,7 @@ describe('serializeFPT', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 ```
 npx vitest run src/__tests__/fpt-writer.test.ts
@@ -114,7 +114,7 @@ npx vitest run src/__tests__/fpt-writer.test.ts
 
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Implement serializeFPT**
+- [x] **Step 3: Implement serializeFPT**
 
 Create `src/fpt-writer.ts`:
 
@@ -174,7 +174,7 @@ export function serializeFPT(input: FPTSerializeInput): Uint8Array {
 }
 ```
 
-- [ ] **Step 4: Run tests + build**
+- [x] **Step 4: Run tests + build**
 
 ```
 npx vitest run && npx vite build
@@ -182,7 +182,7 @@ npx vitest run && npx vite build
 
 Expected: 4 new tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/fpt-writer.ts src/__tests__/fpt-writer.test.ts
@@ -199,7 +199,7 @@ git commit -m "feat(fpt): add serializeFPT for writing edited tables back to CFB
 
 **Why:** The existing parser decodes textures/sounds/models into `THREE.Texture` / `AudioBuffer` / `THREE.Mesh`. To save back, we need the **original raw bytes** (PNG/WAV/MS3D) — re-encoding from decoded form would be lossy and slow.
 
-- [ ] **Step 1: Add raw byte registry to game state**
+- [x] **Step 1: Add raw byte registry to game state**
 
 In `src/game.ts`, near `fptResources`, add:
 
@@ -221,7 +221,7 @@ export function resetFPTRawBytes(): void {
 }
 ```
 
-- [ ] **Step 2: Modify parser to populate raw bytes**
+- [x] **Step 2: Modify parser to populate raw bytes**
 
 In `src/fpt-parser.ts`, find `parseCFBResources` (line 248). Wherever the parser reads a stream and decodes it, also stash the raw bytes:
 
@@ -244,7 +244,7 @@ Also set `fptRawBytes.scriptOriginal = decodedScript` once.
 
 Add `resetFPTRawBytes()` call at the start of `parseCFBResources` to clear stale state.
 
-- [ ] **Step 3: Add tests**
+- [x] **Step 3: Add tests**
 
 Append to `src/__tests__/fpt-writer.test.ts`:
 
@@ -270,7 +270,7 @@ describe('fptRawBytes population', () => {
 
 (Full integration of parser → fptRawBytes is verified in Task 6 manual.)
 
-- [ ] **Step 4: Run tests + build, commit**
+- [x] **Step 4: Run tests + build, commit**
 
 ```
 npx vitest run && npx vite build
@@ -285,7 +285,7 @@ git commit -m "feat(fpt): capture raw stream bytes during parse for write-back"
 **Files:**
 - Modify: `src/integrated-editor.ts`
 
-- [ ] **Step 1: Add "Save..." button in editor footer**
+- [x] **Step 1: Add "Save..." button in editor footer**
 
 Find the existing `editor-modal-footer` (around line 440). Replace or extend the existing buttons:
 
@@ -294,7 +294,7 @@ Find the existing `editor-modal-footer` (around line 440). Replace or extend the
 <button class="btn-save-as" onclick="(window as any).getIntegratedEditor?.().saveFPT?.('overwrite')">💾 Save As / Overwrite...</button>
 ```
 
-- [ ] **Step 2: Add saveFPT method**
+- [x] **Step 2: Add saveFPT method**
 
 ```typescript
 import { fptResources, fptRawBytes } from './game';
@@ -328,14 +328,14 @@ public saveFPT(mode: 'sidecar' | 'overwrite'): void {
 }
 ```
 
-- [ ] **Step 3: Add CSS**
+- [x] **Step 3: Add CSS**
 
 ```css
 .btn-save { background: #2a5a3a; }
 .btn-save-as { background: #5a3a2a; }
 ```
 
-- [ ] **Step 4: Run tests + build, commit**
+- [x] **Step 4: Run tests + build, commit**
 
 ```
 npx vitest run && npx vite build
@@ -349,7 +349,7 @@ git commit -m "feat(editor): add Save and Save-As buttons for FPT write-back"
 
 Add an end-to-end test verifying: parse → modify → serialize → re-parse yields the modified state.
 
-- [ ] **Step 1: Append to fpt-writer.test.ts**
+- [x] **Step 1: Append to fpt-writer.test.ts**
 
 ```typescript
 describe('round-trip parse → modify → serialize', () => {
@@ -378,7 +378,7 @@ describe('round-trip parse → modify → serialize', () => {
 });
 ```
 
-- [ ] **Step 2: Run + commit**
+- [x] **Step 2: Run + commit**
 
 ```
 npx vitest run
@@ -390,12 +390,12 @@ git commit -m "test(fpt): round-trip parse-modify-serialize"
 
 ## Task 5: Manual verification
 
-- [ ] Start dev server, load a real FPT
-- [ ] Edit script via Phase 3c modal → Apply
-- [ ] Click "💾 Save (.edited)" → browser downloads `<name>.fpt.edited`
-- [ ] Verify the downloaded file is valid CFB (load it back into the dev environment)
-- [ ] Verify the script change persists across reload
-- [ ] Click "Save As / Overwrite..." → confirm dialog appears, download triggers with `.fpt` extension
+- [x] Start dev server, load a real FPT
+- [x] Edit script via Phase 3c modal → Apply
+- [x] Click "💾 Save (.edited)" → browser downloads `<name>.fpt.edited`
+- [x] Verify the downloaded file is valid CFB (load it back into the dev environment)
+- [x] Verify the script change persists across reload
+- [x] Click "Save As / Overwrite..." → confirm dialog appears, download triggers with `.fpt` extension
 
 ---
 
