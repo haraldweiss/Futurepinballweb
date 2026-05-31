@@ -3,6 +3,9 @@
 /**
  * test-suite.ts — Comprehensive Test Suite for All Optimization Phases
  *
+ * @deprecated Core tests ported to vitest (src/__tests__/system-integration.test.ts).
+ * Kept as standalone runner for npm run test:suite.
+ *
  * Provides automated testing for:
  * - Phase 1-6 optimization verification
  * - File browser functionality

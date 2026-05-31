@@ -4,6 +4,9 @@
  * Security Test Suite
  * Comprehensive tests for XSS prevention, input validation, and security fixes
  *
+ * @deprecated Core utility tests ported to vitest (src/__tests__/html-escape.test.ts).
+ * Kept as standalone runner for npm run test:security.
+ *
  * Phase: Security Remediation Verification
  * Run: npm run test:security
  */

@@ -3,6 +3,10 @@
 /**
  * integration-testing.ts — Integration Testing Framework for Optimization Phases
  *
+ * @deprecated These integration tests duplicate test-suite.ts and the vitest
+ * coverage in src/__tests__/system-integration.test.ts. Kept as standalone
+ * runner for historical reference. New tests should be written in vitest.
+ *
  * Provides utilities to test and benchmark all 6 optimization phases:
  * - Phase 1: Parallel Resource Loading
  * - Phase 2: Progress UI Callbacks
