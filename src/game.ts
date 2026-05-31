@@ -31,49 +31,39 @@ export const state: GameState = {
   lastRank:        0,
   lastScore:       0,
 
-  // ─── Arcade Mode: Player & Coin System ───
   credits: 0,
   numPlayers: 0,
   currentPlayer: 0,
   playerScores: [0, 0, 0, 0],
 
-  // ─── Enhanced Physics & Game Mechanics ───
-  // Phase 1: Bumper Combo
   bumperCombo:         0,
   lastBumperHitTime:   0,
   bumperComboMultiplier: 1.0,
   maxBumperCombo:      0,
 
-  // Phase 2: Spinner
   spinnerActive:       false,
   spinnerSpins:        0,
   spinnerScore:        0,
   lastSpinnerHitTime:  0,
 
-  // Phase 3: Ramp Completion
   rampsHit:            new Set(),
   rampSequenceBonus:   0,
 
-  // Phase 5: Flipper Power
   flipperChargeTime:   0,
   flipperShotPower:    0,
 
-  // Phase 6: Target Sequences
   targetSequence:      [],
   targetsHitSequence:  [],
   sequenceProgress:    0,
 
-  // Phase 7: Extended Ball Saves
   ballSavesRemaining:  1,
   ballSaveMode:        'none',
 
-  // Phase 12: Progressive Target System
   progressiveTargetMode: 'none',
   progressiveTargets: new Map(),
   targetProgress: 0,
   targetHitCounts: new Map(),
 
-  // Phase 12 Task 2: Kickback & Ball Hold Mechanics
   kickbacksRemaining: 0,
   kickbackActive: false,
   heldBalls: [],
@@ -81,16 +71,14 @@ export const state: GameState = {
   magnetLocationX: 2.55,
   magnetLocationY: -5.0,
 
-  // Phase 12 Task 3: Advanced Combo System
   skillShotActive: false,
   skillShotTimeout: 0,
-  lastHitElement: 'none' as any,
+  lastHitElement: 'none',
   lastHitTime: 0,
   comboMultiplier: 1.0,
   activeModes: new Map(),
 
-  // Phase 12 Task 5: Ramp Sequencing
-  rampSequenceMode: 'none' as any,
+  rampSequenceMode: 'none',
   rampComboMultiplier: 1.0,
   lastRampHitTime: 0,
   rampComboCounter: 0,
@@ -166,40 +154,33 @@ export const cb = {
   launchMultiBall:  (): void => {},
   resetBall:        (): void => {},
 
-  // ── Phase 2: Advanced Lighting Effects ──
-  triggerBumperFlash:     (): void => {},  // Bumper hit effect
-  triggerRampCompletion:  (): void => {},  // Ramp finished effect
-  triggerDrainWarning:    (): void => {},  // Ball drain warning effect
-  triggerMultiballFlash:  (): void => {},  // Multiball start effect
+  triggerBumperFlash:     (): void => {},
+  triggerRampCompletion:  (): void => {},
+  triggerDrainWarning:    (): void => {},
+  triggerMultiballFlash:  (): void => {},
 
-  // ── Phase 4: Backglass Score Animations ──
-  animateBackglassScore:  (_points: number): void => {},  // Score popup animation
-  updateBackglassModeInfo: (_text: string): void => {},   // Update mode indicator
+  animateBackglassScore:  (_points: number): void => {},
+  updateBackglassModeInfo: (_text: string): void => {},
 
-  // ── Phase 9: Table Shake on Impact ──
-  tableShake: (_magnitude: number, _duration: number): void => {},  // Table vibration effect
+  tableShake: (_magnitude: number, _duration: number): void => {},
 
-  // ── Phase 9: Score Display Animations ──
-  showFloatingScore: (_position: any, _points: number): void => {},  // Floating score text
-  updateCombo: (_combo: number): void => {},  // Update combo counter
-  showScoreMilestone: (_text: string): void => {},  // Milestone celebration
-  showBonusAnnouncement: (_text: string): void => {},  // Bonus event announcement
+  showFloatingScore: (_position: any, _points: number): void => {},
+  updateCombo: (_combo: number): void => {},
+  showScoreMilestone: (_text: string): void => {},
+  showBonusAnnouncement: (_text: string): void => {},
 
-  // ── Phase 9: Enhanced Audio Events ──
-  playTargetSound: (_intensity?: number): void => {},  // Target hit sound
-  playFlipperSound: (_intensity?: number): void => {},  // Flipper activation sound
-  playRampCompleteSound: (): void => {},  // Ramp completion sound
-  playBallDrainSound: (): void => {},  // Ball drain sound
-  playMultiballSound: (): void => {},  // Multiball start sound
-  playMilestoneSound: (): void => {},  // Milestone reached sound
+  playTargetSound: (_intensity?: number): void => {},
+  playFlipperSound: (_intensity?: number): void => {},
+  playRampCompleteSound: (): void => {},
+  playBallDrainSound: (): void => {},
+  playMultiballSound: (): void => {},
+  playMilestoneSound: (): void => {},
 
-  // ── Phase 9: Visual Polish Effects ──
-  triggerImpactEffect: (_position: any, _intensity: number = 1.0): void => {},  // Bumper impact visual
-  triggerDrainVisual: (): void => {},  // Drain warning visual
-  triggerRampVisual: (): void => {},  // Ramp completion visual
-  triggerMultiballVisual: (): void => {},  // Multiball start visual
+  triggerImpactEffect: (_position: any, _intensity: number = 1.0): void => {},
+  triggerDrainVisual: (): void => {},
+  triggerRampVisual: (): void => {},
+  triggerMultiballVisual: (): void => {},
 
-  // ── Game Events (for script engine) ──
-  notifyBumperHit: (_data?: any): void => {},  // Called by script engine
-  notifyTargetHit: (_data?: any): void => {},  // Called by script engine
+  notifyBumperHit: (_data?: any): void => {},
+  notifyTargetHit: (_data?: any): void => {},
 };
