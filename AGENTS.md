@@ -71,6 +71,16 @@ If `user.email` is unset, empty, or fake — **stop, fix it, then proceed**.
 - When splitting a module into sub-modules, keep the original file as a barrel that re-exports everything from `./subdir/`. This preserves all existing import paths (e.g. `'./table'` still works after splitting `table.ts` into `table/configs.ts` + `table/scoring.ts`).
 - New `src/app/` modules must be gated by `import.meta.env.DEV` for debug-only code.
 
+### 3.7 Cabinet deploy (Windows-Cabinet `vpin4kp`)
+- **SSH-Alias**: `cabinet` (= `vpx@192.168.178.44`, Ed25519-Key, passwortlos). User ist **non-admin**.
+- **Build-Pflicht**: auf Mac **`electron-builder --win dir --x64`** (kein wine vorhanden → NSIS-Installer nicht baubar). Liefert `release/win-unpacked/`.
+- **Push**: `taskkill` → `scp` ZIP nach `%TEMP%` → `Expand-Archive` → `robocopy /MIR` nach `C:\Users\vpx\AppData\Local\Programs\Future Pinball Web\`.
+- **Robocopy-Exit-Codes 0–7 sind alle Erfolg** (2 = "Extra files purged"); bei `set -e` muss man `$LASTEXITCODE < 8` abfangen.
+- **Default-Shell auf Cabinet ist `cmd.exe`** — Semikolon-Verkettung geht nicht, PowerShell explizit invoken oder per stdin pipen (`ssh cabinet 'powershell -NoProfile -Command -' <<EOF ... EOF`) statt Inline-Quote-Hell.
+- **App muss vor Replace beendet sein** sonst File-Lock auf `Future Pinball Web.exe`.
+- **Verknüpfungen**: müssen separat per WScript.Shell-Shortcut erstellt werden (kein NSIS = keine Shortcuts automatisch). Desktop liegt auf OneDrive (`C:\Users\vpx\OneDrive\Desktop\`).
+- Niemals Passwort im Chat/Commit, nur Key-Auth.
+
 ---
 
 ## 4. Verification standards (write in commit body)
@@ -116,6 +126,7 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 | Table scoring | `src/table/scoring.ts` — bumper/target/ramp scoring logic |
 | FPT parser modules | `src/fpt/lzo.ts` (decompressor), `src/fpt/media.ts` (image/audio extraction) |
 | Docs | `docs/` — all documentation organised in subdirectories |
+| Cabinet deploy | `ssh cabinet` → `vpx@192.168.178.44` (vpin4kp.fritz.box), Install-Pfad `C:\Users\vpx\AppData\Local\Programs\Future Pinball Web` — siehe §3.7 |
 
 ---
 
@@ -150,3 +161,11 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 - Netto: −10.500 Zeilen, 25 Dateien entfernt
 - Commit: `f3105969`
 - Verified: tsc clean, 698/698 tests
+
+### 2026-05-31 — Cabinet-Deploy 0.21.0 + SSH-Setup (`vpin4kp`)
+- Erstmaliger Push von Future Pinball Web 0.21.0 auf das Windows-Cabinet
+- Build via `npx electron-builder --win dir --x64` (kein wine → kein NSIS-Installer); danach ZIP + SCP + robocopy /MIR
+- SSH-Setup: `cabinet`-Alias in `~/.ssh/config` (vpx@192.168.178.44), passwortlos via Ed25519-Key
+- Fallstricke aufgedeckt (siehe §3.7): `ssh-copy-id` legt Key auf Windows OpenSSH falsch in `administrators_authorized_keys` ab; `vpx` ist non-admin → musste `~/.ssh/authorized_keys` manuell anlegen
+- Verknüpfungen (Desktop OneDrive + Startmenü) per WScript.Shell-Shortcut erstellt
+- Verified: EXE 222.973.952 bytes auf Cabinet, app.asar 19 MB, passwortloser Login bestätigt
