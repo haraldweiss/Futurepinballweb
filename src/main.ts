@@ -4,22 +4,6 @@
  * main.ts — Einstiegspunkt: Scene, Physik, Game-Loop, Input, UI, Multiscreen
  */
 import * as THREE from 'three';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { ShaderPass }     from 'three/addons/postprocessing/ShaderPass.js';
-import { FXAAShader }     from 'three/addons/shaders/FXAAShader.js';
-import { createVolumetricLightingPass } from './graphics/volumetric-lighting';
-import { SSRPass } from './graphics/ssr-pass';
-import { initializeMetallicMaterials, getMetallicMaterialFactory } from './graphics/metallic-materials';
-import { MotionBlurPass } from './graphics/motion-blur-pass';
-import { CascadedShadowMapper, initializeCascadedShadows } from './graphics/cascaded-shadows';
-import { PerLightBloomPass, initializePerLightBloom } from './graphics/per-light-bloom';
-import { AdvancedParticleSystem, initializeParticleSystem, getParticleSystem } from './graphics/advanced-particle-system';
-import { FilmEffectsPass, initializeFilmEffects, getFilmEffectsPass } from './graphics/film-effects-pass';
-import { DepthOfFieldPass, initializeDepthOfField, getDepthOfFieldPass } from './graphics/dof-pass';
-import { CascadedShadowCompositePass, initializeCascadedShadowComposite } from './graphics/cascaded-shadow-composite-pass';
-import { initializeGraphicsPass } from './graphics/pass-initializer';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -100,30 +84,17 @@ import {
   initializePhysicsWorker, getPhysicsWorker, disposePhysicsWorker,
   type PhysicsFrameData,
 } from './physics-worker-bridge';
+import { getGraphicsPipeline } from './graphics/graphics-pipeline';
+import { getPlayfieldVisualEnhancement } from './graphics/playfield-visual-enhancement';
+import { getVideoManager } from './video-manager';
+import { getVideoBindingManager } from './mechanics/video-binding';
 import {
-  initializeGraphicsPipeline, getGraphicsPipeline,
-} from './graphics/graphics-pipeline';
-import {
-  initializePlayfieldVisualEnhancement, getPlayfieldVisualEnhancement, disposePlayfieldVisualEnhancement,
-} from './graphics/playfield-visual-enhancement';
-import {
-  initializeVideoManager, getVideoManager, disposeVideoManager,
-  type VideoConfig, type VideoEvent,
-} from './video-manager';
-import {
-  initializeVideoBinding, getVideoBindingManager, disposeVideoBinding,
-} from './mechanics/video-binding';
-import {
-  FileSystemBrowser, FileInfo, FileOverview, formatFileSize, formatDate, createFileOverview,
-  getFileSystemBrowser, resetFileSystemBrowser, getFileStatistics, getCompatibleLibraries,
+  FileSystemBrowser, FileInfo, formatFileSize,
+  getFileSystemBrowser,
+  FileBrowserUIManager, getFileBrowserUIManager,
+  AdvancedFileBrowserManager, getAdvancedFileBrowserManager,
+  type BatchJob,
 } from './file-browser';
-import {
-  FileBrowserUIManager, getFileBrowserUIManager, resetFileBrowserUIManager,
-} from './file-browser-ui';
-import {
-  AdvancedFileBrowserManager, getAdvancedFileBrowserManager, resetAdvancedFileBrowserManager,
-  type FavoriteEntry, type BatchJob, type FilePreview,
-} from './file-browser-advanced';
 import {
   ResourceManager, initializeResourceManager, getResourceManager, resetResourceManager,
   type ResourceBudgets,
@@ -145,107 +116,17 @@ import { getPerformanceDashboard } from './performance-dashboard';
 import { initScoreAnimationManager, getScoreAnimationManager, disposeScoreAnimationManager } from './score-animation-manager';
 import { initTouchControlsManager, getTouchControlsManager, disposeTouchControlsManager } from './touch-controls-manager';
 import { initBallTrailManager, getBallTrailManager, disposeBallTrailManager } from './ball-trail-manager';
+import {
+  calculateResponsiveZoom, getResponsiveCameraTilt, getResponsiveFOV,
+  getResponsiveFlipperX, getOptimalPixelRatio, calcSafeFlipperLength,
+  getAutoQualityPreset, detectDeviceType,
+} from './app/responsive-helpers';
+import { setupScene, type SceneContext } from './app/scene-setup';
+import { setupPostProcessing } from './app/post-processing';
+import { initSyncTransport, emitSyncFrame, onSyncFrame, destroySyncTransport } from './app/sync-transport';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
-
-// ─── Responsive Display Helper Functions ──────────────────────────────────────
-function calculateResponsiveZoom(aspectRatio: number): number {
-  // Optimized for better screen space utilization
-  let zoom: number;
-
-  if (aspectRatio > 2.0) {
-    // Ultra-wide (desktop ultrawide, TV): zoom in closer
-    zoom = 12 + (2.0 - aspectRatio) * 2;  // 12-14 range
-  } else if (aspectRatio > 1.5) {
-    // Wide (16:9, 16:10, desktop): optimal range
-    zoom = 14 + (aspectRatio - 1.5) * 4;  // 14-18 range
-  } else if (aspectRatio > 1.0) {
-    // Square-ish to slightly wide (tablets): moderate zoom
-    zoom = 17 + (1.5 - aspectRatio) * 6;  // 17-20 range
-  } else {
-    // Tall (phones, portrait): pull back more to see full field
-    zoom = 20 + (1.0 - aspectRatio) * 8;  // 20-28 range
-  }
-
-  return Math.max(12, Math.min(28, zoom));  // Clamp 12-28
-}
-
-function getResponsiveCameraTilt(aspectRatio: number): number {
-  // Y offset: negative = camera lower (see more top), positive = camera higher (see more flippers)
-  if (aspectRatio < 0.6) {
-    return -8;   // Very tall: move UP to prioritize flippers
-  } else if (aspectRatio < 0.9) {
-    return -9;   // Tall phone: slightly up
-  } else if (aspectRatio < 1.3) {
-    return -9.5; // Tablet: balanced
-  } else {
-    return -10;  // Desktop: move DOWN to show more top area
-  }
-}
-
-function getResponsiveFOV(): number {
-  const width = window.innerWidth;
-
-  // Smooth curve instead of discrete jumps
-  if (width < 500) {
-    return 65;  // Extreme mobile: keep wide FOV
-  } else if (width < 768) {
-    // Mobile transition: 65° → 62°
-    const t = (width - 500) / 268;
-    return 65 - (3 * t * t);  // Quadratic ease
-  } else if (width < 1200) {
-    // Tablet transition: 62° → 58°
-    const t = (width - 768) / 432;
-    return 62 - (4 * t * t);
-  } else {
-    return 58;  // Desktop: stable
-  }
-}
-
-function getResponsiveFlipperX(aspectRatio: number): number {
-  // Flipper width adapts to available horizontal space
-  // ─── Phase 13+ Enhancement: Increased spacing for better playability ───
-  const minFlipperX = 0.90;  // Narrowest (increased from 0.75 for playability)
-  const maxFlipperX = 1.40;  // Widest (increased from 1.20)
-
-  if (aspectRatio < 1.0) {
-    // Tall: interpolate 0.90–1.05
-    return minFlipperX + (aspectRatio - 0.5) * (1.05 - minFlipperX) / 0.5;
-  } else {
-    // Wide: interpolate 1.05–1.40
-    return 1.05 + Math.min((aspectRatio - 1.0) * 0.18, maxFlipperX - 1.05);
-  }
-}
-
-function getOptimalPixelRatio(): number {
-  // Auto-detect 4K/1080p/HD and set optimal pixel ratio
-  const physWidth = window.screen.width * window.devicePixelRatio;
-  if (physWidth >= 3840) return Math.min(window.devicePixelRatio, 3);   // 4K
-  if (physWidth >= 1920) return Math.min(window.devicePixelRatio, 2);   // 1080p/2K
-  return Math.min(window.devicePixelRatio, 1.5);                        // HD/mobile
-}
-
-function calcSafeFlipperLength(flipperX: number): number {
-  // Prevent flipper tips from crossing at full-up angle (35°)
-  // Must ensure ball (diameter 0.44) can drain through center gap
-  // Geometry: left tip at (-flipperX + len*cos(35°)), right tip at (flipperX - len*cos(35°))
-  // Gap distance: 2*flipperX - 2*len*cos(35°) >= 0.44 (ball diameter)
-  // → len <= (flipperX - 0.22) / cos(35°)
-  const cos35 = Math.cos(35 * Math.PI / 180);  // ≈ 0.8192
-  const ballRadius = 0.22;  // Ball radius (0.44 diameter)
-  const maxLen = (flipperX - ballRadius) / cos35;
-  return Math.min(2.1, Math.max(1.2, maxLen));  // Clamp 1.2–2.1
-}
-
-function getAutoQualityPreset(): string {
-  // Auto-select quality based on display resolution
-  const physWidth = window.screen.width * window.devicePixelRatio;
-  if (physWidth >= 3840) return 'ultra';
-  if (physWidth >= 1920) return 'high';
-  if (physWidth >= 1280) return 'medium';
-  return 'low';
-}
 
 // ─── Phase 13.2: Optimized Table View for Screen Size ───
 function getOptimizedTableView(): { zoom: number; tilt: number; fov: number; quality: string } {
@@ -517,13 +398,6 @@ function getResponsiveBackglassWidth(): string {
   }
 }
 
-function detectDeviceType(): 'mobile' | 'tablet' | 'desktop' {
-  const width = window.innerWidth;
-  if (width < 768) return 'mobile';
-  if (width < 1200) return 'tablet';
-  return 'desktop';
-}
-
 // ─── Role Detection ───────────────────────────────────────────────────────────
 window.FPW_MODULE_LOADED = true;  // Flag to confirm main.ts loaded
 const FPW_ROLE = new URLSearchParams(location.search).get('role');
@@ -546,87 +420,8 @@ if (screenParam && ['1', '2', '3', 'auto'].includes(screenParam)) {
   window._startupScreenConfig = screenVal;
 }
 
-// ─── BroadcastChannel ────────────────────────────────────────────────────────
-const multiChannel: BroadcastChannel | null = typeof BroadcastChannel !== 'undefined'
-  ? new BroadcastChannel('fpw-multiscreen') : null;
-
-// Electron's IPC relay (electron-preload.cjs). Used as a fallback / parallel
-// transport because BroadcastChannel does NOT cross independent BrowserWindow
-// instances opened via main-process IPC — DMD/Backglass child windows therefore
-// never receive playfield state updates and stay frozen. The relay always works
-// in Electron and is undefined in plain browsers (where BroadcastChannel does
-// the right thing). Both fire in parallel; receivers dedup naturally because
-// they always overwrite local state with the latest payload.
-const electronAPIRef: any = (typeof window !== 'undefined') ? window.electronAPI : null;
-// Diagnostic counters reachable from any window's DevTools as `_msDiag`.
-// In playfield console: `_msDiag` shows outgoing counts.
-// In DMD/Backglass console: `_msStateMessages` shows incoming counts.
-(window as any)._msDiag = {
-  outgoing_total: 0,
-  outgoing_bc_ok: 0,
-  outgoing_ipc_ok: 0,
-  outgoing_ls_ok: 0,
-  outgoing_ipc_error: null as string | null,
-  bridge_present: false,
-};
-
-// Throttle localStorage writes — every frame would be 60 writes/sec which
-// thrashes IO. Once every 4 frames is plenty for DMD/Backglass animation.
-const LS_KEY = 'fpw_ms_state';
-let _lsThrottleCounter = 0;
-
-function emitMultiscreenState(payload: any): void {
-  const diag = (window as any)._msDiag;
-  diag.outgoing_total++;
-  // Transport 1: BroadcastChannel (browser tabs / same browsing context group)
-  if (multiChannel) {
-    try { multiChannel.postMessage(payload); diag.outgoing_bc_ok++; }
-    catch { /* channel closed */ }
-  }
-  // Transport 2: Electron IPC (cross-window via main process)
-  if (electronAPIRef?.broadcastState) {
-    diag.bridge_present = true;
-    try { electronAPIRef.broadcastState(payload); diag.outgoing_ipc_ok++; }
-    catch (e: any) { diag.outgoing_ipc_error = String(e?.message || e); }
-  }
-  // Transport 3: localStorage `storage` event — fires across all same-origin
-  // BrowserWindow instances in the same Electron session. Belt-and-suspenders
-  // fallback in case BroadcastChannel doesn't bridge BCGs and IPC has a race.
-  if (++_lsThrottleCounter >= 4) {
-    _lsThrottleCounter = 0;
-    try {
-      // Stamp with timestamp so the value differs every write — otherwise
-      // localStorage doesn't fire 'storage' for identical writes.
-      localStorage.setItem(LS_KEY, JSON.stringify({ ...payload, _ts: Date.now() }));
-      diag.outgoing_ls_ok++;
-    } catch { /* localStorage may throw under strict mode */ }
-  }
-}
-
-(window as any)._msStateMessages = { broadcastChannel: 0, electronIPC: 0, localStorage: 0 };
-function subscribeMultiscreenState(handler: (data: any) => void): void {
-  if (multiChannel) {
-    multiChannel.onmessage = ({ data }) => {
-      (window as any)._msStateMessages.broadcastChannel++;
-      handler(data);
-    };
-  }
-  if (electronAPIRef?.onStateBroadcast) {
-    electronAPIRef.onStateBroadcast((data: any) => {
-      (window as any)._msStateMessages.electronIPC++;
-      handler(data);
-    });
-  }
-  // localStorage `storage` event listener (transport 3)
-  window.addEventListener('storage', (ev) => {
-    if (ev.key !== LS_KEY || !ev.newValue) return;
-    try {
-      const data = JSON.parse(ev.newValue);
-      (window as any)._msStateMessages.localStorage++;
-      handler(data);
-    } catch { /* malformed payload */ }
-  });
-}
+// ─── Sync Transport (unified, frame-paced) ───────────────────────────────────
+initSyncTransport();
 
 // ─── Phase 5: Flipper Power Variations ────────────────────────────────────────
 let leftFlipperChargeStart: number | null = null;   // Timestamp when left flipper pressed
@@ -695,26 +490,13 @@ let lastAppliedQualityPreset = '';  // Track quality changes for application
 })();
 
 // ─── THREE.js Scene ───────────────────────────────────────────────────────────
-const scene    = new THREE.Scene();
-scene.background = new THREE.Color(0x1a1a22);  // ─── Brightened from 0x050508: Much darker gray instead of near-black
-scene.fog = new THREE.Fog(0x1a1a22, 20, 50);   // ─── Match background color, still dark but not oppressive
+const { scene, camera, renderer, playgroundGroup } = setupScene();
 
-// ─── Phase 10+: Playground Rotation Group (für Cabinet-Rotation) ─────────────
-/**
- * All playfield elements (flippers, ball, bumpers, etc.) are added to this group
- * This allows us to rotate the entire playfield for different cabinet orientations
- */
-const playgroundGroup = new THREE.Group();
-playgroundGroup.name = 'playground';
-scene.add(playgroundGroup);
-
-// ─── Phase 27: Ball Trail Visualization ──────────────────────────────────────
+// ─── Ball Trail Visualization ────────────────────────────────────────────────
 initBallTrailManager(scene);
-console.log('[Ball Trail] ✓ Initialized');
 
-// ─── Phase 28: Score Animation Manager ───────────────────────────────────────
+// ─── Score Animation Manager ─────────────────────────────────────────────────
 initScoreAnimationManager(scene);
-console.log('[Score Animation] ✓ Initialized');
 
 // ─── Phase 9: Score Display Manager ──────────────────────────────────────────
 let scoreDisplayManager: ScoreDisplayManager | null = null;
@@ -724,142 +506,35 @@ const enhancedAudioSystem = initializeAudioSystem();
 
 // ─── Phase 6: Audio Source Pool (GC pressure reduction) ──────────────────────
 initializeAudioPooling();
-logMsg(`🎵 AudioSourcePool initialized (16 pre-allocated sources)`, 'ok');
 
 // ─── GPU Diagnostics (Windows multi-GPU support) ───────────────────────────────
 initializeGPUDiagnostics();
 
 // ─── Coin System (Arcade Insert Coin) ────────────────────────────────────────
 initializeCoinSystem();
-logMsg(`💰 Coin system initialized`, 'ok');
 
 // ─── Key Binding Manager (Configurable Controls) ────────────────────────────
 initializeKeyBindings();
-logMsg(`🔑 Key Bindings initialized (VPX Standard)`, 'ok');
 
 // ─── Phase 10+: Cabinet System (Rotation & Profiles) ──────────────────────────
 const cabinetSystem = initializeCabinetSystem();
 const activeCabinetProfile = cabinetSystem.autoDetectProfile();
-console.log(`🎮 Cabinet profile auto-detected: ${activeCabinetProfile.name}`);
 
 // ─── Screen Role Manager (Multi-screen Assignment) ────────────────────────────
 const screenRoleManager = initializeScreenRoleManager();
 const screenLayout = screenRoleManager.getLayout();
-console.log(`🎮 Screen roles initialized: ${screenLayout.screens.map((s) => `${s.name}: ${s.role}`).join(', ')}`);
 
 // ─── Screen Resolution Manager (Resolution Configuration) ─────────────────────
 const screenResolutionManager = initializeScreenResolutionManager();
 const resolutionLayout = screenResolutionManager.getLayout();
-console.log(`📺 Screen resolutions initialized: ${resolutionLayout.screens.map((s) => `Screen ${s.screenIndex + 1}: ${s.width}x${s.height}`).join(', ')}`);
 
 // ─── Phase 4: Resource Manager (Memory Budget Management) ──────────────────────
 let resourceManager = initializeResourceManager();
-logMsg(`💾 ResourceManager initialized with default budgets (50MB textures, 20MB audio, 50MB models, 150MB total)`, 'ok');
 
 // ─── Phase 5: Library Cache with TTL & Cleanup ───────────────────────────────────
 let libraryCache = initializeLibraryCache();
-logMsg(`📚 LibraryCache initialized with 1-hour TTL and 5-minute cleanup interval`, 'ok');
 
 const aspectRatio = innerWidth / innerHeight;
-const responsiveZoom = calculateResponsiveZoom(aspectRatio);
-const responsiveFOV = getResponsiveFOV();
-const responsiveTilt = getResponsiveCameraTilt(aspectRatio);
-
-const camera = new THREE.PerspectiveCamera(responsiveFOV, aspectRatio, 0.1, 200);
-camera.position.set(0, responsiveTilt, responsiveZoom);  // Auto-zoom + tilt based on aspect ratio
-camera.lookAt(0, 0.5, 0);
-
-// DEBUG: Log camera setup for diagnostics
-console.log('📷 Camera Configuration:', {
-  fov: responsiveFOV,
-  aspect: aspectRatio.toFixed(2),
-  near: 0.1, far: 200,
-  position: { x: 0, y: responsiveTilt.toFixed(2), z: responsiveZoom.toFixed(2) },
-  lookAt: { x: 0, y: 0.5, z: 0 }
-});
-
-const renderer = new THREE.WebGLRenderer({ antialias: true, precision: 'highp' });
-renderer.domElement.id = 'playfield-canvas';
-// ─── Responsive Canvas Sizing ───
-// Three.js convention: setPixelRatio FIRST, then setSize with CSS pixels.
-// setSize internally multiplies by pixelRatio for the backbuffer and applies
-// CSS dimensions in CSS pixels — feeding pre-multiplied "device pixels" here
-// would double-scale the canvas on HiDPI screens (causing oversized canvas
-// that overflows the viewport).
-const initialCanvasSize = getPlayfieldCanvasSize();
-renderer.setPixelRatio(getOptimalPixelRatio());
-renderer.setSize(initialCanvasSize.displayWidth, initialCanvasSize.displayHeight);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
-renderer.toneMapping       = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.35;  // ─── Phase 2: Increased from 1.15 to compensate for SSAO, fog, and dark background
-
-// ─── Phase 2: Output Encoding for better color accuracy ───
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-// WebGL2 Extensions: Texture Compression (S3TC, ETC, ASTC)
-const gl = renderer.getContext()!;
-['WEBGL_compressed_texture_s3tc', 'WEBGL_compressed_texture_s3tc_srgb',
- 'WEBGL_compressed_texture_etc1', 'WEBGL_compressed_texture_etc',
- 'WEBGL_compressed_texture_astc'].forEach(ext => gl.getExtension(ext));
-
-document.body.appendChild(renderer.domElement);
-
-// ─── WebGL context loss / restore ────────────────────────────────────────────
-// VPIN cabinets idle for hours and the GPU sometimes resets the WebGL context.
-// Without these listeners the canvas turns black until the user reloads.
-renderer.domElement.addEventListener('webglcontextlost', (e: Event) => {
-  e.preventDefault();
-  console.warn('[fpw] WebGL context lost — rendering paused until restore');
-}, false);
-renderer.domElement.addEventListener('webglcontextrestored', () => {
-  console.warn('[fpw] WebGL context restored — re-uploading GPU resources');
-  // three.js automatically rebuilds program cache on next render; textures
-  // and geometry are re-uploaded lazily as they're used.
-}, false);
-
-// ─── Environment Mapping (Phase 1: PBR Enhancements) ───────────────────────────
-// Create a simple environment map for metallic surface reflections
-(function setupEnvironmentMap() {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 256;
-  const ctx = canvas.getContext('2d')!;
-
-  // Gradient environment: darker sky, brighter ground
-  const gradient = ctx.createLinearGradient(0, 0, 0, 256);
-  gradient.addColorStop(0, '#1a1a2e');    // Dark top (sky)
-  gradient.addColorStop(0.5, '#4a4a6a');  // Mid (horizon)
-  gradient.addColorStop(1, '#2a2a3e');    // Darker bottom (ground)
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 512, 256);
-
-  const envMap = new THREE.CanvasTexture(canvas);
-  envMap.mapping = THREE.EquirectangularReflectionMapping;
-  envMap.colorSpace = THREE.SRGBColorSpace;
-
-  scene.environment = envMap;
-  console.log('✓ Environment mapping applied to scene');
-})();
-
-// ─── Shader Precompilation (Warm-up) ──────────────────────────────────────────
-// Precompile common materials to avoid stutter on first render
-(function precompileShaders() {
-  const dummyScene = new THREE.Scene();
-  const dummyGeo = new THREE.BoxGeometry();
-
-  [
-    new THREE.MeshStandardMaterial({ color: 0xff0000, metalness: 0.5, roughness: 0.5 }),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1.0, roughness: 0.02 }),
-    new THREE.PointsMaterial({ size: 0.1, vertexColors: true }),
-  ].forEach(mat => {
-    const mesh = new THREE.Mesh(dummyGeo, mat);
-    dummyScene.add(mesh);
-    renderer.render(dummyScene, camera);
-  });
-  renderer.compile(dummyScene, camera);
-  console.log('✓ Shader precompilation complete');
-})();
 
 // ─── Phase 2: Initialize Advanced Lighting System ───────────────────────────────
 advancedLightingSystem = getAdvancedLighting(scene);
@@ -941,24 +616,20 @@ requestAnimationFrame(function initViewSettingsAndVisuals() {
   }, 100);  // Brief delay to ensure all DOM elements are ready
 });
 
-const composer = new EffectComposer(renderer);
-const renderPass = new RenderPass(scene, camera);
-composer.addPass(renderPass);
+// ─── Post-Processing + Graphics Pipeline + Lighting ─────────────────────────
+const {
+  composer, bloomPass, ssrPass, motionBlurPass,
+  cascadedShadowMapper, cascadedShadowCompositePass, perLightBloomPass,
+  particleSystem, volumetricPass, filmEffectsPass, dofPass, fxaaPass,
+  mainSpot, ambLight, fillLight, rimLight,
+} = setupPostProcessing(scene, camera, renderer, profiler);
 
 // ─── Phase 10+: Initialize Rotation Engine ────────────────────────────────────
 const rotationEngine = initializeRotationEngine(playgroundGroup, camera);
 // Apply initial profile rotation
 applyProfileRotation(activeCabinetProfile);
-console.log(`✓ Rotation engine initialized with profile: ${activeCabinetProfile.name}`);
 
-// Restore saved rotation preference (Ctrl+Q/E or VIEW panel buttons persist
-// the user's choice). Auto-detect picks 0° based on monitor aspect ratio,
-// but pinball cabinets commonly need 90°/270° to align the playfield with
-// the physical screen orientation — so on a real cabinet the user's saved
-// choice should win. Defer until after first render so physics + scene
-// graph are ready, and re-deferring also so the physics worker has had
-// time to receive 'init' (otherwise setWorldGravity is sent before the
-// world exists and is silently dropped).
+// Restore saved rotation preference
 {
   const savedRot = loadSavedRotation();
   if (savedRot !== null && savedRot !== 0) {
@@ -971,256 +642,11 @@ console.log(`✓ Rotation engine initialized with profile: ${activeCabinetProfil
 
 // ─── Phase 10+: Initialize UI Rotation Manager ─────────────────────────────────
 const uiRotationManager = initializeUIRotation();
-// Apply initial UI rotation based on active profile
 applyUIRotation(activeCabinetProfile);
-console.log(`✓ UI rotation manager initialized`);
 
 // ─── Phase 10+: Initialize Input Mapping Manager ────────────────────────────────
 const inputMappingManager = initializeInputMapping();
-// Apply initial input mapping based on active profile
 applyInputMapping(activeCabinetProfile);
-console.log(`✓ Input mapping manager initialized`);
-
-// ─── Phase 13+: Enhanced Bloom Effect for Demo Table ───
-// Improved glow on ball, bumpers, and emissive surfaces
-// Increased strength for more dramatic visual impact
-const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.8, 0.8, 0.20);
-bloomPass.threshold = 0.25;  // Higher threshold to reduce glow on dimmer surfaces
-bloomPass.strength = 0.9;    // Reduced from 1.6 for less intense bloom
-bloomPass.radius = 0.6;      // Slightly narrower glow falloff for more defined edges
-composer.addPass(bloomPass);
-
-// ─── Polish Suite Initialization (Phases 18-23) ─────────────────────────────
-// Get quality preset once at initialization
-const initPreset = profiler.getQualityPreset();
-
-// ─── Phase 18: Screen Space Reflections (SSR) ────────────────────────────
-const ssrPass: SSRPass | null = initializeGraphicsPass(
-  'SSRPass',
-  initPreset.ssrEnabled,
-  () => new SSRPass(renderer, scene, camera, innerWidth, innerHeight),
-  (pass) => {
-    pass.setIntensity(initPreset.ssrIntensity);
-    pass.setParameters(initPreset.ssrSamples, initPreset.ssrMaxDistance, 0.1);
-    pass.setEnabled(true);
-    // Add SSR to composer as ShaderPass
-    const ssrShaderPass = new ShaderPass(pass.getShaderMaterial());
-    composer.addPass(ssrShaderPass);
-  }
-);
-
-// ─── Phase 19: Motion Blur (Velocity-Based Blur) ────────────────────────
-const motionBlurPass: MotionBlurPass | null = initializeGraphicsPass(
-  'MotionBlurPass',
-  initPreset.motionBlurEnabled,
-  () => new MotionBlurPass(renderer, innerWidth, innerHeight),
-  (pass) => {
-    pass.setIntensity(initPreset.motionBlurStrength);
-    pass.setSamples(initPreset.motionBlurSamples);
-    pass.setEnabled(true);
-    // Add Motion Blur to composer as ShaderPass
-    const motionBlurShaderPass = new ShaderPass(pass.getShaderMaterial());
-    composer.addPass(motionBlurShaderPass);
-  }
-);
-
-// ─── Phase 20: Cascaded Shadows ────────────────────────────────────────
-const cascadedShadowMapper: CascadedShadowMapper | null = initializeGraphicsPass(
-  'CascadedShadows',
-  initPreset.cascadeShadowsEnabled,
-  () =>
-    initializeCascadedShadows(renderer, scene, camera as THREE.PerspectiveCamera, {
-      cascadeCount: initPreset.cascadeCount,
-      shadowMapSize: initPreset.cascadeShadowMapSize,
-      lightDirection: new THREE.Vector3(0.5, -1, 0.5).normalize(),
-      lightIntensity: 1.0,
-    })
-);
-
-// ─── Phase 20: Cascaded Shadow Composite (Apply Shadows to Scene) ──────
-const cascadedShadowCompositePass: CascadedShadowCompositePass | null = initializeGraphicsPass(
-  'CascadedShadowComposite',
-  initPreset.cascadeShadowsEnabled && cascadedShadowMapper !== null,
-  () => initializeCascadedShadowComposite(innerWidth, innerHeight),
-  (pass) => {
-    // Wire cascade shadow maps to composite pass
-    if (cascadedShadowMapper) {
-      const cascadeInfo = cascadedShadowMapper.getCascadeInfo();
-      const shadowMaps = cascadeInfo.cascades.map(c => c.shadowMap.texture);
-      pass.setShadowMaps(shadowMaps);
-      pass.setCascadeCount(cascadeInfo.count);
-
-      // Set quality-based parameters
-      const qualityConfig = {
-        low: { intensity: 0.3, samples: 2 },
-        medium: { intensity: 0.5, samples: 4 },
-        high: { intensity: 0.7, samples: 8 },
-        ultra: { intensity: 0.9, samples: 16 },
-      };
-      const config = qualityConfig[initPreset.name as 'low' | 'medium' | 'high' | 'ultra'];
-      pass.setShadowIntensity(config.intensity);
-      pass.setPCFSamples(config.samples);
-      pass.setCameraFar((camera as THREE.PerspectiveCamera).far);
-    }
-
-    // Add to composer after blur passes, before volumetric
-    if (pass) {
-      composer.addPass(pass);
-    }
-  }
-);
-
-// ─── Phase 20: Per-Light Bloom ──────────────────────────────────────────
-const perLightBloomPass: PerLightBloomPass | null = initializeGraphicsPass(
-  'PerLightBloom',
-  initPreset.perLightBloomEnabled,
-  () => initializePerLightBloom(renderer, innerWidth, innerHeight),
-  (pass) => {
-    pass.setBloomStrength(initPreset.perLightBloomStrength);
-    pass.setBloomThreshold(initPreset.perLightBloomThreshold);
-    // Add Per-Light Bloom to composer as ShaderPass
-    const perLightBloomShaderPass = new ShaderPass(pass.getShaderMaterial());
-    composer.addPass(perLightBloomShaderPass);
-  }
-);
-
-// ─── Phase 21: Advanced Particle System ────────────────────────────────
-const particleSystem: AdvancedParticleSystem | null = initializeGraphicsPass(
-  'ParticleSystem',
-  initPreset.advancedParticlesEnabled,
-  () => initializeParticleSystem(scene, initPreset.maxParticles),
-  (pass) => {
-    pass.setQualityPreset(initPreset.name as 'low' | 'medium' | 'high' | 'ultra');
-  }
-);
-
-// ─── Phase 15: Volumetric Lighting (God Rays) ──────────────────────────
-const volumetricPass = createVolumetricLightingPass(renderer);
-volumetricPass.setExposure(1.2);  // ─── Increased from 0.6: Was darkening scene by 40%
-volumetricPass.setParameters(0.5, 0.4, 0.95, 32);  // ─── Reduced decay from 0.8 to 0.5: Less aggressive falloff
-composer.addPass((volumetricPass as any).pass || volumetricPass);
-
-// ─── Phase 22: Film Effects (Grain + Aberration + Distortion) ──────────
-const filmEffectsPass: FilmEffectsPass | null = initializeGraphicsPass(
-  'FilmEffects',
-  initPreset.filmEffectsEnabled,
-  () => initializeFilmEffects(renderer),
-  (pass) => {
-    pass.setQualityPreset(initPreset.name as 'low' | 'medium' | 'high' | 'ultra');
-    const shaderPass = new ShaderPass(pass.getShaderMaterial());
-    composer.addPass(shaderPass);
-  }
-);
-
-// ─── Phase 23: Depth of Field (Optional, Ultra-Only) ──────────────────
-const dofPass: DepthOfFieldPass | null = initializeGraphicsPass(
-  'DepthOfField',
-  initPreset.depthOfFieldEnabled,
-  () => initializeDepthOfField(renderer, camera as THREE.PerspectiveCamera),
-  (pass) => {
-    if (pass.isDeviceSupported?.()) {
-      pass.setQualityPreset(initPreset.name as 'low' | 'medium' | 'high' | 'ultra');
-      pass.setAperture(initPreset.dofAperture);
-      pass.setSamples(initPreset.dofSamples);
-      pass.setEnabled(true);
-      const shaderPass = new ShaderPass(pass.getShaderMaterial());
-      composer.addPass(shaderPass);
-    }
-  }
-);
-
-// FXAA: smoother edges at high DPI, performance-friendly alternative to MSAA
-const fxaaPass = new ShaderPass(FXAAShader);
-fxaaPass.uniforms['resolution'].value.x = 1 / (innerWidth * renderer.getPixelRatio());
-fxaaPass.uniforms['resolution'].value.y = 1 / (innerHeight * renderer.getPixelRatio());
-fxaaPass.renderToScreen = true;
-composer.addPass(fxaaPass);
-
-// ─── Phase 14: Initialize Graphics Pipeline ─────────────────────────────────────
-// Initialize the modular graphics pipeline system (geometry pooling, material factory, lighting)
-initializeGraphicsPipeline(renderer, scene, camera, composer);
-console.log('✓ Graphics pipeline initialized');
-
-// ─── Phase 16+: Initialize Playfield Visual Enhancements ─────────────────────────
-// SSAO, Enhanced Materials, Color Grading, Improved Shadows
-initializePlayfieldVisualEnhancement(scene, camera, renderer, composer);
-console.log('✓ Playfield visual enhancements initialized');
-
-// ─── Phase 18+: Initialize Enhanced Metallic Materials ──────────────────────────
-// Metallic materials for ball, flippers, bumpers optimized for SSR
-initializeMetallicMaterials();
-console.log('✓ Enhanced metallic materials initialized');
-
-// ─── Phase 17+: Initialize Event-Driven Video System ─────────────────────────────
-// Support for backglass and DMD video playback triggered by game events
-initializeVideoManager();
-initializeVideoBinding();
-console.log('✓ Video playback system initialized');
-
-// ─── Phase 14: Initialize Standard Pinball Lighting via LightManager ───────────────
-// Declare lights at module level so applyQualityPreset() can access them
-let mainSpot: THREE.SpotLight | null = null;
-let ambLight: THREE.AmbientLight | null = null;
-let fillLight: THREE.PointLight | null = null;
-let rimLight: THREE.DirectionalLight | null = null;
-
-// Get LightManager from pipeline and initialize standard lighting
-const lightManager = getGraphicsPipeline()?.getLightManager();
-if (lightManager) {
-  lightManager.initialize();
-  console.log('✓ Pinball lighting system initialized via LightManager');
-  // Try to get lights from LightManager if it exposes them
-  // For now, create fallback lights anyway for applyQualityPreset() to use
-  ambLight = new THREE.AmbientLight(0xffffff, 0.55);  // ─── Increased from 0.35: Critical for overall scene brightness
-  scene.add(ambLight);
-  mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI/3.0, 0.20);
-  mainSpot.position.set(0, 14, 16);
-  mainSpot.castShadow = true;
-  mainSpot.shadow.mapSize.set(2048, 2048);
-  mainSpot.shadow.bias = -0.0020;
-  mainSpot.shadow.normalBias = 0.030;
-  mainSpot.shadow.camera.near = 0.5;
-  mainSpot.shadow.camera.far = 120;
-  mainSpot.shadow.blurSamples = 16;
-  scene.add(mainSpot);
-  fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
-  fillLight.position.set(-9, 6, 9);
-  fillLight.castShadow = true;
-  scene.add(fillLight);
-  const accentLight = new THREE.PointLight(0xccddff, 0.8, 25);
-  accentLight.position.set(9, 4, 5);
-  scene.add(accentLight);
-  rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
-  rimLight.position.set(0, 22, -12);
-  rimLight.castShadow = true;
-  scene.add(rimLight);
-} else {
-  // Fallback: create lights manually if LightManager unavailable
-  console.warn('⚠️ LightManager not available, creating lights manually');
-  ambLight = new THREE.AmbientLight(0xffffff, 0.55);  // ─── Increased from 0.35: Critical for overall scene brightness
-  scene.add(ambLight);
-  mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI/3.0, 0.20);
-  mainSpot.position.set(0, 14, 16);
-  mainSpot.castShadow = true;
-  mainSpot.shadow.mapSize.set(2048, 2048);
-  mainSpot.shadow.bias = -0.0020;
-  mainSpot.shadow.normalBias = 0.030;
-  mainSpot.shadow.camera.near = 0.5;
-  mainSpot.shadow.camera.far = 120;
-  mainSpot.shadow.blurSamples = 16;
-  scene.add(mainSpot);
-  fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
-  fillLight.position.set(-9, 6, 9);
-  fillLight.castShadow = true;
-  scene.add(fillLight);
-  const accentLight = new THREE.PointLight(0xccddff, 0.8, 25);
-  accentLight.position.set(9, 4, 5);
-  scene.add(accentLight);
-  rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
-  rimLight.position.set(0, 22, -12);
-  rimLight.castShadow = true;
-  scene.add(rimLight);
-}
 
 // ─── Flipper (Responsive Positioning + Collision Prevention) ────────────────────
 const flipperX = getResponsiveFlipperX(aspectRatio);  // Dynamic based on aspect ratio
@@ -3079,7 +2505,7 @@ function animate(): void {
     flipperResponse: 0,  // Updated by flipper handler
   });
 
-  emitMultiscreenState({
+  emitSyncFrame({
     type:'state', score:state.score, ballNum:state.ballNum, multiplier:state.multiplier,
     inLane:state.inLane, dmdMode:dmdState.mode, dmdEventText:dmdState.eventText,
     dmdAnimFrame:dmdState.animFrame, dmdScrollX:dmdState.scrollX,
@@ -4364,7 +3790,7 @@ function setupDMDWindow(): void {
     drawDmdDiag();
   };
   dmdLoop();
-  subscribeMultiscreenState((data: any) => {
+  onSyncFrame((data: any) => {
     if (data.type !== 'state') return;
     Object.assign(dmdState, {
       mode: data.dmdMode, eventText: data.dmdEventText, animFrame: data.dmdAnimFrame,
@@ -4380,8 +3806,6 @@ function setupBackglassWindow(): void {
   document.title='FPW — Backglass';
   window.addEventListener('beforeunload',()=>{try{localStorage.setItem('fpw_winpos_backglass',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{ /* localStorage can throw, ignore */ void 0; }
 disposePhysicsWorker();});
-  // Frameless Electron child window — make whole body a drag region so the
-  // Backglass can be repositioned freely across monitors.
   document.body.style.setProperty('-webkit-app-region', 'drag');
   document.body.style.setProperty('app-region', 'drag');
   const canvas=document.getElementById('backglass-canvas') as HTMLCanvasElement;
@@ -4391,21 +3815,8 @@ disposePhysicsWorker();});
   const setSize=()=>{canvas.width=innerWidth;canvas.height=innerHeight;};
   setSize(); window.addEventListener('resize',setSize);
 
-  // On-canvas diagnostic for Backglass (see DMD comment for meaning).
   let bgRenderFrames = 0;
   const bgCtx = canvas.getContext('2d');
-  const drawBgDiag = () => {
-    if (!bgCtx) return;
-    const m = (window as any)._msStateMessages || {};
-    const total = (m.broadcastChannel || 0) + (m.electronIPC || 0) + (m.localStorage || 0);
-    bgCtx.save();
-    bgCtx.fillStyle = 'rgba(0,0,0,0.6)';
-    bgCtx.fillRect(2, 2, 130, 16);
-    bgCtx.fillStyle = '#0f0';
-    bgCtx.font = '11px monospace';
-    bgCtx.fillText(`F:${bgRenderFrames} M:${total}`, 4, 13);
-    bgCtx.restore();
-  };
 
   const bgLoop = () => {
     requestAnimationFrame(bgLoop);
@@ -4416,10 +3827,9 @@ disposePhysicsWorker();});
     Object.assign(state, { score: bgState.score, ballNum: bgState.ballNum, multiplier: bgState.multiplier, lastRank: bgState.lastRank, lastScore: bgState.lastScore });
     Object.assign(dmdState, { mode: bgState.dmdMode, eventText: bgState.dmdEventText, animFrame: bgState.dmdAnimFrame, scrollX: bgState.dmdScrollX, eventTimer: bgState.dmdEventTimer });
     drawBGCanvas(canvas, bgState, showEmbedDMD);
-    drawBgDiag();
   };
   bgLoop();
-  subscribeMultiscreenState((data: any) => {
+  onSyncFrame((data: any) => {
     if (data.type !== 'state') return;
     Object.assign(bgState, {
       score: data.score, ballNum: data.ballNum, multiplier: data.multiplier,

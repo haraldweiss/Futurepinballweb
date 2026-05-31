@@ -11,9 +11,7 @@
  * - Cross-browser compatibility
  */
 
-import { getFileSystemBrowser } from './file-browser';
-import { getFileBrowserUIManager } from './file-browser-ui';
-import { getAdvancedFileBrowserManager } from './file-browser-advanced';
+import { getFileSystemBrowser, getFileBrowserUIManager, getAdvancedFileBrowserManager } from './file-browser';
 import { getResourceManager } from './resource-manager';
 import { getLibraryCache } from './library-cache';
 import { getAudioSourcePool } from './audio-system';

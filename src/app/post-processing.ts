@@ -1,0 +1,255 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
+import { SSRPass } from '../graphics/ssr-pass';
+import { MotionBlurPass } from '../graphics/motion-blur-pass';
+import { CascadedShadowMapper, initializeCascadedShadows } from '../graphics/cascaded-shadows';
+import { CascadedShadowCompositePass, initializeCascadedShadowComposite } from '../graphics/cascaded-shadow-composite-pass';
+import { PerLightBloomPass, initializePerLightBloom } from '../graphics/per-light-bloom';
+import { AdvancedParticleSystem, initializeParticleSystem, getParticleSystem } from '../graphics/advanced-particle-system';
+import { createVolumetricLightingPass } from '../graphics/volumetric-lighting';
+import { FilmEffectsPass, initializeFilmEffects, getFilmEffectsPass } from '../graphics/film-effects-pass';
+import { DepthOfFieldPass, initializeDepthOfField, getDepthOfFieldPass } from '../graphics/dof-pass';
+import { initializeGraphicsPass } from '../graphics/pass-initializer';
+import { initializeGraphicsPipeline, getGraphicsPipeline } from '../graphics/graphics-pipeline';
+import { initializePlayfieldVisualEnhancement, getPlayfieldVisualEnhancement, disposePlayfieldVisualEnhancement } from '../graphics/playfield-visual-enhancement';
+import { initializeMetallicMaterials, getMetallicMaterialFactory } from '../graphics/metallic-materials';
+import { initializeVideoManager, getVideoManager, disposeVideoManager } from '../video-manager';
+import { initializeVideoBinding, getVideoBindingManager, disposeVideoBinding } from '../mechanics/video-binding';
+
+import type { PerformanceProfiler } from '../profiler';
+
+export interface PostProcessingContext {
+  composer: EffectComposer;
+  bloomPass: UnrealBloomPass;
+  ssrPass: SSRPass | null;
+  motionBlurPass: MotionBlurPass | null;
+  cascadedShadowMapper: CascadedShadowMapper | null;
+  cascadedShadowCompositePass: CascadedShadowCompositePass | null;
+  perLightBloomPass: PerLightBloomPass | null;
+  particleSystem: AdvancedParticleSystem | null;
+  volumetricPass: any;
+  filmEffectsPass: FilmEffectsPass | null;
+  dofPass: DepthOfFieldPass | null;
+  fxaaPass: ShaderPass;
+  mainSpot: THREE.SpotLight | null;
+  ambLight: THREE.AmbientLight | null;
+  fillLight: THREE.PointLight | null;
+  rimLight: THREE.DirectionalLight | null;
+}
+
+export function setupPostProcessing(
+  scene: THREE.Scene,
+  camera: THREE.Camera,
+  renderer: THREE.WebGLRenderer,
+  profiler: PerformanceProfiler,
+): PostProcessingContext {
+  const composer = new EffectComposer(renderer);
+  const renderPass = new RenderPass(scene, camera);
+  composer.addPass(renderPass);
+
+  const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.8, 0.8, 0.20);
+  bloomPass.threshold = 0.25;
+  bloomPass.strength = 0.9;
+  bloomPass.radius = 0.6;
+  composer.addPass(bloomPass);
+
+  const initPreset = profiler.getQualityPreset();
+
+  const ssrPass: SSRPass | null = initializeGraphicsPass(
+    'SSRPass',
+    initPreset.ssrEnabled,
+    () => new SSRPass(renderer, scene, camera, innerWidth, innerHeight),
+    (pass) => {
+      pass.setIntensity(initPreset.ssrIntensity);
+      pass.setParameters(initPreset.ssrSamples, initPreset.ssrMaxDistance, 0.1);
+      pass.setEnabled(true);
+      const ssrShaderPass = new ShaderPass(pass.getShaderMaterial());
+      composer.addPass(ssrShaderPass);
+    }
+  );
+
+  const motionBlurPass: MotionBlurPass | null = initializeGraphicsPass(
+    'MotionBlurPass',
+    initPreset.motionBlurEnabled,
+    () => new MotionBlurPass(renderer, innerWidth, innerHeight),
+    (pass) => {
+      pass.setIntensity(initPreset.motionBlurStrength);
+      pass.setSamples(initPreset.motionBlurSamples);
+      pass.setEnabled(true);
+      const motionBlurShaderPass = new ShaderPass(pass.getShaderMaterial());
+      composer.addPass(motionBlurShaderPass);
+    }
+  );
+
+  const cascadedShadowMapper: CascadedShadowMapper | null = initializeGraphicsPass(
+    'CascadedShadows',
+    initPreset.cascadeShadowsEnabled,
+    () =>
+      initializeCascadedShadows(renderer, scene, camera as THREE.PerspectiveCamera, {
+        cascadeCount: initPreset.cascadeCount,
+        shadowMapSize: initPreset.cascadeShadowMapSize,
+        lightDirection: new THREE.Vector3(0.5, -1, 0.5).normalize(),
+        lightIntensity: 1.0,
+      })
+  );
+
+  const cascadedShadowCompositePass: CascadedShadowCompositePass | null = initializeGraphicsPass(
+    'CascadedShadowComposite',
+    initPreset.cascadeShadowsEnabled && cascadedShadowMapper !== null,
+    () => initializeCascadedShadowComposite(innerWidth, innerHeight),
+    (pass) => {
+      if (cascadedShadowMapper) {
+        const cascadeInfo = cascadedShadowMapper.getCascadeInfo();
+        const shadowMaps = cascadeInfo.cascades.map(c => c.shadowMap.texture);
+        pass.setShadowMaps(shadowMaps);
+        pass.setCascadeCount(cascadeInfo.count);
+
+        const qualityConfig = {
+          low: { intensity: 0.3, samples: 2 },
+          medium: { intensity: 0.5, samples: 4 },
+          high: { intensity: 0.7, samples: 8 },
+          ultra: { intensity: 0.9, samples: 16 },
+        };
+        const config = qualityConfig[initPreset.name as 'low' | 'medium' | 'high' | 'ultra'];
+        pass.setShadowIntensity(config.intensity);
+        pass.setPCFSamples(config.samples);
+        pass.setCameraFar((camera as THREE.PerspectiveCamera).far);
+      }
+
+      if (pass) {
+        composer.addPass(pass);
+      }
+    }
+  );
+
+  const perLightBloomPass: PerLightBloomPass | null = initializeGraphicsPass(
+    'PerLightBloom',
+    initPreset.perLightBloomEnabled,
+    () => initializePerLightBloom(renderer, innerWidth, innerHeight),
+    (pass) => {
+      pass.setBloomStrength(initPreset.perLightBloomStrength);
+      pass.setBloomThreshold(initPreset.perLightBloomThreshold);
+      const perLightBloomShaderPass = new ShaderPass(pass.getShaderMaterial());
+      composer.addPass(perLightBloomShaderPass);
+    }
+  );
+
+  const particleSystem: AdvancedParticleSystem | null = initializeGraphicsPass(
+    'ParticleSystem',
+    initPreset.advancedParticlesEnabled,
+    () => initializeParticleSystem(scene, initPreset.maxParticles),
+    (pass) => {
+      pass.setQualityPreset(initPreset.name as 'low' | 'medium' | 'high' | 'ultra');
+    }
+  );
+
+  const volumetricPass = createVolumetricLightingPass(renderer);
+  volumetricPass.setExposure(1.2);
+  volumetricPass.setParameters(0.5, 0.4, 0.95, 32);
+  composer.addPass((volumetricPass as any).pass || volumetricPass);
+
+  const filmEffectsPass: FilmEffectsPass | null = initializeGraphicsPass(
+    'FilmEffects',
+    initPreset.filmEffectsEnabled,
+    () => initializeFilmEffects(renderer),
+    (pass) => {
+      pass.setQualityPreset(initPreset.name as 'low' | 'medium' | 'high' | 'ultra');
+      const shaderPass = new ShaderPass(pass.getShaderMaterial());
+      composer.addPass(shaderPass);
+    }
+  );
+
+  const dofPass: DepthOfFieldPass | null = initializeGraphicsPass(
+    'DepthOfField',
+    initPreset.depthOfFieldEnabled,
+    () => initializeDepthOfField(renderer, camera as THREE.PerspectiveCamera),
+    (pass) => {
+      if (pass.isDeviceSupported?.()) {
+        pass.setQualityPreset(initPreset.name as 'low' | 'medium' | 'high' | 'ultra');
+        pass.setAperture(initPreset.dofAperture);
+        pass.setSamples(initPreset.dofSamples);
+        pass.setEnabled(true);
+        const shaderPass = new ShaderPass(pass.getShaderMaterial());
+        composer.addPass(shaderPass);
+      }
+    }
+  );
+
+  const fxaaPass = new ShaderPass(FXAAShader);
+  fxaaPass.uniforms['resolution'].value.x = 1 / (innerWidth * renderer.getPixelRatio());
+  fxaaPass.uniforms['resolution'].value.y = 1 / (innerHeight * renderer.getPixelRatio());
+  fxaaPass.renderToScreen = true;
+  composer.addPass(fxaaPass);
+
+  initializeGraphicsPipeline(renderer, scene, camera, composer);
+  initializePlayfieldVisualEnhancement(scene, camera, renderer, composer);
+  initializeMetallicMaterials();
+  initializeVideoManager();
+  initializeVideoBinding();
+
+  let mainSpot: THREE.SpotLight | null = null;
+  let ambLight: THREE.AmbientLight | null = null;
+  let fillLight: THREE.PointLight | null = null;
+  let rimLight: THREE.DirectionalLight | null = null;
+
+  const lightManager = getGraphicsPipeline()?.getLightManager();
+  if (lightManager) {
+    lightManager.initialize();
+    ambLight = new THREE.AmbientLight(0xffffff, 0.55);
+    scene.add(ambLight);
+    mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI / 3.0, 0.20);
+    mainSpot.position.set(0, 14, 16);
+    mainSpot.castShadow = true;
+    mainSpot.shadow.mapSize.set(2048, 2048);
+    mainSpot.shadow.bias = -0.0020;
+    mainSpot.shadow.normalBias = 0.030;
+    mainSpot.shadow.camera.near = 0.5;
+    mainSpot.shadow.camera.far = 120;
+    mainSpot.shadow.blurSamples = 16;
+    scene.add(mainSpot);
+    fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
+    fillLight.position.set(-9, 6, 9);
+    fillLight.castShadow = true;
+    scene.add(fillLight);
+    const accentLight = new THREE.PointLight(0xccddff, 0.8, 25);
+    accentLight.position.set(9, 4, 5);
+    scene.add(accentLight);
+    rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
+    rimLight.position.set(0, 22, -12);
+    rimLight.castShadow = true;
+    scene.add(rimLight);
+  } else {
+    ambLight = new THREE.AmbientLight(0xffffff, 0.55);
+    scene.add(ambLight);
+    mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI / 3.0, 0.20);
+    mainSpot.position.set(0, 14, 16);
+    mainSpot.castShadow = true;
+    mainSpot.shadow.mapSize.set(2048, 2048);
+    mainSpot.shadow.bias = -0.0020;
+    mainSpot.shadow.normalBias = 0.030;
+    scene.add(mainSpot);
+    fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
+    fillLight.position.set(-9, 6, 9);
+    fillLight.castShadow = true;
+    scene.add(fillLight);
+    const accentLight = new THREE.PointLight(0xccddff, 0.8, 25);
+    accentLight.position.set(9, 4, 5);
+    scene.add(accentLight);
+    rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
+    rimLight.position.set(0, 22, -12);
+    rimLight.castShadow = true;
+    scene.add(rimLight);
+  }
+
+  return {
+    composer, bloomPass, ssrPass, motionBlurPass,
+    cascadedShadowMapper, cascadedShadowCompositePass, perLightBloomPass,
+    particleSystem, volumetricPass, filmEffectsPass, dofPass, fxaaPass,
+    mainSpot, ambLight, fillLight, rimLight,
+  };
+}

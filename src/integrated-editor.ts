@@ -22,7 +22,7 @@ import { PropertyModal } from './editor/property-modal';
 import { ScriptEditorModal } from './editor/script-editor-modal';
 import { showTableSelector } from './table-selector';
 import { escapeHtml } from './utils/html-escape';
-import { fptResources, fptRawBytes } from './game';
+import { fptResources, fptRawBytes, currentTableConfig } from './game';
 import { serializeFPT } from './fpt-writer';
 import { runFPScript } from './script-engine';
 
@@ -298,12 +298,11 @@ export class EditorModal {
     // Show table selector
     showTableSelector((tableKey: string) => {
       // Load the selected demo table
-      (window as any).loadDemoTable(tableKey);
+      window.loadDemoTable(tableKey);
 
-      // After a short delay, reopen editor with new table
       setTimeout(() => {
-        if ((window as any).currentTableConfig) {
-          this.open((window as any).currentTableConfig);
+        if (currentTableConfig) {
+          this.open(currentTableConfig);
         }
       }, 100);
     });
