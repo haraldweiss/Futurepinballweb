@@ -21,7 +21,7 @@ If `user.email` is unset, empty, or fake — **stop, fix it, then proceed**.
 - **Browser-based pinball simulator** that loads Future Pinball `.fpt` tables
 - TypeScript + Vite + three.js (renderer) + Rapier2D (physics) + CodeMirror (in-app VBScript editor)
 - Optional **Electron shell** for multi-screen cabinet mode (`electron-main.cjs`, `electron-preload.cjs`)
-- 33 test files (vitest), 691 tests as of 2026-05-28 — **must stay green**
+- 33 test files (vitest), 698 tests as of 2026-05-31 — **must stay green**
 - Default branch: `main`, remote: `github.com:haraldweiss/Futurepinballweb`
 
 ---
@@ -33,6 +33,7 @@ If `user.email` is unset, empty, or fake — **stop, fix it, then proceed**.
 - Dead-code removal, debug-log gating behind `import.meta.env.DEV`
 - Granular feature commits (3–8 per topic)
 - Bulk lint cleanup
+- Module extractions and barrel-pattern refactoring (`src/app/`, `src/table/`, `src/fpt/`)
 
 ### Claude Code (Care — Opus 4.7)
 - Anything touching the physics worker bridge or Rapier2D integration
@@ -66,12 +67,16 @@ If `user.email` is unset, empty, or fake — **stop, fix it, then proceed**.
 - Don't bump `electron-updater` without testing on macOS arm64 build. Past releases broke auto-update.
 - `electron-preload.cjs` is the only IPC bridge — don't expose new `ipcRenderer` channels without considering the cabinet-mode multi-window security model.
 
+### 3.6 Extracted modules (barrel pattern)
+- When splitting a module into sub-modules, keep the original file as a barrel that re-exports everything from `./subdir/`. This preserves all existing import paths (e.g. `'./table'` still works after splitting `table.ts` into `table/configs.ts` + `table/scoring.ts`).
+- New `src/app/` modules must be gated by `import.meta.env.DEV` for debug-only code.
+
 ---
 
 ## 4. Verification standards (write in commit body)
 
 ```
-Verified: tsc clean, 691/691 tests, manual smoke test in dev browser ✓
+Verified: tsc clean, 698/698 tests, manual smoke test in dev browser ✓
 ```
 or
 ```
@@ -106,6 +111,11 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 | Window API | `src/window-api.ts` — register HTML inline handlers here |
 | Asset catalog | `src/assets/` — Cabinet-PR added this layer |
 | Sample tables | `public/tables/` |
+| Extracted modules | `src/app/` (scene-setup, responsive-helpers, post-processing, sync-transport) |
+| Table configs | `src/table/configs.ts` — demo table definitions |
+| Table scoring | `src/table/scoring.ts` — bumper/target/ramp scoring logic |
+| FPT parser modules | `src/fpt/lzo.ts` (decompressor), `src/fpt/media.ts` (image/audio extraction) |
+| Docs | `docs/` — all documentation organised in subdirectories |
 
 ---
 
@@ -127,3 +137,16 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 - Replaced 12 Window-interface properties from `(window as any).X` → `window.X`
 - Gated debug console.log behind `import.meta.env.DEV` (testGravity, forceScore, dumpState, plunger launch)
 - Verified: tsc clean, 691/691 tests
+
+### 2026-05-31 — Major project cleanup (−10.500 Zeilen)
+- main.ts entkerned: responsive-helpers, scene-setup, post-processing als Module extrahiert
+- fpt-parser.ts gesplittet: LZO + Media-Extraktion in src/fpt/
+- table.ts gesplittet: configs + scoring in src/table/
+- File-Browser: 3→1 Datei konsolidiert
+- Sync-Transport vereinheitlicht: 3 Wege (BC+IPC+LS) → 1 deterministischer Transport mit Frame-Pacing
+- Dead code: 25 tote Dateien entfernt (kompletter src/parser/ Ordner, tote Graphics/Animation/Utils)
+- docs: 121 .md + 9 .txt aus Root nach docs/ umgezogen, Research-Skripte nach scripts/research/
+- Tests: 691→698 (+7), 33 files
+- Netto: −10.500 Zeilen, 25 Dateien entfernt
+- Commit: `f3105969`
+- Verified: tsc clean, 698/698 tests

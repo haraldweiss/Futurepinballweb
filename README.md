@@ -3,14 +3,13 @@
 **Modern cross-platform 3D pinball game in your browser — with VPX-competitive graphics, advanced physics, multi-screen arcade cabinet support, and comprehensive video editing**
 
 ![Version](https://img.shields.io/badge/Version-0.20.21-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
+![License](https://img.shields.io/badge/License-AGPLv3-green)
 ![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)
-![Modules](https://img.shields.io/badge/Modules-60-orange)
-![Code](https://img.shields.io/badge/Code-27.8K%20Lines-purple)
-![Tests](https://img.shields.io/badge/Tests-582%20passing-success)
+![Modules](https://img.shields.io/badge/Modules-56-orange)
+![Code](https://img.shields.io/badge/Code-39K%20Lines-purple)
+![Tests](https://img.shields.io/badge/Tests-698%20passing-success)
 ![TypeScript](https://img.shields.io/badge/TS_Errors-0-success)
-![Parser](https://img.shields.io/badge/Enhanced_FPT_Parser-v1.0-success)
 
 ---
 
@@ -174,7 +173,7 @@ npm run build
 # Node built-ins only). Serves dist/ on PORT or 3000.
 npm run serve
 
-# Tests (582 passing, vitest)
+# Tests (698 passing, vitest)
 npm run test:run
 
 # Security checks (eslint security plugin + audit + custom XSS tests)
@@ -201,61 +200,43 @@ logs — silent by default in production.
 ### For Users 👥
 | Want | Link |
 |------|------|
-| 🚀 Get started in 5 mins | [QUICK_START.md](./QUICK_START.md) |
-| 🎮 Setup arcade cabinet (3 screens) | [MULTISCREEN_QUICK_REFERENCE.md](./MULTISCREEN_QUICK_REFERENCE.md) |
-| 🎬 Create & add videos | [VIDEO_EDITOR_QUICK_START.md](./VIDEO_EDITOR_QUICK_START.md) |
-| 💻 Setup desktop app | [DESKTOP_APP_QUICKSTART.md](./DESKTOP_APP_QUICKSTART.md) |
-| 🐛 Troubleshooting | [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) |
+| 🚀 Get started in 5 mins | [docs/guides/QUICK_START.md](./docs/guides/QUICK_START.md) |
+| 🎮 Setup arcade cabinet (3 screens) | [docs/multiscreen/MULTISCREEN_QUICK_REFERENCE.md](./docs/multiscreen/MULTISCREEN_QUICK_REFERENCE.md) |
+| 🎬 Create & add videos | [docs/video/VIDEO_EDITOR_QUICK_START.md](./docs/video/VIDEO_EDITOR_QUICK_START.md) |
+| 💻 Setup desktop app | [docs/guides/DESKTOP_APP_QUICKSTART.md](./docs/guides/DESKTOP_APP_QUICKSTART.md) |
+| 🐛 Troubleshooting | [docs/guides/DEPLOYMENT_GUIDE.md](./docs/guides/DEPLOYMENT_GUIDE.md) |
 
 ### For Developers 👨‍💻
 | Want | Link |
 |------|------|
-| 📖 Architecture overview | [CODE_QUALITY_ARCHITECTURE_DIAGRAM.md](./CODE_QUALITY_ARCHITECTURE_DIAGRAM.md) |
-| 🔬 Video system internals | [EVENT_DRIVEN_VIDEO_SYSTEM.md](./EVENT_DRIVEN_VIDEO_SYSTEM.md) |
-| ⚙️ Multi-screen deep dive | [MULTISCREEN_LAYOUT_GUIDE.md](./MULTISCREEN_LAYOUT_GUIDE.md) |
-| 🎨 Graphics pipeline | [PHASE16_VISUAL_ENHANCEMENTS_SUMMARY.md](./PHASE16_VISUAL_ENHANCEMENTS_SUMMARY.md) |
-| 📊 Performance analysis | [EFFICIENCY_REVIEW_EXECUTIVE_SUMMARY.md](./EFFICIENCY_REVIEW_EXECUTIVE_SUMMARY.md) |
+| 📖 Architecture overview | [docs/reviews/CODE_QUALITY_ARCHITECTURE_DIAGRAM.md](./docs/reviews/CODE_QUALITY_ARCHITECTURE_DIAGRAM.md) |
+| 🔬 Video system internals | [docs/polish/EVENT_DRIVEN_VIDEO_SYSTEM.md](./docs/polish/EVENT_DRIVEN_VIDEO_SYSTEM.md) |
+| ⚙️ Multi-screen deep dive | [docs/multiscreen/MULTISCREEN_LAYOUT_GUIDE.md](./docs/multiscreen/MULTISCREEN_LAYOUT_GUIDE.md) |
+| 🎨 Graphics pipeline | [docs/phases/PHASE16_VISUAL_ENHANCEMENTS_SUMMARY.md](./docs/phases/PHASE16_VISUAL_ENHANCEMENTS_SUMMARY.md) |
+| 📊 Performance analysis | [docs/reviews/EFFICIENCY_REVIEW_EXECUTIVE_SUMMARY.md](./docs/reviews/EFFICIENCY_REVIEW_EXECUTIVE_SUMMARY.md) |
+| 🔄 Sync-Transport | [docs/plan-sync-pipeline.md](./docs/plan-sync-pipeline.md) |
 
 ---
 
 ## 📚 Documentation
 
-### Getting Started 🚀
-- **[QUICK_START.md](./QUICK_START.md)** — 5-minute setup guide
-- **[STARTUP_GUIDE.md](./STARTUP_GUIDE.md)** — Multi-screen startup & auto-detection
-- **[DESKTOP_APP_QUICKSTART.md](./DESKTOP_APP_QUICKSTART.md)** — Desktop app quick start
-
-### Features & Configuration ⚙️
-- **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** — Complete deployment for all platforms
-- **[MULTISCREEN_QUICK_REFERENCE.md](./MULTISCREEN_QUICK_REFERENCE.md)** — Quick reference for multi-screen setup
-- **[MULTISCREEN_LAYOUT_GUIDE.md](./MULTISCREEN_LAYOUT_GUIDE.md)** — Comprehensive multi-screen guide
-- **[MULTISCREEN_VERIFICATION.md](./MULTISCREEN_VERIFICATION.md)** — Testing & troubleshooting multi-screen
-- **[VIDEO_EDITOR_QUICK_START.md](./VIDEO_EDITOR_QUICK_START.md)** — Video editor quick start
-- **[VIDEO_CONFIGURATION_GUIDE.md](./VIDEO_CONFIGURATION_GUIDE.md)** — Video configuration reference
-
-### Technical Deep Dives 🔬
-- **[ENHANCED_FPT_PARSER.md](./ENHANCED_FPT_PARSER.md)** — ✨ **NEW** Complete FPT parsing system based on fp-dump/fp-grab
-  - 10 implementation phases with 3,972 lines of code
-  - Multi-strategy extraction (gravity, elements, lights, physics, materials, scripts)
-  - 90%+ physics accuracy vs 40-50% with heuristics
-  - Full module reference and integration guide
-- **[PWA_ELECTRON_IMPLEMENTATION_COMPLETE.md](./PWA_ELECTRON_IMPLEMENTATION_COMPLETE.md)** — PWA & Electron architecture
-- **[VIDEO_EDITOR_UI_IMPLEMENTATION.md](./VIDEO_EDITOR_UI_IMPLEMENTATION.md)** — Video editor UI internals
-- **[VIDEO_CREATION_WORKFLOW.md](./VIDEO_CREATION_WORKFLOW.md)** — Video creation workflow
-- **[EVENT_DRIVEN_VIDEO_SYSTEM.md](./EVENT_DRIVEN_VIDEO_SYSTEM.md)** — Event-driven video binding system
-- **[INTEGRATED_EDITOR_IMPLEMENTATION.md](./INTEGRATED_EDITOR_IMPLEMENTATION.md)** — Table editor architecture
-
-### Quality & Performance 📊
-- **[CODE_QUALITY_EXECUTIVE_SUMMARY.md](./CODE_QUALITY_EXECUTIVE_SUMMARY.md)** — Code quality overview
-- **[CODE_QUALITY_REVIEW_INDEX.md](./CODE_QUALITY_REVIEW_INDEX.md)** — Code review documentation
-- **[EFFICIENCY_REVIEW_EXECUTIVE_SUMMARY.md](./EFFICIENCY_REVIEW_EXECUTIVE_SUMMARY.md)** — Performance analysis
-- **[PHASE16_VISUAL_ENHANCEMENTS_SUMMARY.md](./PHASE16_VISUAL_ENHANCEMENTS_SUMMARY.md)** — Graphics phase details
-- **[PHASE17_VIDEO_SYSTEM_SUMMARY.md](./PHASE17_VIDEO_SYSTEM_SUMMARY.md)** — Video system phase details
-- **[PLAYFIELD_VISUAL_ENHANCEMENTS.md](./PLAYFIELD_VISUAL_ENHANCEMENTS.md)** — Playfield visual details
-
-### Production & Deployment 🚀
-- **[PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md)** — Production deployment checklist
-- **[FPT_DRAGDROP_SUPPORT.md](./FPT_DRAGDROP_SUPPORT.md)** — Drag & drop FPT table loading
+All documentation is organised in `docs/`:
+- **[docs/guides/](./docs/guides/)** — Quick start, deployment, FAQ, startup guides
+- **[docs/cabinet/](./docs/cabinet/)** — Cabinet setup, rotation, plunger adjustment
+- **[docs/multiscreen/](./docs/multiscreen/)** — Multi-screen layout & window setup
+- **[docs/fpt/](./docs/fpt/)** — FPT parser documentation
+- **[docs/editor/](./docs/editor/)** — Integrated editor & enhancements
+- **[docs/video/](./docs/video/)** — Video editor & configuration
+- **[docs/dmd/](./docs/dmd/)** — DMD display tracking
+- **[docs/bam/](./docs/bam/)** — B.A.M. animation engine
+- **[docs/polish/](./docs/polish/)** — Graphics & visual enhancements
+- **[docs/phases/](./docs/phases/)** — Historical phase documentation
+- **[docs/performance/](./docs/performance/)** — Performance tuning & analysis
+- **[docs/reviews/](./docs/reviews/)** — Code quality reviews
+- **[docs/security/](./docs/security/)** — Security audits & setup
+- **[docs/testing/](./docs/testing/)** — Testing guide & resources
+- **[docs/user-guides/](./docs/user-guides/)** — Advanced features & file browser
+- **[docs/archive/](./docs/archive/)** — Historical analysis & old summaries
 
 ---
 
@@ -359,7 +340,7 @@ automatically — no other changes needed.
 | `CSC_LINK` / `CSC_KEY_PASSWORD` | Windows + macOS signing certs |
 | `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | macOS notarization |
 
-See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for the full setup.
+   See [docs/guides/DEPLOYMENT_GUIDE.md](./docs/guides/DEPLOYMENT_GUIDE.md) for the full setup.
 
 ---
 
@@ -370,13 +351,24 @@ See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for the full setup.
 src/
 ├── main.ts                      # Game entry point
 ├── window-api.ts                # Typed window global API layer
-├── table.ts                     # Table builder
 ├── game.ts                      # Game state machine
-├── physics/                     # Physics systems
+├── app/                         # Extracted modules
+│   ├── responsive-helpers.ts    # Responsive zoom/FOV helpers
+│   ├── scene-setup.ts           # THREE.js scene/camera/renderer init
+│   ├── post-processing.ts       # EffectComposer + bloom/SSAO/SSR/DOF
+│   └── sync-transport.ts        # Unified frame-paced cross-window sync
+├── table.ts                     # Table builder barrel
+├── table/configs.ts             # Demo table definitions
+├── table/scoring.ts             # Scoring logic
+├── fpt/                         # FPT parser modules
+│   ├── lzo.ts                   # LZO1X decompressor
+│   └── media.ts                 # Image/audio extraction
+├── fpt-parser.ts                # FPT parser (CFB/OLE2 + main parse)
 ├── video-manager.ts             # Video playback system
 ├── integrated-editor.ts         # Table editor
 ├── backglass.ts                 # Backglass renderer
 ├── dmd.ts                       # LED display
+├── file-browser.ts              # File browser (core + UI + advanced)
 ├── types/                       # Type declarations
 │   └── three.d.ts               # Three.js addon types
 └── [other modules]
@@ -387,18 +379,32 @@ public/
 ├── pwa.js                       # PWA manager
 └── icons/                       # App icons
 
+docs/
+├── guides/                      # Quick start, deployment, FAQ
+├── cabinet/                     # Cabinet/rotation/plunger guides
+├── multiscreen/                 # Multi-screen setup
+├── fpt/                         # FPT parser documentation
+├── phases/                      # Phase-based development docs
+└── [other doc categories]
+
+scripts/
+├── installer.js                 # One-shot setup
+├── start-game.js                # Cross-platform launcher
+├── stop-game.js                 # Stop dev server
+└── research/                    # Research & analysis scripts
+
 .github/workflows/
 └── build-release.yml            # CI/CD pipeline
 ```
 
 ### Build Status
-- **Modules**: 60 (optimized)
-- **Build Time**: ~1.1 seconds
+- **Modules**: 56 (optimized)
+- **Build Time**: ~1.0 seconds
 - **TypeScript**: full strict mode ✓ (strict: true)
 - **TypeScript Errors**: 0 ✓
-- **Code Size**: ~27.8K lines
+- **Code Size**: ~39K lines
 - **VBScript Functions**: 179+
-- **Tests**: 582 passing across 20 vitest files
+- **Tests**: 698 passing across 33 vitest files
 - **Git Commits**: 470+
 
 ### Performance
@@ -502,18 +508,16 @@ npm run security:check
 
 ## 📊 Project Statistics
 
-- **Total Source Code**: ~27.8K lines (TypeScript + VBScript)
-- **TypeScript Modules**: 60 (optimized)
-- **TypeScript Files**: 50+
+- **Total Source Code**: ~39K lines (TypeScript)
+- **Source Files**: ~56 (optimized, −25 dead files removed)
 - **TypeScript**: full strict mode (`strict: true`) — 0 errors
 - **VBScript Functions**: 179+ (142+ game API functions)
-- **Graphics Modules**: 15+ (volumetric lighting, cascaded shadows, DOF, particle system, etc.)
+- **Extracted Modules**: 4 in `src/app/`, 2 in `src/table/`, 2 in `src/fpt/`
 - **Supported Tables**: 6 demo tables (themed, progressive difficulty)
 - **Game Events**: 28+ (video-bindable)
-- **Video Events**: 28+ (bumper hit, target, ramp, multiball, drain, etc.)
 - **Git History**: 470+ commits
-- **Development Phases**: 18 completed phases
-- **Documentation Files**: 30+ guides & references
+- **Tests**: 698 across 33 files (+7 new)
+- **Documentation**: organised in `docs/` with 15 subdirectories
 
 ---
 
@@ -635,7 +639,7 @@ MIT License - See LICENSE file for details
 
 **Made with ❤️ by Future Pinball Contributors**
 
-Last Updated: May 27, 2026 | Version 0.20.21 | Strict Mode ✅
+Last Updated: May 31, 2026 | Version 0.20.21 | 698 tests ✅ | 56 modules ✅
 
 ---
 
