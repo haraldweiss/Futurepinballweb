@@ -184,3 +184,9 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 - Changelog updated with FP v1.x legacy format support + plan-doc housekeeping
 - 11 commits since 0.21.0
 - Verified: build succeeds, 732/732 tests, tsc clean, manual smoke on 10_ALIEN
+
+### 2026-05-31 — Cabinet-Deploy 0.22.0
+- Build via `npx electron-builder --win dir --x64` (141 MB ZIP)
+- Per PowerShell deploy via robocopy /MIR an gleichen Pfad
+- EXE: 222.973.952 Bytes, app.asar: 19.162.483 Bytes
+- taskkill fehlgeschlagen (Access Denied — App läuft nicht oder non-admin), robocopy dennoch erfolgreich
