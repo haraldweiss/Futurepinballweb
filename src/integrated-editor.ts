@@ -318,9 +318,9 @@ export class EditorModal {
       fptResources.script = updated;
       try {
         runFPScript(updated);
-        console.log('[ScriptEditor] Script re-loaded, handlers refreshed');
+        if (import.meta.env.DEV) { console.log('[ScriptEditor] Script re-loaded, handlers refreshed'); }
       } catch (err) {
-        console.error('[ScriptEditor] Script reload failed:', err);
+        if (import.meta.env.DEV) { console.error('[ScriptEditor] Script reload failed:', err); }
         alert('Script reload failed: ' + (err as Error).message);
       }
     });
