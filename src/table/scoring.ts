@@ -154,12 +154,13 @@ export function scoreTargetHit(targetData: { x: number; y: number; mesh: any; in
     }
   } else if (pMode === 'countdown') {
     state.targetProgress++;
-    if (state.targetProgress >= (state as any).targetProgressMax || 5) {
+    const targetMax = (state as any).targetProgressMax ?? 5;
+    if (state.targetProgress >= targetMax) {
       state.score += 3000 * state.multiplier;
       targetMsg = '🏆 COUNTDOWN BONUS! +3000!';
       state.targetProgress = 0;
     } else {
-      targetMsg = `🎯 ${state.targetProgress}/${(state as any).targetProgressMax || 5}`;
+      targetMsg = `🎯 ${state.targetProgress}/${targetMax}`;
     }
   }
 
