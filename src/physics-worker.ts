@@ -129,7 +129,7 @@ function initializePhysics(config: any): void {
   targetMap = new Map(config.targetMap ?? []);
   slingshotMap = new Map(config.slingshotMap ?? []);
 
-  console.log('[Physics Worker] Initialized physics world');
+  if (import.meta.env.DEV) { console.log('[Physics Worker] Initialized physics world'); }
 }
 
 /**
@@ -292,7 +292,7 @@ function disposePhysics(): void {
   slingshotMap.clear();
   tableBodies = [];
 
-  console.log('[Physics Worker] Physics world disposed');
+  if (import.meta.env.DEV) { console.log('[Physics Worker] Physics world disposed'); }
 }
 
 // ─── Worker Message Handler ──────────────────────────────────────────────────
@@ -329,10 +329,10 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
       case 'init': {
         // Ensure RAPIER is initialized before setting up physics
         if (!rapierInitialized) {
-          console.log('[Physics Worker] Initializing RAPIER...');
+          if (import.meta.env.DEV) { console.log('[Physics Worker] Initializing RAPIER...'); }
           await RAPIER.init();
           rapierInitialized = true;
-          console.log('[Physics Worker] RAPIER initialized');
+          if (import.meta.env.DEV) { console.log('[Physics Worker] RAPIER initialized'); }
         }
         initializePhysics((params as any).config);
         self.postMessage({ type: 'ready' });
@@ -373,7 +373,7 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
         if (world) {
           world.gravity.x = x;
           world.gravity.y = y;
-          console.log(`[Physics Worker] World gravity → (${x.toFixed(2)}, ${y.toFixed(2)})`);
+          if (import.meta.env.DEV) { console.log(`[Physics Worker] World gravity → (${x.toFixed(2)}, ${y.toFixed(2)})`); }
         }
         break;
       }
@@ -385,14 +385,14 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
       }
 
       default:
-        console.warn(`[Physics Worker] Unknown message type: ${type}`);
+        if (import.meta.env.DEV) { console.warn(`[Physics Worker] Unknown message type: ${type}`); }
     }
   } catch (error) {
-    console.error('[Physics Worker] Error processing message:', error);
+    if (import.meta.env.DEV) { console.error('[Physics Worker] Error processing message:', error); }
     self.postMessage({ type: 'error', error: String(error) });
   }
 };
 
 // Signal ready
 self.postMessage({ type: 'worker-ready' });
-console.log('[Physics Worker] Worker initialized and ready');
+if (import.meta.env.DEV) { console.log('[Physics Worker] Worker initialized and ready'); }

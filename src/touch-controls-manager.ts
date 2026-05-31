@@ -37,7 +37,7 @@ export class TouchControlsManager {
   constructor() {
     this.setupTouchZones();
     this.setupEventListeners();
-    console.log('[Touch Controls] ✓ Initialized');
+    if (import.meta.env.DEV) { console.log('[Touch Controls] ✓ Initialized'); }
   }
 
   /**
@@ -71,10 +71,7 @@ export class TouchControlsManager {
       height: h * 0.35,
     };
 
-    console.log('[Touch] Zones configured:',
-      `Flipper-L: ${this.leftFlipperZone.width}x${this.leftFlipperZone.height}px`,
-      `Flipper-R: ${this.rightFlipperZone.width}x${this.rightFlipperZone.height}px`,
-      `Plunger: ${this.plungerZone.width}x${this.plungerZone.height}px`);
+    if (import.meta.env.DEV) { console.log('[Touch] Zones configured:',`Flipper-L: ${this.leftFlipperZone.width}x${this.leftFlipperZone.height}px`,`Flipper-R: ${this.rightFlipperZone.width}x${this.rightFlipperZone.height}px`,`Plunger: ${this.plungerZone.width}x${this.plungerZone.height}px`); }
   }
 
   /**
