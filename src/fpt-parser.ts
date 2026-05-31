@@ -93,7 +93,7 @@ export async function parseCFBResources(
     // Classify entry
     if (/script|code|vbs/i.test(nameL) || name === 'TableScript' || name === 'Script') {
       scriptEntries.push({ name, bytes });
-    } else if (/image|texture|playfield|table|backdrop|translite/i.test(nameL)) {
+    } else if (/image|texture|playfield|backdrop|translite/i.test(nameL)) {
       textureEntries.push({ name, bytes });
     } else if (/sound|music|sfx|wav|ogg|audio/i.test(nameL)) {
       soundEntries.push({ name, bytes });
