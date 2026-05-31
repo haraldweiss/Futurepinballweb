@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { getAudioCtx } from '../audio-system';
 import { tryLZOExtract } from './lzo';
+import { extractEmbeddedPayload } from './legacy-container';
 
 export function detectImageMime(buf: Uint8Array, off = 0): string | null {
   if (buf.length < off + 4) return null;
@@ -105,6 +106,17 @@ export function scanForImageMagic(bytes: Uint8Array, maxScan = 4096): { mime: st
 }
 
 export async function extractImageFromBytes(bytes: Uint8Array): Promise<THREE.Texture | null> {
+  const embedded = extractEmbeddedPayload(bytes);
+  if (embedded && embedded.kind !== 'unknown') {
+    const mime = embedded.kind === 'bmp' ? 'image/bmp'
+               : embedded.kind === 'jpeg' ? 'image/jpeg'
+               : embedded.kind === 'png' ? 'image/png'
+               : embedded.kind === 'gif' ? 'image/gif'
+               : null;
+    if (mime) {
+      try { return await bytesToTexture(embedded.payload, mime); } catch (e) { console.debug('[fpt] Legacy image decode retry:', (e || 'unknown')); }
+    }
+  }
   const found = scanForImageMagic(bytes);
   if (found) {
     try { return await bytesToTexture(bytes.slice(found.off), found.mime); } catch (e) { console.debug('[fpt] Image decode retry:', (e || 'unknown')); }
@@ -146,6 +158,11 @@ export async function extractSoundFromBytes(
     const ab = slice.buffer.slice(slice.byteOffset, slice.byteOffset + slice.byteLength);
     return ctx.decodeAudioData(ab as ArrayBuffer);
   };
+
+  const embedded = extractEmbeddedPayload(bytes);
+  if (embedded && (embedded.kind === 'ogg' || embedded.kind === 'wav')) {
+    try { return await tryDecode(embedded.payload); } catch (e) { console.debug('[fpt] Legacy audio decode retry:', (e || 'unknown')); }
+  }
 
   const estimatedSize = estimateAudioSize(bytes);
   const shouldStream = allowStreaming && estimatedSize > maxUncompressedSize;
