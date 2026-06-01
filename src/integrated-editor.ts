@@ -22,6 +22,8 @@ import { PropertyModal } from './editor/property-modal';
 import { ScriptEditorModal } from './editor/script-editor-modal';
 import { showTableSelector } from './table-selector';
 import { escapeHtml } from './utils/html-escape';
+import { gToC, cToG, snap } from './editor/editor-coords';
+import { getEditorModalHTML } from './editor/editor-modal-html';
 import { fptResources, fptRawBytes, currentTableConfig } from './game';
 import { serializeFPT } from './fpt-writer';
 import { runFPScript } from './script-engine';
@@ -428,8 +430,8 @@ export class EditorModal {
       // Modal doesn't exist in HTML, create it
       this.modal.id = 'editor-modal';
       this.modal.className = 'editor-modal hidden';
-      // eslint-disable-next-line no-unsanitized/property -- getModalHTML() returns a static internal template
-      this.modal.innerHTML = this.getModalHTML();
+      // eslint-disable-next-line no-unsanitized/property — static internal template
+      this.modal.innerHTML = getEditorModalHTML(escapeHtml(this.currentTableConfig?.name || 'Table'));
       document.body.appendChild(this.modal);
     }
 
@@ -443,103 +445,7 @@ export class EditorModal {
   /**
    * Get modal HTML structure
    */
-  private getModalHTML(): string {
-    const tableName = escapeHtml(this.currentTableConfig?.name || 'Table');
-    return `
-      <div class="editor-modal-header">
-        <div class="header-top">
-          <h2>📝 Table Editor: ${tableName}</h2>
-          <button class="modal-close" title="Close editor">✕</button>
-        </div>
-        <div class="tab-navigation">
-          <button class="tab-btn active" data-tab="playfield" title="Edit playfield">⊞ Playfield</button>
-          <button class="tab-btn" data-tab="backglass" title="Edit backglass">🖼️ Backglass</button>
-          <button class="tab-btn" data-tab="dmd" title="Edit DMD">🔲 DMD</button>
-          <button class="tab-btn" data-tab="video" title="Manage videos">🎬 Videos</button>
-          <button class="tab-btn" data-tab="assets" title="Browse assets">📦 Assets</button>
-        </div>
-      </div>
 
-      <div class="editor-modal-content">
-        <!-- TAB 1: Playfield Editor -->
-        <div id="tab-playfield" class="editor-tab active">
-          <div class="editor-2d-panel">
-            <div class="editor-toolbar">
-              <button class="tool-btn active" data-tool="select" title="Select (S)">⊹</button>
-              <button class="tool-btn" data-tool="bumper" title="Bumper (B)">●</button>
-              <button class="tool-btn" data-tool="target" title="Target (T)">▪</button>
-              <button class="tool-btn" data-tool="ramp" title="Ramp (R)">╱</button>
-              <hr>
-              <button class="tool-btn snap-btn active" title="Toggle snap">⊞ SNAP</button>
-              <button class="tool-btn clear-btn" title="Clear all">🗑</button>
-              <hr>
-              <button class="tool-btn load-fpt-btn" title="Load FPT file">📂 FPT</button>
-              <input type="file" id="fpt-file-input" accept=".fpt,.fp" style="display:none">
-            </div>
-
-            <div class="editor-canvas-wrap">
-              <canvas id="integrated-editor-canvas" width="400" height="800"></canvas>
-            </div>
-
-            <div class="editor-properties">
-              <div class="prop-group">
-                <label>Table Name:</label>
-                <input type="text" id="prop-name" class="prop-input" placeholder="Table name">
-              </div>
-              <div class="prop-group">
-                <label>Table Color:</label>
-                <input type="color" id="prop-color" class="prop-color">
-              </div>
-              <div class="prop-group">
-                <label>Accent Color:</label>
-                <input type="color" id="prop-accent" class="prop-color">
-              </div>
-              <div class="prop-group">
-                <small id="elem-count">Elements: 0</small>
-              </div>
-            </div>
-          </div>
-
-          <div class="editor-3d-panel">
-            <div class="preview-label">3D Preview (Top-Down)</div>
-            <canvas id="editor-3d-canvas" width="400" height="800"></canvas>
-            <div class="preview-info">
-              <small>Real-time preview updates as you edit</small>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB 2: Backglass Editor -->
-        <div id="tab-backglass" class="editor-tab hidden">
-          <div class="backglass-editor-container"></div>
-        </div>
-
-        <!-- TAB 3: DMD Editor -->
-        <div id="tab-dmd" class="editor-tab hidden">
-          <div class="dmd-editor-container"></div>
-        </div>
-
-        <!-- TAB 4: Video Manager -->
-        <div id="tab-video" class="editor-tab hidden">
-          <div class="video-editor-container"></div>
-        </div>
-
-        <!-- TAB 5: Asset Browser -->
-        <div id="tab-assets" class="editor-tab hidden">
-          <div class="assets-editor-container"></div>
-        </div>
-      </div>
-
-      <div class="editor-modal-footer">
-        <button class="btn-save-fpt" onclick="(window as any).getIntegratedEditor?.().saveFPT?.('sidecar')">💾 Save (.edited)</button>
-        <button class="btn-save-fpt-overwrite" onclick="(window as any).getIntegratedEditor?.().saveFPT?.('overwrite')">💾 Save As / Overwrite...</button>
-        <button class="btn-apply" onclick="(window as any).getIntegratedEditor?.().applyChanges?.()">✓ Apply & Save</button>
-        <button class="btn-discard" onclick="(window as any).getIntegratedEditor?.().discardChanges?.()">✕ Discard</button>
-        <button class="btn-switch-table" onclick="(window as any).getIntegratedEditor?.().switchTable?.()">⇨ Switch Table</button>
-        <button class="btn-script" onclick="(window as any).getIntegratedEditor?.().openScriptEditor?.()">📝 Script</button>
-      </div>
-    `;
-  }
 
   /**
    * Setup canvas and attach event listeners
@@ -565,7 +471,8 @@ export class EditorModal {
         toolBtns.forEach(b => b.classList.remove('active'));
         (e.target as HTMLElement).classList.add('active');
         const tool = (btn as HTMLElement).dataset.tool as ToolType;
-        this.setTool(tool);
+        this.tool = tool;
+        this.rampStart = null;
       });
     });
 
@@ -762,40 +669,6 @@ export class EditorModal {
   /**
    * Convert game coordinates to canvas coordinates
    */
-  private gToC(gx: number, gy: number): { x: number; y: number } {
-    if (!this.canvas) return { x: 0, y: 0 };
-    return {
-      x: (gx + this.GW / 2) * (this.canvas.width / this.GW),
-      y: (this.GH / 2 - gy) * (this.canvas.height / this.GH),
-    };
-  }
-
-  /**
-   * Convert canvas coordinates to game coordinates
-   */
-  private cToG(cx: number, cy: number): { x: number; y: number } {
-    if (!this.canvas) return { x: 0, y: 0 };
-    return {
-      x: cx * (this.GW / this.canvas.width) - this.GW / 2,
-      y: this.GH / 2 - cy * (this.GH / this.canvas.height),
-    };
-  }
-
-  /**
-   * Snap coordinate to grid
-   */
-  private snap(v: number): number {
-    return this.snapEnabled ? Math.round(v * 5) / 5 : v;
-  }
-
-  /**
-   * Set active tool
-   */
-  private setTool(tool: ToolType): void {
-    this.tool = tool;
-    this.rampStart = null;
-  }
-
   /**
    * Render the editor canvas
    */
@@ -826,7 +699,7 @@ export class EditorModal {
     }
 
     // Drain line
-    const drainY = this.gToC(0, -5.5).y;
+    const drainY = gToC(0, -5.5, this.canvas, this.GW, this.GH).y;
     ctx.strokeStyle = 'rgba(255,60,60,0.35)';
     ctx.lineWidth = 1;
     ctx.setLineDash([5, 5]);
@@ -841,7 +714,7 @@ export class EditorModal {
 
     // Ramp start preview
     if (this.tool === 'ramp' && this.rampStart) {
-      const p = this.gToC(this.rampStart.x, this.rampStart.y);
+      const p = gToC(this.rampStart.x, this.rampStart.y, this.canvas, this.GW, this.GH);
       ctx.fillStyle = `#${  (`000000${  this.COLORS[this.colorIdx].toString(16)}`).slice(-6)}`;
       ctx.beginPath();
       ctx.arc(p.x, p.y, 7, 0, Math.PI * 2);
@@ -858,7 +731,7 @@ export class EditorModal {
     const color = `#${  (`000000${  el.color.toString(16)}`).slice(-6)}`;
 
     if (el.type === 'bumper') {
-      const p = this.gToC(el.x, el.y);
+      const p = gToC(el.x, el.y, this.canvas, this.GW, this.GH);
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(p.x, p.y, 12, 0, Math.PI * 2);
@@ -869,7 +742,7 @@ export class EditorModal {
         ctx.stroke();
       }
     } else if (el.type === 'target') {
-      const p = this.gToC(el.x, el.y);
+      const p = gToC(el.x, el.y, this.canvas, this.GW, this.GH);
       ctx.fillStyle = color;
       ctx.fillRect(p.x - 10, p.y - 10, 20, 20);
       if (selected) {
@@ -878,8 +751,8 @@ export class EditorModal {
         ctx.strokeRect(p.x - 10, p.y - 10, 20, 20);
       }
     } else if (el.type === 'ramp') {
-      const p1 = this.gToC(el.x1, el.y1);
-      const p2 = this.gToC(el.x2, el.y2);
+      const p1 = gToC(el.x1, el.y1, this.canvas, this.GW, this.GH);
+      const p2 = gToC(el.x2, el.y2, this.canvas, this.GW, this.GH);
       ctx.strokeStyle = color;
       ctx.lineWidth = 8;
       ctx.lineCap = 'round';
@@ -904,14 +777,14 @@ export class EditorModal {
 
     if (this.isDragging && this.selectedIdx >= 0) {
       const el = this.elements[this.selectedIdx];
-      const g = this.cToG(cx - this.dragOffX, cy - this.dragOffY);
+      const g = cToG(cx - this.dragOffX, cy - this.dragOffY, this.canvas, this.GW, this.GH);
 
       if (el.type === 'bumper' || el.type === 'target') {
-        el.x = this.snap(g.x);
-        el.y = this.snap(g.y);
+        el.x = snap(g.x, this.snapEnabled);
+        el.y = snap(g.y, this.snapEnabled);
       } else if (el.type === 'ramp') {
-        el.x2 = this.snap(g.x);
-        el.y2 = this.snap(g.y);
+        el.x2 = snap(g.x, this.snapEnabled);
+        el.y2 = snap(g.y, this.snapEnabled);
       }
 
       this.updateEditor();
@@ -931,8 +804,8 @@ export class EditorModal {
       this.selectedIdx = idx;
       this.isDragging = true;
 
-      const p = this.gToC(el.type === 'bumper' || el.type === 'target' ? el.x : el.x2,
-                         el.type === 'bumper' || el.type === 'target' ? el.y : el.y2);
+      const p = gToC(el.type === 'bumper' || el.type === 'target' ? el.x : el.x2,
+                         el.type === 'bumper' || el.type === 'target' ? el.y : el.y2, this.canvas, this.GW, this.GH);
       this.dragOffX = cx - p.x;
       this.dragOffY = cy - p.y;
 
@@ -950,7 +823,7 @@ export class EditorModal {
    * Iterates top-to-bottom (last-placed first) to match selection priority.
    */
   private pickElementAt(cx: number, cy: number): number {
-    const g = this.cToG(cx, cy);
+    const g = cToG(cx, cy, this.canvas, this.GW, this.GH);
     for (let i = this.elements.length - 1; i >= 0; i--) {
       const el = this.elements[i];
       let dist = 999;
@@ -990,25 +863,25 @@ export class EditorModal {
     const rect = this.canvas.getBoundingClientRect();
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
-    const g = this.cToG(cx, cy);
+    const g = cToG(cx, cy, this.canvas, this.GW, this.GH);
 
     if (this.tool === 'bumper') {
-      this.elements.push({ type: 'bumper', x: this.snap(g.x), y: this.snap(g.y), color: this.COLORS[this.colorIdx] });
+      this.elements.push({ type: 'bumper', x: snap(g.x, this.snapEnabled), y: snap(g.y, this.snapEnabled), color: this.COLORS[this.colorIdx] });
       this.updateEditor();
     } else if (this.tool === 'target') {
-      this.elements.push({ type: 'target', x: this.snap(g.x), y: this.snap(g.y), color: this.COLORS[this.colorIdx] });
+      this.elements.push({ type: 'target', x: snap(g.x, this.snapEnabled), y: snap(g.y, this.snapEnabled), color: this.COLORS[this.colorIdx] });
       this.updateEditor();
     } else if (this.tool === 'ramp') {
       if (!this.rampStart) {
-        this.rampStart = { x: this.snap(g.x), y: this.snap(g.y) };
+        this.rampStart = { x: snap(g.x, this.snapEnabled), y: snap(g.y, this.snapEnabled) };
         this.render();
       } else {
         this.elements.push({
           type: 'ramp',
           x1: this.rampStart.x,
           y1: this.rampStart.y,
-          x2: this.snap(g.x),
-          y2: this.snap(g.y),
+          x2: snap(g.x, this.snapEnabled),
+          y2: snap(g.y, this.snapEnabled),
           color: this.COLORS[this.colorIdx],
         });
         this.rampStart = null;
