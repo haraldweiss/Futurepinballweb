@@ -2690,7 +2690,8 @@ const loadDemoTable = async (key: string) => {
 // see window-api.ts — loadDemoTable
 
 const closeLoader = async () => {
-  (document.getElementById('loader-modal') as HTMLElement).style.display='none';
+  const el = document.getElementById('loader-modal');
+  if (el) el.style.display = 'none';
 };
 // see window-api.ts — closeLoader
 
@@ -4329,11 +4330,10 @@ if (FPW_ROLE === 'dmd') {
     initializePhysicsWorker().catch(() => {});
     setDevFlag('INIT_PHYSICS_WORKER_OK', true);
 
-    // Skip initial table load during startup - let user select from loader
-    if (import.meta.env.DEV) {
-      console.log('[INIT] Skipping initial table load - showing loader');
-      setDevFlag('INIT_TABLE_LOAD_OK', true);
-    }
+    // Auto-load a demo table on startup (Pharaoh's Gold — medium difficulty)
+    setDevFlag('INIT_TABLE_LOAD_START', true);
+    await loadDemoTable('pharaoh');
+    setDevFlag('INIT_TABLE_LOAD_OK', true);
 
     // Initialize B.A.M. Engine (after table is loaded and currentTableConfig is set)
     if (import.meta.env.DEV) {
