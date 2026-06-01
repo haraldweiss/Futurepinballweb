@@ -31,6 +31,8 @@ export interface DebugWindow {
   INIT_IN_ASYNC_IIFE?:        boolean;
   INIT_PHYSICS_START?:        boolean;
   INIT_PHYSICS_OK?:           boolean;
+  INIT_PHYSICS_WORKER_START?: boolean;
+  INIT_PHYSICS_WORKER_OK?:    boolean;
   INIT_PHYSICS_ERROR?:        string;
   INIT_TABLE_LOAD_OK?:        boolean;
   INIT_BAM_ENGINE_START?:     boolean;

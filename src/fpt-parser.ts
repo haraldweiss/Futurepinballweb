@@ -7,12 +7,12 @@ import * as THREE from 'three';
 import * as CFB from 'cfb';
 import { fptResources, fptRawBytes, resetFPTRawBytes, globalAssetCatalog, setGlobalAssetCatalog } from './game';
 import { AssetCatalog } from './assets/asset-catalog';
-import { playFPTMusic } from './audio-system';
+import { getAudioCtx, playFPTMusic } from './audio-system';
 import { runFPScript } from './script-engine';
-import { lzo1xDecompress } from './fpt/lzo';
+import { lzo1xDecompress, tryLZOExtract } from './fpt/lzo';
 import {
-  _detectImageMime, _detectAudioMime,
-  _bytesToTexture, _scanForImageMagic, extractImageFromBytes,
+  detectImageMime, detectAudioMime,
+  bytesToTexture, scanForImageMagic, extractImageFromBytes,
   extractSoundFromBytes,
 } from './fpt/media';
 import { extractTableCoordsFromCFB } from './fpt/table-elements';
