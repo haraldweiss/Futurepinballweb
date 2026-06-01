@@ -45,12 +45,13 @@ self.addEventListener('fetch', evt => {
       caches.match(req).then(cached => {
         if (cached) return cached;
         return fetch(req).then(r => {
-          // Only cache successful same-origin responses
           if (r.ok && r.type !== 'opaque') {
             caches.open(CACHE).then(c => c.put(req, r.clone()));
           }
           return r;
         });
+      }).catch(() => {
+        // Silently fail — Vite dev server HMR URLs are not cacheable
       })
     );
   }

@@ -4452,9 +4452,17 @@ if (FPW_ROLE === 'dmd') {
 
 // ─── PWA: Service Worker + Install Prompt ─────────────────────────────────────
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {/* ignore in dev */});
-  });
+  if (import.meta.env.DEV) {
+    // In dev mode, unregister any leftover service worker that would
+    // block Vite's HMR websocket and virtual module URLs.
+    navigator.serviceWorker.getRegistrations().then(regs =>
+      regs.forEach(r => r.unregister())
+    );
+  } else {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js');
+    });
+  }
 }
 
 let _installPrompt: BeforeInstallPromptEvent | null = null;
