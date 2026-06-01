@@ -1,4 +1,4 @@
-.fpw-config.json
+fpw-config.json
 src/public/fpw-config.json
 .fpw-server.pid
 node_modules/
