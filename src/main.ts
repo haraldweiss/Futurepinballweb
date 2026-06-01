@@ -13,6 +13,7 @@ if ('serviceWorker' in navigator) {
  * main.ts — Einstiegspunkt: Scene, Physik, Game-Loop, Input, UI, Multiscreen
  */
 import * as THREE from 'three';
+import { devLog } from './utils/dev-log';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -215,38 +216,31 @@ function applyPhysicsGravityForRotation(deg: 0 | 90 | 180 | 270): void {
   }
 }
 
-// Runtime gravity tester — call from DevTools console.
-(window as any).testGravity = (x: number, y: number) => {
-  const bridge = getPhysicsWorker();
-  if (!bridge) {
-    console.warn('[testGravity] physics worker not ready');
-    return;
-  }
-  bridge.setWorldGravity?.(x, y);
-  if (import.meta.env.DEV) { console.log(`[testGravity] world gravity set to (${x}, ${y})`); }
-};
+if (import.meta.env.DEV) {
+  // Runtime gravity tester — call from DevTools console.
+  (window as any).testGravity = (x: number, y: number) => {
+    const bridge = getPhysicsWorker();
+    if (!bridge) {
+      console.warn('[testGravity] physics worker not ready');
+      return;
+    }
+    bridge.setWorldGravity?.(x, y);
+    console.log(`[testGravity] world gravity set to (${x}, ${y})`);
+  };
 
-// Force-set the score to bypass the physics/bumper chain — used to isolate
-// "does the cross-window state bridge work?" from "does the ball actually
-// hit bumpers?". Call from playfield DevTools:
-//   forceScore(123456)   // sets state.score, then dmdState.mode = 'playing'
-// If after this call DMD/Backglass display 123456, the bridge is fine and
-// the only remaining issue is the physics not letting the ball score.
-// If they still show 0, there's a separate render bug to chase.
-(window as any).forceScore = (n: number) => {
-  state.score = n;
-  state.ballNum = Math.max(1, state.ballNum);
-  state.multiplier = Math.max(1, state.multiplier);
-  // Push DMD into 'playing' so dmdRenderPlaying displays the score
-  if (dmdState.mode === 'attract') dmdState.mode = 'playing';
-  if (import.meta.env.DEV) { console.log(`[forceScore] state.score = ${n}, dmdState.mode = ${dmdState.mode}`); }
-  if (import.meta.env.DEV) { console.log(`              expecting Backglass + DMD windows to show ${n} within 1 frame`); }
-};
+  // Force-set the score — call from playfield DevTools to test cross-window bridge
+  (window as any).forceScore = (n: number) => {
+    state.score = n;
+    state.ballNum = Math.max(1, state.ballNum);
+    state.multiplier = Math.max(1, state.multiplier);
+    if (dmdState.mode === 'attract') dmdState.mode = 'playing';
+    console.log(`[forceScore] state.score = ${n}, dmdState.mode = ${dmdState.mode}`);
+    console.log(`              expecting Backglass + DMD windows to show ${n} within 1 frame`);
+  };
 
-// Debug: dump current state diagnostics
-(window as any).dumpState = () => {
-  const diag = (window as any)._msDiag || {};
-  if (import.meta.env.DEV) {
+  // Debug: dump current state diagnostics
+  (window as any).dumpState = () => {
+    const diag = (window as any)._msDiag || {};
     console.log('=== STATE DIAGNOSTICS ===');
     console.log(`state.score = ${state.score}`);
     console.log(`state.ballNum = ${state.ballNum}`);
@@ -547,7 +541,7 @@ const aspectRatio = innerWidth / innerHeight;
 
 // ─── Phase 2: Initialize Advanced Lighting System ───────────────────────────────
 advancedLightingSystem = getAdvancedLighting(scene);
-console.log('✓ Advanced lighting system initialized');
+devLog('✓ Advanced lighting system initialized');
 
 // ─── Phase 4: Initialize Backglass Renderer ────────────────────────────────────
 // Create backglass with responsive dimensions
@@ -555,18 +549,18 @@ const backglassSize = getBackglassSize();
 const backglassWidth = backglassSize.displayWidth;
 const backglassHeight = backglassSize.displayHeight;
 backglassRenderer = getBackglassRenderer(backglassWidth, backglassHeight);
-console.log('✓ Backglass renderer initialized');
+devLog('✓ Backglass renderer initialized');
 
 // ─── Phase 9: Initialize Score Display Manager ──────────────────────────────────
 scoreDisplayManager = new ScoreDisplayManager(scene);
-console.log('✓ Score display manager initialized');
+devLog('✓ Score display manager initialized');
 
 // ─── Phase 9: Initialize Visual Polish System ──────────────────────────────────
 let visualPolishSystem: VisualPolishSystem | null = null;
 
 requestAnimationFrame(function initViewSettingsAndVisuals() {
   visualPolishSystem = new VisualPolishSystem(scene, camera);
-  console.log('✓ Visual polish system initialized');
+  devLog('✓ Visual polish system initialized');
   initViewSettings();
   
   // ─── Phase 1 Security: Initialize Event Handlers (CSP-compliant) ───
@@ -576,7 +570,7 @@ requestAnimationFrame(function initViewSettingsAndVisuals() {
     // ─── Phase 25: Initialize Sound Manager for audio feedback ───
     try {
       const soundMgr = await getSoundManager();
-      console.log('[Sound Manager] ✓ Initialized');
+      devLog('[Sound Manager] ✓ Initialized');
       if (soundMgr.isEnabled()) {
         setTimeout(() => soundMgr.playSound('scoreUp'), 100);
       }
@@ -616,7 +610,7 @@ requestAnimationFrame(function initViewSettingsAndVisuals() {
           }
         });
         
-        console.log('[Touch Controls] ✓ Initialized & bound to game');
+        devLog('[Touch Controls] ✓ Initialized & bound to game');
         showNotification('📱 Touch controls enabled');
       } catch (e) {
         console.warn('[Touch Controls] Initialization failed:', e);
@@ -643,7 +637,7 @@ applyProfileRotation(activeCabinetProfile);
   const savedRot = loadSavedRotation();
   if (savedRot !== null && savedRot !== 0) {
     setTimeout(() => {
-      console.log(`🎮 Restoring saved playfield rotation: ${savedRot}°`);
+      devLog(`🎮 Restoring saved playfield rotation: ${savedRot}°`);
       void rotateAndRedraw(savedRot, 0);
     }, 1500);
   }
@@ -741,7 +735,7 @@ const partMat = new THREE.PointsMaterial({
 });
 const partMesh = new THREE.Points(partGeo, partMat);
 scene.add(partMesh);
-console.log(`✓ Particle System: MAX_PARTS=${MAX_PARTS}`);
+devLog(`✓ Particle System: MAX_PARTS=${MAX_PARTS}`);
 
 function spawnParticles(wx: number, wy: number, hexColor: number, count = 14): void {
   // Adaptive spawn: reduce particles on low FPS
@@ -1056,7 +1050,7 @@ function applyEnhancedVisualsToTable(sceneTarget: THREE.Scene): void {
     }
   });
 
-  console.log('✓ Enhanced visuals applied to table');
+  devLog('✓ Enhanced visuals applied to table');
 }
 
 // ─── Phase 15: Helper function to load table with physics worker ────────────────
@@ -1656,7 +1650,7 @@ const changeCabinetProfile = (profileId: string) => {
     // ─── Phase 10+ Task 5: Also apply input mapping ───
     applyInputMapping(profile);
     showNotification(`🎮 Cabinet profile: ${profile.name}`);
-    console.log(`✓ Cabinet profile changed to: ${profile.name}`);
+    devLog(`✓ Cabinet profile changed to: ${profile.name}`);
   } else {
     showNotification(`❌ Cabinet profile not found: ${profileId}`);
   }
@@ -1774,7 +1768,7 @@ document.addEventListener('keydown', e => {
     // ─── Phase 5: Toggle profiler display ───
     showProfiler = !showProfiler;
     localStorage.setItem('fpw_show_profiler', showProfiler.toString());
-    console.log(`📊 Performance profiler: ${showProfiler ? 'ON' : 'OFF'}`);
+    devLog(`📊 Performance profiler: ${showProfiler ? 'ON' : 'OFF'}`);
   }
 
   // ─── Arcade Mode: Player Start & Coin Input ───
@@ -2575,7 +2569,7 @@ function drawInlineBackglass(): void {
   const dY=H*0.74, dH=H*0.23, dW=W*0.86, dX=W*0.07;
   ctx.fillStyle='#050200'; ctx.strokeStyle='#5a2200'; ctx.lineWidth=2;
   ctx.beginPath();
-  if ((ctx as any).roundRect) (ctx as any).roundRect(dX,dY,dW,dH,5); else ctx.rect(dX,dY,dW,dH);
+  if (ctx.roundRect) ctx.roundRect(dX,dY,dW,dH,5); else ctx.rect(dX,dY,dW,dH);
   ctx.fill(); ctx.stroke();
   if (dmdCanvas) { ctx.save(); ctx.globalAlpha=0.92; ctx.drawImage(dmdCanvas,dX+4,dY+4,dW-8,dH-8); ctx.restore(); }
 }
@@ -3141,7 +3135,7 @@ const initDMDVisibility = () => {
   // If multi-screen mode with dedicated DMD, and this is NOT the DMD window, hide it
   if (layout.screenCount > 1 && hasDedicatedDMD && FPW_ROLE !== 'dmd') {
     _dmdHidden = true;
-    console.log(`🎮 Multi-screen mode detected: DMD hidden on ${FPW_ROLE || 'playfield'} window`);
+    devLog(`🎮 Multi-screen mode detected: DMD hidden on ${FPW_ROLE || 'playfield'} window`);
   }
 };
 
@@ -3467,19 +3461,19 @@ async function openMultiscreenWindow(
 
 // ─── Helper function to open windows with verification ───
 function openMultiScreenWindow(url: string, name: string, features: string, role: string): Window | null {
-  console.log(`🪟 Opening ${role} window: ${url}`);
+  devLog(`🪟 Opening ${role} window: ${url}`);
   try {
     const win = window.open(url, name, features);
     if (win) {
       _msWindowStatus[role] = { opened: true, verified: false };
-      console.log(`✓ ${role} window opened successfully`);
+      devLog(`✓ ${role} window opened successfully`);
 
       // Verify window loaded after delay
       setTimeout(() => {
         try {
           if (!win.closed && win.document && win.document.readyState === 'complete') {
             _msWindowStatus[role].verified = true;
-            console.log(`✓ ${role} window verified - fully loaded`);
+            devLog(`✓ ${role} window verified - fully loaded`);
           } else {
             console.warn(`⚠ ${role} window opened but may not be fully loaded yet`);
           }
@@ -3581,9 +3575,9 @@ const applyMsLayout = async () => {
 
   // Try to get available screens (Phase 4: uses Electron IPC if available)
   const screens: ScreenLike[] = await getAllScreensForLayout();
-  console.log(`📺 Screen API detected: ${screens.length} screens found`);
+  devLog(`📺 Screen API detected: ${screens.length} screens found`);
   screens.forEach((s, i) => {
-    console.log(`  Screen ${i}: ${s.availWidth}x${s.availHeight} @ (${s.availLeft},${s.availTop})${s.isPrimary ? ' [PRIMARY]' : ''}`);
+    devLog(`  Screen ${i}: ${s.availWidth}x${s.availHeight} @ (${s.availLeft},${s.availTop})${s.isPrimary ? ' [PRIMARY]' : ''}`);
   });
 
   if(_msLayout===1){
@@ -3612,7 +3606,7 @@ const applyMsLayout = async () => {
     const bgScreenIdx = bgConfig?.screenIndex ?? 1;
     const dmdScreenIdx = dmdConfig?.screenIndex ?? 2;
 
-    console.log(`🎮 3-Screen Mode: Backglass on screen ${bgScreenIdx + 1}, DMD on screen ${dmdScreenIdx + 1}. Detected ${screens.length} physical screens`);
+    devLog(`🎮 3-Screen Mode: Backglass on screen ${bgScreenIdx + 1}, DMD on screen ${dmdScreenIdx + 1}. Detected ${screens.length} physical screens`);
 
     if(screens.length >= 3) {
       // Backglass on assigned screen
@@ -3626,7 +3620,7 @@ const applyMsLayout = async () => {
       if (dmdScreenIdx < screens.length) {
         const dmdScreen = screens[dmdScreenIdx];
         const xdmd = dmdScreen.availLeft, ydmd = dmdScreen.availTop, wdmd = dmdScreen.availWidth, hdmd = dmdScreen.availHeight;
-        console.log(`✓ Opening DMD on Screen ${dmdScreenIdx + 1}: ${wdmd}x${hdmd} at (${xdmd},${ydmd})`);
+        devLog(`✓ Opening DMD on Screen ${dmdScreenIdx + 1}: ${wdmd}x${hdmd} at (${xdmd},${ydmd})`);
         _msWindows['dmd']=await openMultiscreenWindow(`${base}?role=dmd`,'fpw_dmd', xdmd, ydmd, wdmd, hdmd, 'dmd');
         if (!_msWindows['dmd']) {
           console.warn('⚠ Detailed positioning failed, trying basic openMultiscreenWindow()');
@@ -3644,9 +3638,9 @@ const applyMsLayout = async () => {
       const screen2 = screens[1];
       const x = screen2.availLeft, y = screen2.availTop, w = screen2.availWidth, h = screen2.availHeight;
       _msWindows['backglass']=await openMultiscreenWindow(`${base}?role=backglass&nodmd=1`,'fpw_backglass', x, y, w, h, 'backglass');
-      console.log(`✓ Backglass opened on Screen 2`);
+      devLog(`✓ Backglass opened on Screen 2`);
       _msWindows['dmd']=await openMultiscreenWindow(`${base}?role=dmd`,'fpw_dmd', x, y, w, h, 'dmd');
-      console.log(`✓ DMD opened on Screen 2`);
+      devLog(`✓ DMD opened on Screen 2`);
       showNotification('3-Screen-Modus mit 2 Bildschirmen: Backglass+DMD auf Screen 2');
     } else {
       // Fallback for single screen: manual arrangement
@@ -3828,7 +3822,7 @@ function drawBGCanvas(canvas: HTMLCanvasElement, bgState: any, showEmbedDMD: boo
   if(showEmbedDMD&&dmdCanvas){
     const dY=H*0.72,dH=H*0.25,dW=W*0.86,dX=W*0.07;
     ctx.fillStyle='#050200';ctx.strokeStyle='#5a2200';ctx.lineWidth=2;
-    ctx.beginPath();if((ctx as any).roundRect)(ctx as any).roundRect(dX,dY,dW,dH,6);else ctx.rect(dX,dY,dW,dH);
+    ctx.beginPath();if(ctx.roundRect)ctx.roundRect(dX,dY,dW,dH,6);else ctx.rect(dX,dY,dW,dH);
     ctx.fill();ctx.stroke();ctx.save();ctx.globalAlpha=0.92;ctx.drawImage(dmdCanvas,dX+4,dY+4,dW-8,dH-8);ctx.restore();
   }
 }
@@ -4367,13 +4361,13 @@ if (FPW_ROLE === 'dmd') {
           const seqId = loadedCount + 1;
           bamSequencer.loadSequence(seqId, JSON.stringify(sequence));
           loadedCount++;
-          console.log(`📽️ Animation loaded: "${name}" (ID: ${seqId})`);
+          devLog(`📽️ Animation loaded: "${name}" (ID: ${seqId})`);
         } catch (e: any) {
           console.warn(`⚠️ Failed to load animation "${name}": ${e.message}`);
         }
       }
       if (loadedCount > 0) {
-        console.log(`✅ ${loadedCount} animation(s) loaded into BAM engine`);
+        devLog(`✅ ${loadedCount} animation(s) loaded into BAM engine`);
       }
     }
     setDevFlag('INIT_ANIM_LOAD_OK', true);
@@ -4445,7 +4439,7 @@ if (FPW_ROLE === 'dmd') {
             const screens = await getAllScreensForLayout();
             const n = screens.length;
             const target = n >= 3 ? 3 : n === 2 ? 2 : 1;
-            console.log(`🚀 Auto-multiscreen on startup: ${n} displays detected → applying ${target}-screen layout (disable via localStorage.setItem('fpw_ms_autostart','off'))`);
+            devLog(`🚀 Auto-multiscreen on startup: ${n} displays detected → applying ${target}-screen layout (disable via localStorage.setItem('fpw_ms_autostart','off'))`);
             window.selectMsLayout?.(target);
             if (target > 1) {
               await window.applyMsLayout?.();
@@ -4491,7 +4485,7 @@ function installPWA() {
 const setQualityPreset = (name: string) => {
   profiler.setQualityPreset(name);
   applyQualityPreset();
-  console.log(`✅ Quality preset changed to: ${name}`);
+  devLog(`✅ Quality preset changed to: ${name}`);
 };
 
 const getQualityPreset = () => profiler.getQualityPreset();
@@ -4499,14 +4493,14 @@ const getAvailableQualityPresets = () => Object.keys(QUALITY_PRESETS);
 const toggleAutoQuality = () => {
   const current = profiler.isAutoAdjusting();
   profiler.setAutoAdjust(!current);
-  console.log(`🎯 Auto-quality adjustment: ${!current ? 'ON' : 'OFF'}`);
+  devLog(`🎯 Auto-quality adjustment: ${!current ? 'ON' : 'OFF'}`);
 };
 
 const getPerformanceMetrics = () => profiler.getMetrics();
 const togglePerformanceMonitor = () => {
   showProfiler = !showProfiler;
   localStorage.setItem('fpw_show_profiler', showProfiler.toString());
-  console.log(`📊 Performance monitor: ${showProfiler ? 'ON' : 'OFF'}`);
+  devLog(`📊 Performance monitor: ${showProfiler ? 'ON' : 'OFF'}`);
 };
 
 // ─── Phase 14: Graphics Pipeline System Exports ──────────────────────────────────

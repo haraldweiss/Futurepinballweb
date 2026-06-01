@@ -166,3 +166,13 @@ declare module 'three/examples/jsm/shaders/FXAAShader.js' {
   const FXAAShader: any;
   export { FXAAShader };
 }
+
+// Extend Performance with Chrome-specific memory API
+interface PerformanceMemory {
+  jsHeapSizeLimit: number;
+  totalJSHeapSize: number;
+  usedJSHeapSize: number;
+}
+interface Performance {
+  memory?: PerformanceMemory;
+}
