@@ -16,11 +16,13 @@ import {
   extractSoundFromBytes,
 } from './fpt/media';
 import { extractTableCoordsFromCFB } from './fpt/table-elements';
-import { logMsg, ResourceLoadingCallbacks } from './fpt/log';
+import { logMsg } from './fpt/log';
+import type { ResourceLoadingCallbacks } from './fpt/log';
 import { getBackglassArtwork } from './fpt/backglass';
 import { suggestTableLights, extractDominantColors, extractElementColors, getLightConfigFromColor } from './fpt/lighting';
 
-export { logMsg, ResourceLoadingCallbacks };
+export { logMsg };
+export type { ResourceLoadingCallbacks };
 export { getBackglassArtwork };
 export { suggestTableLights, extractDominantColors, extractElementColors };
 import { getLibraryByName, detectLibraryDependencies, getMissingLibraries, formatLibraryDependencies, mergeLibraries, type LibraryDependency } from './fpt/library';
