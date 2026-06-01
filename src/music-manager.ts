@@ -8,6 +8,8 @@
  * M key to toggle on/off
  */
 
+import { devLog } from './utils/dev-log';
+
 /**
  * Music Manager - Procedural ambient music generation
  */
@@ -47,12 +49,12 @@ export class MusicManager {
         document.addEventListener('click', () => {
           if (this.audioContext?.state === 'suspended') {
             this.audioContext.resume();
-            console.log('[Music Manager] Audio context resumed');
+            devLog('[Music Manager] Audio context resumed');
           }
         }, { once: true });
       }
 
-      console.log('[Music Manager] ✓ Initialized');
+      devLog('[Music Manager] ✓ Initialized');
       return;
     } catch (e) {
       console.warn('[Music Manager] Audio Context not available:', e);
@@ -66,7 +68,7 @@ export class MusicManager {
   play(): void {
     if (!this.enabled || !this.audioContext || this.playing) return;
 
-    console.log('[Music Manager] ▶ Playing');
+    devLog('[Music Manager] ▶ Playing');
     this.playing = true;
     this.scheduleIndex = 0;
     this.nextNoteTime = this.audioContext.currentTime;
@@ -79,7 +81,7 @@ export class MusicManager {
   stop(): void {
     if (!this.playing) return;
 
-    console.log('[Music Manager] ⏹ Stopped');
+    devLog('[Music Manager] ⏹ Stopped');
     this.playing = false;
     this.musicNodes.forEach(({ oscillator }) => {
       try {

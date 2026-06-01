@@ -8,6 +8,8 @@
  * Provides clean API for physics updates while running on separate thread
  */
 
+import { devLog } from './utils/dev-log';
+
 /**
  * Physics frame data returned from worker.
  */
@@ -82,7 +84,7 @@ export class PhysicsWorkerBridge {
             clearTimeout(readyTimeout);
             this.initialized = true;
             this.worker!.onmessage = originalHandler?.bind(this as unknown as Worker);
-            console.log('[Physics Bridge] Worker initialized');
+            devLog('[Physics Bridge] Worker initialized');
             resolve();
           } else if (originalHandler) {
             (originalHandler as (this: Worker, ev: MessageEvent) => void).call(this as unknown as Worker, event);
@@ -130,7 +132,7 @@ export class PhysicsWorkerBridge {
       },
     });
 
-    console.log('[Physics Bridge] Physics world initialized');
+    devLog('[Physics Bridge] Physics world initialized');
   }
 
   /**
@@ -273,7 +275,7 @@ export class PhysicsWorkerBridge {
     this.frameCallback = null;
     this.pendingFrame = null;
 
-    console.log('[Physics Bridge] Physics worker disposed');
+    devLog('[Physics Bridge] Physics worker disposed');
   }
 }
 

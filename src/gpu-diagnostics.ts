@@ -7,6 +7,8 @@
  * (integrated + discrete GPU configurations on Windows)
  */
 
+import { devLog } from './utils/dev-log';
+
 export interface GPUInfo {
   renderer: string;
   vendor: string;
@@ -264,15 +266,15 @@ declare global {
 export function initializeGPUDiagnostics() {
   window.diagnoseGPU = () => {
     const info = detectGPUInfo();
-    console.log(formatGPUInfo(info));
+    devLog(formatGPUInfo(info));
 
     // Check for Windows dual-GPU setup
     const setup = detectWindowsGPUSetup();
     if (setup.isDualGPUSystem) {
-      console.log('💡 Windows Multi-GPU System Detected:');
-      console.log(setup.recommendation);
+      devLog('💡 Windows Multi-GPU System Detected:');
+      devLog(setup.recommendation);
     }
   };
 
-  console.log('✓ GPU Diagnostics initialized. Use diagnoseGPU() for details.');
+  devLog('✓ GPU Diagnostics initialized. Use diagnoseGPU() for details.');
 }

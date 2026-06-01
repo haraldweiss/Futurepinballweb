@@ -5,6 +5,8 @@
  * Phase 13 Task 3: Queue and schedule animations with priority
  */
 
+import { devLog } from '../utils/dev-log';
+
 export interface ScheduledAnimation {
   sequenceId: number | string;
   startTime: number;                // When to start (relative to now)
@@ -68,7 +70,7 @@ export class AnimationScheduler {
     if (nextIdx >= 0) {
       this.currentAnimation = this.queue.splice(nextIdx, 1)[0];
       this.playStartTime = now;
-      console.log(`▶️  Animation queued: ${this.currentAnimation.sequenceId} (priority ${this.currentAnimation.priority})`);
+      devLog(`▶️  Animation queued: ${this.currentAnimation.sequenceId} (priority ${this.currentAnimation.priority})`);
     }
   }
 

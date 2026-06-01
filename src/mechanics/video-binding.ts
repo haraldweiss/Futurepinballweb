@@ -12,6 +12,7 @@
  * - Priority and ordering
  * - Conditional triggers
  */
+import { devLog } from '../utils/dev-log';
 
 import type { VideoEvent, VideoConfig } from '../video-manager';
 
@@ -36,7 +37,7 @@ export class VideoBindingManager {
   private nextId: number = 0;
 
   constructor() {
-    console.log('✓ VideoBindingManager initialized');
+    devLog('✓ VideoBindingManager initialized');
   }
 
   /**
@@ -68,7 +69,7 @@ export class VideoBindingManager {
     // Store in ID map for quick lookup
     this.bindingMap.set(binding.id, binding);
 
-    console.log(`✓ Created video binding: ${binding.id} (${trigger} → ${videoId})`);
+    devLog(`✓ Created video binding: ${binding.id} (${trigger} → ${videoId})`);
     return binding;
   }
 
@@ -112,7 +113,7 @@ export class VideoBindingManager {
     // Remove from ID map
     this.bindingMap.delete(bindingId);
 
-    console.log(`✓ Removed video binding: ${bindingId}`);
+    devLog(`✓ Removed video binding: ${bindingId}`);
     return true;
   }
 
@@ -128,7 +129,7 @@ export class VideoBindingManager {
     }
 
     this.bindings.delete(trigger);
-    console.log(`✓ Removed ${count} video bindings for trigger: ${trigger}`);
+    devLog(`✓ Removed ${count} video bindings for trigger: ${trigger}`);
     return count;
   }
 
@@ -190,7 +191,7 @@ export class VideoBindingManager {
   clear(): void {
     this.bindings.clear();
     this.bindingMap.clear();
-    console.log('✓ VideoBindingManager cleared');
+    devLog('✓ VideoBindingManager cleared');
   }
 
   /**

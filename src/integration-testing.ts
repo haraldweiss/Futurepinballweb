@@ -541,7 +541,7 @@ export class MemoryProfiler {
    */
   snapshot(label?: string): void {
     const memory =
-      (performance as any).memory?.usedJSHeapSize || 0;
+      (performance as Performance).memory?.usedJSHeapSize || 0;
 
     this.snapshots.push({
       timestamp: Date.now(),

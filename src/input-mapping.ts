@@ -11,6 +11,7 @@
  */
 
 import { CabinetProfile } from './cabinet-system';
+import { devLog } from './utils/dev-log';
 
 // ─── Input Mapping Manager ────────────────────────────────────────────────────
 export class InputMappingManager {
@@ -24,7 +25,7 @@ export class InputMappingManager {
 
   constructor() {
     this.cacheTouchElements();
-    console.log('✓ Input Mapping Manager initialized');
+    devLog('✓ Input Mapping Manager initialized');
   }
 
   /**
@@ -46,7 +47,7 @@ export class InputMappingManager {
     // Update touch controls positioning
     this.repositionTouchControls(profile.rotation);
 
-    console.log(`🎮 Input mapping applied for rotation ${profile.rotation}°`);
+    devLog(`🎮 Input mapping applied for rotation ${profile.rotation}°`);
   }
 
   /**
@@ -275,7 +276,7 @@ export class InputMappingManager {
   reset(): void {
     this.repositionTouchStandard();
     this.currentRotation = 0;
-    console.log('✓ Input mapping reset to defaults');
+    devLog('✓ Input mapping reset to defaults');
   }
 
   /**

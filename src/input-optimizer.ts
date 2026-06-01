@@ -7,6 +7,8 @@
  * Critical for pinball: Input lag = dead game
  */
 
+import { devLog } from './utils/dev-log';
+
 export interface InputState {
   flipperLeft: boolean;
   flipperRight: boolean;
@@ -61,7 +63,7 @@ export class InputOptimizer {
     document.addEventListener('keydown', this.handleKeyDown.bind(this), true);
     document.addEventListener('keyup', this.handleKeyUp.bind(this), true);
     
-    console.log('[Input Optimizer] Initialized with capture phase listeners');
+    devLog('[Input Optimizer] Initialized with capture phase listeners');
   }
 
   /**

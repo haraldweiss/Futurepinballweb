@@ -5,6 +5,8 @@
  * Allows users to configure resolution for each screen in multi-screen setup
  */
 
+import { devLog } from './utils/dev-log';
+
 export type ResolutionPreset = 'auto' | '720p' | '1080p' | '1440p' | '2160p' | 'custom';
 
 export interface ScreenResolution {
@@ -88,7 +90,7 @@ class ScreenResolutionManager {
   private saveLayout(layout: ResolutionLayout): void {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
-      console.log('✓ Screen resolutions saved');
+      devLog('✓ Screen resolutions saved');
     } catch (e) {
       console.error('Failed to save screen resolutions:', e);
     }
@@ -167,7 +169,7 @@ class ScreenResolutionManager {
       }
 
       this.saveLayout(this.currentLayout);
-      console.log(`✓ Screen ${screenIndex + 1} preset changed to ${preset}`);
+      devLog(`✓ Screen ${screenIndex + 1} preset changed to ${preset}`);
     }
   }
 
@@ -191,7 +193,7 @@ class ScreenResolutionManager {
   resetToDefault(screenCount: number): void {
     this.currentLayout = this.getDefaultLayout(screenCount);
     this.saveLayout(this.currentLayout);
-    console.log(`✓ Screen resolutions reset to default for ${screenCount} screens`);
+    devLog(`✓ Screen resolutions reset to default for ${screenCount} screens`);
   }
 
   /**
@@ -224,17 +226,17 @@ class ScreenResolutionManager {
         const details = await (window as any).getScreenDetails();
         const screens = details.screens || [];
 
-        console.log(`📺 Auto-detecting resolutions for ${screens.length} screens:`);
+        devLog(`📺 Auto-detecting resolutions for ${screens.length} screens:`);
 
         screens.forEach((screen: any, idx: number) => {
           const width = screen.availWidth || screen.width;
           const height = screen.availHeight || screen.height;
-          console.log(`  Screen ${idx + 1}: ${width}x${height}`);
+          devLog(`  Screen ${idx + 1}: ${width}x${height}`);
 
           this.setResolutionForScreen(idx, width, height, 'auto');
         });
 
-        console.log('✓ Resolutions auto-detected');
+        devLog('✓ Resolutions auto-detected');
       }
     } catch (e) {
       console.warn('⚠ Could not auto-detect resolutions:', e);

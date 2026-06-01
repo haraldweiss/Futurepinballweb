@@ -6,6 +6,8 @@
  * Useful for multi-screen arcade cabinet setups
  */
 
+import { devLog } from './utils/dev-log';
+
 export type ScreenRole = 'playfield' | 'backglass' | 'dmd' | 'none';
 
 export interface ScreenConfig {
@@ -76,7 +78,7 @@ class ScreenRoleManager {
   private saveLayout(layout: MultiScreenLayout): void {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
-      console.log('✓ Screen roles saved');
+      devLog('✓ Screen roles saved');
     } catch (e) {
       console.error('Failed to save screen roles:', e);
     }
@@ -155,7 +157,7 @@ class ScreenRoleManager {
   resetToDefault(screenCount: number): void {
     this.currentLayout = this.getDefaultLayout(screenCount);
     this.saveLayout(this.currentLayout);
-    console.log(`✓ Screen roles reset to default for ${screenCount} screens`);
+    devLog(`✓ Screen roles reset to default for ${screenCount} screens`);
   }
 
   /**
@@ -174,7 +176,7 @@ class ScreenRoleManager {
       screen1.role = screen2.role;
       screen2.role = tempRole;
       this.saveLayout(this.currentLayout);
-      console.log(
+      devLog(
         `✓ Swapped roles: Screen ${screenIndex1 + 1} ↔ Screen ${screenIndex2 + 1}`
       );
     }

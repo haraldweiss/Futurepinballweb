@@ -11,6 +11,7 @@
  */
 
 import * as THREE from 'three';
+import { devLog } from './utils/dev-log';
 
 // ─── Cabinet Profile Interface ─────────────────────────────────────────────
 export interface CabinetProfile {
@@ -142,7 +143,7 @@ export class CabinetSystem {
   private rotationAngle: number = 0;  // Current rotation in radians
 
   constructor() {
-    console.log('✓ Cabinet System initialized');
+    devLog('✓ Cabinet System initialized');
   }
 
   /**
@@ -166,26 +167,26 @@ export class CabinetSystem {
 
     const aspectRatio = width / height;
 
-    console.log(`🎮 Cabinet auto-detect:`);
-    console.log(`   Monitor: ${screenWidth}x${screenHeight} | Available: ${width}x${height} | Aspect: ${aspectRatio.toFixed(2)}`);
+    devLog(`🎮 Cabinet auto-detect:`);
+    devLog(`   Monitor: ${screenWidth}x${screenHeight} | Available: ${width}x${height} | Aspect: ${aspectRatio.toFixed(2)}`);
 
     // Ultra-wide: 21:9 or wider (>2.3) - best for ultrawide monitors
     if (aspectRatio > 2.3) {
-      console.log(`🎮 → Ultrawide detected (>2.3), using WIDE profile (0°)`);
+      devLog(`🎮 → Ultrawide detected (>2.3), using WIDE profile (0°)`);
       this.setProfile(CABINET_WIDE);
       return CABINET_WIDE;
     }
 
     // Vertical portrait: < 0.75 ratio - true portrait displays
     if (aspectRatio < 0.75) {
-      console.log(`🎮 → Vertical/Portrait detected (<0.75), using VERTICAL profile (90°)`);
+      devLog(`🎮 → Vertical/Portrait detected (<0.75), using VERTICAL profile (90°)`);
       this.setProfile(CABINET_VERTICAL);
       return CABINET_VERTICAL;
     }
 
     // DEFAULT: Standard horizontal (0.75-2.3) - NO ROTATION
     // This is the safest default for most displays
-    console.log(`🎮 → Standard horizontal detected, using HORIZONTAL profile (0° - NO ROTATION)`);
+    devLog(`🎮 → Standard horizontal detected, using HORIZONTAL profile (0° - NO ROTATION)`);
     this.setProfile(CABINET_HORIZONTAL);
     return CABINET_HORIZONTAL;
   }
@@ -196,7 +197,7 @@ export class CabinetSystem {
   setProfile(profile: CabinetProfile): void {
     this.currentProfile = profile;
     this.updateRotation(profile.rotation);
-    console.log(`🎮 Cabinet profile changed to: ${profile.name} (rotation: ${profile.rotation}°)`);
+    devLog(`🎮 Cabinet profile changed to: ${profile.name} (rotation: ${profile.rotation}°)`);
   }
 
   /**
@@ -256,7 +257,7 @@ export class CabinetSystem {
           requestAnimationFrame(animate);
         } else {
           this.currentProfile.rotation = targetDegrees;
-          console.log(`🎮 Playfield rotated to ${targetDegrees}°`);
+          devLog(`🎮 Playfield rotated to ${targetDegrees}°`);
           resolve();
         }
       };

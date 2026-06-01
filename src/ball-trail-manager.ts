@@ -9,6 +9,7 @@
  */
 
 import * as THREE from 'three';
+import { devLog } from './utils/dev-log';
 
 /**
  * Ball Trail Manager - Glow trail following ball
@@ -43,7 +44,7 @@ export class BallTrailManager {
     this.trail.frustumCulled = false;
     scene.add(this.trail);
 
-    console.log('[Ball Trail] ✓ Initialized');
+    devLog('[Ball Trail] ✓ Initialized');
   }
 
   /**

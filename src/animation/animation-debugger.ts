@@ -11,6 +11,7 @@ import { getAnimationScheduler } from '../mechanics/animation-scheduler';
 import { getBamBridge } from '../bam-bridge';
 import { BAMEngine } from '../bam-engine';
 import { escapeHtml } from '../utils/html-escape';
+import { devLog } from '../utils/dev-log';
 
 /**
  * Animation Debugger UI — provides controls and visualization for animations
@@ -205,7 +206,7 @@ export class AnimationDebugger {
         const seqId = (e.target as HTMLElement).getAttribute('data-seq-id');
         if (seqId && getBamBridge()) {
           getBamBridge()!.playAnimation(seqId);
-          console.log(`▶️ Playing animation: ${seqId}`);
+          devLog(`▶️ Playing animation: ${seqId}`);
         }
       });
     });

@@ -11,6 +11,7 @@
  */
 
 import { CabinetProfile } from './cabinet-system';
+import { devLog } from './utils/dev-log';
 
 // ─── UI Rotation Manager ──────────────────────────────────────────────────────
 export class UIRotationManager {
@@ -24,7 +25,7 @@ export class UIRotationManager {
 
   constructor() {
     this.cacheElements();
-    console.log('✓ UI Rotation Manager initialized');
+    devLog('✓ UI Rotation Manager initialized');
   }
 
   /**
@@ -54,7 +55,7 @@ export class UIRotationManager {
     // Adjust DMD position
     this.repositionDMD(profile);
 
-    console.log(`🎨 UI rotated to ${profile.rotation}°`);
+    devLog(`🎨 UI rotated to ${profile.rotation}°`);
   }
 
   /**

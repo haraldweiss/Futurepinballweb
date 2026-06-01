@@ -117,7 +117,7 @@ export class PerformanceReportGenerator {
     }
 
     // Memory detection
-    const memory = (performance as any).memory?.jsHeapSizeLimit;
+    const memory = (performance as Performance).memory?.jsHeapSizeLimit;
     if (memory) {
       const mb = memory / 1024 / 1024;
       if (mb < 500) {
@@ -199,7 +199,7 @@ export class PerformanceReportGenerator {
     } catch (e) {
       console.warn(`⚠️ GPU detection failed:`, e);
       // Fallback: Use device memory to estimate GPU capability
-      const memory = (performance as any).memory?.jsHeapSizeLimit;
+      const memory = (performance as Performance).memory?.jsHeapSizeLimit;
       if (memory && memory > 3 * 1024 * 1024 * 1024) {
         profile.gpu = 'high'; // 3GB+ likely desktop with dedicated GPU
       } else {

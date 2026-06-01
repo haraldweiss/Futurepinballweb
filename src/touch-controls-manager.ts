@@ -8,6 +8,8 @@
  * Responsive zones for various screen sizes
  */
 
+import { devLog } from './utils/dev-log';
+
 /**
  * Touch Controls Manager - Handle mobile/tablet input
  */
@@ -112,7 +114,7 @@ export class TouchControlsManager {
         this.leftFlipperActive = true;
         if (this.onLeftFlipperPress) this.onLeftFlipperPress();
         this.showTouchIndicator(touch.identifier, x, y, '#00ff88');
-        console.log('[Touch] Left flipper pressed');
+        devLog('[Touch] Left flipper pressed');
       }
       // Right flipper
       else if (this.pointInZone(x, y, this.rightFlipperZone)) {
@@ -120,7 +122,7 @@ export class TouchControlsManager {
         this.rightFlipperActive = true;
         if (this.onRightFlipperPress) this.onRightFlipperPress();
         this.showTouchIndicator(touch.identifier, x, y, '#ff00ff');
-        console.log('[Touch] Right flipper pressed');
+        devLog('[Touch] Right flipper pressed');
       }
       // Plunger
       else if (this.pointInZone(x, y, this.plungerZone)) {
@@ -129,7 +131,7 @@ export class TouchControlsManager {
         this.plungerStartY = y;
         this.plungerCurrentY = y;
         this.showTouchIndicator(touch.identifier, x, y, '#ffff00');
-        console.log('[Touch] Plunger engaged');
+        devLog('[Touch] Plunger engaged');
       }
     }
   }
@@ -183,7 +185,7 @@ export class TouchControlsManager {
         if (this.pointInZone(x, y, this.leftFlipperZone)) {
           this.leftFlipperActive = false;
           if (this.onLeftFlipperRelease) this.onLeftFlipperRelease();
-          console.log('[Touch] Left flipper released');
+          devLog('[Touch] Left flipper released');
         }
       }
 
@@ -194,7 +196,7 @@ export class TouchControlsManager {
         if (this.pointInZone(x, y, this.rightFlipperZone)) {
           this.rightFlipperActive = false;
           if (this.onRightFlipperRelease) this.onRightFlipperRelease();
-          console.log('[Touch] Right flipper released');
+          devLog('[Touch] Right flipper released');
         }
       }
 
@@ -204,7 +206,7 @@ export class TouchControlsManager {
         if (this.onPlungerChange) {
           this.onPlungerChange(0);  // Release plunger
         }
-        console.log('[Touch] Plunger released');
+        devLog('[Touch] Plunger released');
       }
 
       // Remove touch indicator
@@ -303,7 +305,7 @@ export class TouchControlsManager {
    */
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
-    console.log(`[Touch Controls] ${enabled ? 'Enabled' : 'Disabled'}`);
+    devLog(`[Touch Controls] ${enabled ? 'Enabled' : 'Disabled'}`);
   }
 
   /**

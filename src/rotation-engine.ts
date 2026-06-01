@@ -12,6 +12,7 @@
 
 import * as THREE from 'three';
 import { getCabinetSystem, getActiveCabinetProfile, CabinetProfile } from './cabinet-system';
+import { devLog } from './utils/dev-log';
 
 // ─── Rotation Engine ──────────────────────────────────────────────────────────
 export class RotationEngine {
@@ -23,7 +24,7 @@ export class RotationEngine {
   constructor(playgroundGroup: THREE.Group, camera: THREE.Camera) {
     this.playgroundGroup = playgroundGroup;
     this.camera = camera;
-    console.log('✓ Rotation Engine initialized');
+    devLog('✓ Rotation Engine initialized');
   }
 
   /**
@@ -42,7 +43,7 @@ export class RotationEngine {
     this.updateCameraForProfile(profile);
 
     this.currentRotationDegrees = profile.rotation;
-    console.log(`🎮 Applied profile rotation: ${profile.rotation}°`);
+    devLog(`🎮 Applied profile rotation: ${profile.rotation}°`);
   }
 
   /**
@@ -116,7 +117,7 @@ export class RotationEngine {
         } else {
           this.currentRotationDegrees = targetDegrees;
           this.isRotating = false;
-          console.log(`✓ Playfield rotation complete: ${targetDegrees}°`);
+          devLog(`✓ Playfield rotation complete: ${targetDegrees}°`);
           resolve();
         }
       };

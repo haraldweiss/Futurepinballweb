@@ -13,6 +13,7 @@
 
 import { dmdTextRenderer, DMDTextLayout } from './dmd-text-renderer';
 import { dmdBoundsTracker } from './dmd-bounds-tracker';
+import { devLog } from './utils/dev-log';
 
 export interface CoinSystemState {
   coinsInserted: number;
@@ -34,13 +35,13 @@ export const coinSystemState: CoinSystemState = {
 
 // ─── Coin System Initialization ──────────────────────────────────────────────
 export function initializeCoinSystem(): void {
-  console.log('✅ Coin system initialized');
+  devLog('✅ Coin system initialized');
 }
 
 // ─── Add Coin ────────────────────────────────────────────────────────────────
 export function addCoin(): void {
   if (coinSystemState.coinsInserted >= 4) {
-    console.log('⚠️ Max coins reached (4)');
+    devLog('⚠️ Max coins reached (4)');
     return;
   }
 
@@ -51,12 +52,12 @@ export function addCoin(): void {
   // Play coin sound (if audio system available)
   try {
     const audio = (window as any).playSound?.('coin');
-    if (audio) console.log('🪙 Coin sound played');
+    if (audio) devLog('🪙 Coin sound played');
   } catch (e) {
     /* Ignore if audio not available */
   }
 
-  console.log(
+  devLog(
     `🪙 Coin inserted: ${coinSystemState.coinsInserted}/${4} | Players: ${coinSystemState.currentPlayers}`
   );
 
@@ -71,7 +72,7 @@ export function addCoin(): void {
 // inserted credits is silently capped down.
 export function startGame(playerCount?: number): void {
   if (coinSystemState.coinsInserted === 0) {
-    console.log('⚠️ Cannot start game - no coins inserted');
+    devLog('⚠️ Cannot start game - no coins inserted');
     return;
   }
 
@@ -83,7 +84,7 @@ export function startGame(playerCount?: number): void {
   coinSystemState.gameStarted = true;
   coinSystemState.coinScreenVisible = false;
 
-  console.log(
+  devLog(
     `🎮 Game started with ${coinSystemState.currentPlayers} player(s)`
   );
 
@@ -107,12 +108,12 @@ export function showCoinScreen(): void {
 
   coinSystemState.insertCoinTimeout = window.setTimeout(() => {
     if (coinSystemState.coinsInserted === 0 && coinSystemState.coinScreenVisible) {
-      console.log('⏱️ Coin timeout - auto-starting with demo mode');
+      devLog('⏱️ Coin timeout - auto-starting with demo mode');
       closeCoinScreen();
     }
-  }, 30000) as any;
+  }, 30000) as unknown as number;
 
-  console.log('💰 Coin screen shown');
+  devLog('💰 Coin screen shown');
   updateCoinDisplay();
 }
 
@@ -124,7 +125,7 @@ export function closeCoinScreen(): void {
   }
 
   coinSystemState.coinScreenVisible = false;
-  console.log('✅ Coin screen closed - game starting');
+  devLog('✅ Coin screen closed - game starting');
 }
 
 // ─── Update Coin Display on DMD ──────────────────────────────────────────────
@@ -146,7 +147,7 @@ export function updateCoinDisplay(): void {
 
     dmdModule.renderCoinScreen(coinSystemState);
   } catch (e) {
-    console.log('ℹ️ Coin display rendering to canvas fallback');
+    devLog('ℹ️ Coin display rendering to canvas fallback');
     renderCoinScreenFallback();
   }
 }
@@ -369,7 +370,7 @@ export function resetCoinSystem(): void {
   coinSystemState.insertCoinTimeout = 0;
   coinSystemState.lastCoinTime = 0;
 
-  console.log('🔄 Coin system reset');
+  devLog('🔄 Coin system reset');
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ import { RenderPass, QualityPreset, GraphicsMetrics } from './graphics-types';
 import { GeometryPool } from './geometry-pool';
 import { MaterialFactory } from './material-factory';
 import { LightManager } from './light-manager';
+import { devLog } from '../utils/dev-log';
 
 /**
  * GraphicsPipeline orchestrates all rendering operations.
@@ -64,7 +65,7 @@ export class GraphicsPipeline {
     this.materialFactory = new MaterialFactory();
     this.lightManager = new LightManager(scene);
 
-    console.log('✓ GraphicsPipeline initialized');
+    devLog('✓ GraphicsPipeline initialized');
   }
 
   /**
@@ -72,7 +73,7 @@ export class GraphicsPipeline {
    */
   async initialize(): Promise<void> {
     // Can be extended for async resource loading
-    console.log('✓ GraphicsPipeline ready');
+    devLog('✓ GraphicsPipeline ready');
   }
 
   // ─── Public Accessors ───
@@ -89,7 +90,7 @@ export class GraphicsPipeline {
       console.warn(`Pass "${pass.name}" already registered, replacing...`);
     }
     this.passes.set(pass.name, pass);
-    console.log(`✓ Registered pass: ${pass.name}`);
+    devLog(`✓ Registered pass: ${pass.name}`);
   }
 
   /**
@@ -100,7 +101,7 @@ export class GraphicsPipeline {
     if (pass) {
       pass.dispose();
       this.passes.delete(name);
-      console.log(`✓ Removed pass: ${name}`);
+      devLog(`✓ Removed pass: ${name}`);
     }
   }
 
@@ -167,7 +168,7 @@ export class GraphicsPipeline {
     // Update light shadows
     this.lightManager.updateShadowMap(preset.shadowMapSize);
 
-    console.log(`✓ Quality preset changed to: ${presetName}`);
+    devLog(`✓ Quality preset changed to: ${presetName}`);
   }
 
   /**
@@ -239,7 +240,7 @@ export class GraphicsPipeline {
     this.materialFactory.dispose();
     this.lightManager.dispose();
 
-    console.log('✓ GraphicsPipeline disposed');
+    devLog('✓ GraphicsPipeline disposed');
   }
 }
 

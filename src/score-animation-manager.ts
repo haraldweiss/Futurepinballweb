@@ -9,6 +9,7 @@
  */
 
 import * as THREE from 'three';
+import { devLog } from './utils/dev-log';
 
 /**
  * Score animation entry
@@ -42,7 +43,7 @@ export class ScoreAnimationManager {
       fog: false,
     });
 
-    console.log('[Score Animation] ✓ Initialized');
+    devLog('[Score Animation] ✓ Initialized');
   }
 
   /**

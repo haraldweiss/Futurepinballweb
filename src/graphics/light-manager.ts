@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import { LightConfig, ManagedLight, DynamicLightUpdate } from './graphics-types';
+import { devLog } from '../utils/dev-log';
 
 /**
  * LightManager centralizes light management.
@@ -29,7 +30,7 @@ export class LightManager {
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
-    console.log('✓ LightManager initialized');
+    devLog('✓ LightManager initialized');
   }
 
   /**
@@ -99,7 +100,7 @@ export class LightManager {
     }
 
     this.lightCount++;
-    console.log(`✓ Added light: ${id} (type: ${type})`);
+    devLog(`✓ Added light: ${id} (type: ${type})`);
 
     return managed;
   }
@@ -116,7 +117,7 @@ export class LightManager {
     this.lights.delete(id);
     this.lightCount--;
 
-    console.log(`✓ Removed light: ${id}`);
+    devLog(`✓ Removed light: ${id}`);
   }
 
   /**
@@ -196,7 +197,7 @@ export class LightManager {
       }
     }
 
-    console.log(`✓ Shadow map size updated to: ${size}×${size}`);
+    devLog(`✓ Shadow map size updated to: ${size}×${size}`);
   }
 
   /**
@@ -332,7 +333,7 @@ export class LightManager {
     const rimLight = this.lights.get('rim')!.light as THREE.DirectionalLight;
     rimLight.position.set(0, 22, -12);
 
-    console.log('✓ Standard pinball lighting initialized');
+    devLog('✓ Standard pinball lighting initialized');
   }
 
   /**
@@ -375,6 +376,6 @@ export class LightManager {
     this.shadowLights.clear();
     this.lightCount = 0;
 
-    console.log('✓ LightManager disposed');
+    devLog('✓ LightManager disposed');
   }
 }

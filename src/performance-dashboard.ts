@@ -69,7 +69,7 @@ export class PerformanceDashboard {
     this.metrics.flipperResponse = data.flipperResponse ?? 0;
 
     // Track memory usage
-    const perfMemory = (performance as any).memory;
+    const perfMemory = (performance as Performance).memory;
     if (perfMemory) {
       this.metrics.memoryUsage = perfMemory.usedJSHeapSize / 1048576; // MB
     }

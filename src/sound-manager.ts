@@ -7,6 +7,8 @@
  * Critical for pinball feel: Audio = Immediate feedback
  */
 
+import { devLog } from './utils/dev-log';
+
 export interface SoundEffect {
   name: string;
   frequency: number;      // Hz for synth
@@ -92,12 +94,12 @@ export class SoundManager {
         document.addEventListener('click', () => {
           if (this.audioContext?.state === 'suspended') {
             this.audioContext.resume();
-            console.log('[Sound Manager] Audio context resumed');
+            devLog('[Sound Manager] Audio context resumed');
           }
         }, { once: true });
       }
       
-      console.log('[Sound Manager] Audio context initialized');
+      devLog('[Sound Manager] Audio context initialized');
     } catch (e) {
       console.warn('[Sound Manager] Audio Context not available:', e);
       this.enabled = false;

@@ -10,6 +10,8 @@
  * - Special debug/admin functions
  */
 
+import { devLog } from './utils/dev-log';
+
 export interface KeyBinding {
   key: string;
   shift?: boolean;
@@ -128,7 +130,7 @@ class KeyBindingManager {
     this.config[action] = binding;
     this.rebuildMap();
     this.saveToStorage();
-    console.log(`🔑 Keybinding updated: ${action} → ${this.bindingToString(binding)}`);
+    devLog(`🔑 Keybinding updated: ${action} → ${this.bindingToString(binding)}`);
   }
 
   /**
@@ -145,7 +147,7 @@ class KeyBindingManager {
     this.config = { ...DEFAULT_KEYBINDINGS };
     this.rebuildMap();
     this.saveToStorage();
-    console.log('🔑 Keybindings reset to defaults');
+    devLog('🔑 Keybindings reset to defaults');
   }
 
   /**
@@ -157,7 +159,7 @@ class KeyBindingManager {
       if (stored) {
         const loaded = JSON.parse(stored);
         this.config = { ...DEFAULT_KEYBINDINGS, ...loaded };
-        console.log('🔑 Keybindings loaded from storage');
+        devLog('🔑 Keybindings loaded from storage');
       }
     } catch (e) {
       console.warn('⚠️ Failed to load keybindings from storage', e);
@@ -224,7 +226,7 @@ let keyBindingManager: KeyBindingManager | null = null;
 export function initializeKeyBindings(): KeyBindingManager {
   if (!keyBindingManager) {
     keyBindingManager = new KeyBindingManager();
-    console.log('✅ Key Binding Manager initialized');
+    devLog('✅ Key Binding Manager initialized');
   }
   return keyBindingManager;
 }

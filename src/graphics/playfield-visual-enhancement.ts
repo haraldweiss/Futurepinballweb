@@ -13,6 +13,7 @@
  */
 
 import * as THREE from 'three';
+import { devLog } from '../utils/dev-log';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -128,7 +129,7 @@ export class PlayfieldVisualEnhancement {
     this.composer = composer;
     this.materialFactory = getEnhancedMaterialFactory();
 
-    console.log('✓ PlayfieldVisualEnhancement initialized');
+    devLog('✓ PlayfieldVisualEnhancement initialized');
   }
 
   /**
@@ -155,7 +156,7 @@ export class PlayfieldVisualEnhancement {
       this.improveShallowAndReflections();
     }
 
-    console.log('✓ All visual enhancements initialized');
+    devLog('✓ All visual enhancements initialized');
   }
 
   /**
@@ -164,7 +165,7 @@ export class PlayfieldVisualEnhancement {
   private initializeSSAO(): void {
     this.ssaoPass = new SSAOPass(this.scene, this.camera, this.renderer);
     this.setQualityPreset(this.qualityPreset);
-    console.log('✓ SSAO Pass initialized');
+    devLog('✓ SSAO Pass initialized');
   }
 
   /**
@@ -176,7 +177,7 @@ export class PlayfieldVisualEnhancement {
     this.colorGradingPass.uniforms.saturation.value = 1.1;
     this.colorGradingPass.uniforms.contrast.value = 1.05;
     this.colorGradingPass.uniforms.colorTemp.value = 0.1; // Slightly warm
-    console.log('✓ Color Grading Pass initialized');
+    devLog('✓ Color Grading Pass initialized');
   }
 
   /**
@@ -203,7 +204,7 @@ export class PlayfieldVisualEnhancement {
       }
     }
 
-    console.log('✓ Improved Lighting initialized');
+    devLog('✓ Improved Lighting initialized');
   }
 
   /**
@@ -220,7 +221,7 @@ export class PlayfieldVisualEnhancement {
     // Configure shadow maps for better quality
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    console.log('✓ Shadow and Reflection improvements applied');
+    devLog('✓ Shadow and Reflection improvements applied');
   }
 
   /**
@@ -338,7 +339,7 @@ export class PlayfieldVisualEnhancement {
    */
   toggleFeature(feature: keyof typeof this.enabledFeatures, enabled: boolean): void {
     this.enabledFeatures[feature] = enabled;
-    console.log(`Feature '${feature}' ${enabled ? 'enabled' : 'disabled'}`);
+    devLog(`Feature '${feature}' ${enabled ? 'enabled' : 'disabled'}`);
   }
 
   /**
@@ -368,7 +369,7 @@ export class PlayfieldVisualEnhancement {
       this.colorGradingPass.dispose();
     }
     this.materialFactory.dispose();
-    console.log('✓ PlayfieldVisualEnhancement disposed');
+    devLog('✓ PlayfieldVisualEnhancement disposed');
   }
 }
 

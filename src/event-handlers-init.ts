@@ -8,6 +8,8 @@
  * This enables CSP compliance and cleaner separation of concerns.
  */
 
+import { devLog } from './utils/dev-log';
+
 let _eventHandlersInitialized = false;
 
 /**
@@ -17,11 +19,11 @@ let _eventHandlersInitialized = false;
  */
 export function initializeEventHandlers(): void {
   if (_eventHandlersInitialized) {
-    console.log('[Event Handlers] Already initialized, skipping');
+    devLog('[Event Handlers] Already initialized, skipping');
     return;
   }
   _eventHandlersInitialized = true;
-  console.log('[Event Handlers] Initializing UI event handlers...');
+  devLog('[Event Handlers] Initializing UI event handlers...');
   
   // Quick Menu
   initializeQuickMenuHandlers();
@@ -38,7 +40,7 @@ export function initializeEventHandlers(): void {
   // View Controls
   initializeViewControlHandlers();
   
-  console.log('[Event Handlers] ✓ All handlers initialized');
+  devLog('[Event Handlers] ✓ All handlers initialized');
   
   // ─── Phase 24 Enhancement: Auto-open Quick Menu on startup ───
   setTimeout(() => {
@@ -48,7 +50,7 @@ export function initializeEventHandlers(): void {
       const isModalHidden = window.getComputedStyle(modal).display === 'none';
       if (isModalHidden && !quickMenu.classList.contains('open')) {
         openQuickMenu();
-        console.log('[Event Handlers] ✅ Quick Menu auto-opened on startup');
+        devLog('[Event Handlers] ✅ Quick Menu auto-opened on startup');
       }
     }
   }, 100);
@@ -84,7 +86,7 @@ function initializeQuickMenuHandlers(): void {
   
   const cards = document.querySelectorAll('.quick-table-card');
   if (import.meta.env.DEV) {
-    console.log(`[QuickMenu] Found ${cards.length} cards, loadDemoTable=`, typeof (window as any).loadDemoTable);
+    devLog(`[QuickMenu] Found ${cards.length} cards, loadDemoTable=`, typeof (window as any).loadDemoTable);
   }
   cards.forEach((card) => {
     const tableId = card.getAttribute('data-table');

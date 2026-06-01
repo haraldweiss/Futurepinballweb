@@ -5,6 +5,8 @@
  * Phase 13 Task 5: Smooth animation transitions and priority-based playback
  */
 
+import { devLog } from '../utils/dev-log';
+
 export interface QueuedAnimation {
   sequenceId: number | string;
   priority: number;
@@ -30,7 +32,7 @@ export class AnimationQueue {
   enqueue(anim: QueuedAnimation): void {
     this.queue.push(anim);
     this.sortQueue();
-    console.log(`📌 Animation queued: ${anim.sequenceId} (priority ${anim.priority})`);
+    devLog(`📌 Animation queued: ${anim.sequenceId} (priority ${anim.priority})`);
   }
 
   /**
@@ -65,7 +67,7 @@ export class AnimationQueue {
       }
     }
 
-    console.log(`▶️ Playing animation: ${next.sequenceId}`);
+    devLog(`▶️ Playing animation: ${next.sequenceId}`);
     return true;
   }
 
