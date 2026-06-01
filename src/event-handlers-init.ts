@@ -82,11 +82,13 @@ function initializeQuickMenuHandlers(): void {
     });
   }
   
-  // Demo table cards in quick menu
-  document.querySelectorAll('.quick-table-card').forEach((card) => {
+  const cards = document.querySelectorAll('.quick-table-card');
+  if (import.meta.env.DEV) {
+    console.log(`[QuickMenu] Found ${cards.length} cards, loadDemoTable=`, typeof (window as any).loadDemoTable);
+  }
+  cards.forEach((card) => {
     const tableId = card.getAttribute('data-table');
     if (!tableId) {
-      // Extract from existing HTML structure if needed
       const heading = card.querySelector('h3')?.textContent || '';
       const tableMap: { [key: string]: string } = {
         'Pharaoh': 'pharaoh', 'Dragon': 'dragon', 'Knight': 'knight',
@@ -97,12 +99,15 @@ function initializeQuickMenuHandlers(): void {
         card.setAttribute('data-table', table);
       }
     }
-    
-    card.addEventListener('click', () => {
+
+    card.addEventListener('click', (e) => {
+      e.stopPropagation();
       const table = card.getAttribute('data-table');
       if (table && typeof (window as any).loadDemoTable === 'function') {
         (window as any).loadDemoTable(table);
         quickMenu?.classList.remove('open');
+      } else if (import.meta.env.DEV) {
+        console.warn('[QuickMenu] No loadDemoTable for', table);
       }
     });
   });

@@ -4644,12 +4644,17 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 // ─── Guaranteed Event Handler Initialization ───
-// The deferred init via requestAnimationFrame can fail silently if any prior
-// step crashes. Module scripts have implicit `defer`, so DOM is ready here.
-// initializeEventHandlers is idempotent, so calling it twice is safe.
+// Module scripts are deferred, so DOM is ready when this runs.
+// setupWindowAPI() above has already set window.loadDemoTable etc.
+// initializeEventHandlers is idempotent, so calling it multiple times is safe.
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => initializeEventHandlers());
 } else {
+  // Run synchronously (DOM + window API ready)
   initializeEventHandlers();
 }
+// Macrotask safety net: RAF+setTimeout(0) can fire before the module's
+// synchronous tail completes in some bundlers. Re-initialize here ensures
+// handlers are attached even if the earlier call raced.
+setTimeout(() => initializeEventHandlers(), 50);
 
