@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+
+// ─── Nuke any stale service worker from a previous session ───
+// Must run before any other code because an old SW (cached from a prior
+// visit) blocks Vite's HMR /@vite/client and /main.ts with TLS errors.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs =>
+    regs.forEach(r => r.unregister())
+  );
+}
 // © 2026 Harald Weiss
 /**
  * main.ts — Einstiegspunkt: Scene, Physik, Game-Loop, Input, UI, Multiscreen
@@ -4451,18 +4460,10 @@ if (FPW_ROLE === 'dmd') {
 }
 
 // ─── PWA: Service Worker + Install Prompt ─────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  if (import.meta.env.DEV) {
-    // In dev mode, unregister any leftover service worker that would
-    // block Vite's HMR websocket and virtual module URLs.
-    navigator.serviceWorker.getRegistrations().then(regs =>
-      regs.forEach(r => r.unregister())
-    );
-  } else {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js');
-    });
-  }
+if ('serviceWorker' in navigator && !import.meta.env.DEV) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js');
+  });
 }
 
 let _installPrompt: BeforeInstallPromptEvent | null = null;
