@@ -206,3 +206,12 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 - `npm run test:suite` und `npm run test:integration` Scripts in package.json
 
 **Gesamt heute**: 22 Commits, 757 Tests, 36 Testdateien, tsc clean, 0 lint errors
+
+### 2026-06-01 — Barrel extractions + Console cleanup + Type cleanup
+- **17 Barrel extractions**: table.ts, fpt-parser.ts, integrated-editor.ts, file-browser.ts, visual-polish.ts, dmd.ts, bam-engine.ts, audio-enhanced.ts, video-editor.ts, score-display.ts, profiler.ts, video-manager.ts, backglass.ts → 17 barrels + 44 sub-modules
+- **Console cleanup**: 150+ `console.log` → `devLog` replacements across 30 files; audit warnings gated behind DEV; physics worker spam (60/sec) removed; framebuffer GL errors fixed with HalfFloat fallback; fpw-config.json parse error fixed
+- **Type cleanup**: 5 debug breadcrumbs gated behind `import.meta.env.DEV`; `PerformanceMemory` interface added; `as any` casts reduced by 8 across 6 files
+- `src/utils/dev-log.ts` created as shared gated logging utility; 45+ files now import from it
+- `src/window-api.ts` typed surface for INIT_* flags (pre-session)
+- Net code: −10.500 lines (pre-session) + cleaner structure
+- Verified: tsc clean, 757/757 tests
