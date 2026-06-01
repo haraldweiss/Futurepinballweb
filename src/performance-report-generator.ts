@@ -509,7 +509,7 @@ export class PerformanceReportGenerator {
 
     // Phase Analysis
     text += `🔍 PHASE ANALYSIS\n\n`;
-    for (const [key, phase] of Object.entries(report.phases)) {
+    for (const [_key, phase] of Object.entries(report.phases)) {
       if (phase.status === 'active') {
         text += `  ${phase.name}\n`;
         for (const [k, v] of Object.entries(phase)) {

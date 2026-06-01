@@ -27,7 +27,7 @@ export class EnhancedAudioSystem {
     playLayeredSound(sound, this.mixer, category, intensity);
 
     if (position && listenerPos) {
-      const spatial = calculate3DPositioning(position, listenerPos);
+      const _spatial = calculate3DPositioning(position, listenerPos);
     }
   }
 

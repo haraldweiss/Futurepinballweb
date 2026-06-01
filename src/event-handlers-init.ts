@@ -76,7 +76,7 @@ export function closeQuickMenu(): void {
 function initializeQuickMenuHandlers(): void {
   const closeBtn = document.getElementById('menu-close-btn');
   const quickMenu = document.getElementById('quick-menu');
-  const openLoaderBtn = document.getElementById('open-loader');
+  const _openLoaderBtn = document.getElementById('open-loader');
   
   if (closeBtn) {
     closeBtn.addEventListener('click', () => {

@@ -6,23 +6,17 @@
  */
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier2d-compat';
-import type { TableConfig, BumperMesh, TargetMesh } from '../types';
+import type { TableConfig } from '../types';
 import {
-  state, fptResources, physics, currentTableConfig, tableGroup, extraBalls,
+  _state, fptResources, physics, _currentTableConfig, tableGroup, extraBalls,
   bumpers, targets, slingshots, ramps,
   setCurrentTableConfig, setTableGroup, setPlungerKnob,
-  cb, globalAssetCatalog,
+  _cb, globalAssetCatalog,
 } from '../game';
-import {
-  callScriptBumper, callScriptTarget, callScriptSlingshot,
-} from '../script-engine';
-import { playBumperSoundWithIntensity } from '../audio-system';
-import { getAnimationBindingManager } from '../mechanics/animation-binding';
+
+
 import { devLog } from '../utils/dev-log';
-import { getAnimationScheduler } from '../mechanics/animation-scheduler';
-import { getBamBridge } from '../bam-bridge';
 import { getGraphicsPipeline } from '../graphics/graphics-pipeline';
-import { getScoreAnimationManager } from '../score-animation-manager';
 import { populateCatalogFromFPTResources } from '../fpt-parser';
 
 /**

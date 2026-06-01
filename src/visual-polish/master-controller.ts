@@ -4,7 +4,6 @@ import * as THREE from 'three';
 import { ScreenEffects } from './screen-effects';
 import { UIEffects } from './ui-effects';
 import { LightingEffects } from './lighting-effects';
-import { emitBallTrail, emitFlipperDust, emitMilestoneSparkles } from './particles';
 
 export class VisualPolishSystem {
   private screenEffects: ScreenEffects;

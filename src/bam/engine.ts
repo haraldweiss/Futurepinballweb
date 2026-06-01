@@ -2,7 +2,6 @@
 // © 2026 Harald Weiss
 
 import * as THREE from 'three';
-import type { AnimationSequence, BAMConfig } from './types';
 import { TablePhysics, FlipperAdvanced, AnimationSequencer, LightingController, ConfigManager } from './systems';
 
 export class BAMEngine {

@@ -1797,7 +1797,7 @@ function buildFPScriptAPI() {
         // Sub-objects for structured access
         Config: {
           set: (key: string, value: any) => fpScriptLog(`BAM.Config.${key} = ${value}`),
-          get: (key: string) => null,
+          get: (_key: string) => null,
         },
 
         Animation: {

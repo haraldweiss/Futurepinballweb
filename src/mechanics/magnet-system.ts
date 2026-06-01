@@ -10,7 +10,7 @@
  */
 
 import * as THREE from 'three';
-import { state } from '../game';
+import {} from '../game';
 
 export interface MagnetZone {
   id: string;
@@ -85,7 +85,7 @@ export class MagnetSystem {
     if (!zone) return 0;
 
     const count = zone.ballIndices.length;
-    const p = Math.max(0, Math.min(10, Number(power) || zone.power));
+    const _p = Math.max(0, Math.min(10, Number(power) || zone.power));
 
     // In full implementation, would apply impulse based on direction/power
     // For now, just clear the zone

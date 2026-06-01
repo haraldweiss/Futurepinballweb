@@ -184,7 +184,7 @@ export class MotionBlurPass {
         .divideScalar(deltaTime);
 
       // Store velocity magnitude for blur calculations
-      const velocityMagnitude = velocity.length();
+      const _velocityMagnitude = velocity.length();
 
       // Update previous position for next frame
       previousPosition.copy(currentPos);

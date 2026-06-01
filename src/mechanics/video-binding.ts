@@ -14,8 +14,6 @@
  */
 import { devLog } from '../utils/dev-log';
 
-import type { VideoEvent, VideoConfig } from '../video-manager';
-
 export interface VideoBinding {
   id: string;
   videoId: string;

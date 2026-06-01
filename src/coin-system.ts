@@ -11,7 +11,7 @@
  * - Dynamic DMD text rendering with intelligent scaling to fit DMD dimensions
  */
 
-import { dmdTextRenderer, DMDTextLayout } from './dmd-text-renderer';
+import { dmdTextRenderer } from './dmd-text-renderer';
 import { dmdBoundsTracker } from './dmd-bounds-tracker';
 import { devLog } from './utils/dev-log';
 

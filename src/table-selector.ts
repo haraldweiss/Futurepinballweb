@@ -7,8 +7,8 @@
  * the game starts with no table loaded.
  */
 
-import { TABLE_CONFIGS } from './table';
-import type { TableConfig } from './types';
+import {} from './table';
+import type {} from './types';
 
 export interface TableInfo {
   key: string;

@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { LightConfig, ManagedLight, DynamicLightUpdate } from './graphics-types';
+import { LightConfig, ManagedLight } from './graphics-types';
 import { devLog } from '../utils/dev-log';
 
 /**

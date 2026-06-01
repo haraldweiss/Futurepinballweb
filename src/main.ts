@@ -17,78 +17,78 @@ import { devLog } from './utils/dev-log';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
-  bumpers, extraBalls, partData, tableGroup,
-  setPhysics, setFpScriptHandlers, setLoadedLibrary, setBAMEngine, cb,
+  bumpers, extraBalls, partData, _tableGroup,
+  setPhysics, _setFpScriptHandlers, setLoadedLibrary, setBAMEngine, cb,
 } from './game';
 import {
-  getAudioCtx, playSound, startBGMusic, stopBGMusic, playFPTMusic, toggleMusic, initializeAudioPooling,
+  getAudioCtx, playSound, startBGMusic, _stopBGMusic, _playFPTMusic, _toggleMusic, initializeAudioPooling,
   getAudioSourcePool,
-  initializeAudioSystem, getAudioSystem, AudioCategory,
-  TARGET_HIT, FLIPPER_ACTIVATE, RAMP_COMPLETE, BALL_DRAIN, MULTIBALL_START, MILESTONE_REACHED,
-  getSoundManager, disposeSoundManager,
-  getMusicManager, disposeMusicManager,
+  initializeAudioSystem, getAudioSystem, _AudioCategory,
+  _TARGET_HIT, _FLIPPER_ACTIVATE, _RAMP_COMPLETE, _BALL_DRAIN, _MULTIBALL_START, _MILESTONE_REACHED,
+  getSoundManager, _disposeSoundManager,
+  getMusicManager, _disposeMusicManager,
 } from './audio-system';
 import { BAMEngine } from './bam-engine';
-import { BamBridge, initializeBamBridge, getBamBridge } from './bam-bridge';
+import { initializeBamBridge, getBamBridge } from './bam-bridge';
 import {
   dmdState, dmdUpdate, dmdEvent, dmdRenderAttract, dmdRenderPlaying,
   dmdRenderEvent, dmdRenderGameOver, dmdCanvas, DMD_W, DMD_H,
   toggleDMDMode, dmdSolidMode, initDMDResizing,
 } from './dmd';
 import { getTopScores, recordScore } from './highscore';
-import { TABLE_CONFIGS, buildTable, buildPhysicsTable, buildRealisticFlipper, scoreBumperHit, scoreTargetHit, scoreSlingshotHit, checkRolloverLanes, updateSpinnerPhysics, getAdvancedLighting } from './table';
-import { runFPScript, callScriptFlipper, callScriptDrain } from './script-engine';
+import { TABLE_CONFIGS, buildTable, buildRealisticFlipper, scoreBumperHit, scoreTargetHit, scoreSlingshotHit, checkRolloverLanes, updateSpinnerPhysics, getAdvancedLighting } from './table';
+import { callScriptFlipper, callScriptDrain } from './script-engine';
 import { parseFPTFile, parseFPLFile, getBackglassArtwork } from './fpt-parser';
-import { getBackglassRenderer, disposeBackglass } from './backglass';
+import { getBackglassRenderer } from './backglass';
 import { getProfiler, QUALITY_PRESETS } from './profiler';
 import { initializeGPUDiagnostics } from './gpu-diagnostics';
 import { ScoreDisplayManager } from './score-display';
-import { VisualPolishSystem, emitBallTrail, emitFlipperDust, emitMilestoneSparkles } from './visual-polish';
+import { VisualPolishSystem } from './visual-polish';
 import { getIntegratedEditor } from './integrated-editor';
 import { showTableSelector } from './table-selector';
 import {
-  CabinetSystem, initializeCabinetSystem, getCabinetSystem, getActiveCabinetProfile,
-  setActiveCabinetProfile, rotatePlayfieldTo, CABINET_VERTICAL, CABINET_HORIZONTAL,
-  CABINET_WIDE, CABINET_INVERTED,
+  CabinetSystem, initializeCabinetSystem, _getCabinetSystem, getActiveCabinetProfile,
+  setActiveCabinetProfile, rotatePlayfieldTo, _CABINET_VERTICAL, _CABINET_HORIZONTAL,
+  _CABINET_WIDE, _CABINET_INVERTED,
 } from './cabinet-system';
 import {
-  RotationEngine, initializeRotationEngine, getRotationEngine,
-  applyProfileRotation, rotatePlayfieldSmooth, getFlipperOrientation,
+  _RotationEngine, initializeRotationEngine, getRotationEngine,
+  applyProfileRotation, rotatePlayfieldSmooth, _getFlipperOrientation,
 } from './rotation-engine';
 import {
-  UIRotationManager, initializeUIRotation, getUIRotationManager,
-  applyUIRotation, resetUIRotation,
+  _UIRotationManager, initializeUIRotation, _getUIRotationManager,
+  applyUIRotation, _resetUIRotation,
 } from './ui-rotation';
 import {
-  getPlayfieldCanvasSize, getDMDSize, getBackglassSize, applyRendererScaling,
-  onDisplayResize, getDisplayDimensions,
+  getPlayfieldCanvasSize, _getDMDSize, getBackglassSize, _applyRendererScaling,
+  _onDisplayResize, _getDisplayDimensions,
 } from './responsive-display';
 import {
   initializeScreenRoleManager, getScreenRoleManager,
 } from './screen-role-manager';
 import {
-  initializeScreenResolutionManager, getScreenResolutionManager,
+  initializeScreenResolutionManager, _getScreenResolutionManager,
 } from './screen-resolution-manager';
 import {
-  InputMappingManager, initializeInputMapping, getInputMappingManager,
-  applyInputMapping, resetInputMapping,
-  getFlipperCorrectionAngles, getPlungerAdjustment,
+  _InputMappingManager, initializeInputMapping, _getInputMappingManager,
+  applyInputMapping, _resetInputMapping,
+  _getFlipperCorrectionAngles, _getPlungerAdjustment,
 } from './input-mapping';
 import {
-  AnimationBindingManager, initializeAnimationBinding, getAnimationBindingManager,
+  _AnimationBindingManager, initializeAnimationBinding, getAnimationBindingManager,
 } from './mechanics/animation-binding';
 import {
-  initializeCoinSystem, showCoinScreen, closeCoinScreen, addCoin, startGame,
-  isCoinScreenVisible, isGameStarted, getPlayerCount, resetCoinSystem, updateCoinDisplay,
+  initializeCoinSystem, showCoinScreen, _closeCoinScreen, addCoin, startGame,
+  isCoinScreenVisible, isGameStarted, getPlayerCount, resetCoinSystem, _updateCoinDisplay,
 } from './coin-system';
 import {
-  initializeKeyBindings, getKeyBindingManager, checkKeyBinding,
+  initializeKeyBindings, _getKeyBindingManager, checkKeyBinding,
 } from './keybindings';
 import {
-  AnimationScheduler, initializeAnimationScheduler, getAnimationScheduler,
+  _AnimationScheduler, initializeAnimationScheduler, getAnimationScheduler,
 } from './mechanics/animation-scheduler';
 import {
-  AnimationDebugger, initializeAnimationDebugger, getAnimationDebugger,
+  _AnimationDebugger, initializeAnimationDebugger, _getAnimationDebugger,
 } from './animation/animation-debugger';
 import {
   initializePhysicsWorker, getPhysicsWorker, disposePhysicsWorker,
@@ -99,33 +99,33 @@ import { getPlayfieldVisualEnhancement } from './graphics/playfield-visual-enhan
 import { getVideoManager } from './video-manager';
 import { getVideoBindingManager } from './mechanics/video-binding';
 import {
-  FileSystemBrowser, FileInfo, formatFileSize,
+  _FileSystemBrowser, FileInfo, formatFileSize,
   getFileSystemBrowser,
-  FileBrowserUIManager, getFileBrowserUIManager,
-  AdvancedFileBrowserManager, getAdvancedFileBrowserManager,
+  _FileBrowserUIManager, getFileBrowserUIManager,
+  _AdvancedFileBrowserManager, getAdvancedFileBrowserManager,
   type BatchJob,
 } from './file-browser';
 import {
-  ResourceManager, initializeResourceManager, getResourceManager, resetResourceManager,
-  type ResourceBudgets,
+  _ResourceManager, initializeResourceManager, getResourceManager, resetResourceManager,
+  type _ResourceBudgets,
 } from './resource-manager';
 import {
-  LibraryCache, initializeLibraryCache, getLibraryCache, resetLibraryCache,
+  _LibraryCache, initializeLibraryCache, getLibraryCache, resetLibraryCache,
 } from './library-cache';
 import { integrationTesting } from './integration-testing';
 import { getPerformanceReportGenerator, generatePerformanceReport } from './performance-report-generator';
-import { getTestSuite, resetTestSuite } from './test-suite';
+import { getTestSuite } from './test-suite';
 import { DirectoryPathManager } from './directory-path-manager';
-import { escapeHtml, setInnerHTMLSafe } from './utils/html-escape';
+import { escapeHtml } from './utils/html-escape';
 import { loadFpwConfig } from './utils/fpw-config';
 import { initializeEventHandlers } from './event-handlers-init';
 import { setupWindowAPI, setDevFlag, type WindowAPI } from './window-api';
 import { getDefaultPhysicsConfig, logPhysicsConfig, validatePhysicsConfig } from './physics-config-enhancer';
-import { getInputOptimizer, disposeInputOptimizer } from './input-optimizer';
+import { getInputOptimizer } from './input-optimizer';
 import { getPerformanceDashboard } from './performance-dashboard';
-import { initScoreAnimationManager, getScoreAnimationManager, disposeScoreAnimationManager } from './score-animation-manager';
-import { initTouchControlsManager, getTouchControlsManager, disposeTouchControlsManager } from './touch-controls-manager';
-import { initBallTrailManager, getBallTrailManager, disposeBallTrailManager } from './ball-trail-manager';
+import { initScoreAnimationManager, getScoreAnimationManager } from './score-animation-manager';
+import { initTouchControlsManager } from './touch-controls-manager';
+import { initBallTrailManager, getBallTrailManager } from './ball-trail-manager';
 import {
   calculateResponsiveZoom, getResponsiveCameraTilt, getResponsiveFOV,
   getResponsiveFlipperX, getOptimalPixelRatio, calcSafeFlipperLength,
@@ -133,7 +133,7 @@ import {
 } from './app/responsive-helpers';
 import { setupScene, type SceneContext } from './app/scene-setup';
 import { setupPostProcessing } from './app/post-processing';
-import { initSyncTransport, emitSyncFrame, onSyncFrame, destroySyncTransport } from './app/sync-transport';
+import { initSyncTransport, emitSyncFrame, onSyncFrame } from './app/sync-transport';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -622,7 +622,7 @@ requestAnimationFrame(function initViewSettingsAndVisuals() {
 // ─── Post-Processing + Graphics Pipeline + Lighting ─────────────────────────
 const {
   composer, bloomPass, ssrPass, motionBlurPass,
-  cascadedShadowMapper, cascadedShadowCompositePass, perLightBloomPass,
+  cascadedShadowMapper, _cascadedShadowCompositePass, perLightBloomPass,
   particleSystem, volumetricPass, filmEffectsPass, dofPass, fxaaPass,
   mainSpot, ambLight, fillLight, rimLight,
 } = setupPostProcessing(scene, camera, renderer, profiler);
@@ -2842,7 +2842,7 @@ const browseTableDirectoryFS = async () => {
     fileBrowserState.selectedLibraryFiles = [];
 
     const tablesList = document.getElementById('tables-list')!;
-    const tablesEmpty = document.getElementById('tables-empty')!;
+    const _tablesEmpty = document.getElementById('tables-empty')!;
 
     if (tables.length === 0) {
       tablesList.style.display = 'none';
@@ -2904,7 +2904,7 @@ const browseLibraryDirectoryFS = async () => {
     fileBrowserState.selectedLibraryFiles = [...libraries];
 
     const libsList = document.getElementById('libraries-list')!;
-    const libsEmpty = document.getElementById('libraries-empty')!;
+    const _libsEmpty = document.getElementById('libraries-empty')!;
 
     if (libraries.length === 0) {
       libsList.style.display = 'none';
@@ -3777,7 +3777,7 @@ disposePhysicsWorker();});
   setSize(); window.addEventListener('resize',setSize);
 
   let bgRenderFrames = 0;
-  const bgCtx = canvas.getContext('2d');
+  const _bgCtx = canvas.getContext('2d');
 
   const bgLoop = () => {
     requestAnimationFrame(bgLoop);
@@ -4344,7 +4344,7 @@ if (FPW_ROLE === 'dmd') {
 
     // Phase 13 Task 2: Initialize BAM Bridge (connects VBScript to BAMEngine)
     setDevFlag('INIT_BAM_BRIDGE_START', true);
-    const bamBridge = initializeBamBridge(bam);
+    const _bamBridge = initializeBamBridge(bam);
     if (import.meta.env.DEV) {
       console.log('✅ B.A.M. Bridge initialized');
       setDevFlag('INIT_BAM_BRIDGE_OK', true);
@@ -4377,8 +4377,8 @@ if (FPW_ROLE === 'dmd') {
       setDevFlag('INIT_ANIM_BINDING_START', true);
       console.log('🔄 About to initialize animation binding...');
     }
-    const animationBindingMgr = initializeAnimationBinding();
-    const animationScheduler = initializeAnimationScheduler();
+    const _animationBindingMgr = initializeAnimationBinding();
+    const _animationScheduler = initializeAnimationScheduler();
     if (import.meta.env.DEV) {
       console.log('✅ Animation binding system initialized');
       setDevFlag('INIT_ANIM_BINDING_OK', true);

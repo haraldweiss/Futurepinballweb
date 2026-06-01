@@ -163,7 +163,7 @@ export class DMDTextRenderer {
    */
   calculateLayout(
     text: string,
-    dmdScale: number = 1,
+    _dmdScale: number = 1,
     options?: {
       alignment?: 'left' | 'center' | 'right';
       verticalAlignment?: 'top' | 'middle' | 'bottom';

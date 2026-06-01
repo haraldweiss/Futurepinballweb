@@ -19,7 +19,7 @@ export function getBackglassArtwork(): THREE.Texture | null {
   let largestTexture: THREE.Texture | null = null;
   let largestArea = 0;
 
-  for (const [name, texture] of Object.entries(fptResources.textures)) {
+  for (const [_name, texture] of Object.entries(fptResources.textures)) {
     if (!texture?.image) continue;
     const img = texture.image as HTMLImageElement;
     const area = (img.width || 0) * (img.height || 0);

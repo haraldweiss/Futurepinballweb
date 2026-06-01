@@ -130,8 +130,8 @@ export class AnimationDebugger {
 
     const queue = getAnimationQueue();
     const bridge = getBamBridge();
-    const bindingMgr = getAnimationBindingManager();
-    const scheduler = getAnimationScheduler();
+    const _bindingMgr = getAnimationBindingManager();
+    const _scheduler = getAnimationScheduler();
 
     let status = '';
     status += `⚙️ Queue: ${queue?.size() || 0} pending\n`;

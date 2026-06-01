@@ -2,7 +2,7 @@
 // © 2026 Harald Weiss
 
 import * as THREE from 'three';
-import type { Vector3, Quaternion, Keyframe, AnimationSequence, BAMConfig } from './types';
+import type { Vector3, Keyframe, AnimationSequence, BAMConfig } from './types';
 
 // ─── Utility Math Functions ────────────────────────────────────────────────
 
@@ -72,7 +72,7 @@ class TablePhysics {
   getGravityVector(): Vector3 {
     const x = degreesToRadians(this.tiltAngleX);
     const y = degreesToRadians(this.tiltAngleY);
-    const z = degreesToRadians(this.tiltAngleZ);
+    const _z = degreesToRadians(this.tiltAngleZ);
 
     const cosX = Math.cos(x);
     const sinX = Math.sin(x);

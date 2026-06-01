@@ -11,7 +11,7 @@
  */
 
 import * as THREE from 'three';
-import { getCabinetSystem, getActiveCabinetProfile, CabinetProfile } from './cabinet-system';
+import { getCabinetSystem, CabinetProfile } from './cabinet-system';
 import { devLog } from './utils/dev-log';
 
 // ─── Rotation Engine ──────────────────────────────────────────────────────────

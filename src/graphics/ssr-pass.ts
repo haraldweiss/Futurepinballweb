@@ -269,7 +269,7 @@ export class SSRPass {
    * Render the SSR effect (assumes input texture is in uniforms.tDiffuse)
    */
   render(
-    renderer: THREE.WebGLRenderer,
+    _renderer: THREE.WebGLRenderer,
     inputTexture: THREE.Texture,
     normalTexture: THREE.Texture,
     depthTexture: THREE.Texture

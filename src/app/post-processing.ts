@@ -10,16 +10,16 @@ import { MotionBlurPass } from '../graphics/motion-blur-pass';
 import { CascadedShadowMapper, initializeCascadedShadows } from '../graphics/cascaded-shadows';
 import { CascadedShadowCompositePass, initializeCascadedShadowComposite } from '../graphics/cascaded-shadow-composite-pass';
 import { PerLightBloomPass, initializePerLightBloom } from '../graphics/per-light-bloom';
-import { AdvancedParticleSystem, initializeParticleSystem, getParticleSystem } from '../graphics/advanced-particle-system';
+import { AdvancedParticleSystem, initializeParticleSystem } from '../graphics/advanced-particle-system';
 import { createVolumetricLightingPass } from '../graphics/volumetric-lighting';
-import { FilmEffectsPass, initializeFilmEffects, getFilmEffectsPass } from '../graphics/film-effects-pass';
-import { DepthOfFieldPass, initializeDepthOfField, getDepthOfFieldPass } from '../graphics/dof-pass';
+import { FilmEffectsPass, initializeFilmEffects } from '../graphics/film-effects-pass';
+import { DepthOfFieldPass, initializeDepthOfField } from '../graphics/dof-pass';
 import { initializeGraphicsPass } from '../graphics/pass-initializer';
 import { initializeGraphicsPipeline, getGraphicsPipeline } from '../graphics/graphics-pipeline';
-import { initializePlayfieldVisualEnhancement, getPlayfieldVisualEnhancement, disposePlayfieldVisualEnhancement } from '../graphics/playfield-visual-enhancement';
-import { initializeMetallicMaterials, getMetallicMaterialFactory } from '../graphics/metallic-materials';
-import { initializeVideoManager, getVideoManager, disposeVideoManager } from '../video-manager';
-import { initializeVideoBinding, getVideoBindingManager, disposeVideoBinding } from '../mechanics/video-binding';
+import { initializePlayfieldVisualEnhancement } from '../graphics/playfield-visual-enhancement';
+import { initializeMetallicMaterials } from '../graphics/metallic-materials';
+import { initializeVideoManager } from '../video-manager';
+import { initializeVideoBinding } from '../mechanics/video-binding';
 
 import type { PerformanceProfiler } from '../profiler';
 

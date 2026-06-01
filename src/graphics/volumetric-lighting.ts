@@ -103,7 +103,7 @@ const VolumetricLightingShader = {
 export class VolumetricLightingPass extends ShaderPass {
   uniforms: any;
 
-  constructor(renderer: THREE.WebGLRenderer) {
+  constructor(_renderer: THREE.WebGLRenderer) {
     const shader = { ...VolumetricLightingShader };
     super(shader);
     // Explicitly assign uniforms from shader
