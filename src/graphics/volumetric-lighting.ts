@@ -101,45 +101,32 @@ const VolumetricLightingShader = {
  * VolumetricLightingPass - Post-processing pass for god rays
  */
 export class VolumetricLightingPass extends ShaderPass {
-  uniforms: any;
+  declare uniforms: Record<string, { value: unknown }>;
 
   constructor(_renderer: THREE.WebGLRenderer) {
     const shader = { ...VolumetricLightingShader };
     super(shader);
-    // Explicitly assign uniforms from shader
-    this.uniforms = (shader as any).uniforms;
+    this.uniforms = shader.uniforms;
     this.renderToScreen = false;
   }
 
-  /**
-   * Update light position for shader
-   */
   setLightPosition(x: number, y: number, z: number): void {
-    (this.uniforms as any).lightPosition.value.set(x, y, z);
+    this.uniforms.lightPosition.value = new THREE.Vector3(x, y, z);
   }
 
-  /**
-   * Set volumetric effect parameters
-   */
   setParameters(density: number, weight: number, decay: number, samples: number = 32): void {
-    (this.uniforms as any).density.value = Math.max(0, Math.min(1, density));
-    (this.uniforms as any).weight.value = Math.max(0, Math.min(1, weight));
-    (this.uniforms as any).decay.value = Math.max(0, Math.min(1, decay));
-    (this.uniforms as any).samples.value = Math.max(8, Math.min(64, samples));
+    this.uniforms.density.value = Math.max(0, Math.min(1, density));
+    this.uniforms.weight.value = Math.max(0, Math.min(1, weight));
+    this.uniforms.decay.value = Math.max(0, Math.min(1, decay));
+    this.uniforms.samples.value = Math.max(8, Math.min(64, samples));
   }
 
-  /**
-   * Set exposure (overall brightness)
-   */
   setExposure(exposure: number): void {
-    (this.uniforms as any).exposure.value = Math.max(0, Math.min(1, exposure));
+    this.uniforms.exposure.value = Math.max(0, Math.min(1, exposure));
   }
 
-  /**
-   * Update screen size for ray casting
-   */
   setScreenSize(width: number, height: number): void {
-    (this.uniforms as any).screenSize.value.set(width, height);
+    this.uniforms.screenSize.value = new THREE.Vector2(width, height);
   }
 }
 

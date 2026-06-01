@@ -215,3 +215,14 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 - `src/window-api.ts` typed surface for INIT_* flags (pre-session)
 - Net code: −10.500 lines (pre-session) + cleaner structure
 - Verified: tsc clean, 757/757 tests
+
+### 2026-06-01 (continued) — More extractions + Features + Bundle opt
+- **5 more barrel extractions**: editor.ts, physics-worker.ts, cabinet-system.ts, touch-controls-manager.ts, coin-system.ts → 5 barrels + 26 sub-modules
+- **Physics worker auto-init**: Worker thread spawned during startup (after initPhysics), eliminating per-table-load latency; 2 new dev flags
+- **Auto-load demo table**: App now loads Pharaoh's Gold on startup instead of the loader screen
+- **Bundle optimization**: main.js 712→286 KB (−60%); editor/audio/video/graphics/file-browser split into 6 separate chunks loaded on demand
+- **Dead code removal**: 124 unused imports/types/parameters removed across 28 files
+- **CI fixes**: actions/checkout v4→v6, setup-node v4→v6, upload-artifact v4→v7; fixed Vite build (type-only import)
+- **Type cleanup**: volumetric-lighting.ts — removed 8 redundant `(this as any)` casts
+- **19 commits total** this session
+- Verified: tsc clean, 757/757 tests
