@@ -16,3 +16,6 @@ release/
 .DS_Store
 *.log
 
+console-output.txt
+scripts/capture-console.cjs
+scripts/devlog-convert.mjs
