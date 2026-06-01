@@ -82,8 +82,7 @@ export function updateSpinnerPhysics(): void {
       physics.ballBody.applyImpulse({ x: dir * hitForce, y: 0.5 }, true);
     }
     const spinAngle = (performance.now() * 0.01) % (Math.PI * 2);
-    const spinnerObj = state as any;
-    spinnerObj.spinnerAngle = spinAngle;
+    (state as unknown as Record<string, number>).spinnerAngle = spinAngle;
     state.spinnerSpins++;
   } else {
     state.spinnerActive = false;
@@ -154,7 +153,7 @@ export function scoreTargetHit(targetData: { x: number; y: number; mesh: any; in
     }
   } else if (pMode === 'countdown') {
     state.targetProgress++;
-    const targetMax = (state as any).targetProgressMax ?? 5;
+    const targetMax = (state as unknown as Record<string, number>).targetProgressMax ?? 5;
     if (state.targetProgress >= targetMax) {
       state.score += 3000 * state.multiplier;
       targetMsg = '🏆 COUNTDOWN BONUS! +3000!';

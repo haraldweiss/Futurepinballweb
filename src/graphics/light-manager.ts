@@ -49,16 +49,18 @@ export class LightManager {
         light = new THREE.AmbientLight(config.color, config.intensity);
         break;
 
-      case 'point':
-        light = new THREE.PointLight(config.color, config.intensity, config.distance ?? 100);
-        light.castShadow = config.castShadow ?? false;
-        if (light.castShadow && (light as any).shadow) {
-          (light as any).shadow.mapSize.set(config.shadowMapSize ?? this.shadowMapSize, config.shadowMapSize ?? this.shadowMapSize);
+      case 'point': {
+        const ptLight = new THREE.PointLight(config.color, config.intensity, config.distance ?? 100);
+        ptLight.castShadow = config.castShadow ?? false;
+        if (ptLight.castShadow && ptLight.shadow) {
+          ptLight.shadow.mapSize.set(config.shadowMapSize ?? this.shadowMapSize, config.shadowMapSize ?? this.shadowMapSize);
         }
+        light = ptLight;
         break;
+      }
 
-      case 'spot':
-        light = new THREE.SpotLight(
+      case 'spot': {
+        const spLight = new THREE.SpotLight(
           config.color,
           config.intensity,
           config.distance ?? 100,
@@ -66,19 +68,23 @@ export class LightManager {
           config.penumbra ?? 0.2,
           config.decay ?? 2
         );
-        light.castShadow = config.castShadow ?? false;
-        if (light.castShadow && (light as any).shadow) {
-          (light as any).shadow.mapSize.set(config.shadowMapSize ?? this.shadowMapSize, config.shadowMapSize ?? this.shadowMapSize);
+        spLight.castShadow = config.castShadow ?? false;
+        if (spLight.castShadow && spLight.shadow) {
+          spLight.shadow.mapSize.set(config.shadowMapSize ?? this.shadowMapSize, config.shadowMapSize ?? this.shadowMapSize);
         }
+        light = spLight;
         break;
+      }
 
-      case 'directional':
-        light = new THREE.DirectionalLight(config.color, config.intensity);
-        light.castShadow = config.castShadow ?? false;
-        if (light.castShadow && (light as any).shadow) {
-          (light as any).shadow.mapSize.set(config.shadowMapSize ?? this.shadowMapSize, config.shadowMapSize ?? this.shadowMapSize);
+      case 'directional': {
+        const dirLight = new THREE.DirectionalLight(config.color, config.intensity);
+        dirLight.castShadow = config.castShadow ?? false;
+        if (dirLight.castShadow && dirLight.shadow) {
+          dirLight.shadow.mapSize.set(config.shadowMapSize ?? this.shadowMapSize, config.shadowMapSize ?? this.shadowMapSize);
         }
+        light = dirLight;
         break;
+      }
 
       default:
         throw new Error(`Unknown light type: ${type}`);
@@ -130,7 +136,7 @@ export class LightManager {
     const light = managed.light;
 
     if (config.color !== undefined) {
-      (light as any).color?.setHex(config.color);
+      light.color?.setHex(config.color);
     }
 
     if (config.intensity !== undefined) {

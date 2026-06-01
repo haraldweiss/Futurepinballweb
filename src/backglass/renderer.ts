@@ -286,7 +286,7 @@ export class BackglassRenderer {
 
     const pulse = Math.sin(now * 0.001) * 0.2 + 0.8;
     this.decorativeLights.forEach(light => {
-      (light as any).intensity = light === this.decorativeLights[0]
+      light.intensity = light === this.decorativeLights[0]
         ? 0.3 * pulse
         : 0.3 * (1 - pulse);
     });

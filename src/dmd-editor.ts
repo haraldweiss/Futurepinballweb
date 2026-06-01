@@ -181,7 +181,7 @@ export class DMDEditor {
       btn.addEventListener('click', (e) => {
         container.querySelectorAll('.scheme-btn').forEach(b => b.classList.remove('active'));
         (e.target as HTMLElement).classList.add('active');
-        this.settings.colorScheme = (e.target as HTMLElement).dataset.scheme as any;
+        this.settings.colorScheme = (e.target as HTMLElement).dataset.scheme as DMDSettings['colorScheme'];
         this.renderPreview();
       });
     });
@@ -191,7 +191,7 @@ export class DMDEditor {
       btn.addEventListener('click', (e) => {
         container.querySelectorAll('.resolution-btn').forEach(b => b.classList.remove('active'));
         (e.target as HTMLElement).classList.add('active');
-        this.settings.resolution = (e.target as HTMLElement).dataset.resolution as any;
+        this.settings.resolution = (e.target as HTMLElement).dataset.resolution as DMDSettings['resolution'];
         this.renderPreview();
       });
     });
@@ -201,7 +201,7 @@ export class DMDEditor {
       btn.addEventListener('click', (e) => {
         container.querySelectorAll('.display-mode-btn').forEach(b => b.classList.remove('active'));
         (e.target as HTMLElement).classList.add('active');
-        this.currentDisplayMode = (e.target as HTMLElement).dataset.mode as any;
+        this.currentDisplayMode = (e.target as HTMLElement).dataset.mode as 'attract' | 'playing' | 'event' | 'gameover';
         this.renderPreview();
       });
     });

@@ -142,9 +142,9 @@ class AdvancedLightingSystem {
     duration: number,
     pulseInterval: number = 200
   ): void {
-    const maxIntensity = (light as any).intensity || 2.0;
+    const maxIntensity = light.intensity || 2.0;
     const startTime = Date.now();
-    const startIntensity = (light as any).intensity;
+    const startIntensity = light.intensity;
 
     const animate = () => {
       const elapsed = Date.now() - startTime;
@@ -153,9 +153,9 @@ class AdvancedLightingSystem {
       // Pulse effect: rapid on/off based on pulseInterval
       const pulseCycle = (elapsed % pulseInterval) / pulseInterval;
       const isOn = pulseCycle < 0.5;
-      const fadeOut = Math.max(0, 1 - elapsed / duration);  // Fade out at end
+      const fadeOut = Math.max(0, 1 - elapsed / duration);
 
-      (light as any).intensity = isOn ? maxIntensity * fadeOut : minIntensity * fadeOut;
+      light.intensity = isOn ? maxIntensity * fadeOut : minIntensity * fadeOut;
 
       requestAnimationFrame(animate);
     };

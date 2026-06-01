@@ -108,7 +108,7 @@ export class VolumetricLightingPass extends ShaderPass {
     super(shader);
     // Explicitly assign uniforms from shader
     this.uniforms = (shader as any).uniforms;
-    (this as any).renderToScreen = false;
+    this.renderToScreen = false;
   }
 
   /**
