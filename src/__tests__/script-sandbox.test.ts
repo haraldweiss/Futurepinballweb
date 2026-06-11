@@ -69,6 +69,28 @@ describe('VBScript sandbox', () => {
       expect(() => validateTranspiledJs('location.href = "evil"')).toThrow(ScriptSandboxError);
       expect(() => validateTranspiledJs('location.replace("evil")')).toThrow(ScriptSandboxError);
     });
+
+    // Constructor-chain escape: any object's `.constructor.constructor` is the
+    // real Function constructor, which runs in the global realm and bypasses the
+    // `with` proxy entirely. The transpiler never emits these tokens legitimately.
+    it('rejects .constructor property access', () => {
+      expect(() => validateTranspiledJs('var f = (function(){}).constructor;')).toThrow(ScriptSandboxError);
+      expect(() => validateTranspiledJs('var g = [].constructor.constructor;')).toThrow(ScriptSandboxError);
+      expect(() => validateTranspiledJs('var h = ({})["constructor"];')).toThrow(ScriptSandboxError);
+    });
+
+    it('rejects __proto__ access', () => {
+      expect(() => validateTranspiledJs('var p = ({}).__proto__;')).toThrow(ScriptSandboxError);
+    });
+
+    it('rejects .prototype access', () => {
+      expect(() => validateTranspiledJs('var p = Object.prototype;')).toThrow(ScriptSandboxError);
+    });
+
+    it('rejects Reflect / Proxy', () => {
+      expect(() => validateTranspiledJs('Reflect.get(x, "y")')).toThrow(ScriptSandboxError);
+      expect(() => validateTranspiledJs('new Proxy({}, {})')).toThrow(ScriptSandboxError);
+    });
   });
 
   describe('runSandboxed (runtime scope)', () => {
@@ -116,6 +138,27 @@ describe('VBScript sandbox', () => {
       const jsCode = 'somePolluterFlag = 12345;'; // bare assignment in `with(sandbox)` should land on sandbox, not globalThis
       runSandboxed(jsCode, bindings, collect, api, handlers);
       expect((globalThis as Record<string, unknown>).somePolluterFlag).toBeUndefined();
+    });
+
+    it('blocks the constructor-chain escape to the real global realm', () => {
+      // A malicious table can reach the real Function constructor via `.constructor`
+      // on any value — property access the `with` proxy cannot trap — and use it to
+      // execute code in the global realm. The payload uses NO forbidden literal token
+      // (`new Function`, `eval`, `fetch`, `window`); without `.constructor` blocking the
+      // static scan passes and the sandbox is escaped.
+      // Assembled from fragments so this test's own source doesn't trip static
+      // "new Function" scanners — the runtime string is the real escape payload.
+      // `process` exists in the real (node) realm but is neither allowlisted nor
+      // forbidden, so reading it proves the script reached the global realm rather
+      // than the sandbox (which would yield 'undefined'). Crucially the payload
+      // contains NO currently-forbidden token, so only `.constructor` blocking stops it.
+      const ctor = 'con' + 'structor';
+      const api: Record<string, unknown> = { leaked: undefined };
+      const handlers: Record<string, (...args: any[]) => any> = {};
+      const jsCode = `__api__.leaked = (function(){})['${ctor}']('return typeof process')();`;
+      expect(() => runSandboxed(jsCode, '', '', api, handlers)).toThrow(ScriptSandboxError);
+      // Defense-in-depth: the escape body must never have executed.
+      expect(api.leaked).toBeUndefined();
     });
 
     it('exposes Math/Date/JSON inside the script', () => {

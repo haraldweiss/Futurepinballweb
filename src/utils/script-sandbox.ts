@@ -8,14 +8,23 @@
  * malicious table can call `fetch`, read `localStorage`, etc. This module
  * provides two layers of defense:
  *
- *   1. Static scan: reject scripts that reference forbidden identifiers.
+ *   1. Static scan: reject scripts that reference forbidden identifiers,
+ *      including the `constructor` / `prototype` / `__proto__` chain that would
+ *      otherwise reach the real `Function` constructor.
  *   2. Runtime scope: a Proxy returns `undefined` for any bare identifier the
  *      script references that isn't in the explicit allowlist below. Used as
  *      `with(__sandbox__) { ... }` so bare names go through the trap.
  *
- * The Proxy alone is sufficient as a hard guarantee — the static scan exists
- * only to fail fast with a readable message instead of "undefined is not a
- * function" deep inside table init.
+ * THREAT MODEL — this is best-effort, defense-in-depth, NOT a hard isolation
+ * boundary. The Proxy only governs bare-identifier resolution; it cannot stop a
+ * script that obtains any live built-in (e.g. via a function literal) from
+ * walking `.constructor.constructor` to the real `Function` in this realm. The
+ * static scan closes the practical, copy-paste escape vectors, but a determined
+ * attacker using computed-string obfuscation (e.g. `["con"+"structor"]`) can
+ * still slip through. Treat loaded tables as semi-trusted (like a downloaded
+ * program). True isolation would require a separate realm (Worker/iframe) — see
+ * the follow-up note in the review. Do not widen ALLOWED_GLOBALS without
+ * re-examining this boundary.
  */
 
 /** Browser/runtime globals safe to expose to scripts. Read-only intent. */
@@ -52,6 +61,13 @@ const FORBIDDEN_PATTERNS: ReadonlyArray<{ re: RegExp; name: string }> = [
   { re: /\bdocument\s*\.\s*(?:write|cookie|domain|location)\b/, name: 'document.write/cookie/domain/location' },
   { re: /\bnavigator\s*\.\s*(?:sendBeacon|serviceWorker|geolocation|credentials|usb|hid|bluetooth)\b/, name: 'navigator privileged API' },
   { re: /\blocation\s*\.\s*(?:assign|replace|href|hash|search)\b/, name: 'location redirect' },
+  // Constructor-chain escape: `obj.constructor.constructor` is the real Function
+  // constructor, which runs in the global realm and bypasses the `with` proxy.
+  // The transpiler never emits these tokens legitimately, so reject them outright.
+  { re: /\bconstructor\b/, name: 'constructor (prototype-chain escape)' },
+  { re: /\bprototype\b/, name: 'prototype access' },
+  { re: /\b__proto__\b/, name: '__proto__ access' },
+  { re: /\b(?:Reflect|Proxy)\b/, name: 'Reflect/Proxy' },
 ];
 
 export class ScriptSandboxError extends Error {
