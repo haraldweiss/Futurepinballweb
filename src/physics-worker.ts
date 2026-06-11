@@ -2,9 +2,10 @@
 // © 2026 Harald Weiss
 /**
  * physics-worker.ts — Barrel for Physics Simulation Worker Thread
- * Composes sub-modules: state, types, init, step, bodies, handler
+ *
+ * The worker entry point. All type re-exports were unused — removed
+ * in 2026-06-11 cleanup. Types are consumed internally via sibling
+ * imports within physics-worker/.
  */
 
 import './physics-worker/worker-handler';
-
-export type { WorkerMessage, PhysicsFrame, CollisionEvent } from './physics-worker/worker-types';
