@@ -313,3 +313,34 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 - `AGENTS.md`: §3.8 für browser-use-Regeln + Quick-Reference-Eintrag + Handoff
 - 6 Free-Modelle getestet, nur 2 browser-use-tauglich (nemotron-3-ultra-free, mimo-v2.5-free)
 - Commits: `9f3111c1` (validator + global) + `142df6a0` (initial BROWSER_USE.md)
+
+### 2026-06-11 — Claude/Care: main.ts-Zerlegung (Review #2, Runde 1)
+
+Drei kohäsive Einheiten per Dependency-Injection aus dem Entry-Point extrahiert
+(Factory-Muster wie `setupScene`); je ein granularer Commit, je end-to-end
+verifiziert (tsc + vite build + Browser-Smoke, da die 762 Unit-Tests die
+main.ts-Orchestrierung **nicht** abdecken).
+
+- `c3eaf346` — `src/app/particle-field.ts`: `ParticleField`-Klasse (DI: scene,
+  profiler, advanced particleSystem). `partData` bleibt der geteilte `./game`-Puffer,
+  `currentFps` wird pro `spawn()` gereicht. Verhalten exakt erhalten inkl. der
+  Eigenheit, dass die Float32Array-Puffer einmalig auf das initiale MAX_PARTS
+  dimensioniert und bei `setMaxParts()` **nicht** neu allokiert werden.
+- `4d004761` — `src/app/view-settings.ts`: `createViewSettings(camera, rotateAndRedraw)`.
+  Eigener `fpw_view`-State; Slider/Reset rufen lokale Closures statt `window.*`.
+- `f134bd70` — `src/app/multiscreen.ts`: `initMultiscreen(deps)` hält
+  `_msLayout`/`_msWindows`; importiert Screen-Role-/Screen-Utils direkt, injiziert
+  die main.ts-lokalen `initInlineBackglass`/`stopInlineBackglass`/`initDMDVisibility`/
+  `getDmdHidden`/`loadDemoTable`. Touch-ups: `innerHTML=''`→`replaceChildren()`,
+  `(e: any)`→`(e: Event)` + `ScreenRole`-Cast.
+
+- main.ts: **4330 → 3930 Zeilen (−400)**; `src/app/` +3 Module.
+- Verified: tsc clean, 762/762 tests, vite build ✓, manueller Browser-Smoke
+  (Pharaoh lädt/rendert, Animate-Loop 900+ Frames fehlerfrei, View-Panel
+  persistiert/resettet, Multiscreen-Modal + Rollen-UI + Single-Screen-Apply
+  fehlerfrei) ✓
+
+**Offen → spätere Care-Runden** (§3.3, nicht mechanisch — Closures über
+scene/camera/physics/state, brauchen DI): File-Browser-Cluster (~300 Zeilen),
+DMD-Visibility, Inline-Backglass, `animate()`-Loop-Orchestrierung, alles über
+`getPhysicsWorker()`/Physics-Bridge.
