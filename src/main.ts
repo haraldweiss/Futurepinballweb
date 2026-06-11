@@ -130,6 +130,8 @@ import {
   detectDeviceType,
 } from './app/responsive-helpers';
 import { setupScene } from './app/scene-setup';
+import { appendLogEntry } from './app/log-utils';
+import { getAllScreensForLayout, type ScreenLike } from './app/screen-utils';
 import { setupPostProcessing } from './app/post-processing';
 import { initSyncTransport, emitSyncFrame, onSyncFrame } from './app/sync-transport';
 
@@ -1311,7 +1313,7 @@ function showLibrarySelector(lib: any): void {
       resetGameState();
       await loadTableWithPhysicsWorker(templateConfig as any, scene, lib);
       window.closeLoader();
-      logMsg(`✓ Loaded: ${lib.name} / ${templateName}`);
+      appendLogEntry(`✓ Loaded: ${lib.name} / ${templateName}`);
     };
     tableEl.appendChild(btn);
   }
@@ -1922,7 +1924,7 @@ function applyQualityPreset(): void {
     if (lastAppliedQualityPreset === presetName) return;
     lastAppliedQualityPreset = presetName;
 
-    logMsg(`⚙️ Applying quality preset: ${currentPreset.label}`, 'ok');
+    appendLogEntry(`⚙️ Applying quality preset: ${currentPreset.label}`, 'ok');
 
     // ─── Bloom Pass ───
     bloomPass?.setEnabled?.(currentPreset.bloomEnabled);
@@ -1958,14 +1960,14 @@ function applyQualityPreset(): void {
 
     // ─── Particle System ───
     MAX_PARTS = currentPreset.particleCount;
-    logMsg(`  └─ Particles: ${MAX_PARTS} max`, 'ok');
+    appendLogEntry(`  └─ Particles: ${MAX_PARTS} max`, 'ok');
 
     // ─── Backglass Mode ───
     if (backglassRenderer) {
       if (currentPreset.backglassEnabled) {
         backglassRenderer.setEnabled(true);
         backglassRenderer.setRenderMode(currentPreset.backglass3D);
-        logMsg(`  └─ Backglass: ${currentPreset.backglass3D ? '3D' : '2D'}`, 'ok');
+        appendLogEntry(`  └─ Backglass: ${currentPreset.backglass3D ? '3D' : '2D'}`, 'ok');
       } else {
         backglassRenderer.setEnabled(false);
       }
@@ -1976,7 +1978,7 @@ function applyQualityPreset(): void {
       (volumetricPass as any).enabled = currentPreset.volumetricEnabled;
       if (currentPreset.volumetricEnabled) {
         volumetricPass.setExposure(currentPreset.volumetricIntensity);
-        logMsg(`  └─ Volumetric: ${(currentPreset.volumetricIntensity * 100).toFixed(0)}%`, 'ok');
+        appendLogEntry(`  └─ Volumetric: ${(currentPreset.volumetricIntensity * 100).toFixed(0)}%`, 'ok');
       }
     }
 
@@ -1984,20 +1986,20 @@ function applyQualityPreset(): void {
     const enhancement = getPlayfieldVisualEnhancement();
     if (enhancement) {
       enhancement.setQualityPreset(currentPreset.name as 'low' | 'medium' | 'high' | 'ultra');
-      logMsg(`  └─ Visual Enhancement: ${currentPreset.name}`, 'ok');
+      appendLogEntry(`  └─ Visual Enhancement: ${currentPreset.name}`, 'ok');
     }
 
     // ─── DMD Resolution ───
     if (currentPreset.dmdResolution) {
       window.setDMDResolutionOption?.(currentPreset.dmdResolution);
       window.setDMDGlow?.(currentPreset.dmdGlowEnabled, currentPreset.dmdGlowIntensity);
-      logMsg(`  └─ DMD: ${currentPreset.dmdResolution} (glow: ${currentPreset.dmdGlowEnabled})`, 'ok');
+      appendLogEntry(`  └─ DMD: ${currentPreset.dmdResolution} (glow: ${currentPreset.dmdGlowEnabled})`, 'ok');
     }
 
     // ─── Tone Mapping Exposure ───
     renderer.toneMappingExposure = currentPreset.bloomEnabled ? 1.35 : 1.30;  // ─── Increased from 1.15/1.05 to combat SSAO/fog darkening
   } catch (err) {
-    logMsg(`❌ Error in applyQualityPreset: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    appendLogEntry(`❌ Error in applyQualityPreset: ${err instanceof Error ? err.message : String(err)}`, 'error');
   }
 }
 
@@ -2916,7 +2918,7 @@ const loadSelectedTable = async () => {
     const fileHandle = fileBrowserState.selectedTableFile.handle as FileSystemFileHandle;
     const file = await browser.getFile(fileHandle);
 
-    logMsg(`Loading FPT: ${file.name} (${formatFileSize(file.size)})...`);
+    appendLogEntry(`Loading FPT: ${file.name} (${formatFileSize(file.size)})...`);
 
     showLoadingOverlay();
 
@@ -2928,7 +2930,7 @@ const loadSelectedTable = async () => {
         updateLoadingProgress(type, progress.current, progress.total);
       },
       onPhaseComplete: (phase: string, duration: number) => {
-        logMsg(`✓ ${phase.toUpperCase()} phase complete: ${duration.toFixed(0)}ms`);
+        appendLogEntry(`✓ ${phase.toUpperCase()} phase complete: ${duration.toFixed(0)}ms`);
       }
     };
 
@@ -2949,26 +2951,17 @@ const loadSelectedTable = async () => {
       loadingCallbacks
     );
 
-    logMsg(`✓ Loaded: ${file.name}`, 'ok');
+    appendLogEntry(`✓ Loaded: ${file.name}`, 'ok');
     hideLoadingOverlay();
   } catch (error) {
     console.error('❌ Error loading table:', error);
     hideLoadingOverlay();
-    logMsg(`❌ Error: ${error instanceof Error ? error.message : String(error)}`, 'error');
+    appendLogEntry(`❌ Error: ${error instanceof Error ? error.message : String(error)}`, 'error');
   }
 };
 // see window-api.ts — loadSelectedTable
 
-function logMsg(msg: string, className: string = 'log-info'): void {
-  const parseLog = document.getElementById('parse-log');
-  if (parseLog) {
-    const span = document.createElement('span');
-    span.className = className;
-    span.textContent = `${msg  }\n`;
-    parseLog.appendChild(span);
-    parseLog.scrollTop = parseLog.scrollHeight;
-  }
-}
+
 
 // ─── Advanced File Browser Features (Option A) ──────────────────────────────────
 const addToFavorites = (filename: string, type: 'table' | 'library') => {
@@ -2977,7 +2970,7 @@ const addToFavorites = (filename: string, type: 'table' | 'library') => {
 
   if (targetList) {
     advancedMgr.addFavorite(targetList, type);
-    logMsg(`⭐ Added to favorites: ${filename}`, 'log-ok');
+    appendLogEntry(`⭐ Added to favorites: ${filename}`, 'log-ok');
   } else {
     console.warn('File not found in current selection');
   }
@@ -3000,7 +2993,7 @@ const createBatchLoadJob = (tableNames: string[]): string => {
     : [];
 
   const job = advancedMgr.createBatchJob(files, fileBrowserState.selectedLibraryFiles);
-  logMsg(`📋 Created batch job: ${job.id}`, 'log-info');
+  appendLogEntry(`📋 Created batch job: ${job.id}`, 'log-info');
   return job.id;
 };
 
@@ -3015,9 +3008,9 @@ const setupTableDragDrop = () => {
 
   if (dropZone) {
     advancedMgr.setupDragDrop(dropZone, async (files: File[], type: 'table' | 'library') => {
-      logMsg(`📂 Dropped ${files.length} ${type} file${files.length !== 1 ? 's' : ''}`, 'log-info');
+      appendLogEntry(`📂 Dropped ${files.length} ${type} file${files.length !== 1 ? 's' : ''}`, 'log-info');
     });
-    logMsg('✓ Drag & drop enabled for game canvas', 'log-ok');
+    appendLogEntry('✓ Drag & drop enabled for game canvas', 'log-ok');
   }
 };
 
@@ -3274,76 +3267,6 @@ const openMultiscreenModal = () => {
 };
 const closeMultiscreenModal = () => document.getElementById('multiscreen-modal')!.classList.remove('open');
 // see window-api.ts — openMultiscreenModal, closeMultiscreenModal
-
-// ─── Multi-Screen helpers (Phase 4: prefer Electron IPC over browser APIs) ───
-interface ScreenLike {
-  availLeft: number;
-  availTop: number;
-  availWidth: number;
-  availHeight: number;
-  isPrimary?: boolean;
-  label?: string;
-}
-
-// Stable, position-aware ordering: primary at index 0, remaining screens
-// sorted by horizontal position (then vertical, as a tiebreaker). This
-// matches typical pinball cabinet layouts where the Playfield (primary)
-// is at the bottom/center and Backglass + DMD are stacked or arranged
-// to the right. Without sorting, Electron returns displays in OS registration
-// order (HDMI in 3 before HDMI in 2 in the user's setup), which made
-// screens[1] the *furthest* display and swapped Backglass/DMD on the cabinet.
-function sortScreensByPosition(arr: ScreenLike[]): ScreenLike[] {
-  const primaryIdx = arr.findIndex(s => s.isPrimary);
-  const primary = primaryIdx >= 0 ? arr[primaryIdx] : null;
-  const rest = arr.filter((_, i) => i !== primaryIdx);
-  // Sort by x ascending, then y ascending — predictable left-to-right ordering.
-  rest.sort((a, b) => (a.availLeft - b.availLeft) || (a.availTop - b.availTop));
-  return primary ? [primary, ...rest] : rest;
-}
-
-async function getAllScreensForLayout(): Promise<ScreenLike[]> {
-  const api = window.electronAPI;
-  if (api?.getAllDisplays) {
-    try {
-      const displays = await api.getAllDisplays();
-      if (Array.isArray(displays) && displays.length > 0) {
-        const mapped: ScreenLike[] = displays.map((d: any) => ({
-          availLeft: d.workArea?.x ?? d.bounds?.x ?? 0,
-          availTop: d.workArea?.y ?? d.bounds?.y ?? 0,
-          availWidth: d.workArea?.width ?? d.bounds?.width ?? 1920,
-          availHeight: d.workArea?.height ?? d.bounds?.height ?? 1080,
-          isPrimary: !!d.isPrimary,
-          label: d.label,
-        }));
-        return sortScreensByPosition(mapped);
-      }
-    } catch (e) {
-      console.warn('[multiscreen] electronAPI.getAllDisplays failed:', e);
-    }
-  }
-  if ('getScreenDetails' in window) {
-    try {
-      const details = await window.getScreenDetails!();
-      const mapped: ScreenLike[] = (details.screens || []).map((s: any) => ({
-        availLeft: s.availLeft,
-        availTop: s.availTop,
-        availWidth: s.availWidth,
-        availHeight: s.availHeight,
-        isPrimary: s.isPrimary,
-        label: s.label,
-      }));
-      return sortScreensByPosition(mapped);
-    } catch { /* fall through */ }
-  }
-  // Single-screen fallback
-  return [{
-    availLeft: 0,
-    availTop: 0,
-    availWidth: window.screen.availWidth,
-    availHeight: window.screen.availHeight,
-    isPrimary: true,
-  }];
-}
 
 async function openMultiscreenWindow(
   url: string,
@@ -3697,9 +3620,9 @@ const handleFile = async (f: File) => {
       (lib: any) => {
         setLoadedLibrary(lib);
         window.showLibrarySelector(lib);
-        logMsg(`📚 Library loaded: ${lib.name} (${Object.keys(lib.tableTemplates).length} tables)`);
+        appendLogEntry(`📚 Library loaded: ${lib.name} (${Object.keys(lib.tableTemplates).length} tables)`);
       },
-      (err) => logMsg(`❌ FPL Error: ${err}`, 'error')
+      (err) => appendLogEntry(`❌ FPL Error: ${err}`, 'error')
     );
   } else if (f.name.endsWith('.fpt')) {
     // Handle FPT table file (apply loaded library if available)
@@ -3717,7 +3640,7 @@ async function browseTableDirectory(): Promise<void> {
   const dirPathInput = document.getElementById('table-dir-path') as HTMLInputElement;
   const tableInput = document.getElementById('table-dir-input') as HTMLInputElement;
 
-  logMsg('📂 Verzeichnis wird ausgewählt...', 'info');
+  appendLogEntry('📂 Verzeichnis wird ausgewählt...', 'info');
 
   if ('showDirectoryPicker' in window) {
     // Modern API: showDirectoryPicker (Chrome/Edge)
@@ -3741,13 +3664,13 @@ async function browseTableDirectory(): Promise<void> {
         }
       }
 
-      logMsg(`✅ ${files.length} Tabellen-Dateien gefunden`, 'ok');
+      appendLogEntry(`✅ ${files.length} Tabellen-Dateien gefunden`, 'ok');
       renderTableFileGrid(files);
     } catch (e: any) {
       if (e.name === 'AbortError') {
-        logMsg('❌ Verzeichnis-Auswahl abgebrochen', 'warn');
+        appendLogEntry('❌ Verzeichnis-Auswahl abgebrochen', 'warn');
       } else {
-        logMsg(`❌ Fehler beim Verzeichnis-Picker: ${e.message}`, 'error');
+        appendLogEntry(`❌ Fehler beim Verzeichnis-Picker: ${e.message}`, 'error');
       }
       return;
     }
@@ -3767,16 +3690,16 @@ async function browseTableDirectory(): Promise<void> {
         DirectoryPathManager.saveTablePath('Tabellenverzeichnis');
         updateTablePathShortcuts();
 
-        logMsg(`✅ ${files.length} Tabellen-Dateien gefunden`, 'ok');
+        appendLogEntry(`✅ ${files.length} Tabellen-Dateien gefunden`, 'ok');
         renderTableFileGrid(files);
       } else {
-        logMsg('❌ Keine Dateien ausgewählt', 'warn');
+        appendLogEntry('❌ Keine Dateien ausgewählt', 'warn');
       }
     };
     tableInput.click();
     return;
   } else {
-    logMsg('❌ Verzeichnis-Auswahl wird in diesem Browser nicht unterstützt', 'error');
+    appendLogEntry('❌ Verzeichnis-Auswahl wird in diesem Browser nicht unterstützt', 'error');
   }
 }
 
@@ -3887,7 +3810,7 @@ async function browseLibraryDirectory(): Promise<void> {
   const dirPathInput = document.getElementById('lib-dir-path') as HTMLInputElement;
   const libInput = document.getElementById('lib-dir-input') as HTMLInputElement;
 
-  logMsg('📚 Bibliotheksverzeichnis wird ausgewählt...', 'info');
+  appendLogEntry('📚 Bibliotheksverzeichnis wird ausgewählt...', 'info');
 
   if ('showDirectoryPicker' in window) {
     // Modern API: showDirectoryPicker (Chrome/Edge)
@@ -3911,13 +3834,13 @@ async function browseLibraryDirectory(): Promise<void> {
         }
       }
 
-      logMsg(`✅ ${files.length} Bibliotheks-Dateien gefunden`, 'ok');
+      appendLogEntry(`✅ ${files.length} Bibliotheks-Dateien gefunden`, 'ok');
       renderLibraryFileList(files);
     } catch (e: any) {
       if (e.name === 'AbortError') {
-        logMsg('❌ Verzeichnis-Auswahl abgebrochen', 'warn');
+        appendLogEntry('❌ Verzeichnis-Auswahl abgebrochen', 'warn');
       } else {
-        logMsg(`❌ Fehler beim Verzeichnis-Picker: ${e.message}`, 'error');
+        appendLogEntry(`❌ Fehler beim Verzeichnis-Picker: ${e.message}`, 'error');
       }
       return;
     }
@@ -3937,16 +3860,16 @@ async function browseLibraryDirectory(): Promise<void> {
         DirectoryPathManager.saveLibraryPath('Bibliotheksverzeichnis');
         updateLibraryPathShortcuts();
 
-        logMsg(`✅ ${files.length} Bibliotheks-Dateien gefunden`, 'ok');
+        appendLogEntry(`✅ ${files.length} Bibliotheks-Dateien gefunden`, 'ok');
         renderLibraryFileList(files);
       } else {
-        logMsg('❌ Keine Dateien ausgewählt', 'warn');
+        appendLogEntry('❌ Keine Dateien ausgewählt', 'warn');
       }
     };
     libInput.click();
     return;
   } else {
-    logMsg('❌ Verzeichnis-Auswahl wird in diesem Browser nicht unterstützt', 'error');
+    appendLogEntry('❌ Verzeichnis-Auswahl wird in diesem Browser nicht unterstützt', 'error');
   }
 }
 
@@ -3973,9 +3896,9 @@ function renderLibraryFileList(files: File[]): void {
           setLoadedLibrary(lib);
           (document.getElementById('lib-status') as HTMLElement).textContent =
             `✅ ${lib.name} geladen (${Object.keys(lib.tableTemplates || {}).length} Tabellen)`;
-          logMsg(`📚 Library: ${lib.name}`);
+          appendLogEntry(`📚 Library: ${lib.name}`);
         },
-        (err: string) => logMsg(`❌ FPL Error: ${err}`, 'error')
+        (err: string) => appendLogEntry(`❌ FPL Error: ${err}`, 'error')
       );
     };
     list.appendChild(btn);
@@ -4382,7 +4305,7 @@ const logResourceStats = () => {
 const resetResourceManagerWrap = () => {
   resetResourceManager();
   resourceManager = initializeResourceManager();
-  logMsg(`💾 ResourceManager reset with fresh budget`, 'ok');
+  appendLogEntry(`💾 ResourceManager reset with fresh budget`, 'ok');
 };
 
 // ─── Phase 5: Library Cache System Exports ──────────────────────────────────────
@@ -4397,12 +4320,12 @@ const logLibraryCacheStats = () => {
 const cleanupLibraryCache = () => {
   const cache = getLibraryCache();
   const removed = cache.cleanup();
-  logMsg(`🧹 Manual cache cleanup: removed ${removed} expired entries`, 'ok');
+  appendLogEntry(`🧹 Manual cache cleanup: removed ${removed} expired entries`, 'ok');
 };
 const resetLibraryCacheWrap = () => {
   resetLibraryCache();
   libraryCache = initializeLibraryCache();
-  logMsg(`📚 LibraryCache reset with fresh TTL`, 'ok');
+  appendLogEntry(`📚 LibraryCache reset with fresh TTL`, 'ok');
 };
 
 // ─── Phase 6: Audio Source Pool System Exports ───────────────────────────────
