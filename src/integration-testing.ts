@@ -263,7 +263,7 @@ export class IntegrationTestRunner {
 
       // Window API availability
       result.metrics['window_api_available'] =
-        typeof (window as any).getResourceManager === 'function';
+        typeof window.getResourceManager === 'function';
 
       if (!hasResourceManager) {
         result.errors.push('ResourceManager class not found');
@@ -323,7 +323,7 @@ export class IntegrationTestRunner {
 
       // Window API availability
       result.metrics['window_api_available'] =
-        typeof (window as any).getLibraryCache === 'function';
+        typeof window.getLibraryCache === 'function';
 
       if (!hasLibraryCache) {
         result.errors.push('LibraryCache class not found');
@@ -390,7 +390,7 @@ export class IntegrationTestRunner {
 
       // Window API availability
       result.metrics['window_api_available'] =
-        typeof (window as any).getAudioSourcePool === 'function';
+        typeof window.getAudioSourcePool === 'function';
 
       if (!hasPool) {
         result.errors.push('AudioSourcePool class not found');

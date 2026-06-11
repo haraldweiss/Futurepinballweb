@@ -244,9 +244,9 @@ export class PerformanceReportGenerator {
     };
 
     // Phase 4: Resource Manager
-    if (typeof (window as any).getResourceManager === 'function') {
+    if (typeof window.getResourceManager === 'function') {
       try {
-        const stats = (window as any).getResourceStats();
+        const stats = window.getResourceStats();
         phases.phase4 = {
           name: 'Resource Budget Management',
           status: 'active',
@@ -266,9 +266,9 @@ export class PerformanceReportGenerator {
     }
 
     // Phase 5: Library Cache
-    if (typeof (window as any).getLibraryCache === 'function') {
+    if (typeof window.getLibraryCache === 'function') {
       try {
-        const stats = (window as any).getLibraryCacheStats();
+        const stats = window.getLibraryCacheStats();
         phases.phase5 = {
           name: 'Library Caching with TTL',
           status: 'active',
@@ -286,9 +286,9 @@ export class PerformanceReportGenerator {
     }
 
     // Phase 6: Audio Source Pooling
-    if (typeof (window as any).getAudioSourcePool === 'function') {
+    if (typeof window.getAudioSourcePool === 'function') {
       try {
-        const stats = (window as any).getAudioSourcePoolStats();
+        const stats = window.getAudioSourcePoolStats();
         phases.phase6 = {
           name: 'Audio Source Pooling',
           status: 'active',
@@ -330,9 +330,9 @@ export class PerformanceReportGenerator {
     const recommendations: Recommendation[] = [];
 
     // Phase 4 Recommendations
-    if (typeof (window as any).getResourceStats === 'function') {
+    if (typeof window.getResourceStats === 'function') {
       try {
-        const stats = (window as any).getResourceStats();
+        const stats = window.getResourceStats();
         const percent = parseFloat(stats.total.percentUsed);
 
         if (percent > 80) {
@@ -360,9 +360,9 @@ export class PerformanceReportGenerator {
     }
 
     // Phase 5 Recommendations
-    if (typeof (window as any).getLibraryCache === 'function') {
+    if (typeof window.getLibraryCache === 'function') {
       try {
-        const stats = (window as any).getLibraryCacheStats();
+        const stats = window.getLibraryCacheStats();
         const hitRate = parseFloat(stats.hitRate);
 
         if (hitRate < 50) {
@@ -381,9 +381,9 @@ export class PerformanceReportGenerator {
     }
 
     // Phase 6 Recommendations
-    if (typeof (window as any).getAudioSourcePool === 'function') {
+    if (typeof window.getAudioSourcePool === 'function') {
       try {
-        const stats = (window as any).getAudioSourcePoolStats();
+        const stats = window.getAudioSourcePoolStats();
         const reuseRate = parseFloat(stats.reuseRate);
 
         if (reuseRate < 80) {

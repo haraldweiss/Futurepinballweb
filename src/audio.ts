@@ -280,6 +280,6 @@ export function playFPTMusic(audioResource: AudioBuffer | string): void {
 }
 
 export function toggleMusic(): void {
-  if (bgMusicActive) { stopBGMusic(); (window as any).showNotification?.('🔇 MUSIK AUS'); }
-  else               { startBGMusic(); (window as any).showNotification?.('🎵 MUSIK AN'); }
+  if (bgMusicActive) { stopBGMusic(); window.showNotification?.('🔇 MUSIK AUS'); }
+  else               { startBGMusic(); window.showNotification?.('🎵 MUSIK AN'); }
 }

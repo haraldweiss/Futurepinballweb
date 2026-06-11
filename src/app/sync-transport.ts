@@ -37,7 +37,7 @@ class SyncTransportImpl {
       this.bc = new BroadcastChannel(BC_CHANNEL_NAME);
     }
     if (typeof window !== 'undefined') {
-      this.electronAPI = (window as any).electronAPI;
+      this.electronAPI = window.electronAPI;
     }
     this.setupReceiver();
   }
