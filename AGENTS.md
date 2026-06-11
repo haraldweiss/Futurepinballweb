@@ -284,10 +284,25 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 - Tests: 762/762 grün (unverändert)
 - 9 Commits gesamt diese Session
 
-**Offene Punkte für Folgesession:**
-- as any noch 95 (v.a. fpt-parser.ts CFB 10, graphics passes 10, script-engine 6, file-browser/core 5)
-- Dead local variables in graphics passes (dof-pass, film-effects-pass, motion-blur-pass, ssr-pass, etc.) — ~80 noch offen
-- game.ts barrel tested — manueller Smoke-Test empfohlen (Pharaoh Gold laden, Flipper, Score)
+### 2026-06-11 — opencode: as any cleanup + dead variables removal
+
+**as any cleanup:** 95 → **1** (only DEV-only `setDevFlag` in window-api.ts remains)
+- CFB types: 11 casts removed (fpt-parser.ts, fpt/table-elements.ts)
+- Window API: 22 new properties, 39 `(window as any)` removed
+- Script-engine, main.ts, file-browser: 18 casts removed
+- Graphics + table: 23 casts removed
+- Misc (13 files): all remaining as any replaced
+
+**Dead local variables:** ~75 removed across 34 files
+- Graphics passes (10 files): 16 unused fields/variables/imports removed
+- Non-graphics (24 files): ~60 unused items removed (imports, functions, variables)
+- Main.ts: 12 unused variables removed
+
+**game.ts barrel:** vite build ✓, tsc clean ✓
+- Barrel modules: callbacks.ts, elements.ts, refs.ts, resources.ts, state.ts
+
+**Verified:** tsc clean, 762/762 tests green, vite build successful
+**Commits:** `85e0f5ad`, `09ff66f6`
 
 ### 2026-06-11 — browser-use global setup + Free-Modell-Validator
 - Globales browser-use venv in `~/.local/share/browser-use/venv/` (0.13.1)
