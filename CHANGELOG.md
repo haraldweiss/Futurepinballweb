@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.23.0] - 2026-06-11
+
+### 🛠 Refactoring
+
+#### 📦 fpt-parser.ts → 7 Sub-Module Barrel Extraction
+- **src/fpt-parser.ts**: Converted from 1426-line monolithic file to barrel re-exporting from `./fpt/`
+- **7 new src/fpt/ sub-modules**: `cfb-parser.ts`, `coords.ts`, `file-parser.ts`, `io.ts`, `models.ts`, `strings.ts`, `validation.ts`
+- All 13 existing import paths preserved — no importers changed
+
+#### 🧩 main.ts Decomposition (Round 3)
+- **main.ts**: 4330 → 3298 lines (−1032, −24% since round 1)
+- **New src/app/ modules**: `dmd-visibility.ts`, `inline-backglass.ts`, `enhanced-visuals.ts`, `backglass-canvas.ts`, `path-shortcuts.ts`, `fpt-browser.ts`
+- **Extracted from main.ts**: DMD visibility, inline backglass, enhanced visuals, backglass canvas, path shortcuts, FPT browser
+
+### 🧹 Cleanup
+- **21 unused barrel re-exports removed**: dmd.ts (−11), editor.ts (−5), physics-worker.ts (−3), fpt-parser.ts (−5)
+- **2 dead files removed**: `src/visual-polish/particles.ts`, `src/editor-classic/io.ts`
+- **All console.log gates verified**: 0 ungated console.log in non-test code
+
+### ✅ Verification
+- `tsc --noEmit` clean
+- All 762 tests green
+- `vite build` successful
+
+---
+
 ## [0.22.0] - 2026-05-31
 
 ### 🎮 New Features

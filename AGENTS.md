@@ -390,3 +390,14 @@ Claudes uncommittierte Extraktionen auf `claude/priceless-lederberg-884dbb` comm
 
 **Verbleibend (Claude/Care, §3.3):** `animate()`-Loop-Orchestrierung (~850 Zeilen,
 captured scene/camera/physics/state/profiler — DI nötig), Physics-Bridge.
+
+### 2026-06-11 — opencode: fpt-parser barrel + main.ts round 4 + cleanup + release 0.23.0
+
+- **fpt-parser.ts barrel**: 1426→20 Zeilen, 7 neue `src/fpt/` Sub-Module
+  (`cfb-parser`, `coords`, `file-parser`, `io`, `models`, `strings`, `validation`)
+- **main.ts round 4**: −206 Zeilen, 4 neue `src/app/` Module
+  (`enhanced-visuals`, `backglass-canvas`, `path-shortcuts`, `fpt-browser`)
+- **Cleanup**: 21 unused barrel re-exports entfernt, 2 dead files gelöscht
+- **Release 0.23.0**: Version bump, Changelog, AGENTS.md handoff
+- main.ts: 3504 → **3298 Zeilen** (Gesamt −1032, −24% seit Runde 1)
+- Verified: tsc clean, 762/762 tests, vite build ✓
