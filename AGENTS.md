@@ -368,3 +368,25 @@ DMD-Visibility, Inline-Backglass, `animate()`-Loop-Orchestrierung, alles über
 
 **Noch offen** (spätere Runden): DMD-Visibility, Inline-Backglass,
 `animate()`-Loop-Orchestrierung, Physics-Bridge.
+
+### 2026-06-11 — opencode: main.ts-Zerlegung (Runde 3 — DMD-Visibility + Inline-Backglass)
+
+Claudes uncommittierte Extraktionen auf `claude/priceless-lederberg-884dbb` committed:
+
+- `923d7cb8` — `src/app/dmd-visibility.ts`: `createDmdVisibility(FPW_ROLE)`-Factory
+  mit eigenem `_dmdHidden`-Flag; initDMDVisibility/toggleHideDMD/getDmdHidden via
+  Interface. Verhalten exakt erhalten: Auto-Hide bei Multi-Screen + dediziertem DMD,
+  manuelles Toggle, Fallback-Timeout.
+- `src/app/inline-backglass.ts`: `createInlineBackglass()`-Factory mit eigenem
+  `_bgPanelActive`-Flag; init(=inlineBackglass.init)/stop/draw/resize. draw() ruft
+  live state/currentTableConfig/getTopScores/dmdCanvas-Werte via Direct Import.
+  `getResponsiveBackglassWidth()` als module-private Helper.
+- `animate()` ruft `inlineBackglass.draw()` statt `drawInlineBackglass()`
+- Resize-Handler ruft `inlineBackglass.resize()` statt Inline-Resize
+- `initMultiscreen`-Deps verwenden `inlineBackglass.init`/`inlineBackglass.stop`
+- `getDmdHidden` jetzt Modul-Fn statt `() => _dmdHidden`
+- main.ts: **3634 → 3504 Zeilen (−130)**. **Gesamt seit Runde-1-Start: 4330 → 3504 (−826, −19 %).**
+- Verified: tsc clean, 762/762 tests, vite build ✓
+
+**Verbleibend (Claude/Care, §3.3):** `animate()`-Loop-Orchestrierung (~850 Zeilen,
+captured scene/camera/physics/state/profiler — DI nötig), Physics-Bridge.
