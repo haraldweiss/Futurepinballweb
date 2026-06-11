@@ -42,7 +42,7 @@ export class MusicManager {
     if (this.audioContext) return;
 
     try {
-      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       this.audioContext = new AudioContextClass();
 
       if (this.audioContext?.state === 'suspended') {

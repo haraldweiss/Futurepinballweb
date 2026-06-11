@@ -86,7 +86,7 @@ export class SoundManager {
     if (this.audioContext) return;
 
     try {
-      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       this.audioContext = new AudioContextClass();
       
       // Resume on user interaction (required by browsers)

@@ -7,7 +7,7 @@ import { initializeAudioSourcePool, getAudioSourcePool } from './audio-source-po
 let _audioCtx: AudioContext | null = null;
 
 export function getAudioCtx(): AudioContext {
-  if (!_audioCtx) _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   return _audioCtx;
 }
 

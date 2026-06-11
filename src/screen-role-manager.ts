@@ -300,10 +300,10 @@ if (typeof window !== 'undefined') {
   (window as any).setScreenRole = (screenIndex: number, role: ScreenRole) => {
     getScreenRoleManager().setRoleForScreen(screenIndex, role);
   };
-  (window as any).swapScreenRoles = (screen1: number, screen2: number) => {
+  window.swapScreenRoles = (screen1: number, screen2: number) => {
     getScreenRoleManager().swapRoles(screen1, screen2);
   };
-  (window as any).resetScreenRoles = (screenCount: number) => {
+  window.resetScreenRoles = (screenCount: number) => {
     getScreenRoleManager().resetToDefault(screenCount);
   };
 }

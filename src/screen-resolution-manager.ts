@@ -223,7 +223,7 @@ class ScreenResolutionManager {
   async autoDetectResolutions(): Promise<void> {
     try {
       if ('getScreenDetails' in window) {
-        const details = await (window as any).getScreenDetails();
+        const details = await window.getScreenDetails!();
         const screens = details.screens || [];
 
         devLog(`📺 Auto-detecting resolutions for ${screens.length} screens:`);

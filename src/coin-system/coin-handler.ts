@@ -15,7 +15,7 @@ export function addCoin(): void {
   coinSystemState.lastCoinTime = Date.now();
 
   try {
-    const audio = (window as any).playSound?.('coin');
+    const audio = window.playSound?.('coin');
     if (audio) devLog('🪙 Coin sound played');
   } catch (e) {
     /* Ignore if audio not available */

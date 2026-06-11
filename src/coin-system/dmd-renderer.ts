@@ -8,7 +8,7 @@ export function updateCoinDisplay(): void {
   if (!coinSystemState.coinScreenVisible) return;
 
   try {
-    const dmdModule = (window as any).__DMD_MODULE__;
+    const dmdModule = window.__DMD_MODULE__;
     if (!dmdModule?.renderCoinScreen) {
       renderCoinScreenFallback();
       return;

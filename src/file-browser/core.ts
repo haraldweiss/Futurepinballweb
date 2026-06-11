@@ -10,7 +10,7 @@ export class FileSystemBrowser {
   async selectTableDirectory(): Promise<FileInfo[]> {
     if ('showDirectoryPicker' in window) {
       try {
-        this.tableDirectory = await (window as any).showDirectoryPicker();
+        this.tableDirectory = await window.showDirectoryPicker!();
         if (this.tableDirectory) {
           if (import.meta.env.DEV) console.log('✓ Table directory selected (FSA):', this.tableDirectory.name);
           return this.scanDirectory(this.tableDirectory, '.fpt');
@@ -28,7 +28,7 @@ export class FileSystemBrowser {
   async selectLibraryDirectory(): Promise<FileInfo[]> {
     if ('showDirectoryPicker' in window) {
       try {
-        this.libraryDirectory = await (window as any).showDirectoryPicker();
+        this.libraryDirectory = await window.showDirectoryPicker!();
         if (this.libraryDirectory) {
           if (import.meta.env.DEV) console.log('✓ Library directory selected (FSA):', this.libraryDirectory.name);
           return this.scanDirectory(this.libraryDirectory, ['.fpl', '.lib']);

@@ -162,6 +162,14 @@ declare global {
 
     // ── Editor ────────────────────────────────────────────────────────────
     openIntegratedEditor:   () => void;
+    getIntegratedEditor?:   () => any;
+
+    // ── Audio (legacy APIs) ───────────────────────────────────────────────
+    webkitAudioContext?:     typeof AudioContext;
+
+    // ── Coin / DMD internal ───────────────────────────────────────────────
+    playSound?:             (name: string) => any;
+    __DMD_MODULE__?:        any;
 
     // ── PWA ────────────────────────────────────────────────────────────────
     installPWA:             () => void;

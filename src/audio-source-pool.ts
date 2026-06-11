@@ -166,7 +166,7 @@ export function getAudioSourcePool(): AudioSourcePool {
     // Lazy initialization with default context
     try {
       const ctx = new (window.AudioContext ||
-        (window as any).webkitAudioContext)();
+        window.webkitAudioContext)();
       globalAudioSourcePool = new AudioSourcePool(ctx, 16);
     } catch (e) {
       throw new Error(
