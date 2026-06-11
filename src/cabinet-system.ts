@@ -8,12 +8,6 @@
  * continue to work.
  */
 export type { CabinetProfile } from './cabinet-system/cabinet-profile';
-export {
-  CABINET_VERTICAL,
-  CABINET_HORIZONTAL,
-  CABINET_WIDE,
-  CABINET_INVERTED,
-} from './cabinet-system/cabinet-profile';
 export { CabinetSystem } from './cabinet-system/cabinet-system-class';
 export {
   initializeCabinetSystem,
@@ -21,5 +15,4 @@ export {
   getActiveCabinetProfile,
   setActiveCabinetProfile,
   rotatePlayfieldTo,
-  getCabinetDiagnostics,
 } from './cabinet-system/cabinet-api';

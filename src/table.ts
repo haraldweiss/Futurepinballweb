@@ -9,11 +9,10 @@
 export { TABLE_CONFIGS } from './table/configs';
 export {
   checkRolloverLanes, scoreBumperHit, updateSpinnerPhysics,
-  scoreSpinnerHit, scoreRampHit, updateTargetSequenceHighlights,
   scoreTargetHit, scoreSlingshotHit,
 } from './table/scoring';
 export {
-  buildTable, buildPhysicsTable, buildRealisticFlipper,
-  buildBumper, buildTarget, buildRamp,
+  buildTable, buildRealisticFlipper,
+  buildBumper, buildTarget,
   resolvePlayfieldTexture, resolveModel, getAdvancedLighting,
 } from './table/builder';
