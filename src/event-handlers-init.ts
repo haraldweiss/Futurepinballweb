@@ -86,7 +86,7 @@ function initializeQuickMenuHandlers(): void {
   
   const cards = document.querySelectorAll('.quick-table-card');
   if (import.meta.env.DEV) {
-    devLog(`[QuickMenu] Found ${cards.length} cards, loadDemoTable=`, typeof (window as any).loadDemoTable);
+    devLog(`[QuickMenu] Found ${cards.length} cards, loadDemoTable=`, typeof window.loadDemoTable);
   }
   cards.forEach((card) => {
     const tableId = card.getAttribute('data-table');
@@ -105,8 +105,8 @@ function initializeQuickMenuHandlers(): void {
     card.addEventListener('click', (e) => {
       e.stopPropagation();
       const table = card.getAttribute('data-table');
-      if (table && typeof (window as any).loadDemoTable === 'function') {
-        (window as any).loadDemoTable(table);
+      if (table && typeof window.loadDemoTable === 'function') {
+        window.loadDemoTable(table);
         quickMenu?.classList.remove('open');
       } else if (import.meta.env.DEV) {
         console.warn('[QuickMenu] No loadDemoTable for', table);
@@ -121,8 +121,8 @@ function initializeQuickMenuHandlers(): void {
   
   if (importBtn) {
     importBtn.addEventListener('click', () => {
-      if (typeof (window as any).switchTab === 'function') {
-        (window as any).switchTab('import');
+      if (typeof window.switchTab === 'function') {
+        window.switchTab('import');
       }
       const modal = document.getElementById('loader-modal');
       if (modal) modal.style.display = 'flex';
@@ -131,8 +131,8 @@ function initializeQuickMenuHandlers(): void {
   
   if (browserBtn) {
     browserBtn.addEventListener('click', () => {
-      if (typeof (window as any).switchTab === 'function') {
-        (window as any).switchTab('browser');
+      if (typeof window.switchTab === 'function') {
+        window.switchTab('browser');
       }
       const modal = document.getElementById('loader-modal');
       if (modal) modal.style.display = 'flex';
@@ -141,8 +141,8 @@ function initializeQuickMenuHandlers(): void {
   
   if (infoBtn) {
     infoBtn.addEventListener('click', () => {
-      if (typeof (window as any).switchTab === 'function') {
-        (window as any).switchTab('info');
+      if (typeof window.switchTab === 'function') {
+        window.switchTab('info');
       }
       const modal = document.getElementById('loader-modal');
       if (modal) modal.style.display = 'flex';
@@ -167,8 +167,8 @@ function initializeTabHandlers(): void {
       else if (btn.textContent?.includes('INFO')) tabName = 'info';
       else if (btn.textContent?.includes('SCRIPT')) tabName = 'script';
       
-      if (tabName && typeof (window as any).switchTab === 'function') {
-        (window as any).switchTab(tabName);
+      if (tabName && typeof window.switchTab === 'function') {
+        window.switchTab(tabName);
       }
     });
   });
@@ -189,8 +189,8 @@ function initializeTableSelectionHandlers(): void {
       };
       
       const table = Object.entries(tableMap).find(([name]) => heading.includes(name))?.[1];
-      if (table && typeof (window as any).loadDemoTable === 'function') {
-        (window as any).loadDemoTable(table);
+      if (table && typeof window.loadDemoTable === 'function') {
+        window.loadDemoTable(table);
       }
     });
   });
@@ -198,8 +198,8 @@ function initializeTableSelectionHandlers(): void {
   // Browser table list buttons
   document.querySelectorAll('#tables-list button').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (typeof (window as any).browseTableDirectory === 'function') {
-        (window as any).browseTableDirectory();
+      if (typeof window.browseTableDirectory === 'function') {
+        window.browseTableDirectory();
       }
     });
   });
@@ -213,8 +213,8 @@ function initializeModalHandlers(): void {
   const closeBtn = document.querySelector('.btn-primary');
   if (closeBtn && closeBtn.textContent?.includes('SPIELEN')) {
     closeBtn.addEventListener('click', () => {
-      if (typeof (window as any).closeLoader === 'function') {
-        (window as any).closeLoader();
+      if (typeof window.closeLoader === 'function') {
+        window.closeLoader();
       }
     });
   }
@@ -237,8 +237,8 @@ function initializeViewControlHandlers(): void {
   const fullscreenBtn = document.getElementById('fullscreen-btn');
   if (fullscreenBtn) {
     fullscreenBtn.addEventListener('click', () => {
-      if (typeof (window as any).toggleFullscreen === 'function') {
-        (window as any).toggleFullscreen();
+      if (typeof window.toggleFullscreen === 'function') {
+        window.toggleFullscreen();
       }
     });
   }
@@ -246,8 +246,8 @@ function initializeViewControlHandlers(): void {
   const multiscreenBtn = document.getElementById('multiscreen-btn');
   if (multiscreenBtn) {
     multiscreenBtn.addEventListener('click', () => {
-      if (typeof (window as any).openMultiscreenModal === 'function') {
-        (window as any).openMultiscreenModal();
+      if (typeof window.openMultiscreenModal === 'function') {
+        window.openMultiscreenModal();
       }
     });
   }
@@ -255,8 +255,8 @@ function initializeViewControlHandlers(): void {
   const viewBtn = document.getElementById('view-btn');
   if (viewBtn) {
     viewBtn.addEventListener('click', () => {
-      if (typeof (window as any).toggleViewPanel === 'function') {
-        (window as any).toggleViewPanel();
+      if (typeof window.toggleViewPanel === 'function') {
+        window.toggleViewPanel();
       }
     });
   }
@@ -264,8 +264,8 @@ function initializeViewControlHandlers(): void {
   const hideDmdBtn = document.getElementById('hide-dmd-btn');
   if (hideDmdBtn) {
     hideDmdBtn.addEventListener('click', () => {
-      if (typeof (window as any).toggleHideDMD === 'function') {
-        (window as any).toggleHideDMD();
+      if (typeof window.toggleHideDMD === 'function') {
+        window.toggleHideDMD();
       }
     });
   }
@@ -273,8 +273,8 @@ function initializeViewControlHandlers(): void {
   const dmdModeBtn = document.getElementById('dmd-mode-btn');
   if (dmdModeBtn) {
     dmdModeBtn.addEventListener('click', () => {
-      if (typeof (window as any).toggleDMDMode === 'function') {
-        (window as any).toggleDMDMode();
+      if (typeof window.toggleDMDMode === 'function') {
+        window.toggleDMDMode();
       }
     });
   }
@@ -282,8 +282,8 @@ function initializeViewControlHandlers(): void {
   const installBtn = document.getElementById('install-btn');
   if (installBtn) {
     installBtn.addEventListener('click', () => {
-      if (typeof (window as any).installPWA === 'function') {
-        (window as any).installPWA();
+      if (typeof window.installPWA === 'function') {
+        window.installPWA();
       }
     });
   }
