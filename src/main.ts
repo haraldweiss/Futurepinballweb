@@ -14,6 +14,9 @@ if ('serviceWorker' in navigator) {
  */
 import * as THREE from 'three';
 import { devLog } from './utils/dev-log';
+import { saveRotation, loadSavedRotation } from './app/rotation-utils';
+import { calculateFlipperPowerCurve } from './app/flipper-utils';
+import { getOptimizedTableView } from './app/view-utils';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -129,7 +132,7 @@ import { initBallTrailManager, getBallTrailManager, disposeBallTrailManager } fr
 import {
   calculateResponsiveZoom, getResponsiveCameraTilt, getResponsiveFOV,
   getResponsiveFlipperX, getOptimalPixelRatio, calcSafeFlipperLength,
-  getAutoQualityPreset, detectDeviceType,
+  detectDeviceType,
 } from './app/responsive-helpers';
 import { setupScene, type SceneContext } from './app/scene-setup';
 import { setupPostProcessing } from './app/post-processing';
@@ -137,21 +140,6 @@ import { initSyncTransport, emitSyncFrame, onSyncFrame, destroySyncTransport } f
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
-
-// ─── Phase 13.2: Optimized Table View for Screen Size ───
-function getOptimizedTableView(): { zoom: number; tilt: number; fov: number; quality: string } {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  const aspectRatio = width / height;
-  const physWidth = window.screen.width * window.devicePixelRatio;
-
-  return {
-    zoom: calculateResponsiveZoom(aspectRatio),
-    tilt: getResponsiveCameraTilt(aspectRatio),
-    fov: getResponsiveFOV(),
-    quality: getAutoQualityPreset(),
-  };
-}
 
 function applyOptimizedTableView(): void {
   const view = getOptimizedTableView();
@@ -173,20 +161,6 @@ function applyOptimizedTableView(): void {
   }
 }
 
-
-// ─── Phase 13.3: Rotation with Redraw ───
-// Persists the chosen rotation so a cabinet doesn't need re-rotation on every cold start.
-const ROTATION_KEY = 'fpw_playfield_rotation';
-function saveRotation(deg: number): void {
-  try { localStorage.setItem(ROTATION_KEY, String(deg)); } catch { /* localStorage may throw */ }
-}
-function loadSavedRotation(): 0 | 90 | 180 | 270 | null {
-  try {
-    const v = localStorage.getItem(ROTATION_KEY);
-    if (v === '90' || v === '180' || v === '270' || v === '0') return Number(v) as 0 | 90 | 180 | 270;
-  } catch { /* ignore */ }
-  return null;
-}
 
 // Rotate the physics gravity vector to match the visual rotation. The scene
 // is rotated visually around Z by `deg` clockwise; for the ball to *appear*
@@ -441,24 +415,6 @@ let rightFlipperColliderHandle: number = -1;  // Saved for collision detection
 // ─── Phase 25: Flipper sound tracking ───
 let _lastLeftFlipperPressed = false;
 let _lastRightFlipperPressed = false;
-
-// ─── Phase 6: Flipper Power Curve (Skill-based Gameplay) ───────────────────────
-// S-curve for more realistic flipper response: quick start, smooth acceleration, plateau
-// This mimics Newton physics where longer button press = more flipper power
-function calculateFlipperPowerCurve(chargeTimeFraction: number): number {
-  // chargeTimeFraction: 0.0 (just pressed) to 1.0 (full charge)
-  const t = Math.min(Math.max(chargeTimeFraction, 0), 1);
-
-  // S-curve: slow start, faster middle, plateaus at end
-  // Formula: smooth step function (Hermite interpolation)
-  const sCurve = t < 0.5
-    ? 2 * t * t                              // First half: accelerating
-    : 1 - Math.pow(-2 * t + 2, 2) / 2;      // Second half: decelerating to plateau
-
-  // Map to power range: 0.5 (min) to 1.0 (max)
-  // But favor higher power: 0.5 + (sCurve * 0.5)
-  return 0.5 + (sCurve * 0.5);
-}
 
 // ─── Phase 2: Advanced Lighting System ─────────────────────────────────────────
 let advancedLightingSystem: ReturnType<typeof getAdvancedLighting> | null = null;
