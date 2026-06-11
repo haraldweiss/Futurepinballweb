@@ -17,10 +17,11 @@ import { devLog } from './utils/dev-log';
 import { saveRotation, loadSavedRotation } from './app/rotation-utils';
 import { calculateFlipperPowerCurve } from './app/flipper-utils';
 import { getOptimizedTableView } from './app/view-utils';
+import { ParticleField } from './app/particle-field';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
-  bumpers, extraBalls, partData,
+  bumpers, extraBalls,
   setPhysics, setLoadedLibrary, setBAMEngine, cb,
 } from './game';
 import {
@@ -677,76 +678,7 @@ ballLight.castShadow = true;
 ballGroup.add(ballLight);
 
 // ─── Partikel-System (Adaptive: Desktop=300, Tablet=200, Mobile=100) ───────────
-let MAX_PARTS = 300;  // Auto-adjust based on device
-if (/iPhone|iPad|Android|Mobile/.test(navigator.userAgent)) {
-  MAX_PARTS = window.innerWidth < 768 ? 100 : 200;  // Mobile/Tablet
-}
-
-const partPos   = new Float32Array(MAX_PARTS * 3);
-const partCol   = new Float32Array(MAX_PARTS * 3);
-const partGeo   = new THREE.BufferGeometry();
-partGeo.setAttribute('position', new THREE.BufferAttribute(partPos, 3));
-partGeo.setAttribute('color',    new THREE.BufferAttribute(partCol, 3));
-
-const partMat = new THREE.PointsMaterial({
-  size: 0.09, vertexColors: true, transparent: true, opacity: 1.0,
-  sizeAttenuation: true, depthWrite: false, fog: false,  // Disable fog for particles
-  toneMapped: false,  // Skip tone mapping for particles
-});
-const partMesh = new THREE.Points(partGeo, partMat);
-scene.add(partMesh);
-devLog(`✓ Particle System: MAX_PARTS=${MAX_PARTS}`);
-
-function spawnParticles(wx: number, wy: number, hexColor: number, count = 14): void {
-  // Adaptive spawn: reduce particles on low FPS
-  const adaptCount = currentFps < 45 ? Math.floor(count * 0.5) : count;
-
-  // Use advanced particle system if enabled
-  // NOTE: previously referenced a free variable `currentPreset` that only exists
-  // inside applyQualityPreset() — every call here threw `ReferenceError:
-  // currentPreset is not defined`. Because spawnParticles() runs inside the
-  // animate loop, the throw aborted the rest of the frame work — including
-  // emitMultiscreenState(), which is why DMD/Backglass child windows never
-  // received state updates and stayed frozen on the cabinet.
-  const preset = profiler.getQualityPreset();
-  if (particleSystem && preset.advancedParticlesEnabled) {
-    const color = new THREE.Color(hexColor);
-    particleSystem.emit(new THREE.Vector3(wx, wy, 0.55), 'generic', adaptCount, color);
-    return;
-  }
-
-  // Fallback: Basic particle system
-  const r = ((hexColor >> 16) & 0xff) / 255;
-  const g = ((hexColor >>  8) & 0xff) / 255;
-  const b = ( hexColor        & 0xff) / 255;
-  for (let i = 0; i < adaptCount; i++) {
-    const angle = (i / adaptCount) * Math.PI * 2 + Math.random() * 0.4;
-    const spd   = 2.5 + Math.random() * 4.5;
-    partData.push({
-      x:wx, y:wy, z:0.55,
-      vx:Math.cos(angle)*spd, vy:Math.sin(angle)*spd,
-      vz:1.5+Math.random()*3.0, life:1.0, r, g, b
-    });
-    if (partData.length > MAX_PARTS) partData.shift();
-  }
-}
-
-function updateParticles(dt: number): void {
-  let n = 0;
-  for (let i = 0; i < partData.length; i++) {
-    const p = partData[i]; p.life -= dt * 2.2;
-    if (p.life <= 0) continue;
-    p.x += p.vx*dt; p.y += p.vy*dt; p.z += p.vz*dt; p.vz -= 12*dt;
-    const t = p.life;
-    partPos[n*3]=p.x; partPos[n*3+1]=p.y; partPos[n*3+2]=p.z;
-    partCol[n*3]=p.r*t; partCol[n*3+1]=p.g*t; partCol[n*3+2]=p.b*t;
-    partData[n] = p; n++;
-  }
-  partData.length = n;
-  partGeo.attributes.position.needsUpdate = true;
-  partGeo.attributes.color.needsUpdate    = true;
-  partGeo.setDrawRange(0, n);
-}
+const particleField = new ParticleField(scene, profiler, particleSystem);
 
 // ─── Rapier2D Physik Init (lazy-loaded) ───────────────────────────────────────
 let RAPIER: any = null;  // Global reference, loaded on demand
@@ -1101,7 +1033,7 @@ function nudgeTable(direction: number): void {
     } catch { /* physics worker not ready */ }
 
     dmdEvent(state.tiltWarnings === 2 ? 'TILT WARNING!!' : 'TILT WARNING!');
-    spawnParticles(state.ballPos.x, state.ballPos.y, 0xffaa00, 6);
+    particleField.spawn(state.ballPos.x, state.ballPos.y, 0xffaa00, 6, currentFps);
   }
 }
 
@@ -1133,7 +1065,7 @@ function launchMultiBall(): void {
   // ─── Phase 9 TASK 3: Play Multiball Sound ──────────────────────────────────
   cb.playMultiballSound();
 
-  dmdEvent('MULTIBALL!'); showNotification('🎱 MULTIBALL!'); spawnParticles(0,2,0xffcc00,30); playSound('bumper');
+  dmdEvent('MULTIBALL!'); showNotification('🎱 MULTIBALL!'); particleField.spawn(0,2,0xffcc00,30,currentFps); playSound('bumper');
 
   // ─── Phase 13: Trigger multiball launch animations ───
   const animationBindingManager = getAnimationBindingManager();
@@ -1164,7 +1096,7 @@ function updateExtraBalls(dt: number): void {
         if (d<0.55&&d>0.001){
           const spd=Math.max(Math.hypot(vel.x,vel.y),5.5)*1.1;
           b.rapierBody!.setLinvel({x:(dx/d)*spd,y:(dy/d)*spd},true);
-          state.score+=150*state.multiplier; spawnParticles(bu.x,bu.y,bu.mesh.userData.color,8); updateHUD();
+          state.score+=150*state.multiplier; particleField.spawn(bu.x,bu.y,bu.mesh.userData.color,8,currentFps); updateHUD();
         }
       });
       if (b.pos.y < -7.0) {
@@ -1317,7 +1249,7 @@ function showLibrarySelector(lib: any): void {
 // ─── Callbacks registrieren ───────────────────────────────────────────────────
 cb.updateHUD        = updateHUD;
 cb.showNotification = showNotification;
-cb.spawnParticles   = spawnParticles;
+cb.spawnParticles   = (x, y, c, n) => particleField.spawn(x, y, c, n, currentFps);
 cb.dmdEvent         = dmdEvent;
 cb.playSound        = playSound;
 cb.launchMultiBall  = launchMultiBall;
@@ -1511,7 +1443,7 @@ cb.triggerImpactEffect = (position: THREE.Vector3, intensity: number = 1.0) => {
     visualPolishSystem.triggerImpactEffect(intensity);
 
     // Emit particles at impact location
-    spawnParticles(position.x, position.y, 0xffaa00, Math.floor(intensity * 20));
+    particleField.spawn(position.x, position.y, 0xffaa00, Math.floor(intensity * 20), currentFps);
   }
 };
 
@@ -1532,7 +1464,7 @@ cb.triggerRampVisual = () => {
     visualPolishSystem.triggerRampCompletion();
 
     // Emit milestone particles at center
-    spawnParticles(0, 2, 0xffff00, 20);
+    particleField.spawn(0, 2, 0xffff00, 20, currentFps);
   }
 };
 
@@ -1951,8 +1883,8 @@ function applyQualityPreset(): void {
     }
 
     // ─── Particle System ───
-    MAX_PARTS = currentPreset.particleCount;
-    appendLogEntry(`  └─ Particles: ${MAX_PARTS} max`, 'ok');
+    particleField.setMaxParts(currentPreset.particleCount);
+    appendLogEntry(`  └─ Particles: ${particleField.maxParts} max`, 'ok');
 
     // ─── Backglass Mode ───
     if (backglassRenderer) {
@@ -2143,7 +2075,7 @@ function animate(): void {
           state.ballSaveTimer = 0;
           state.ballSaveMode = 'active';
           dmdEvent('BALL SAVED!');
-          spawnParticles(state.ballPos.x,-6.8,0x00ff88,18);
+          particleField.spawn(state.ballPos.x,-6.8,0x00ff88,18,currentFps);
           playSound('flipper');
           resetBall();
         } else if (state.ballSavesRemaining > 0) {
@@ -2154,7 +2086,7 @@ function animate(): void {
           resetBall();
           showNotification(`💾 BALL SAVED! (${state.ballSavesRemaining} left)`);
           dmdEvent(`BALL SAVED!`);
-          spawnParticles(state.ballPos.x,-6.8,0x00ff88,18);
+          particleField.spawn(state.ballPos.x,-6.8,0x00ff88,18,currentFps);
           playSound('flipper');
         } else {
           // Game over / next ball
@@ -2269,7 +2201,7 @@ function animate(): void {
 
   updatePlunger(dt);
   updateExtraBalls(dt);
-  updateParticles(dt);
+  particleField.update(dt);
 
   // ─── DMD state machine ───────────────────────────────────────────────────
   // tableinfo  → attract  (auto, dmdUpdate handles bootTimer countdown)
