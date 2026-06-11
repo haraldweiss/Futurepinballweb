@@ -147,7 +147,6 @@ export class PerformanceProfiler {
 
   public static detectOptimalQuality(): string {
     const width = window.innerWidth;
-    const height = window.innerHeight;
     const devicePixelRatio = window.devicePixelRatio;
 
     if (width < 500 || devicePixelRatio < 1) return 'low';

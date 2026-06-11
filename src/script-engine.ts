@@ -52,17 +52,6 @@ function preprocessLineContinuation(src: string): string {
   return src.replace(/\s*_\s*\r?\n\s*/g, ' ');
 }
 
-// Phase 1.3: Extract parenthesis-matched content for nested functions
-function extractParenContent(s: string, start: number): [string, number] {
-  let depth = 1, i = start + 1;
-  while (i < s.length && depth > 0) {
-    if (s[i] === '(') depth++;
-    else if (s[i] === ')') depth--;
-    i++;
-  }
-  return [s.slice(start + 1, i - 1), i];
-}
-
 // Phase 1.4: String-safe pattern replacement
 function replaceOutsideStrings(text: string, pattern: string, replacement: string): string {
   const parts = text.split(/(["'])/);

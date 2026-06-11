@@ -9,7 +9,6 @@ export function getOptimizedTableView(): { zoom: number; tilt: number; fov: numb
   const width = window.innerWidth;
   const height = window.innerHeight;
   const aspectRatio = width / height;
-  const physWidth = window.screen.width * window.devicePixelRatio;
 
   return {
     zoom: calculateResponsiveZoom(aspectRatio),

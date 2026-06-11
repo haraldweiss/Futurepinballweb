@@ -301,7 +301,6 @@ window.addEventListener('resize', () => {
       }
 
       // ─── Reposition UI Elements for Different Viewport Sizes ───
-      const isMobile = window.innerWidth < 768;
       const isSmallMobile = window.innerWidth < 480;
       const isPortrait = window.innerHeight > window.innerWidth;
 
@@ -421,7 +420,6 @@ let advancedLightingSystem: ReturnType<typeof getAdvancedLighting> | null = null
 
 // ─── Phase 4: Backglass Renderer ───────────────────────────────────────────────
 let backglassRenderer: ReturnType<typeof getBackglassRenderer> | null = null;
-const backglassCanvasElement: HTMLCanvasElement | null = null;
 
 // ─── Phase 5: Performance Profiler ────────────────────────────────────────────
 const profiler = getProfiler();
@@ -467,7 +465,7 @@ initScoreAnimationManager(scene);
 let scoreDisplayManager: ScoreDisplayManager | null = null;
 
 // ─── Phase 9: Enhanced Audio System ──────────────────────────────────────────
-const enhancedAudioSystem = initializeAudioSystem();
+initializeAudioSystem();
 
 // ─── Phase 6: Audio Source Pool (GC pressure reduction) ──────────────────────
 initializeAudioPooling();
@@ -487,11 +485,11 @@ const activeCabinetProfile = cabinetSystem.autoDetectProfile();
 
 // ─── Screen Role Manager (Multi-screen Assignment) ────────────────────────────
 const screenRoleManager = initializeScreenRoleManager();
-const screenLayout = screenRoleManager.getLayout();
+screenRoleManager.getLayout();
 
 // ─── Screen Resolution Manager (Resolution Configuration) ─────────────────────
 const screenResolutionManager = initializeScreenResolutionManager();
-const resolutionLayout = screenResolutionManager.getLayout();
+screenResolutionManager.getLayout();
 
 // ─── Phase 4: Resource Manager (Memory Budget Management) ──────────────────────
 let resourceManager = initializeResourceManager();
@@ -584,7 +582,7 @@ requestAnimationFrame(function initViewSettingsAndVisuals() {
 // ─── Post-Processing + Graphics Pipeline + Lighting ─────────────────────────
 const {
   composer, bloomPass, ssrPass, motionBlurPass,
-  cascadedShadowMapper, cascadedShadowCompositePass, perLightBloomPass,
+  cascadedShadowMapper, perLightBloomPass,
   particleSystem, volumetricPass, filmEffectsPass, dofPass, fxaaPass,
   mainSpot, ambLight, fillLight, rimLight,
 } = setupPostProcessing(scene, camera, renderer, profiler);
@@ -610,7 +608,7 @@ const uiRotationManager = initializeUIRotation();
 applyUIRotation(activeCabinetProfile);
 
 // ─── Phase 10+: Initialize Input Mapping Manager ────────────────────────────────
-const inputMappingManager = initializeInputMapping();
+initializeInputMapping();
 applyInputMapping(activeCabinetProfile);
 
 // ─── Flipper (Responsive Positioning + Collision Prevention) ────────────────────

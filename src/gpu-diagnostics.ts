@@ -120,7 +120,6 @@ export function detectGPUInfo(): GPUInfo {
  */
 function classifyGPU(info: GPUInfo): 'low' | 'mid' | 'high' | 'unknown' {
   const renderer = info.renderer.toLowerCase();
-  const _vendor = info.vendor.toLowerCase();
 
   // High-end: Discrete NVIDIA/AMD, Apple GPU, Intel Arc
   if (renderer.includes('rtx') ||
