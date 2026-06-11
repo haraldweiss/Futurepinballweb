@@ -23,6 +23,10 @@ import { initMultiscreen } from './app/multiscreen';
 import { initFileBrowser } from './app/file-browser-controller';
 import { createDmdVisibility } from './app/dmd-visibility';
 import { createInlineBackglass } from './app/inline-backglass';
+import { applyEnhancedVisualsToTable } from './app/enhanced-visuals';
+import { drawBGCanvas } from './app/backglass-canvas';
+import { updateTablePathShortcuts, updateLibraryPathShortcuts } from './app/path-shortcuts';
+import { initializeFPTBrowser, loadFPTFromPath } from './app/fpt-browser';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -907,35 +911,7 @@ function handlePhysicsFrame(frame: PhysicsFrameData): void {
 }
 
 // ─── Phase 16+: Helper function to apply enhanced visuals to playfield ────────
-function applyEnhancedVisualsToTable(sceneTarget: THREE.Scene): void {
-  const enhancement = getPlayfieldVisualEnhancement();
-  if (!enhancement) return;
-
-  // Traverse scene and apply enhanced materials to identified playfield elements
-  sceneTarget.traverse((obj: THREE.Object3D) => {
-    if (!(obj instanceof THREE.Mesh)) return;
-
-    const mesh = obj as THREE.Mesh;
-    const name = mesh.name.toLowerCase();
-
-    // Identify element type and apply appropriate enhanced material
-    if (name.includes('bumper')) {
-      enhancement.applyEnhancedMaterial(mesh, 'bumper', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as THREE.MeshStandardMaterial).color : '#ff6600');
-    } else if (name.includes('target')) {
-      enhancement.applyEnhancedMaterial(mesh, 'target', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as THREE.MeshStandardMaterial).color : '#00ff00');
-    } else if (name.includes('ramp')) {
-      enhancement.applyEnhancedMaterial(mesh, 'ramp', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as THREE.MeshStandardMaterial).color : '#ccb366');
-    } else if (name.includes('flipper')) {
-      enhancement.applyEnhancedMaterial(mesh, 'flipper', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as THREE.MeshStandardMaterial).color : '#ff6600');
-    } else if (name.includes('ball')) {
-      enhancement.applyEnhancedMaterial(mesh, 'ball', '#ffffff');
-    } else if (name.includes('playfield') || name.includes('table')) {
-      enhancement.applyEnhancedMaterial(mesh, 'playfield', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as THREE.MeshStandardMaterial).color : '#8b7355');
-    }
-  });
-
-  devLog('✓ Enhanced visuals applied to table');
-}
+// applyEnhancedVisualsToTable moved to src/app/enhanced-visuals.ts
 
 // ─── Phase 15: Helper function to load table with physics worker ────────────────
 async function loadTableWithPhysicsWorker(tableConfig: any, sceneTarget: THREE.Scene, library?: any): Promise<void> {
@@ -2625,7 +2601,7 @@ disposePhysicsWorker();});
     else if (bgState.dmdMode === 'event') bgState.dmdMode = 'playing';
     Object.assign(state, { score: bgState.score, ballNum: bgState.ballNum, multiplier: bgState.multiplier, lastRank: bgState.lastRank, lastScore: bgState.lastScore });
     Object.assign(dmdState, { mode: bgState.dmdMode, eventText: bgState.dmdEventText, animFrame: bgState.dmdAnimFrame, scrollX: bgState.dmdScrollX, eventTimer: bgState.dmdEventTimer });
-    drawBGCanvas(canvas, bgState, showEmbedDMD);
+    drawBGCanvas(canvas, bgState, showEmbedDMD, dmdCanvas);
   };
   bgLoop();
   onSyncFrame((data: any) => {
@@ -2641,29 +2617,7 @@ disposePhysicsWorker();});
   });
 }
 
-function drawBGCanvas(canvas: HTMLCanvasElement, bgState: any, showEmbedDMD: boolean): void {
-  const ctx=canvas.getContext('2d')!; if(!canvas.width)return;
-  const W=canvas.width,H=canvas.height;
-  const toHex=(n:number)=>`#${(`000000${n.toString(16)}`).slice(-6)}`;
-  const accent=toHex(bgState.tableAccent||0x00ff66), tcolor=toHex(bgState.tableColor||0x1a4a15);
-  const bg=ctx.createLinearGradient(0,0,0,H);
-  bg.addColorStop(0,'#0a0a14');bg.addColorStop(0.5,`${tcolor}44`);bg.addColorStop(1,'#050508');
-  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
-  ctx.save();ctx.shadowColor=accent;ctx.shadowBlur=25;ctx.fillStyle=accent;
-  ctx.font=`bold ${Math.min(H*0.06,W*0.07)}px "Courier New",monospace`;ctx.textAlign='center';ctx.textBaseline='top';
-  ctx.fillText((bgState.tableName||'FUTURE PINBALL').toUpperCase(),W/2,H*0.03);ctx.restore();
-  ctx.save();ctx.shadowColor='#ff6600';ctx.shadowBlur=30;ctx.fillStyle='#ff6600';
-  ctx.font=`bold ${Math.min(H*0.14,W*0.12)}px "Courier New",monospace`;ctx.textAlign='center';ctx.textBaseline='top';
-  ctx.fillText((bgState.score||0).toLocaleString(),W/2,H*0.15);ctx.restore();
-  ctx.save();ctx.fillStyle='#ffcc00';ctx.font=`bold ${Math.min(H*0.07,W*0.06)}px "Courier New",monospace`;ctx.textAlign='left';ctx.textBaseline='top';
-  ctx.fillText(`×${bgState.multiplier||1}`,W*0.08,H*0.38);ctx.restore();
-  if(showEmbedDMD&&dmdCanvas){
-    const dY=H*0.72,dH=H*0.25,dW=W*0.86,dX=W*0.07;
-    ctx.fillStyle='#050200';ctx.strokeStyle='#5a2200';ctx.lineWidth=2;
-    ctx.beginPath();if(ctx.roundRect)ctx.roundRect(dX,dY,dW,dH,6);else ctx.rect(dX,dY,dW,dH);
-    ctx.fill();ctx.stroke();ctx.save();ctx.globalAlpha=0.92;ctx.drawImage(dmdCanvas,dX+4,dY+4,dW-8,dH-8);ctx.restore();
-  }
-}
+// drawBGCanvas moved to src/app/backglass-canvas.ts
 
 // ─── File Input ────────────────────────────────────────────────────────────────
 const fileInput = document.getElementById('file-input') as HTMLInputElement;
@@ -2707,7 +2661,7 @@ async function browseTableDirectory(): Promise<void> {
 
       // Pfad speichern
       DirectoryPathManager.saveTablePath(dirHandle.name || 'Tabellenverzeichnis');
-      updateTablePathShortcuts();
+      updateTablePathShortcuts(browseTableDirectory);
 
       const files: File[] = [];
       for await (const [name, handle] of dirHandle.entries()) {
@@ -2745,7 +2699,7 @@ async function browseTableDirectory(): Promise<void> {
 
         dirPathInput.value = 'Tabellenverzeichnis';
         DirectoryPathManager.saveTablePath('Tabellenverzeichnis');
-        updateTablePathShortcuts();
+        updateTablePathShortcuts(browseTableDirectory);
 
         appendLogEntry(`✅ ${files.length} Tabellen-Dateien gefunden`, 'ok');
         renderTableFileGrid(files);
@@ -2789,78 +2743,7 @@ function renderTableFileGrid(files: File[]): void {
   }
 }
 
-// ─── Phase B0: FPT Browser Init ───────────────────────────────────────────────
-
-// Phase B0: FPT auto-scan + browser. Only runs when running under Electron
-// (electronAPI present); in plain browsers the section stays empty and the
-// user falls back to the existing drag-drop / file-picker UI.
-async function initializeFPTBrowser(): Promise<void> {
-  const api = window.electronAPI;
-  if (!api?.scanFPTDirectory) {
-    // No Electron — hide the FPT section entirely
-    const section = document.getElementById('qm-fpt-section');
-    if (section) section.style.display = 'none';
-    return;
-  }
-
-  const { scanFPTDirectory } = await import('./fpt-render/fpt-table-scanner');
-  const { filterEntries, sortEntries, renderTableList } = await import('./fpt-render/fpt-table-browser');
-  type SortKey = 'name' | 'size' | 'mtime';
-  const { getFPTPath, setFPTPath } = await import('./fpt-render/fpt-path-config');
-
-  const listEl = document.getElementById('qm-fpt-list')!;
-  const searchEl = document.getElementById('qm-fpt-search') as HTMLInputElement;
-  const sortEl = document.getElementById('qm-fpt-sort') as HTMLSelectElement;
-  const pathBtn = document.getElementById('qm-fpt-set-path') as HTMLButtonElement;
-
-  let allEntries: import('./fpt-render/fpt-table-scanner').FPTFileEntry[] = [];
-
-  const refreshList = () => {
-    const filtered = filterEntries(allEntries, searchEl.value);
-    const sorted = sortEntries(filtered, sortEl.value as SortKey);
-    renderTableList(listEl, sorted, (entry) => {
-      void loadFPTFromPath(entry.path).catch((e) => {
-        console.error('[fpt-browser] load failed:', e);
-        showNotification(`Failed to load ${entry.name}: ${e.message}`);
-      });
-    });
-  };
-
-  const scan = async (path: string | null) => {
-    if (!path) { allEntries = []; refreshList(); return; }
-    allEntries = await scanFPTDirectory(path);
-    if (import.meta.env.DEV) console.log(`[fpt-browser] scanned ${allEntries.length} files in ${path}`);
-    refreshList();
-  };
-
-  // Initial scan from saved path
-  await scan(getFPTPath());
-
-  // Wire controls
-  searchEl.addEventListener('input', refreshList);
-  sortEl.addEventListener('change', refreshList);
-  pathBtn.addEventListener('click', async () => {
-    const picked = await api.pickFPTDirectory?.();
-    if (picked) {
-      setFPTPath(picked);
-      await scan(picked);
-    }
-  });
-}
-
-async function loadFPTFromPath(filePath: string): Promise<void> {
-  const api = window.electronAPI;
-  if (!api?.readFPTFile) throw new Error('not running in Electron');
-  const buf: ArrayBuffer = await api.readFPTFile(filePath);
-  const filename = filePath.split(/[\\/]/).pop() ?? 'table.fpt';
-  // parseFPTFile expects a File. Wrap the ArrayBuffer in one — the parser
-  // only uses .name, .size, and .arrayBuffer(), all of which a File provides.
-  const file = new File([buf], filename, { type: 'application/octet-stream' });
-  // Use the static import (parseFPTFile is already imported at the top of
-  // this file; redundant dynamic import was removed).
-  await parseFPTFile(file);
-  showNotification(`Loaded ${filename} — rendering polish in upcoming phases`);
-}
+// ─── Phase B0: FPT Browser Init — moved to src/app/fpt-browser.ts ──────────
 
 // ─── Library Directory Browser ──────────────────────────────────────────────────
 async function browseLibraryDirectory(): Promise<void> {
@@ -2877,7 +2760,7 @@ async function browseLibraryDirectory(): Promise<void> {
 
       // Pfad speichern
       DirectoryPathManager.saveLibraryPath(dirHandle.name || 'Bibliotheksverzeichnis');
-      updateLibraryPathShortcuts();
+      updateLibraryPathShortcuts(browseLibraryDirectory);
 
       const files: File[] = [];
       for await (const [name, handle] of dirHandle.entries()) {
@@ -2915,7 +2798,7 @@ async function browseLibraryDirectory(): Promise<void> {
 
         dirPathInput.value = 'Bibliotheksverzeichnis';
         DirectoryPathManager.saveLibraryPath('Bibliotheksverzeichnis');
-        updateLibraryPathShortcuts();
+        updateLibraryPathShortcuts(browseLibraryDirectory);
 
         appendLogEntry(`✅ ${files.length} Bibliotheks-Dateien gefunden`, 'ok');
         renderLibraryFileList(files);
@@ -2962,96 +2845,7 @@ function renderLibraryFileList(files: File[]): void {
   }
 }
 
-// ─── Path Shortcuts Manager ────────────────────────────────────────────────────
-/**
- * Aktualisiert die Quick-Access-Buttons für zuletzt geöffnete Tabellen-Verzeichnisse
- */
-function updateTablePathShortcuts(): void {
-  const container = document.getElementById('table-shortcuts-container');
-  if (!container) return;
-
-  const paths = DirectoryPathManager.getTablePaths();
-  if (paths.length === 0) {
-    container.innerHTML = '<p style="color:#999; font-size:11px;">Keine Verlauf</p>';
-    return;
-  }
-
-  container.innerHTML = '<p style="color:#667; font-size:10px; margin-bottom:4px;">📋 Zuletzt geöffnet:</p>';
-  paths.forEach((path, idx) => {
-    const btn = document.createElement('button');
-    btn.className = 'tab-btn';
-    btn.style.fontSize = '11px';
-    btn.style.padding = '4px 8px';
-    btn.style.marginBottom = '3px';
-    btn.style.width = '100%';
-    btn.style.textAlign = 'left';
-    btn.style.opacity = (1 - idx * 0.1).toString();
-    // eslint-disable-next-line no-unsanitized/property -- path.name is escapeHtml'd inline
-    btn.innerHTML = `🔄 ${escapeHtml(path.name)}`;
-    btn.title = new Date(path.timestamp).toLocaleDateString();
-    btn.onclick = () => browseTableDirectory();
-    container.appendChild(btn);
-  });
-
-  // Clear-Button
-  const clearBtn = document.createElement('button');
-  clearBtn.style.fontSize = '10px';
-  clearBtn.style.padding = '3px 6px';
-  clearBtn.style.marginTop = '6px';
-  clearBtn.style.color = '#999';
-  clearBtn.style.cursor = 'pointer';
-  clearBtn.textContent = '✕ Löschen';
-  clearBtn.onclick = () => {
-    DirectoryPathManager.clearAllPaths('table');
-    updateTablePathShortcuts();
-  };
-  container.appendChild(clearBtn);
-}
-
-/**
- * Aktualisiert die Quick-Access-Buttons für zuletzt geöffnete Bibliotheks-Verzeichnisse
- */
-function updateLibraryPathShortcuts(): void {
-  const container = document.getElementById('library-shortcuts-container');
-  if (!container) return;
-
-  const paths = DirectoryPathManager.getLibraryPaths();
-  if (paths.length === 0) {
-    container.innerHTML = '<p style="color:#999; font-size:11px;">Keine Verlauf</p>';
-    return;
-  }
-
-  container.innerHTML = '<p style="color:#667; font-size:10px; margin-bottom:4px;">📋 Zuletzt geöffnet:</p>';
-  paths.forEach((path, idx) => {
-    const btn = document.createElement('button');
-    btn.className = 'tab-btn';
-    btn.style.fontSize = '11px';
-    btn.style.padding = '4px 8px';
-    btn.style.marginBottom = '3px';
-    btn.style.width = '100%';
-    btn.style.textAlign = 'left';
-    btn.style.opacity = (1 - idx * 0.1).toString();
-    // eslint-disable-next-line no-unsanitized/property -- path.name is escapeHtml'd inline
-    btn.innerHTML = `🔄 ${escapeHtml(path.name)}`;
-    btn.title = new Date(path.timestamp).toLocaleDateString();
-    btn.onclick = () => browseLibraryDirectory();
-    container.appendChild(btn);
-  });
-
-  // Clear-Button
-  const clearBtn = document.createElement('button');
-  clearBtn.style.fontSize = '10px';
-  clearBtn.style.padding = '3px 6px';
-  clearBtn.style.marginTop = '6px';
-  clearBtn.style.color = '#999';
-  clearBtn.style.cursor = 'pointer';
-  clearBtn.textContent = '✕ Löschen';
-  clearBtn.onclick = () => {
-    DirectoryPathManager.clearAllPaths('library');
-    updateLibraryPathShortcuts();
-  };
-  container.appendChild(clearBtn);
-}
+// ─── Path Shortcuts — moved to src/app/path-shortcuts.ts ────────────────────
 
 fileInput.addEventListener('change', e => { const f=(e.target as HTMLInputElement).files?.[0]; if(f) handleFile(f); });
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -3071,8 +2865,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(btn) btn.textContent=dmdSolidMode?'SOLID':'DOT';
 
   // Initialize path shortcuts
-  updateTablePathShortcuts();
-  updateLibraryPathShortcuts();
+  updateTablePathShortcuts(browseTableDirectory);
+  updateLibraryPathShortcuts(browseLibraryDirectory);
 
   // Show table selector if no table is loaded
   if (!currentTableConfig) {
