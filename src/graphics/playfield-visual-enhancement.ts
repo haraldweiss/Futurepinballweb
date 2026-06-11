@@ -15,8 +15,6 @@
 import * as THREE from 'three';
 import { devLog } from '../utils/dev-log';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import {} from 'three/addons/postprocessing/RenderPass.js';
-import {} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { SSAOPass } from './ssao-pass';
 import { EnhancedMaterialFactory, getEnhancedMaterialFactory } from './enhanced-materials';
@@ -106,7 +104,6 @@ export class PlayfieldVisualEnhancement {
   private scene: THREE.Scene;
   private camera: THREE.Camera;
   private renderer: THREE.WebGLRenderer;
-  private composer: EffectComposer;
 
   private ssaoPass: SSAOPass | null = null;
   private colorGradingPass: ShaderPass | null = null;
@@ -126,7 +123,6 @@ export class PlayfieldVisualEnhancement {
     this.scene = scene;
     this.camera = camera;
     this.renderer = renderer;
-    this.composer = composer;
     this.materialFactory = getEnhancedMaterialFactory();
 
     devLog('✓ PlayfieldVisualEnhancement initialized');
@@ -301,7 +297,7 @@ export class PlayfieldVisualEnhancement {
 
     for (const light of lights) {
       if (light instanceof THREE.Light) {
-        const baseIntensity = (light as any).baseIntensity || light.intensity;
+        const baseIntensity = (light as THREE.Light & { baseIntensity?: number }).baseIntensity ?? light.intensity;
         light.intensity = baseIntensity * Math.max(0.3, intensity);
       }
     }

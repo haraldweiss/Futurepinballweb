@@ -3,16 +3,15 @@
 /**
  * fpt-parser.ts — CFB/OLE2 Ressourcen-Extraktion + FPT Heuristik-Parser
  */
-import * as THREE from 'three';
 import * as CFB from 'cfb';
+import type { CFB$Container } from 'cfb';
 import { fptResources, fptRawBytes, resetFPTRawBytes, globalAssetCatalog, setGlobalAssetCatalog } from './game';
 import { AssetCatalog } from './assets/asset-catalog';
-import { getAudioCtx, playFPTMusic } from './audio-system';
+import { playFPTMusic } from './audio-system';
 import { runFPScript } from './script-engine';
-import { lzo1xDecompress, tryLZOExtract } from './fpt/lzo';
+import { lzo1xDecompress } from './fpt/lzo';
 import {
-  detectImageMime, detectAudioMime,
-  bytesToTexture, scanForImageMagic, extractImageFromBytes,
+  extractImageFromBytes,
   extractSoundFromBytes,
 } from './fpt/media';
 import { extractTableCoordsFromCFB } from './fpt/table-elements';
@@ -42,8 +41,8 @@ export async function parseCFBResources(
   delete fptResources.musicTrack;
   resetFPTRawBytes();
 
-  let cfb: any;
-  try { cfb = (CFB as any).read(new Uint8Array(arrayBuffer), { type: 'array' }); }
+  let cfb: CFB$Container;
+  try { cfb = CFB.read(new Uint8Array(arrayBuffer), { type: 'array' }); }
   catch(e: any) { logMsg(`CFB Parse-Fehler: ${  e.message}`, 'warn'); return { textureCount: 0, soundCount: 0, streamCount: 0 }; }
 
   // The cfb library (v1.2.2) does not always populate `e.t` — for FPT files
@@ -52,12 +51,12 @@ export async function parseCFBResources(
   // parser thinking the file was empty (textures, sounds, models all unloaded).
   // Trust `size > 0` and exclude the root storage by name instead — streams
   // have a payload, the root storage entry never carries one we want to read.
-  const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.size > 0 && e.name && e.name !== 'Root Entry');
+  const entries = (cfb.FileIndex || []).filter((e) => e.size > 0 && e.name && e.name !== 'Root Entry');
   logMsg(`📦 CFB-Streams gefunden: ${entries.length}`, entries.length > 0 ? 'ok' : 'warn');
 
   // Enhanced: Zeige Stream-Overview
   const streamTypes = new Map<string, number>();
-  entries.forEach((e: any) => {
+  entries.forEach((e) => {
     const type = e.name?.includes('Image') || e.name?.includes('Texture') || e.name?.includes('Playfield') ? 'Image'
                : e.name?.includes('Sound') || e.name?.includes('Audio') || e.name?.includes('Music') ? 'Audio'
                : e.name?.includes('Script') || e.name?.includes('Code') ? 'Script'
@@ -218,9 +217,11 @@ export async function parseCFBResources(
     for (const entry of entries) {
       if (entry.size < 50 || entry.size > 2*1024*1024) continue;
       try {
-        const text = new TextDecoder('utf-8', { fatal: false }).decode((entry.content as Uint8Array).slice(0, 8192));
+        const rawContent = entry.content;
+        const content = rawContent instanceof Uint8Array ? rawContent : new Uint8Array(rawContent);
+        const text = new TextDecoder('utf-8', { fatal: false }).decode(content.slice(0, 8192));
         if (/\bSub\s+\w+.*?\bEnd\s+Sub\b/is.test(text)) {
-          const fullText = new TextDecoder('utf-8', { fatal: false }).decode(entry.content);
+          const fullText = new TextDecoder('utf-8', { fatal: false }).decode(content);
           fptResources.script = fullText;
           fptRawBytes.scriptOriginal = fullText;
           logMsg(`  Script (heuristisch): "${entry.name || '?'}"`, 'ok');
@@ -797,7 +798,7 @@ export async function parseFPTFile(
           const modelMap = parseAndCacheModels(extractedModels);
           logMsg(`📦 Modelle gecacht: ${modelMap.size} / ${ms3dModels.size}`, modelMap.size > 0 ? 'ok' : 'warn');
           // Store model map in fptResources for table builder to access
-          (fptResources as any).models = modelMap;
+          fptResources.models = modelMap;
         } catch (e: any) {
           logMsg(`⚠ Fehler beim Model-Caching: ${e.message}`, 'warn');
         }
@@ -1090,7 +1091,7 @@ export async function parseFPLFile(
 ): Promise<void> {
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const cfb = (CFB as any).read(new Uint8Array(arrayBuffer), { type: 'array' });
+    const cfb = CFB.read(new Uint8Array(arrayBuffer), { type: 'array' });
 
     const libName = file.name.replace(/\.fpl$/i, '');
     const library: any = {
@@ -1105,8 +1106,8 @@ export async function parseFPLFile(
       voiceLibrary: {},
     };
 
-    const entries = ((cfb.FileIndex as any[]) || [])
-      .filter((e: any) => e.size > 0 && e.name && e.name !== 'Root Entry');
+    const entries = (cfb.FileIndex || [])
+      .filter((e) => e.size > 0 && e.name && e.name !== 'Root Entry');
 
     logMsg(`📚 FPL Parser: Found ${entries.length} streams in "${libName}"`);
 
@@ -1117,7 +1118,8 @@ export async function parseFPLFile(
 
     for (const entry of entries) {
       const name: string = entry.name || '';
-      const bytes: Uint8Array = entry.content;
+      const rawContent = entry.content;
+      const bytes: Uint8Array = rawContent instanceof Uint8Array ? rawContent : new Uint8Array(rawContent);
       const nameL = name.toLowerCase();
 
       // Textures / Images (GFX, TEX, TEXTURE, BACKDROP, etc.)
@@ -1231,11 +1233,11 @@ export async function parseFPLFile(
 export function extractMS3DModelsFromCFB(arrayBuffer: ArrayBuffer): Map<string, Uint8Array> {
   const models = new Map<string, Uint8Array>();
 
-  let cfb: any;
-  try { cfb = (CFB as any).read(new Uint8Array(arrayBuffer), { type: 'array' }); }
+  let cfb: CFB$Container;
+  try { cfb = CFB.read(new Uint8Array(arrayBuffer), { type: 'array' }); }
   catch(e: any) { logMsg(`CFB Parse-Fehler beim Model-Extract: ${  e.message}`, 'warn'); return models; }
 
-  const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.size > 0 && e.name && e.name !== 'Root Entry');
+  const entries = (cfb.FileIndex || []).filter((e) => e.size > 0 && e.name && e.name !== 'Root Entry');
 
   for (const entry of entries) {
     const name: string = entry.name || '';
@@ -1275,11 +1277,11 @@ export function extractMS3DModelsFromCFB(arrayBuffer: ArrayBuffer): Map<string, 
 export function extractAnimationSequencesFromCFB(arrayBuffer: ArrayBuffer): Map<string, any> {
   const animations = new Map<string, any>();
 
-  let cfb: any;
-  try { cfb = (CFB as any).read(new Uint8Array(arrayBuffer), { type: 'array' }); }
+  let cfb: CFB$Container;
+  try { cfb = CFB.read(new Uint8Array(arrayBuffer), { type: 'array' }); }
   catch(e: any) { logMsg(`CFB Parse-Fehler beim Animation-Extract: ${  e.message}`, 'warn'); return animations; }
 
-  const entries = ((cfb.FileIndex as any[]) || []).filter((e: any) => e.size > 0 && e.name && e.name !== 'Root Entry');
+  const entries = (cfb.FileIndex || []).filter((e) => e.size > 0 && e.name && e.name !== 'Root Entry');
 
   for (const entry of entries) {
     const name: string = entry.name || '';

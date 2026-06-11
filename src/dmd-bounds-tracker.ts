@@ -299,7 +299,6 @@ export class DMDBoundsTracker {
   ): { x: number; y: number } {
     if (!this.currentBounds) return { x, y };
 
-    const bounds = this.currentBounds;
     const padding = 2;
 
     // Adjust X position

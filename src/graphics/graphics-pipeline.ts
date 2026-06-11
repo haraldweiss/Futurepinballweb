@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { RenderPass, QualityPreset, GraphicsMetrics } from './graphics-types';
+import { RenderPass, QualityPreset, GraphicsMetrics, IBloomPass } from './graphics-types';
 import { GeometryPool } from './geometry-pool';
 import { MaterialFactory } from './material-factory';
 import { LightManager } from './light-manager';
@@ -158,7 +158,7 @@ export class GraphicsPipeline {
     this.qualityPreset = preset;
 
     // Update pass settings based on preset
-    const bloomPass = this.passes.get('Bloom') as any;
+    const bloomPass = this.passes.get('Bloom') as IBloomPass | undefined;
     if (bloomPass) {
       bloomPass.setStrength(preset.bloomStrength);
       bloomPass.setRadius(preset.bloomRadius);
@@ -215,7 +215,7 @@ export class GraphicsPipeline {
    */
   private updateMetrics(): void {
     // drawCalls can be queried from renderer if it supports it
-    const info = (this.renderer as any).info;
+    const info = this.renderer.info;
     if (info) {
       this.metrics.drawCalls = info.render.calls || 0;
     }

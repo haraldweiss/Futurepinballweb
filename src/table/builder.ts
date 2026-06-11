@@ -6,23 +6,15 @@
  */
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier2d-compat';
-import type { TableConfig, BumperMesh, TargetMesh } from '../types';
+import type { TableConfig, BumperUserData, TargetUserData } from '../types';
 import {
-  state, fptResources, physics, currentTableConfig, tableGroup, extraBalls,
+  fptResources, physics, tableGroup, extraBalls,
   bumpers, targets, slingshots, ramps,
   setCurrentTableConfig, setTableGroup, setPlungerKnob,
-  cb, globalAssetCatalog,
+  globalAssetCatalog,
 } from '../game';
-import {
-  callScriptBumper, callScriptTarget, callScriptSlingshot,
-} from '../script-engine';
-import { playBumperSoundWithIntensity } from '../audio-system';
-import { getAnimationBindingManager } from '../mechanics/animation-binding';
 import { devLog } from '../utils/dev-log';
-import { getAnimationScheduler } from '../mechanics/animation-scheduler';
-import { getBamBridge } from '../bam-bridge';
 import { getGraphicsPipeline } from '../graphics/graphics-pipeline';
-import { getScoreAnimationManager } from '../score-animation-manager';
 import { populateCatalogFromFPTResources } from '../fpt-parser';
 
 /**
@@ -144,8 +136,6 @@ class AdvancedLightingSystem {
   ): void {
     const maxIntensity = light.intensity || 2.0;
     const startTime = Date.now();
-    const startIntensity = light.intensity;
-
     const animate = () => {
       const elapsed = Date.now() - startTime;
       if (elapsed > duration) return;
@@ -177,7 +167,7 @@ class AdvancedLightingSystem {
 
       const progress = elapsed / anim.duration;
       const easeOut = 1 - (progress * progress);  // Ease out curve
-      (anim.light as any).intensity = anim.targetIntensity * easeOut;
+      anim.light.intensity = anim.targetIntensity * easeOut;
 
       return true;
     });
@@ -252,29 +242,6 @@ function createProceduralNormalMap(width: number = 512, height: number = 512): T
 
   ctx.putImageData(imageData, 0, 0);
   const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
-}
-
-/**
- * Create simple environment map (fallback)
- */
-function createEnvironmentMap(): THREE.Texture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 256;
-  const ctx = canvas.getContext('2d')!;
-
-  // Gradient: darker at top, brighter at bottom
-  const gradient = ctx.createLinearGradient(0, 0, 0, 256);
-  gradient.addColorStop(0, '#1a1a2e');
-  gradient.addColorStop(0.5, '#4a4a6a');
-  gradient.addColorStop(1, '#2a2a3e');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 512, 256);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.mapping = THREE.EquirectangularReflectionMapping;
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
@@ -483,7 +450,6 @@ function buildEnhancedTarget(
 export function buildRealisticFlipper(side: 'left' | 'right', length: number = 2.1, geomPool?: any): THREE.Group {
   const group = new THREE.Group();
   const len   = length;
-  const scale = len / 2.1;  // Normalize to original length
 
   const bodyMat = new THREE.MeshStandardMaterial({
     color: 0xddddee, metalness: 0.95, roughness: 0.08,
@@ -983,7 +949,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   const buildGuide = (x1:number,y1:number,x2:number,y2:number,mat:THREE.Material,w=0.16,h=0.38) => {
     const cx=(x1+x2)/2, cy=(y1+y2)/2, dx=x2-x1, dy=y2-y1;
     const len=Math.sqrt(dx*dx+dy*dy), angle=Math.atan2(dy,dx);
-    const m = new THREE.Mesh(geomPool?.getBox(len,w,h) ?? new THREE.BoxGeometry(len,w,h), mat as any);
+    const m = new THREE.Mesh(geomPool?.getBox(len,w,h) ?? new THREE.BoxGeometry(len,w,h), mat);
     m.position.set(cx,cy,0.32); m.rotation.z=angle; m.castShadow=true; tg.add(m);
   };
 
@@ -1066,9 +1032,9 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
       const lod = b.y > 3.5 ? 'low' : b.y > 2.0 ? 'med' : 'high';
       const m = buildBumper(b.x, b.y, b.color, lod, b.size, b.light, geomPool);
       if (m) {
-        (m as any).castShadow = true;
+        m.castShadow = true;
         tg.add(m);
-        bumpers.push({ x:b.x, y:b.y, mesh:m as any });
+        bumpers.push({ x:b.x, y:b.y, mesh: m as THREE.Mesh & { userData: BumperUserData } });
       } else {
         console.warn('[buildTable] buildBumper returned null/undefined for bumper at', b.x, b.y);
       }
@@ -1094,7 +1060,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
         });
       }
       tg.add(g);
-      targets.push({ x:t.x, y:t.y, mesh:g as any });
+      targets.push({ x:t.x, y:t.y, mesh: g as THREE.Group & { userData: TargetUserData } });
     } catch (e) {
       console.error('[buildTable] Error building target at', t.x, t.y, e);
     }

@@ -85,7 +85,7 @@ export class CabinetSystem {
           : -1 + (4 - 2 * progress) * progress;
 
         const currentDegrees = startDegrees + (targetDegrees - startDegrees) * easeProgress;
-        this.updateRotation(Math.round(currentDegrees) as any);
+        this.updateRotation(Math.round(currentDegrees) as 0 | 90 | 180 | 270);
 
         if (progress < 1) {
           requestAnimationFrame(animate);
@@ -134,7 +134,7 @@ export class CabinetSystem {
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
       devicePixelRatio: window.devicePixelRatio,
-      isFullscreen: !!(document.fullscreenElement || (document as any).webkitFullscreenElement),
+      isFullscreen: !!(document.fullscreenElement || document.webkitFullscreenElement),
       aspectRatio: (window.screen.availWidth / window.screen.availHeight).toFixed(2),
       detectedProfile: this.currentProfile.id,
     };

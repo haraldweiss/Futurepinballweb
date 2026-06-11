@@ -180,15 +180,14 @@ const SSRShader = {
  */
 export class SSRPass {
   private shader: THREE.ShaderMaterial;
-  private fsQuad: any;
   private normalTarget: THREE.WebGLRenderTarget;
   private depthTarget: THREE.WebGLRenderTarget;
   private metallicTarget: THREE.WebGLRenderTarget;
   private enabled = true;
 
   constructor(
-    private renderer: THREE.WebGLRenderer,
-    private scene: THREE.Scene,
+    renderer: THREE.WebGLRenderer,
+    scene: THREE.Scene,
     private camera: THREE.Camera,
     width: number,
     height: number
@@ -313,7 +312,7 @@ export function createSSRPass(
   const pass = new SSRPass(renderer, scene, camera, width, height);
 
   return {
-    pass: new (THREE.ShaderPass as any)(SSRShader),
+    pass: new (THREE.ShaderPass)(SSRShader),
     ssrPass: pass,
     setIntensity: (intensity: number) => pass.setIntensity(intensity),
     setParameters: (samples: number, maxDistance: number, thickness: number) =>

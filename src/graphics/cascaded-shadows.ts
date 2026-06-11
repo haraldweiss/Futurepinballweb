@@ -43,7 +43,6 @@ export class CascadedShadowMapper {
   private shadowMaps: THREE.WebGLRenderTarget[] = [];
   private cascadeConfig: CascadeConfig;
   private lightDirection: THREE.Vector3;
-  private lightIntensity: number;
   private enabled = true;
 
   constructor(
@@ -61,7 +60,6 @@ export class CascadedShadowMapper {
     };
 
     this.lightDirection = config.lightDirection.normalize();
-    this.lightIntensity = config.lightIntensity;
 
     this.initializeCascades();
     if (import.meta.env.DEV) console.log(`✓ Cascaded Shadow Mapper initialized (${config.cascadeCount} cascades)`);
@@ -84,7 +82,7 @@ export class CascadedShadowMapper {
       const renderTarget = new THREE.WebGLRenderTarget(
         this.cascadeConfig.shadowMapSize,
         this.cascadeConfig.shadowMapSize,
-        renderTargetOptions as any
+        renderTargetOptions
       );
       renderTarget.texture.compareFunction = THREE.LessEqualCompare;
       this.shadowMaps.push(renderTarget);

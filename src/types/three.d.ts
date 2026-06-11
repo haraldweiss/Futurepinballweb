@@ -176,3 +176,8 @@ interface PerformanceMemory {
 interface Performance {
   memory?: PerformanceMemory;
 }
+
+// Safari/older WebKit fullscreen API
+interface Document {
+  webkitFullscreenElement?: Element | null;
+}

@@ -124,7 +124,7 @@ export class SoundManager {
       const gainNode = this.audioContext.createGain();
 
       // Set waveform
-      oscillator.type = (effect.waveform || 'sine') as any;
+      oscillator.type = (effect.waveform || 'sine') as OscillatorType;
       
       // Set frequency with pitch adjustment
       oscillator.frequency.value = effect.frequency * pitch;

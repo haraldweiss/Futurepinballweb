@@ -53,7 +53,7 @@ export async function bytesToTexture(slice: Uint8Array, mime: string): Promise<T
   const blob = new Blob([payload as BlobPart], { type: mime });
   try {
     const bitmap = await createImageBitmap(blob);
-    const tex = new THREE.Texture(bitmap as any);
+    const tex = new THREE.Texture(bitmap);
     tex.flipY = false;
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;

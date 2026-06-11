@@ -245,12 +245,12 @@ export function checkKeyBinding(event: KeyboardEvent, action: keyof KeyBindingCo
 }
 
 // ─── Window API ─────────────────────────────────────────────────────────────
-(window as any).getKeyBindings = () => getKeyBindingManager().getAllBindings();
-(window as any).setKeyBinding = (action: string, key: string) => {
+window.getKeyBindings = () => getKeyBindingManager().getAllBindings();
+window.setKeyBinding = (action: string, key: string) => {
   const binding: KeyBinding = { key };
   getKeyBindingManager().setBinding(action as keyof KeyBindingConfig, binding);
 };
-(window as any).resetKeyBindings = () => getKeyBindingManager().resetToDefaults();
-(window as any).showKeyBindings = () => {
+window.resetKeyBindings = () => getKeyBindingManager().resetToDefaults();
+window.showKeyBindings = () => {
   console.table(getKeyBindingManager().getBindingsList());
 };

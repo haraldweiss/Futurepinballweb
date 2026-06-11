@@ -152,10 +152,8 @@ const CascadedShadowCompositeShader = {
  */
 export class CascadedShadowCompositePass extends ShaderPass {
   declare material: THREE.ShaderMaterial;
-  private shadowMaps: THREE.Texture[] = [];
   private cascadeCount: number = 4;
   private shadowIntensity: number = 0.6;
-  private pcfSamples: number = 4;
 
   constructor() {
     const material = new THREE.ShaderMaterial({
@@ -172,7 +170,6 @@ export class CascadedShadowCompositePass extends ShaderPass {
    * Set cascade shadow maps
    */
   setShadowMaps(maps: THREE.Texture[]): void {
-    this.shadowMaps = maps;
     this.material.uniforms.tCascadeShadowMaps.value = maps;
     this.material.uniforms.cascadeCount.value = Math.min(maps.length, 4);
     this.cascadeCount = Math.min(maps.length, 4);
@@ -199,7 +196,6 @@ export class CascadedShadowCompositePass extends ShaderPass {
   setPCFSamples(samples: number): void {
     const validSamples = [2, 4, 8, 16];
     const clampedSamples = validSamples.includes(samples) ? samples : 4;
-    this.pcfSamples = clampedSamples;
     this.material.uniforms.pcfSamples.value = clampedSamples;
   }
 
@@ -265,7 +261,7 @@ export function getCascadedShadowCompositePass(): CascadedShadowCompositePass | 
 
 export function disposeCascadedShadowComposite(): void {
   if (globalCascadedShadowCompositePass) {
-    (globalCascadedShadowCompositePass as any).dispose();
+    globalCascadedShadowCompositePass.dispose();
     globalCascadedShadowCompositePass = null;
   }
 }

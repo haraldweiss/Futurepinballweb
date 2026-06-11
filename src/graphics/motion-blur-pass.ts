@@ -102,8 +102,6 @@ const MotionBlurShader = {
 export class MotionBlurPass {
   private shader: THREE.ShaderMaterial;
   private velocityTarget: THREE.WebGLRenderTarget;
-  private velocityScene: THREE.Scene;
-  private velocityCamera: THREE.OrthographicCamera;
   private enabled = true;
   private trackedObjects: Array<{ mesh: THREE.Mesh; previousPosition: THREE.Vector3 }> = [];
 
@@ -130,10 +128,6 @@ export class MotionBlurPass {
       vertexShader: MotionBlurShader.vertexShader,
       fragmentShader: MotionBlurShader.fragmentShader,
     });
-
-    // Setup velocity scene for rendering velocities
-    this.velocityScene = new THREE.Scene();
-    this.velocityCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
     if (import.meta.env.DEV) console.log('✓ Motion Blur Pass initialized');
   }
@@ -177,17 +171,8 @@ export class MotionBlurPass {
     for (const entry of this.trackedObjects) {
       const { mesh, previousPosition } = entry;
 
-      // Calculate velocity
-      const currentPos = mesh.position;
-      const velocity = new THREE.Vector3()
-        .subVectors(currentPos, previousPosition)
-        .divideScalar(deltaTime);
-
-      // Store velocity magnitude for blur calculations
-      const _velocityMagnitude = velocity.length();
-
       // Update previous position for next frame
-      previousPosition.copy(currentPos);
+      previousPosition.copy(mesh.position);
 
       // Note: Full velocity texture rendering would require additional setup
       // For now, velocity buffer is used in shader pass rendering

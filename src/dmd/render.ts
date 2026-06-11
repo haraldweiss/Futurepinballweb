@@ -539,7 +539,7 @@ export function getDMDConfig() {
 export function cycleDMDResolution(): void {
   const current = DMD_RESOLUTIONS.findIndex(r => r.id === dmdOptions.resolution);
   const next = (current + 1) % DMD_RESOLUTIONS.length;
-  setDMDResolutionOption(DMD_RESOLUTIONS[next].id as any);
+  setDMDResolutionOption(DMD_RESOLUTIONS[next].id);
   updateCanvasSize();
   updateOffscreenSize();
 }

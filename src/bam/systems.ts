@@ -22,24 +22,6 @@ function degreesToRadians(degrees: number): number {
   return degrees * (Math.PI / 180);
 }
 
-function radiansToDegrees(radians: number): number {
-  return radians * (180 / Math.PI);
-}
-
-function hermiteInterpolate(
-  p0: number, p1: number, p2: number, p3: number, t: number
-): number {
-  const t2 = t * t;
-  const t3 = t2 * t;
-
-  const h00 = 2 * t3 - 3 * t2 + 1;
-  const h10 = t3 - 2 * t2 + t;
-  const h01 = -2 * t3 + 3 * t2;
-  const h11 = t3 - t2;
-
-  return h00 * p1 + h10 * (p2 - p0) * 0.5 + h01 * p2 + h11 * (p3 - p1) * 0.5;
-}
-
 // ─── Table Physics ──────────────────────────────────────────────────────
 
 class TablePhysics {
@@ -72,8 +54,6 @@ class TablePhysics {
   getGravityVector(): Vector3 {
     const x = degreesToRadians(this.tiltAngleX);
     const y = degreesToRadians(this.tiltAngleY);
-    const _z = degreesToRadians(this.tiltAngleZ);
-
     const cosX = Math.cos(x);
     const sinX = Math.sin(x);
     const cosY = Math.cos(y);
@@ -112,7 +92,6 @@ class FlipperAdvanced {
   private leftPower: number = 100;
   private rightPower: number = 100;
   private maxPowerOverloads: number = 0;
-  private lastFlipTime: number = 0;
 
   constructor(config: BAMConfig) {
     this.leftPower = config.physics.flipperPower;
@@ -156,7 +135,6 @@ class FlipperAdvanced {
 class AnimationSequencer {
   private sequences: Map<number, AnimationSequence> = new Map();
   private currentSequence: AnimationSequence | null = null;
-  private currentSequenceId: number = 0;
   private elapsedTime: number = 0;
   private isPlaying: boolean = false;
 
@@ -235,7 +213,6 @@ class AnimationSequencer {
     const seq = this.sequences.get(sequenceId);
     if (seq) {
       this.currentSequence = seq;
-      this.currentSequenceId = sequenceId;
       this.elapsedTime = 0;
       this.isPlaying = true;
     }
@@ -292,6 +269,10 @@ class AnimationSequencer {
 
   isAnimationPlaying(): boolean {
     return this.isPlaying;
+  }
+
+  getAllSequences(): Map<number, AnimationSequence> {
+    return this.sequences;
   }
 }
 

@@ -289,15 +289,15 @@ declare global {
 
 // Export window API
 if (typeof window !== 'undefined') {
-  (window as any).initializeScreenRoleManager = initializeScreenRoleManager;
-  (window as any).getScreenRoleManager = getScreenRoleManager;
-  (window as any).configureScreenRoles = (layout: MultiScreenLayout) => {
+  window.initializeScreenRoleManager = initializeScreenRoleManager;
+  window.getScreenRoleManager = getScreenRoleManager;
+  window.configureScreenRoles = (layout: MultiScreenLayout) => {
     getScreenRoleManager().setLayout(layout);
   };
-  (window as any).getScreenRoleConfig = () => {
+  window.getScreenRoleConfig = () => {
     return getScreenRoleManager().getLayout();
   };
-  (window as any).setScreenRole = (screenIndex: number, role: ScreenRole) => {
+  window.setScreenRole = (screenIndex: number, role: ScreenRole) => {
     getScreenRoleManager().setRoleForScreen(screenIndex, role);
   };
   window.swapScreenRoles = (screen1: number, screen2: number) => {

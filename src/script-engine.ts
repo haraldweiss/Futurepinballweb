@@ -336,7 +336,7 @@ export function fpScriptLog(msg: string, type = 'info'): void {
 
   // Also log to browser console for debugging
   const logLevel = { ok: 'info', warn: 'warn', error: 'error', debug: 'debug' }[type] || 'log';
-  (console as any)[logLevel](`[FPScript] ${fullMsg}`);
+  (console as unknown as Record<string, Function>)[logLevel](`[FPScript] ${fullMsg}`);
 }
 
 // ─── FP Script API ────────────────────────────────────────────────────────────
@@ -885,7 +885,7 @@ function buildFPScriptAPI() {
       const m = String(mode).toLowerCase();
       const validModes = ['3-of-5', 'all', 'multi-level', 'none'];
       if (validModes.includes(m)) {
-        state.progressiveTargetMode = m as any;
+        state.progressiveTargetMode = m as '3-of-5' | 'all' | 'multi-level' | 'none';
         state.targetHitCounts.clear();
         state.progressiveTargets.clear();
         state.targetProgress = 0;
@@ -1043,7 +1043,7 @@ function buildFPScriptAPI() {
 
     LockRamp: (rampIndex: number, lockState?: string) => {
       const state_val = String(lockState || 'locked').toLowerCase();
-      state.rampLockStates.set(Math.floor(rampIndex), state_val as any);
+      state.rampLockStates.set(Math.floor(rampIndex), state_val as 'unlocked' | 'lit' | 'locked' | 'completed');
       fpScriptLog(`LockRamp: ${rampIndex} → ${state_val}`);
     },
 
@@ -1502,18 +1502,18 @@ function buildFPScriptAPI() {
 
     GetCollisionForce: () => {
       // Return cached collision force from last frame (physics engine would set this)
-      return (physics as any)?.__lastCollisionForce || 0;
+      return (physics as unknown as Record<string, number | undefined>)?.__lastCollisionForce || 0;
     },
 
     GetCollisionNormal: () => {
       // Return cached collision normal from last frame
-      const normal = (physics as any)?.__lastCollisionNormal;
+      const normal = (physics as unknown as Record<string, { x: number; y: number; z?: number } | undefined>)?.__lastCollisionNormal;
       return normal ? { x: normal.x, y: normal.y, z: normal.z || 0 } : { x: 0, y: 1, z: 0 };
     },
 
     GetCollisionPoint: () => {
       // Return cached collision point in world space
-      const point = (physics as any)?.__lastCollisionPoint;
+      const point = (physics as unknown as Record<string, { x: number; y: number; z?: number } | undefined>)?.__lastCollisionPoint;
       return point ? { x: point.x, y: point.y, z: point.z || 0 } : { x: 0, y: 0, z: 0 };
     },
 

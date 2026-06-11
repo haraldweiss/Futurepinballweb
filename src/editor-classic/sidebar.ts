@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // © 2026 Harald Weiss
 
-import type { Bumper, Ramp, Target } from './types';
 import { state, COLORS, hex } from './state';
 import { render } from './canvas';
 
@@ -61,19 +60,19 @@ export function updateColorDot() {
   if (d) d.style.background = hex(COLORS[state.colorIdx]);
 }
 
-(window as any).cycleColor = () => {
+window.cycleColor = () => {
   state.colorIdx = (state.colorIdx + 1) % COLORS.length;
   updateColorDot();
   if (state.selectedIdx >= 0) { state.elements[state.selectedIdx].color = COLORS[state.colorIdx]; updateSidebar(); render(); }
 };
 
-(window as any).setProp = (key: string, val: string) => {
+window.setProp = (key: string, val: string) => {
   if (state.selectedIdx < 0) return;
-  (state.elements[state.selectedIdx] as any)[key] = parseFloat(val) || 0;
+  (state.elements[state.selectedIdx] as unknown as Record<string, number>)[key] = parseFloat(val) || 0;
   render();
 };
 
-(window as any).setElemColor = (color: number) => {
+window.setElemColor = (color: number) => {
   if (state.selectedIdx < 0) return;
   state.elements[state.selectedIdx].color = color;
   state.colorIdx = COLORS.indexOf(color);

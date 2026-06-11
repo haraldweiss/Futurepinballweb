@@ -13,6 +13,13 @@ import {
   disposePhysics,
 } from './physics-bodies';
 
+interface InitParams { config: any; }
+interface StepParams { dt: number; substeps: number; }
+interface UpdateFlipperParams { side: 'left' | 'right'; angle: number; }
+interface UpdateBallParams { x: number; y: number; vx?: number; vy?: number; }
+interface SetBallGravityParams { scale: number; }
+interface SetWorldGravityParams { x: number; y: number; }
+
 self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
   const { type, ...params } = event.data;
 
@@ -25,38 +32,38 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
           state.rapierInitialized = true;
           if (import.meta.env.DEV) { console.log('[Physics Worker] RAPIER initialized'); }
         }
-        initializePhysics((params as any).config);
+        initializePhysics((params as InitParams).config);
         self.postMessage({ type: 'ready' });
         break;
       }
 
       case 'step': {
-        const { dt, substeps } = params as any;
+        const { dt, substeps } = params as StepParams;
         const result = stepPhysics(dt, substeps);
         self.postMessage({ type: 'frame', data: result });
         break;
       }
 
       case 'updateFlipper': {
-        const { side, angle } = params as any;
+        const { side, angle } = params as UpdateFlipperParams;
         updateFlipperRotation(side, angle);
         break;
       }
 
       case 'updateBall': {
-        const { x, y, vx, vy } = params as any;
+        const { x, y, vx, vy } = params as UpdateBallParams;
         updateBallPosition(x, y, vx, vy);
         break;
       }
 
       case 'setBallGravity': {
-        const { scale } = params as any;
+        const { scale } = params as SetBallGravityParams;
         setBallGravityScale(scale);
         break;
       }
 
       case 'setWorldGravity': {
-        const { x, y } = params as any;
+        const { x, y } = params as SetWorldGravityParams;
         if (state.world) {
           state.world.gravity.x = x;
           state.world.gravity.y = y;

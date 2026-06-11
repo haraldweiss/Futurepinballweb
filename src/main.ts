@@ -87,7 +87,7 @@ import {
   initializeAnimationScheduler, getAnimationScheduler,
 } from './mechanics/animation-scheduler';
 import {
-  initializeAnimationDebugger, getAnimationDebugger,
+  initializeAnimationDebugger,
 } from './animation/animation-debugger';
 import {
   initializePhysicsWorker, getPhysicsWorker, disposePhysicsWorker,
@@ -192,7 +192,7 @@ function applyPhysicsGravityForRotation(deg: 0 | 90 | 180 | 270): void {
 
 if (import.meta.env.DEV) {
   // Runtime gravity tester — call from DevTools console.
-  (window as any).testGravity = (x: number, y: number) => {
+  window.testGravity = (x: number, y: number) => {
     const bridge = getPhysicsWorker();
     if (!bridge) {
       console.warn('[testGravity] physics worker not ready');
@@ -203,7 +203,7 @@ if (import.meta.env.DEV) {
   };
 
   // Force-set the score — call from playfield DevTools to test cross-window bridge
-  (window as any).forceScore = (n: number) => {
+  window.forceScore = (n: number) => {
     state.score = n;
     state.ballNum = Math.max(1, state.ballNum);
     state.multiplier = Math.max(1, state.multiplier);
@@ -215,8 +215,8 @@ if (import.meta.env.DEV) {
   };
 
   // Debug: dump current state diagnostics
-  (window as any).dumpState = () => {
-    const diag = (window as any)._msDiag || {};
+  window.dumpState = () => {
+    const diag = window._msDiag || {};
     if (import.meta.env.DEV) {
       console.log('=== STATE DIAGNOSTICS ===');
       console.log(`state.score = ${state.score}`);
@@ -266,8 +266,8 @@ async function rotateAndRedraw(targetDegrees: 0 | 90 | 180 | 270, duration: numb
 // Adjusts all UI elements to fit the current browser window size
 window.addEventListener('resize', () => {
   // Throttle resize events to avoid performance issues
-  clearTimeout((window as any).resizeTimer);
-  (window as any).resizeTimer = setTimeout(() => {
+  clearTimeout(window.resizeTimer);
+  window.resizeTimer = setTimeout(() => {
     try {
       // Apply optimized table view
       applyOptimizedTableView();
@@ -492,10 +492,10 @@ const screenResolutionManager = initializeScreenResolutionManager();
 screenResolutionManager.getLayout();
 
 // ─── Phase 4: Resource Manager (Memory Budget Management) ──────────────────────
-let resourceManager = initializeResourceManager();
+initializeResourceManager();
 
 // ─── Phase 5: Library Cache with TTL & Cleanup ───────────────────────────────────
-let libraryCache = initializeLibraryCache();
+initializeLibraryCache();
 
 const aspectRatio = innerWidth / innerHeight;
 
@@ -996,17 +996,17 @@ function applyEnhancedVisualsToTable(sceneTarget: THREE.Scene): void {
 
     // Identify element type and apply appropriate enhanced material
     if (name.includes('bumper')) {
-      enhancement.applyEnhancedMaterial(mesh, 'bumper', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as any).color : '#ff6600');
+      enhancement.applyEnhancedMaterial(mesh, 'bumper', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as THREE.MeshStandardMaterial).color : '#ff6600');
     } else if (name.includes('target')) {
-      enhancement.applyEnhancedMaterial(mesh, 'target', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as any).color : '#00ff00');
+      enhancement.applyEnhancedMaterial(mesh, 'target', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as THREE.MeshStandardMaterial).color : '#00ff00');
     } else if (name.includes('ramp')) {
-      enhancement.applyEnhancedMaterial(mesh, 'ramp', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as any).color : '#ccb366');
+      enhancement.applyEnhancedMaterial(mesh, 'ramp', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as THREE.MeshStandardMaterial).color : '#ccb366');
     } else if (name.includes('flipper')) {
-      enhancement.applyEnhancedMaterial(mesh, 'flipper', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as any).color : '#ff6600');
+      enhancement.applyEnhancedMaterial(mesh, 'flipper', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as THREE.MeshStandardMaterial).color : '#ff6600');
     } else if (name.includes('ball')) {
       enhancement.applyEnhancedMaterial(mesh, 'ball', '#ffffff');
     } else if (name.includes('playfield') || name.includes('table')) {
-      enhancement.applyEnhancedMaterial(mesh, 'playfield', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as any).color : '#8b7355');
+      enhancement.applyEnhancedMaterial(mesh, 'playfield', mesh.material instanceof THREE.MeshStandardMaterial ? (mesh.material as THREE.MeshStandardMaterial).color : '#8b7355');
     }
   });
 
@@ -1303,7 +1303,7 @@ function showLibrarySelector(lib: any): void {
     btn.textContent = templateName;
     btn.onclick = async () => {
       resetGameState();
-      await loadTableWithPhysicsWorker(templateConfig as any, scene, lib);
+      await loadTableWithPhysicsWorker(templateConfig, scene, lib);
       window.closeLoader();
       appendLogEntry(`✓ Loaded: ${lib.name} / ${templateName}`);
     };
@@ -1785,7 +1785,7 @@ document.addEventListener('keydown', e => {
     const rotEngine = getRotationEngine();
     const currentRotation = rotEngine?.getCurrentRotation() ?? 0;
     const nextRotation = (currentRotation + 90) % 360;
-    rotateAndRedraw(nextRotation as any, 400);
+    rotateAndRedraw(nextRotation as 0 | 90 | 180 | 270, 400);
     showNotification(`🎮 Rotated to ${nextRotation}°`);
   }
   if ((e.ctrlKey || e.metaKey) && (e.key === 'e' || e.key === 'E')) {
@@ -1793,7 +1793,7 @@ document.addEventListener('keydown', e => {
     const rotEngine = getRotationEngine();
     const currentRotation = rotEngine?.getCurrentRotation() ?? 0;
     const nextRotation = (currentRotation - 90 + 360) % 360;
-    rotateAndRedraw(nextRotation as any, 400);
+    rotateAndRedraw(nextRotation as 0 | 90 | 180 | 270, 400);
     showNotification(`🎮 Rotated to ${nextRotation}°`);
   }
 });
@@ -1967,7 +1967,7 @@ function applyQualityPreset(): void {
 
     // ─── Volumetric Lighting ───
     if (volumetricPass) {
-      (volumetricPass as any).enabled = currentPreset.volumetricEnabled;
+      volumetricPass.enabled = currentPreset.volumetricEnabled;
       if (currentPreset.volumetricEnabled) {
         volumetricPass.setExposure(currentPreset.volumetricIntensity);
         appendLogEntry(`  └─ Volumetric: ${(currentPreset.volumetricIntensity * 100).toFixed(0)}%`, 'ok');
@@ -2570,7 +2570,6 @@ function setupBackglassForTable(): void {
     backglassRenderer.setArtwork(artwork);
 
     // Set mode indicator
-    const modeName = currentTableConfig?.name || 'UNKNOWN';
     backglassRenderer.setModeIndicator(`BALL ${state.ballNum}/3`);
   }
 }
@@ -2606,8 +2605,6 @@ const fileBrowserState = {
 };
 
 function updateFileBrowserUI(): void {
-  const tableDir = fileBrowserState.tableDirectory;
-  const libDir = fileBrowserState.libraryDirectory;
 
   // Update status
   const tableCount = fileBrowserState.selectedTableFile ? 1 : 0;
@@ -2658,8 +2655,6 @@ const browseTableDirectoryFS = async () => {
     fileBrowserState.selectedLibraryFiles = [];
 
     const tablesList = document.getElementById('tables-list')!;
-    const tablesEmpty = document.getElementById('tables-empty')!;
-
     if (tables.length === 0) {
       tablesList.style.display = 'none';
       return;
@@ -2720,8 +2715,6 @@ const browseLibraryDirectoryFS = async () => {
     fileBrowserState.selectedLibraryFiles = [...libraries];
 
     const libsList = document.getElementById('libraries-list')!;
-    const libsEmpty = document.getElementById('libraries-empty')!;
-
     if (libraries.length === 0) {
       libsList.style.display = 'none';
       return;
@@ -3063,7 +3056,7 @@ window.addEventListener('resize', () => {
 // ─── Multi-Screen ─────────────────────────────────────────────────────────────
 let _msLayout = 1;
 const _msWindows: Record<string,Window|null> = {};
-const _msWindowStatus: Record<string,{opened: boolean; verified: boolean}> = {};
+
 
 const selectMsLayout = (n: number) => {
   _msLayout=n;
@@ -3396,7 +3389,7 @@ function setupDMDWindow(): void {
   const dmdCtx = canvas.getContext('2d');
   const drawDmdDiag = () => {
     if (!dmdCtx) return;
-    const m = (window as any)._msStateMessages || {};
+    const m = window._msStateMessages || {};
     const total = (m.broadcastChannel || 0) + (m.electronIPC || 0) + (m.localStorage || 0);
     dmdCtx.save();
     dmdCtx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -3450,8 +3443,6 @@ disposePhysicsWorker();});
   setSize(); window.addEventListener('resize',setSize);
 
   let bgRenderFrames = 0;
-  const bgCtx = canvas.getContext('2d');
-
   const bgLoop = () => {
     requestAnimationFrame(bgLoop);
     bgRenderFrames++;
@@ -3548,7 +3539,7 @@ async function browseTableDirectory(): Promise<void> {
       for await (const [name, handle] of dirHandle.entries()) {
         if (name.endsWith('.fpt') || name.endsWith('.fp')) {
           try {
-            const file = await (handle as any).getFile();
+            const file = await (handle as FileSystemFileHandle).getFile();
             files.push(file);
           } catch (e) {
             console.warn(`⚠ Fehler beim Lesen der Datei ${name}:`, e);
@@ -3718,7 +3709,7 @@ async function browseLibraryDirectory(): Promise<void> {
       for await (const [name, handle] of dirHandle.entries()) {
         if (name.endsWith('.fpl')) {
           try {
-            const file = await (handle as any).getFile();
+            const file = await (handle as FileSystemFileHandle).getFile();
             files.push(file);
           } catch (e) {
             console.warn(`⚠ Fehler beim Lesen der Datei ${name}:`, e);
@@ -3944,7 +3935,6 @@ window.addEventListener('editor:apply-changes', (event: any) => {
   if (!newConfig || !scene || !physics) return;
 
   // Update current table config
-  const prevConfig = currentTableConfig;
   if (currentTableConfig) {
     currentTableConfig.name = newConfig.name;
     currentTableConfig.tableColor = newConfig.tableColor;
@@ -4021,7 +4011,7 @@ if (FPW_ROLE === 'dmd') {
 
     // Phase 13 Task 2: Initialize BAM Bridge (connects VBScript to BAMEngine)
     setDevFlag('INIT_BAM_BRIDGE_START', true);
-    const bamBridge = initializeBamBridge(bam);
+    initializeBamBridge(bam);
     if (import.meta.env.DEV) {
       console.log('✅ B.A.M. Bridge initialized');
       setDevFlag('INIT_BAM_BRIDGE_OK', true);
@@ -4054,8 +4044,8 @@ if (FPW_ROLE === 'dmd') {
       setDevFlag('INIT_ANIM_BINDING_START', true);
       console.log('🔄 About to initialize animation binding...');
     }
-    const animationBindingMgr = initializeAnimationBinding();
-    const animationScheduler = initializeAnimationScheduler();
+    initializeAnimationBinding();
+    initializeAnimationScheduler();
     if (import.meta.env.DEV) {
       console.log('✅ Animation binding system initialized');
       setDevFlag('INIT_ANIM_BINDING_OK', true);
@@ -4196,7 +4186,7 @@ const logResourceStats = () => {
 };
 const resetResourceManagerWrap = () => {
   resetResourceManager();
-  resourceManager = initializeResourceManager();
+  initializeResourceManager();
   appendLogEntry(`💾 ResourceManager reset with fresh budget`, 'ok');
 };
 
@@ -4216,7 +4206,7 @@ const cleanupLibraryCache = () => {
 };
 const resetLibraryCacheWrap = () => {
   resetLibraryCache();
-  libraryCache = initializeLibraryCache();
+  initializeLibraryCache();
   appendLogEntry(`📚 LibraryCache reset with fresh TTL`, 'ok');
 };
 

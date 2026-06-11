@@ -151,7 +151,7 @@ export function setupPostProcessing(
   const volumetricPass = createVolumetricLightingPass(renderer);
   volumetricPass.setExposure(1.2);
   volumetricPass.setParameters(0.5, 0.4, 0.95, 32);
-  composer.addPass((volumetricPass as any).pass || volumetricPass);
+  composer.addPass(volumetricPass);
 
   const filmEffectsPass: FilmEffectsPass | null = initializeGraphicsPass(
     'FilmEffects',

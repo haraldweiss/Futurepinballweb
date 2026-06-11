@@ -91,7 +91,6 @@ export class BallTrailManager {
 
     for (let i = 0; i < count; i++) {
       // Fade from opaque (tail) to transparent (head)
-      const alpha = i / count;
       const r = 0;
       const g = 1;
       const b = 0.5;
@@ -106,7 +105,7 @@ export class BallTrailManager {
 
     // Update material to use vertex colors
     this.lineMaterial.vertexColors = true;
-    (this.lineMaterial as any).linewidth = 2;
+    (this.lineMaterial as THREE.LineBasicMaterial & { linewidth?: number }).linewidth = 2;
   }
 
   /**

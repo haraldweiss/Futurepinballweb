@@ -47,7 +47,7 @@ export class InputOptimizer {
     lastInputTime: 0,
   };
 
-  private keyMap = {
+  private keyMap: Record<string, string> = {
     'ShiftLeft': 'flipperLeft',
     'ShiftRight': 'flipperRight',
     'Enter': 'plungerActive',
@@ -121,7 +121,7 @@ export class InputOptimizer {
    * Process individual key input
    */
   private processKeyInput(key: string, pressed: boolean): void {
-    const mappedKey = (this.keyMap as any)[key];
+    const mappedKey = this.keyMap[key];
     if (!mappedKey) return;
 
     if (mappedKey === 'nudgeLeft') {

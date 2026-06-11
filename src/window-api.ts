@@ -236,6 +236,38 @@ declare global {
     setDMDGlow?:                (enabled: boolean, intensity?: number) => void;
     updateResponsiveDMDScale?:  () => void;
     getCurrentRotation?:        () => number;
+
+    // ── Classic Editor ───────────────────────────────────────────────────
+    exportJSON?:            () => void;
+    openInGame?:            () => void;
+    importJSON?:            () => void;
+    loadDemo?:              (key: string) => void;
+    setTool?:               (tool: 'select' | 'bumper' | 'target' | 'ramp') => void;
+    deleteSelected?:        () => void;
+    clearAll?:              () => void;
+    toggleSnap?:            () => void;
+    cycleColor?:            () => void;
+    setProp?:               (key: string, val: string) => void;
+    setElemColor?:          (color: number) => void;
+
+    // ── Key Bindings ──────────────────────────────────────────────────
+    getKeyBindings?:     () => any;
+    setKeyBinding?:      (action: string, key: string) => void;
+    resetKeyBindings?:   () => void;
+    showKeyBindings?:    () => void;
+
+    // ── Resize timers ─────────────────────────────────────────────────
+    resizeTimer?:       ReturnType<typeof setTimeout>;
+    dmdResizeTimer?:    ReturnType<typeof setTimeout>;
+
+    // ── DEV-only debug helpers ────────────────────────────────────────
+    testGravity?:       (x: number, y: number) => void;
+    forceScore?:        (n: number) => void;
+    dumpState?:         () => void;
+
+    // ── Diagnostics bags ──────────────────────────────────────────────
+    _msDiag?:           Record<string, any>;
+    _msStateMessages?:  Record<string, any>;
   }
 }
 

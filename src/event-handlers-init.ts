@@ -76,7 +76,6 @@ export function closeQuickMenu(): void {
 function initializeQuickMenuHandlers(): void {
   const closeBtn = document.getElementById('menu-close-btn');
   const quickMenu = document.getElementById('quick-menu');
-  const _openLoaderBtn = document.getElementById('open-loader');
   
   if (closeBtn) {
     closeBtn.addEventListener('click', () => {
@@ -157,7 +156,6 @@ function initializeQuickMenuHandlers(): void {
 function initializeTabHandlers(): void {
   document.querySelectorAll('.tab-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const tabs = ['demo', 'import', 'browser', 'info', 'script'];
       let tabName = '';
       
       // Extract tab name from button text or data-tab attribute

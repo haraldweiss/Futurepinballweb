@@ -14,8 +14,8 @@
 import type { TableConfig } from './types';
 import { Editor3DPreview } from './editor-3d-preview';
 import { parseFPTFile } from './fpt-parser';
-import { BackglassEditor, type BackglassSettings } from './backglass-editor';
-import { DMDEditor, type DMDSettings } from './dmd-editor';
+import { BackglassEditor } from './backglass-editor';
+import { DMDEditor } from './dmd-editor';
 import { VideoEditor } from './video-editor';
 import { AssetBrowser } from './editor/asset-browser';
 import { PropertyModal } from './editor/property-modal';
@@ -51,7 +51,6 @@ export class EditorModal {
   private preview3d: Editor3DPreview | null = null;
 
   // Tab management
-  private currentTab: 'playfield' | 'backglass' | 'dmd' | 'video' | 'assets' = 'playfield';
   private currentTableConfig: TableConfig | null = null;
 
   // Sub-editors
@@ -137,8 +136,6 @@ export class EditorModal {
    * Switch to a different editor tab
    */
   switchTab(tabId: 'playfield' | 'backglass' | 'dmd' | 'video' | 'assets'): void {
-    this.currentTab = tabId;
-
     if (!this.modal) return;
 
     // Hide all tabs
@@ -847,8 +844,8 @@ export class EditorModal {
     const cy = e.clientY - rect.top;
     const idx = this.pickElementAt(cx, cy);
     if (idx < 0 || !this.elements[idx]) return;
-    this.propertyModal.openForElement(this.elements[idx] as any, (updated) => {
-      this.elements[idx] = updated as any;
+    this.propertyModal.openForElement(this.elements[idx], (updated) => {
+      this.elements[idx] = updated;
       this.updateEditor();
     });
   }
@@ -961,4 +958,4 @@ export function getIntegratedEditor(): EditorModal {
 }
 
 // Export to window for HTML onclick handlers
-(window as any).getIntegratedEditor = getIntegratedEditor;
+window.getIntegratedEditor = getIntegratedEditor;

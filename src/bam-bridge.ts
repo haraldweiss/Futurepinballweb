@@ -205,7 +205,7 @@ export class BamBridge {
   saveConfig(key: string, value: any): void {
     try {
       const config = this.bamEngine.getConfig();
-      (config.set as any)(key, value);
+      (config.set as (key: string, value: any) => void)(key, value);
       config.saveToStorage();
       this.triggerEvent('ConfigSaved', key, value);
     } catch (e: any) {
@@ -219,7 +219,7 @@ export class BamBridge {
   loadConfig(key: string, defaultValue?: any): any {
     try {
       const config = this.bamEngine.getConfig();
-      return (config.get as any)(key) ?? defaultValue;
+      return (config.get as (key: string) => any)(key) ?? defaultValue;
     } catch (e: any) {
       console.warn(`⚠️ Failed to load config: ${e.message}`);
       return defaultValue;
@@ -289,7 +289,7 @@ export class BamBridge {
   private callScriptEvent(eventName: string, ...args: any[]): void {
     try {
       const fnName = `BAM_${eventName}`;
-      const fn = (window as any)[fnName];
+      const fn = (window as unknown as Record<string, Function>)[fnName];
       if (typeof fn === 'function') {
         fn(...args);
       }

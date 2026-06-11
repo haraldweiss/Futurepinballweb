@@ -21,7 +21,7 @@ function buildConfig() {
   };
 }
 
-(window as any).exportJSON = () => {
+window.exportJSON = () => {
   const json = JSON.stringify(buildConfig(), null, 2);
   const a    = document.createElement('a');
   a.href     = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
@@ -29,12 +29,12 @@ function buildConfig() {
   a.click(); URL.revokeObjectURL(a.href);
 };
 
-(window as any).openInGame = () => {
+window.openInGame = () => {
   localStorage.setItem('fpw_custom_table', JSON.stringify(buildConfig()));
   window.open('index.html?load=custom', '_blank');
 };
 
-(window as any).importJSON = () => {
+window.importJSON = () => {
   const input = document.createElement('input');
   input.type = 'file'; input.accept = '.json';
   input.onchange = (e) => {
@@ -68,7 +68,7 @@ function loadFromConfig(cfg: any) {
 }
 
 // ─── Demo-Tische ──────────────────────────────────────────────────────────────
-(window as any).loadDemo = (key: string) => {
+window.loadDemo = (key: string) => {
   const demos: Record<string,any> = {
     classic: { name:'Classic Arcade', tableColor:0x1a4a15, accentColor:0x00ff66,
       bumpers:[{x:-1.1,y:2.2,color:0xff2200},{x:1.1,y:2.2,color:0xff9900},{x:0,y:3.6,color:0xff00aa}],

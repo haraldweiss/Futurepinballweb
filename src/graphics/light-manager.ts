@@ -143,8 +143,8 @@ export class LightManager {
       light.intensity = config.intensity;
     }
 
-    if (config.distance !== undefined && (light as any).distance !== undefined) {
-      (light as any).distance = config.distance;
+    if (config.distance !== undefined && light.distance !== undefined) {
+      light.distance = config.distance;
     }
 
     if (config.castShadow !== undefined) {
@@ -195,7 +195,7 @@ export class LightManager {
       const managed = this.lights.get(id);
       if (!managed) continue;
 
-      const light = managed.light as any;
+      const light = managed.light;
       if (light.shadow) {
         light.shadow.mapSize.set(size, size);
         light.shadow.map?.dispose();
@@ -373,8 +373,8 @@ export class LightManager {
       this.scene.remove(managed.light);
 
       // Dispose shadow map if it exists
-      if ((managed.light as any).shadow?.map) {
-        (managed.light as any).shadow.map.dispose();
+      if (managed.light.shadow?.map) {
+        managed.light.shadow.map.dispose();
       }
     }
 

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import * as CFB from 'cfb';
+import type { CFB$Container } from 'cfb';
 
 const NAME_TAG_LE = (() => {
   const b = new Uint8Array([0xb2, 0xbe, 0xb2, 0xba]);
@@ -92,15 +93,15 @@ function toGameY(fpY: number): number {
  * coordinates, converted to game space.
  */
 export function extractTableCoordsFromCFB(arrayBuffer: ArrayBuffer): Array<{ x: number; y: number }> {
-  let cfb: any;
+  let cfb: CFB$Container;
   try {
-    cfb = (CFB as any).read(new Uint8Array(arrayBuffer), { type: 'array' });
+    cfb = CFB.read(new Uint8Array(arrayBuffer), { type: 'array' });
   } catch {
     return [];
   }
 
-  const entries = ((cfb.FileIndex as any[]) || []).filter(
-    (e: any) => e.size > 0 && e.name && /table element/i.test(e.name)
+  const entries = (cfb.FileIndex || []).filter(
+    (e) => e.size > 0 && e.name && /table element/i.test(e.name)
   );
 
   const coords: Array<{ x: number; y: number }> = [];

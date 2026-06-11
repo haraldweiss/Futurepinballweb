@@ -127,8 +127,8 @@ export class AnimationBindingManager {
   ): AnimationBinding {
     return {
       id: `default_${elementType}_${sequenceId}`,
-      elementType: elementType as any,
-      triggerEvent: event as any,
+      elementType: elementType as AnimationBinding['elementType'],
+      triggerEvent: event as AnimationBinding['triggerEvent'],
       sequenceId,
       autoPlay: true,
       delay: 0,

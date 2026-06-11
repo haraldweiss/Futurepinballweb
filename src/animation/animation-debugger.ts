@@ -6,8 +6,6 @@
  */
 
 import { getAnimationQueue } from './animation-queue';
-import { getAnimationBindingManager } from '../mechanics/animation-binding';
-import { getAnimationScheduler } from '../mechanics/animation-scheduler';
 import { getBamBridge } from '../bam-bridge';
 import { BAMEngine } from '../bam-engine';
 import { escapeHtml } from '../utils/html-escape';
@@ -130,9 +128,6 @@ export class AnimationDebugger {
 
     const queue = getAnimationQueue();
     const bridge = getBamBridge();
-    const _bindingMgr = getAnimationBindingManager();
-    const _scheduler = getAnimationScheduler();
-
     let status = '';
     status += `⚙️ Queue: ${queue?.size() || 0} pending\n`;
     status += `▶️ Current: ${queue?.getCurrent()?.sequenceId || 'none'}\n`;
@@ -150,23 +145,24 @@ export class AnimationDebugger {
   private updateAnimationList(): void {
     if (!this.animationList || !this.bamEngine) return;
 
-    const sequencer = (this.bamEngine as any).sequencer;
-    if (!sequencer || !sequencer.sequences) {
+    const sequencer = this.bamEngine.getAnimationSequencer();
+    const sequences = sequencer.getAllSequences();
+    if (sequences.size === 0) {
       this.animationList.innerHTML = '<span style="color: #ff8800;">No animations loaded</span>';
       return;
     }
 
-    const sequences = Array.from(sequencer.sequences.entries());
-    if (sequences.length === 0) {
+    const sequencesArr = Array.from(sequences.entries());
+    if (sequencesArr.length === 0) {
       this.animationList.innerHTML = '<span style="color: #ff8800;">No animations loaded</span>';
       return;
     }
 
     let html = '<div style="font-weight: bold; margin-bottom: 6px; color: #00ff88;">📝 Sequences:</div>';
 
-    sequences.forEach(([seqId, seq]: any) => {
-      const duration = seq.keyframes?.length > 0
-        ? seq.keyframes[seq.keyframes.length - 1].time || 0
+    sequencesArr.forEach(([seqId, seq]) => {
+      const duration = seq.frames?.length > 0
+        ? seq.frames[seq.frames.length - 1].time || 0
         : 0;
       const safeSeqId = escapeHtml(String(seqId));
 
@@ -191,7 +187,7 @@ export class AnimationDebugger {
             ">▶ PLAY</button>
           </div>
           <div style="font-size: 9px; margin-top: 3px; color: #00aa88;">
-            ⏱️ ${(duration / 1000).toFixed(2)}s | 🔑 ${seq.keyframes?.length || 0} frames
+            ⏱️ ${(duration / 1000).toFixed(2)}s | 🔑 ${seq.frames?.length || 0} frames
           </div>
         </div>
       `;

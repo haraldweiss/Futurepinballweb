@@ -9,7 +9,6 @@
  * - Release mechanics: Auto-release after timeout or script-triggered
  */
 
-import * as THREE from 'three';
 import {} from '../game';
 
 export interface MagnetZone {
@@ -85,8 +84,6 @@ export class MagnetSystem {
     if (!zone) return 0;
 
     const count = zone.ballIndices.length;
-    const _p = Math.max(0, Math.min(10, Number(power) || zone.power));
-
     // In full implementation, would apply impulse based on direction/power
     // For now, just clear the zone
     zone.ballIndices = [];

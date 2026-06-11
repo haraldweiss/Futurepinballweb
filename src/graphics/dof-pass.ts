@@ -125,7 +125,6 @@ const DepthOfFieldShader = {
  */
 export class DepthOfFieldPass {
   private shader: THREE.ShaderMaterial;
-  private enabled = false;
   private focusDistance: number = 5.0;
   private aperture: number = 0.5;
   private maxBlur: number = 1.0;
@@ -265,10 +264,8 @@ export class DepthOfFieldPass {
    */
   setEnabled(enabled: boolean): void {
     if (!this.isSupported) {
-      this.enabled = false;
       return;
     }
-    this.enabled = enabled;
   }
 
   /**

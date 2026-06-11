@@ -16,8 +16,6 @@ import { devLog } from './utils/dev-log';
 // ─── Input Mapping Manager ────────────────────────────────────────────────────
 export class InputMappingManager {
   private currentRotation: 0 | 90 | 180 | 270 = 0;
-  private currentProfile: CabinetProfile | null = null;
-
   // Touch element references
   private touchLeftBtn: HTMLElement | null = null;
   private touchRightBtn: HTMLElement | null = null;
@@ -41,7 +39,6 @@ export class InputMappingManager {
    * Apply input mapping for cabinet profile
    */
   applyProfileMapping(profile: CabinetProfile): void {
-    this.currentProfile = profile;
     this.currentRotation = profile.rotation;
 
     // Update touch controls positioning

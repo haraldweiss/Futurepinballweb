@@ -1,0 +1,72 @@
+{
+  "timestamp": "2026-06-11T08:29:50.433476+00:00",
+  "api_base": "https://opencode.ai/zen/v1",
+  "models_tested": 6,
+  "all_match_expectations": false,
+  "results": {
+    "deepseek-v4-flash-free": {
+      "text": true,
+      "structured_output": false,
+      "vision": false
+    },
+    "mimo-v2.5-free": {
+      "text": true,
+      "structured_output": true,
+      "vision": true
+    },
+    "qwen3.6-plus-free": {
+      "text": false,
+      "structured_output": false,
+      "vision": false
+    },
+    "minimax-m3-free": {
+      "text": false,
+      "structured_output": false,
+      "vision": false
+    },
+    "nemotron-3-ultra-free": {
+      "text": true,
+      "structured_output": true,
+      "vision": false
+    },
+    "north-mini-code-free": {
+      "text": true,
+      "structured_output": false,
+      "vision": false
+    }
+  },
+  "expected": {
+    "nemotron-3-ultra-free": {
+      "text": true,
+      "structured_output": true,
+      "vision": false
+    },
+    "mimo-v2.5-free": {
+      "text": true,
+      "structured_output": true,
+      "vision": true
+    },
+    "deepseek-v4-flash-free": {
+      "text": true,
+      "structured_output": false,
+      "vision": false
+    },
+    "north-mini-code-free": {
+      "text": true,
+      "structured_output": false,
+      "vision": false
+    }
+  },
+  "known_but_missing": [],
+  "new_unexpected": [
+    "minimax-m3-free",
+    "qwen3.6-plus-free"
+  ],
+  "models_with_structured": [
+    "mimo-v2.5-free",
+    "nemotron-3-ultra-free"
+  ],
+  "models_with_vision": [
+    "mimo-v2.5-free"
+  ]
+}

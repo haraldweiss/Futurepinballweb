@@ -207,9 +207,10 @@ export class TouchControlsManager {
   }
 
   static isTouchDevice(): boolean {
+    const nav = navigator as Navigator & { msMaxTouchPoints?: number };
     return (('ontouchstart' in window) ||
             (navigator.maxTouchPoints > 0) ||
-            ((navigator as any).msMaxTouchPoints > 0));
+            (nav.msMaxTouchPoints ?? 0) > 0);
   }
 
   static isMobileDevice(): boolean {

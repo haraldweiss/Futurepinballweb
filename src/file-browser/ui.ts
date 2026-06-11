@@ -5,8 +5,6 @@ import type { FileInfo } from './types';
 import { formatFileSize, formatDate } from './utils';
 
 export class FileBrowserUIManager {
-  private _selectedTables: Map<string, FileInfo> = new Map();
-  private _selectedLibraries: Map<string, FileInfo> = new Map();
   private recentFiles: string[] = [];
   private maxRecentFiles = 10;
 

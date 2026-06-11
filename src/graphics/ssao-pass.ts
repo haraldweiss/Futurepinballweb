@@ -94,7 +94,6 @@ export class SSAOPass extends ShaderPass {
   private depthMaterial: THREE.ShaderMaterial;
   private scene: THREE.Scene;
   private camera: THREE.Camera;
-  private renderer: THREE.WebGLRenderer;
 
   private _radius: number = 0.5;
   private _intensity: number = 1.0;
@@ -106,7 +105,6 @@ export class SSAOPass extends ShaderPass {
 
     this.scene = scene;
     this.camera = camera;
-    this.renderer = renderer;
 
     // Setup render targets for normal and depth
     const width = renderer.domElement.clientWidth || 800;

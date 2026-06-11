@@ -34,7 +34,6 @@ export class DMDEditor {
   private ctx: CanvasRenderingContext2D | null = null;
   private settings: DMDSettings;
 
-  private originalSettings: DMDSettings;
   private currentDisplayMode: 'attract' | 'playing' | 'event' | 'gameover' = 'attract';
   private displayModeText = {
     attract: 'HIGH SCORES\nCONTROLS',
@@ -58,7 +57,6 @@ export class DMDEditor {
 
   constructor(tableConfig: TableConfig) {
     this.settings = tableConfig.dmdSettings ? JSON.parse(JSON.stringify(tableConfig.dmdSettings)) : this.getDefaultSettings();
-    this.originalSettings = JSON.parse(JSON.stringify(this.settings));
   }
 
   /**
@@ -211,7 +209,7 @@ export class DMDEditor {
       btn.addEventListener('click', (e) => {
         container.querySelectorAll('.render-btn').forEach(b => b.classList.remove('active'));
         (e.target as HTMLElement).classList.add('active');
-        this.settings.renderMode = (e.target as HTMLElement).dataset.render as any;
+        this.settings.renderMode = (e.target as HTMLElement).dataset.render as 'dots' | 'solid';
         this.renderPreview();
       });
     });
@@ -282,8 +280,6 @@ export class DMDEditor {
     const rows = 8;
     const cols = 16;
     const dotSize = this.settings.renderMode === 'dots' ? 3 : 4;
-    const gap = 2;
-
     const cellW = w / cols;
     const cellH = h / rows;
 

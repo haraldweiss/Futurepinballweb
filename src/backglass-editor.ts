@@ -37,12 +37,9 @@ export class BackglassEditor {
   private ctx: CanvasRenderingContext2D | null = null;
   private settings: BackglassSettings;
 
-  private originalSettings: BackglassSettings;
-
   constructor(tableConfig: TableConfig) {
     // Initialize from table config or defaults
     this.settings = tableConfig.backglassSettings ? JSON.parse(JSON.stringify(tableConfig.backglassSettings)) : this.getDefaultSettings();
-    this.originalSettings = JSON.parse(JSON.stringify(this.settings));
   }
 
   /**

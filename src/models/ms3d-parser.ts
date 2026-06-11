@@ -106,7 +106,7 @@ export function parseMS3D(bytes: Uint8Array): MS3DModel | null {
 
     const triangles: MS3DTriangle[] = [];
     for (let i = 0; i < triangleCount; i++) {
-      const flags = view.getUint16(offset, true); offset += 2;
+      view.getUint16(offset, true); offset += 2;
 
       const i1 = view.getUint16(offset, true); offset += 2;
       const i2 = view.getUint16(offset, true); offset += 2;

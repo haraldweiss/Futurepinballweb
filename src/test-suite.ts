@@ -588,8 +588,8 @@ export class TestSuite {
     });
 
     // Test B.4: Web Audio API
-    const hasAudioAPI = typeof (window as any).AudioContext !== 'undefined' ||
-      typeof (window as any).webkitAudioContext !== 'undefined';
+    const hasAudioAPI = typeof window.AudioContext !== 'undefined' ||
+      typeof window.webkitAudioContext !== 'undefined';
     this.addResult({
       name: 'Web Audio API available',
       category,

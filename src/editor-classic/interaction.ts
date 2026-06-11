@@ -3,7 +3,7 @@
 
 import type { ToolType } from './types';
 import { state, COLORS, snap } from './state';
-import { canvas, ctx, cToG, gToC, render } from './canvas';
+import { canvas, cToG, render } from './canvas';
 import { updateSidebar, updateStatus } from './sidebar';
 
 function hitTest(cx: number, cy: number): number {
@@ -97,7 +97,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ─── Global Callbacks ─────────────────────────────────────────────────────────
-(window as any).setTool = setTool;
+window.setTool = setTool;
 export function setTool(t: ToolType) {
   state.tool = t; state.rampStart = null;
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
@@ -105,7 +105,7 @@ export function setTool(t: ToolType) {
   canvas.style.cursor = t === 'select' ? 'default' : 'crosshair';
 }
 
-(window as any).deleteSelected = deleteSelected;
+window.deleteSelected = deleteSelected;
 export function deleteSelected() {
   if (state.selectedIdx >= 0) {
     state.elements.splice(state.selectedIdx, 1);
@@ -114,13 +114,13 @@ export function deleteSelected() {
   }
 }
 
-(window as any).clearAll = () => {
+window.clearAll = () => {
   if (!confirm('Alle Elemente löschen?')) return;
   state.elements = []; state.selectedIdx = -1; state.rampStart = null;
   updateSidebar(); updateStatus(); render();
 };
 
-(window as any).toggleSnap = () => {
+window.toggleSnap = () => {
   state.snapEnabled = !state.snapEnabled;
   const btn = document.getElementById('snap-btn')!;
   btn.classList.toggle('active', state.snapEnabled);

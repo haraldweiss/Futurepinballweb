@@ -21,7 +21,6 @@ export class MusicManager {
   private musicNodes: { oscillator: OscillatorNode; gainNode: GainNode }[] = [];
   private nextNoteTime: number = 0;
   private noteLength: number = 0.5;  // seconds
-  private schedule: number[] = [];  // MIDI notes
   private scheduleIndex = 0;
 
   /**

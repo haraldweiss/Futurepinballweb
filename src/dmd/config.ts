@@ -11,37 +11,11 @@ export let DMD_DOT = 4, DMD_GAP = 1;
 export let DMD_STEP = DMD_DOT + DMD_GAP;
 export let DMD_SCALE = 2;  // Dynamic scale based on screen size
 
-// ─── Responsive DMD Scaling ───
-function calculateResponsiveDMDScale(): number {
-  // Calculate scale based on window height
-  // Min 1x (small screens), max 6x (large screens)
-  const minHeight = 256;  // Minimum practical height
-  const maxHeight = 1080; // Maximum practical height
-
-  const availableHeight = window.innerHeight - 80;  // Account for UI chrome
-  const scale = Math.max(1, Math.min(6, Math.floor(availableHeight / 32))); // 32 = DMD_H
-
-  return scale;
-}
-
-function updateResponsiveDMDScale(): void {
-  const newScale = calculateResponsiveDMDScale();
-  if (newScale !== DMD_SCALE) {
-    DMD_SCALE = newScale;
-    DMD_STEP = DMD_DOT + DMD_GAP;
-    devLog(`📺 DMD scale adjusted to ${DMD_SCALE}x for ${window.innerHeight}px height`);
-    // Trigger re-render
-    dmdClear();
-  }
-}
-
 // ─── DMD Drag-to-Resize System ───
-let isDraggingDMD = false;
 let dragStartX = 0;
 let dragStartY = 0;
 let dragStartWidth = 0;
 let dragStartHeight = 0;
-let currentDragHandle = '';
 
 const RESIZE_HANDLE_SIZE = 12;
 const MIN_DMD_WIDTH = 256;
@@ -101,8 +75,6 @@ function getCursorForHandle(position: string): string {
 }
 
 function startDMDDrag(e: MouseEvent, handle: string, canvas: HTMLCanvasElement, wrap: HTMLElement): void {
-  isDraggingDMD = true;
-  currentDragHandle = handle;
   dragStartX = e.clientX;
   dragStartY = e.clientY;
   dragStartWidth = canvas.offsetWidth;
@@ -147,7 +119,6 @@ function startDMDDrag(e: MouseEvent, handle: string, canvas: HTMLCanvasElement, 
   };
 
   const stopDMDDrag = () => {
-    isDraggingDMD = false;
     window.removeEventListener('mousemove', handleDMDDrag);
     window.removeEventListener('mouseup', stopDMDDrag);
 
@@ -236,7 +207,7 @@ export const dmdOptions: DMDOptions = {
   enableGlow: localStorage.getItem('fpw_dmd_glow') !== 'false',
   glowIntensity: 0.6,
   colorScheme: localStorage.getItem('fpw_dmd_color') || 'amber',
-  resolution: (localStorage.getItem('fpw_dmd_res') || 'standard') as any,
+  resolution: (localStorage.getItem('fpw_dmd_res') || 'standard') as 'standard' | 'hires' | 'uhires',
 };
 
 // Apply resolution
@@ -310,8 +281,8 @@ dmdOff2d.imageSmoothingEnabled = true;
 
 // ─── Responsive DMD Resize Handler ───────────────────────────────────────────
 window.addEventListener('resize', () => {
-  clearTimeout((window as any).dmdResizeTimer);
-  (window as any).dmdResizeTimer = setTimeout(() => {
+  clearTimeout(window.dmdResizeTimer);
+  window.dmdResizeTimer = setTimeout(() => {
     updateCanvasSize();
   }, 150);
 });

@@ -47,7 +47,7 @@ export class FileSystemBrowser {
     return new Promise((resolve) => {
       const input = document.createElement('input');
       input.type = 'file';
-      (input as any).webkitdirectory = true;
+      (input as HTMLInputElement & { webkitdirectory: boolean }).webkitdirectory = true;
       input.multiple = true;
 
       input.onchange = () => {
@@ -57,7 +57,7 @@ export class FileSystemBrowser {
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
           if (file.name.toLowerCase().endsWith('.fpt')) {
-            fileInfos.push({ name: file.name, size: file.size, modified: file.lastModified, handle: file as any, type: 'fpt' });
+            fileInfos.push({ name: file.name, size: file.size, modified: file.lastModified, handle: file as unknown as FileSystemFileHandle, type: 'fpt' });
           }
         }
         fileInfos.sort((a, b) => a.name.localeCompare(b.name));
@@ -72,7 +72,7 @@ export class FileSystemBrowser {
     return new Promise((resolve) => {
       const input = document.createElement('input');
       input.type = 'file';
-      (input as any).webkitdirectory = true;
+      (input as HTMLInputElement & { webkitdirectory: boolean }).webkitdirectory = true;
       input.multiple = true;
 
       input.onchange = () => {
@@ -83,7 +83,7 @@ export class FileSystemBrowser {
           const file = files[i];
           const name = file.name.toLowerCase();
           if (name.endsWith('.fpl') || name.endsWith('.lib')) {
-            fileInfos.push({ name: file.name, size: file.size, modified: file.lastModified, handle: file as any, type: name.endsWith('.fpl') ? 'fpl' : 'lib' });
+            fileInfos.push({ name: file.name, size: file.size, modified: file.lastModified, handle: file as unknown as FileSystemFileHandle, type: name.endsWith('.fpl') ? 'fpl' : 'lib' });
           }
         }
         fileInfos.sort((a, b) => a.name.localeCompare(b.name));
@@ -98,7 +98,7 @@ export class FileSystemBrowser {
     const files: FileInfo[] = [];
     const filterArray = Array.isArray(filters) ? filters : [filters];
     try {
-      for await (const entry of (dirHandle as any).values()) {
+      for await (const entry of (dirHandle as unknown as { values(): AsyncIterableIterator<FileSystemFileHandle> }).values()) {
         if (entry.kind === 'file') {
           if (filterArray.length > 0) {
             const matches = filterArray.some(f => entry.name.toLowerCase().endsWith(f.toLowerCase()));

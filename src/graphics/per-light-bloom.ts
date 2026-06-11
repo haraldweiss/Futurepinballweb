@@ -90,7 +90,7 @@ export class PerLightBloomPass {
   private bloomRadius: number = 1.0;
 
   constructor(
-    private renderer: THREE.WebGLRenderer,
+    renderer: THREE.WebGLRenderer,
     width: number,
     height: number
   ) {
@@ -103,7 +103,7 @@ export class PerLightBloomPass {
       stencilBuffer: false,
     };
 
-    this.bloomTarget = new THREE.WebGLRenderTarget(width, height, bloomOptions as any);
+    this.bloomTarget = new THREE.WebGLRenderTarget(width, height, bloomOptions);
     this.bloomTexture = this.bloomTarget.texture;
 
     // Create shader material

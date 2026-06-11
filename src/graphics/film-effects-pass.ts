@@ -131,7 +131,6 @@ const FilmEffectsShader = {
  */
 export class FilmEffectsPass {
   private shader: THREE.ShaderMaterial;
-  private enabled = true;
   private grainIntensity: number = 0.15;
   private chromaticAberrationEnabled = false;
   private distortionEnabled = false;
@@ -140,7 +139,7 @@ export class FilmEffectsPass {
   private distortionDecay = 0.95;
   private time: number = 0;
 
-  constructor(private renderer: THREE.WebGLRenderer) {
+  constructor(renderer: THREE.WebGLRenderer) {
     // Create shader material
     this.shader = new THREE.ShaderMaterial({
       uniforms: FilmEffectsShader.uniforms,
@@ -242,8 +241,7 @@ export class FilmEffectsPass {
   /**
    * Enable/disable film effects
    */
-  setEnabled(enabled: boolean): void {
-    this.enabled = enabled;
+  setEnabled(_enabled: boolean): void {
   }
 
   /**

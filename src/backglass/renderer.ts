@@ -32,7 +32,6 @@ export class BackglassRenderer {
     animation: (progress: number) => void;
   }> = [];
 
-  private scoreDisplay: THREE.Mesh | null = null;
   private modeIndicator: THREE.Mesh | null = null;
 
   constructor(width: number, height: number) {
@@ -221,7 +220,7 @@ export class BackglassRenderer {
 
       mesh.position.lerpVectors(startPos, endPos, progress);
 
-      (mat as any).opacity = 1 - (progress * progress);
+      mat.opacity = 1 - (progress * progress);
 
       mesh.scale.set(1 + progress * 0.3, 1 + progress * 0.3, 1);
 

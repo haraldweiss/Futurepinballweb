@@ -72,7 +72,7 @@ export class PropertyModal {
       if (!this.working) return;
       const v = parseFloat(input.value);
       if (Number.isFinite(v)) {
-        (this.working as any)[fieldName] = v;
+        (this.working as unknown as Record<string, number>)[fieldName] = v;
       }
     });
     row.appendChild(label);
@@ -94,7 +94,7 @@ export class PropertyModal {
       const hex = input.value.replace('#', '');
       const n = parseInt(hex, 16);
       if (Number.isFinite(n)) {
-        (this.working as any)[fieldName] = n;
+        (this.working as unknown as Record<string, number>)[fieldName] = n;
       }
     });
     row.appendChild(label);

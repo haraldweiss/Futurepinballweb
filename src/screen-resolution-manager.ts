@@ -276,21 +276,21 @@ declare global {
 
 // Export window API
 if (typeof window !== 'undefined') {
-  (window as any).initializeScreenResolutionManager = initializeScreenResolutionManager;
-  (window as any).getScreenResolutionManager = getScreenResolutionManager;
-  (window as any).setScreenResolution = (screenIndex: number, width: number, height: number) => {
+  window.initializeScreenResolutionManager = initializeScreenResolutionManager;
+  window.getScreenResolutionManager = getScreenResolutionManager;
+  window.setScreenResolution = (screenIndex: number, width: number, height: number) => {
     getScreenResolutionManager().setResolutionForScreen(screenIndex, width, height);
   };
-  (window as any).setScreenResolutionPreset = (screenIndex: number, preset: ResolutionPreset) => {
+  window.setScreenResolutionPreset = (screenIndex: number, preset: ResolutionPreset) => {
     getScreenResolutionManager().setPresetForScreen(screenIndex, preset);
   };
-  (window as any).getScreenResolutionConfig = () => {
+  window.getScreenResolutionConfig = () => {
     return getScreenResolutionManager().getLayout();
   };
-  (window as any).autoDetectScreenResolutions = async () => {
+  window.autoDetectScreenResolutions = async () => {
     await getScreenResolutionManager().autoDetectResolutions();
   };
-  (window as any).resetScreenResolutions = (screenCount: number) => {
+  window.resetScreenResolutions = (screenCount: number) => {
     getScreenResolutionManager().resetToDefault(screenCount);
   };
 }
