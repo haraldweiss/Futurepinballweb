@@ -226,3 +226,22 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 - **Type cleanup**: volumetric-lighting.ts — removed 8 redundant `(this as any)` casts
 - **19 commits total** this session
 - Verified: tsc clean, 757/757 tests
+
+### 2026-06-11 — Code review + sandbox hardening (Claude/Care) → opencode handoff
+**Branch**: `claude/musing-bouman-e8c53b` (deckungsgleich mit main beim Start). 2 Commits gepusht-fähig (noch nicht gepusht):
+- `229efeac` ⚠ Security: Constructor-chain-Escape in der VBScript-Sandbox geschlossen
+  - `with(__sandbox__)` + Allowlist-Proxy schützt nur bare-identifier-Auflösung. Ein transpiliertes Skript konnte über `(function(){}).constructor` den echten `Function`-Konstruktor erreichen (Property-Access, den der Proxy nicht trappt) und im globalen Realm Code ausführen → Denylist (fetch/window/eval) komplett umgangen.
+  - Reproduziert: Payload ohne ein einziges verbotenes Literal las das echte `process` via `['constructor']('return ...')()`.
+  - Fix: `constructor`/`prototype`/`__proto__`/`Reflect`/`Proxy` zur statischen Denylist in `src/utils/script-sandbox.ts`; Docstring ehrlich gemacht (Proxy ist best-effort defense-in-depth, **keine** harte Isolation — echte Isolation bräuchte Worker/iframe-Realm). 5 neue Tests in `src/__tests__/script-sandbox.test.ts`, inkl. Runtime-Test der den Escape vor dem Fix beweist.
+- `a101b910` Type cleanup: 29 `(window as any)`-Casts in `event-handlers-init.ts` entfernt (alle Handler sind bereits auf `Window` in `window-api.ts` typisiert). Net `as any` (non-test): **188 → 159**.
+- Verified: tsc clean, **762/762 tests** (war 757; +5 Sandbox).
+
+**Review-Befunde, offen → opencode/Throughput (§2):**
+- **#2 main.ts zerlegen** — `src/main.ts` ist 4668 Zeilen / ~198 KB, 69 Top-Level-Funktionen **plus** seitenwirksamer Top-Level-Code (THREE.js-Scene-Setup ab ~L467). main.ts ist Entry-Point, **kein** reiner Barrel → Helfer in `src/app/*` extrahieren und zurück-importieren (Barrel-Pattern §3.6 gilt nur für reine Module).
+  - **Sicher extrahierbar (pure, kein Capture von scene/camera/physics/state/profiler):** `saveRotation`/`loadSavedRotation` + `ROTATION_KEY` (L179–189, reines localStorage), `calculateFlipperPowerCurve` (L444, reine Mathe), `getOptimizedTableView` (L142, nur window + responsive-helpers).
+  - **NICHT mechanisch extrahieren (Closure über Modul-State):** alles was `scene`/`camera`/`physics`/`state`/`profiler` captured — braucht DI, kein Throughput-Job.
+  - **NICHT anfassen (bleibt Claude/Care, §3.3):** `applyPhysicsGravityForRotation` (L198) + alles über `getPhysicsWorker()` / Physics-Bridge.
+  - ⚠ **Risiko**: die 762 Unit-Tests decken main.ts-Runtime-Orchestrierung **nicht** ab. Nach jeder Extraktion `npx vite build` + manueller Browser-Smoke-Test (Pharaoh lädt, Flipper, Score). tsc + Tests allein reichen hier nicht.
+- **#4 console.log gaten** — 139 ungated `console.log` (non-test), davon **47 in main.ts**. Hinter `devLog`/`import.meta.env.DEV` (§3.6). Rest v.a. in Runtime-Test-Harnessen (`test-security.ts` 24, `test-suite.ts` 19, `integration-testing.ts` 16) — dort ggf. bewusste CLI-Ausgabe, zuerst main.ts.
+
+**Rails für opencode (§3) gelten unverändert**: tsc muss clean bleiben, 762/762 Tests grün, `Verified:`-Zeile im Commit-Body, granulare Commits (3–8/Topic), Sandbox nie weiten, kein force-push ohne Mensch.
