@@ -344,3 +344,27 @@ main.ts-Orchestrierung **nicht** abdecken).
 scene/camera/physics/state, brauchen DI): File-Browser-Cluster (~300 Zeilen),
 DMD-Visibility, Inline-Backglass, `animate()`-Loop-Orchestrierung, alles über
 `getPhysicsWorker()`/Physics-Bridge.
+
+### 2026-06-11 — Claude/Care: main.ts-Zerlegung (Review #2, Runde 2)
+
+- `6656ad56` — `src/app/file-browser-controller.ts`: `initFileBrowser(deps)`-Factory
+  mit eigenem Selection-State. File-System-/UI-/Advanced-Manager, Loader-Overlay
+  und `parseFPTFile` direkt importiert; der Physics-Worker-Tischbau + `resetGameState`
+  bleiben am Entry-Point und werden via `FileBrowserDeps.loadTableConfig`/`resetGameState`
+  injiziert (Rapier-Bridge §3.3 nicht aus dem Controller erreicht).
+  - Verhaltenstreue Touch-ups (Security-Hook stolperte über `innerHTML`):
+    `updateFileBrowserUI` baut das Status-Panel jetzt per `createElement` statt
+    `innerHTML`; Load-Button via `textContent` (Dateiname literal — äquivalent zum
+    vorherigen `escapeHtml()`+`innerHTML`, ohne XSS-Fläche); Listen-Clears
+    `innerHTML=''`→`replaceChildren()`. `updateFileBrowserUI`/`selectTableFile` sind
+    jetzt modul-intern.
+- main.ts: **3930 → 3634 Zeilen (−296)**. **Gesamt seit Runde-1-Start: 4330 → 3634 (−696, −16 %).**
+- Verified: tsc clean, 762/762 tests, vite build ✓, Browser-Smoke (App bootet +
+  Pharaoh rendert; alle 10 File-Browser-window-api-Fns registriert; Advanced-Helfer
+  favorites/recent/sort/batch liefern korrekt; `loadSelectedTable`-Guard ohne
+  Auswahl warnt + returnt; null Konsolenfehler). Picker-gegatete Pfade
+  (`browse*`/voller Load→Physics) + `updateFileBrowserUI`-Render headless nicht
+  erreichbar → durch tsc + getreue Übernahme abgedeckt, nicht per Runtime-Smoke.
+
+**Noch offen** (spätere Runden): DMD-Visibility, Inline-Backglass,
+`animate()`-Loop-Orchestrierung, Physics-Bridge.
