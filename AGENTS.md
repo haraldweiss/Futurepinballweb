@@ -297,4 +297,4 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 - `docs/guides/BROWSER_USE.md` aktualisiert mit globaler Einrichtung + Free-Modell-Tabelle
 - `AGENTS.md`: §3.8 für browser-use-Regeln + Quick-Reference-Eintrag + Handoff
 - 6 Free-Modelle getestet, nur 2 browser-use-tauglich (nemotron-3-ultra-free, mimo-v2.5-free)
-- Commits: `7deaa64a` (validator + global) + `142df6a0` (initial BROWSER_USE.md)
+- Commits: `9f3111c1` (validator + global) + `142df6a0` (initial BROWSER_USE.md)
