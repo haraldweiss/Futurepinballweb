@@ -21,3 +21,4 @@ console-output.txt
 scripts/capture-console.cjs
 scripts/devlog-convert.mjs
 =
+scripts/opencode-models-report.json
