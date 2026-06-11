@@ -71,6 +71,15 @@ If `user.email` is unset, empty, or fake — **stop, fix it, then proceed**.
 - When splitting a module into sub-modules, keep the original file as a barrel that re-exports everything from `./subdir/`. This preserves all existing import paths (e.g. `'./table'` still works after splitting `table.ts` into `table/configs.ts` + `table/scoring.ts`).
 - New `src/app/` modules must be gated by `import.meta.env.DEV` for debug-only code.
 
+### 3.8 browser-use (KI-Browser-Automation)
+
+- `docs/guides/BROWSER_USE.md` enthält Setup + Free-Modell-Tabelle
+- `~/.local/bin/browser-use-run` ist der globale Launcher (aus jedem Projekt nutzbar)
+- `scripts/validate-opencode-models.py` testet Free-Modelle auf Capabilities und vergleicht mit `EXPECTED`
+- **Bei Modell-Änderungen** (neue Free-Modelle, geänderte Capabilities): Validator laufen lassen,
+  `EXPECTED` in `scripts/validate-opencode-models.py` aktualisieren, `docs/guides/BROWSER_USE.md` anpassen
+- Free-Modelle ohne structured output (`json_schema`) sind für browser-use unbrauchbar
+
 ### 3.7 Cabinet deploy (Windows-Cabinet `vpin4kp`)
 - **SSH-Alias**: `cabinet` (= `vpx@192.168.178.44`, Ed25519-Key, passwortlos). User ist **non-admin**.
 - **Build-Pflicht**: auf Mac **`electron-builder --win dir --x64`** (kein wine vorhanden → NSIS-Installer nicht baubar). Liefert `release/win-unpacked/`.
@@ -126,6 +135,7 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 | Table scoring | `src/table/scoring.ts` — bumper/target/ramp scoring logic |
 | FPT parser modules | `src/fpt/lzo.ts` (decompressor), `src/fpt/media.ts` (image/audio extraction) |
 | Docs | `docs/` — all documentation organised in subdirectories |
+| browser-use | `docs/guides/BROWSER_USE.md` — KI-Browser-Automation mit OpenCode-Free-Modellen; `browser-use-run` nach §3.8 global nutzbar |
 | Cabinet deploy | `ssh cabinet` → `vpx@192.168.178.44` (vpin4kp.fritz.box), Install-Pfad `C:\Users\vpx\AppData\Local\Programs\Future Pinball Web` — siehe §3.7 |
 
 ---
@@ -278,3 +288,13 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 - as any noch 95 (v.a. fpt-parser.ts CFB 10, graphics passes 10, script-engine 6, file-browser/core 5)
 - Dead local variables in graphics passes (dof-pass, film-effects-pass, motion-blur-pass, ssr-pass, etc.) — ~80 noch offen
 - game.ts barrel tested — manueller Smoke-Test empfohlen (Pharaoh Gold laden, Flipper, Score)
+
+### 2026-06-11 — browser-use global setup + Free-Modell-Validator
+- Globales browser-use venv in `~/.local/share/browser-use/venv/` (0.13.1)
+- Launcher `~/.local/bin/browser-use-run` — aus jedem Projekt nutzbar
+- `scripts/validate-opencode-models.py` testet alle Free-Modelle (text/structured_output/vision)
+  und vergleicht mit `EXPECTED`; Exit-Code 1 bei Abweichungen
+- `docs/guides/BROWSER_USE.md` aktualisiert mit globaler Einrichtung + Free-Modell-Tabelle
+- `AGENTS.md`: §3.8 für browser-use-Regeln + Quick-Reference-Eintrag + Handoff
+- 6 Free-Modelle getestet, nur 2 browser-use-tauglich (nemotron-3-ultra-free, mimo-v2.5-free)
+- Commits: `7deaa64a` (validator + global) + `142df6a0` (initial BROWSER_USE.md)
