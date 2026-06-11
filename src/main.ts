@@ -20,78 +20,74 @@ import { getOptimizedTableView } from './app/view-utils';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
-  bumpers, extraBalls, partData, tableGroup,
-  setPhysics, setFpScriptHandlers, setLoadedLibrary, setBAMEngine, cb,
+  bumpers, extraBalls, partData,
+  setPhysics, setLoadedLibrary, setBAMEngine, cb,
 } from './game';
 import {
-  getAudioCtx, playSound, startBGMusic, stopBGMusic, playFPTMusic, toggleMusic, initializeAudioPooling,
+  getAudioCtx, playSound, startBGMusic, initializeAudioPooling,
   getAudioSourcePool,
-  initializeAudioSystem, getAudioSystem, AudioCategory,
-  TARGET_HIT, FLIPPER_ACTIVATE, RAMP_COMPLETE, BALL_DRAIN, MULTIBALL_START, MILESTONE_REACHED,
-  getSoundManager, disposeSoundManager,
-  getMusicManager, disposeMusicManager,
+  initializeAudioSystem, getAudioSystem,
+  getSoundManager,
+  getMusicManager,
 } from './audio-system';
 import { BAMEngine } from './bam-engine';
-import { BamBridge, initializeBamBridge, getBamBridge } from './bam-bridge';
+import { initializeBamBridge, getBamBridge } from './bam-bridge';
 import {
   dmdState, dmdUpdate, dmdEvent, dmdRenderAttract, dmdRenderPlaying,
   dmdRenderEvent, dmdRenderGameOver, dmdCanvas, DMD_W, DMD_H,
   toggleDMDMode, dmdSolidMode, initDMDResizing,
 } from './dmd';
 import { getTopScores, recordScore } from './highscore';
-import { TABLE_CONFIGS, buildTable, buildPhysicsTable, buildRealisticFlipper, scoreBumperHit, scoreTargetHit, scoreSlingshotHit, checkRolloverLanes, updateSpinnerPhysics, getAdvancedLighting } from './table';
-import { runFPScript, callScriptFlipper, callScriptDrain } from './script-engine';
+import { TABLE_CONFIGS, buildTable, buildRealisticFlipper, scoreBumperHit, scoreTargetHit, scoreSlingshotHit, checkRolloverLanes, updateSpinnerPhysics, getAdvancedLighting } from './table';
+import { callScriptFlipper, callScriptDrain } from './script-engine';
 import { parseFPTFile, parseFPLFile, getBackglassArtwork } from './fpt-parser';
-import { getBackglassRenderer, disposeBackglass } from './backglass';
+import { getBackglassRenderer } from './backglass';
 import { getProfiler, QUALITY_PRESETS } from './profiler';
 import { initializeGPUDiagnostics } from './gpu-diagnostics';
 import { ScoreDisplayManager } from './score-display';
-import { VisualPolishSystem, emitBallTrail, emitFlipperDust, emitMilestoneSparkles } from './visual-polish';
+import { VisualPolishSystem } from './visual-polish';
 import { getIntegratedEditor } from './integrated-editor';
 import { showTableSelector } from './table-selector';
 import {
-  CabinetSystem, initializeCabinetSystem, getCabinetSystem, getActiveCabinetProfile,
-  setActiveCabinetProfile, rotatePlayfieldTo, CABINET_VERTICAL, CABINET_HORIZONTAL,
-  CABINET_WIDE, CABINET_INVERTED,
+  CabinetSystem, initializeCabinetSystem, getActiveCabinetProfile,
+  setActiveCabinetProfile, rotatePlayfieldTo,
 } from './cabinet-system';
 import {
-  RotationEngine, initializeRotationEngine, getRotationEngine,
-  applyProfileRotation, rotatePlayfieldSmooth, getFlipperOrientation,
+  initializeRotationEngine, getRotationEngine,
+  applyProfileRotation, rotatePlayfieldSmooth,
 } from './rotation-engine';
 import {
-  UIRotationManager, initializeUIRotation, getUIRotationManager,
-  applyUIRotation, resetUIRotation,
+  initializeUIRotation,
+  applyUIRotation,
 } from './ui-rotation';
 import {
-  getPlayfieldCanvasSize, getDMDSize, getBackglassSize, applyRendererScaling,
-  onDisplayResize, getDisplayDimensions,
+  getPlayfieldCanvasSize, getBackglassSize,
 } from './responsive-display';
 import {
   initializeScreenRoleManager, getScreenRoleManager,
 } from './screen-role-manager';
 import {
-  initializeScreenResolutionManager, getScreenResolutionManager,
+  initializeScreenResolutionManager,
 } from './screen-resolution-manager';
 import {
-  InputMappingManager, initializeInputMapping, getInputMappingManager,
-  applyInputMapping, resetInputMapping,
-  getFlipperCorrectionAngles, getPlungerAdjustment,
+  initializeInputMapping,
+  applyInputMapping,
 } from './input-mapping';
 import {
-  AnimationBindingManager, initializeAnimationBinding, getAnimationBindingManager,
+  initializeAnimationBinding, getAnimationBindingManager,
 } from './mechanics/animation-binding';
 import {
-  initializeCoinSystem, showCoinScreen, closeCoinScreen, addCoin, startGame,
-  isCoinScreenVisible, isGameStarted, getPlayerCount, resetCoinSystem, updateCoinDisplay,
+  initializeCoinSystem, showCoinScreen, addCoin, startGame,
+  isCoinScreenVisible, isGameStarted, getPlayerCount, resetCoinSystem,
 } from './coin-system';
 import {
-  initializeKeyBindings, getKeyBindingManager, checkKeyBinding,
+  initializeKeyBindings, checkKeyBinding,
 } from './keybindings';
 import {
-  AnimationScheduler, initializeAnimationScheduler, getAnimationScheduler,
+  initializeAnimationScheduler, getAnimationScheduler,
 } from './mechanics/animation-scheduler';
 import {
-  AnimationDebugger, initializeAnimationDebugger, getAnimationDebugger,
+  initializeAnimationDebugger, getAnimationDebugger,
 } from './animation/animation-debugger';
 import {
   initializePhysicsWorker, getPhysicsWorker, disposePhysicsWorker,
@@ -102,41 +98,40 @@ import { getPlayfieldVisualEnhancement } from './graphics/playfield-visual-enhan
 import { getVideoManager } from './video-manager';
 import { getVideoBindingManager } from './mechanics/video-binding';
 import {
-  FileSystemBrowser, FileInfo, formatFileSize,
+  FileInfo, formatFileSize,
   getFileSystemBrowser,
-  FileBrowserUIManager, getFileBrowserUIManager,
-  AdvancedFileBrowserManager, getAdvancedFileBrowserManager,
+  getFileBrowserUIManager,
+  getAdvancedFileBrowserManager,
   type BatchJob,
 } from './file-browser';
 import {
-  ResourceManager, initializeResourceManager, getResourceManager, resetResourceManager,
-  type ResourceBudgets,
+  initializeResourceManager, getResourceManager, resetResourceManager,
 } from './resource-manager';
 import {
-  LibraryCache, initializeLibraryCache, getLibraryCache, resetLibraryCache,
+  initializeLibraryCache, getLibraryCache, resetLibraryCache,
 } from './library-cache';
 import { integrationTesting } from './integration-testing';
 import { getPerformanceReportGenerator, generatePerformanceReport } from './performance-report-generator';
-import { getTestSuite, resetTestSuite } from './test-suite';
+import { getTestSuite } from './test-suite';
 import { DirectoryPathManager } from './directory-path-manager';
-import { escapeHtml, setInnerHTMLSafe } from './utils/html-escape';
+import { escapeHtml } from './utils/html-escape';
 import { loadFpwConfig } from './utils/fpw-config';
 import { initializeEventHandlers } from './event-handlers-init';
-import { setupWindowAPI, setDevFlag, type WindowAPI } from './window-api';
+import { setupWindowAPI, setDevFlag } from './window-api';
 import { getDefaultPhysicsConfig, logPhysicsConfig, validatePhysicsConfig } from './physics-config-enhancer';
-import { getInputOptimizer, disposeInputOptimizer } from './input-optimizer';
+import { getInputOptimizer } from './input-optimizer';
 import { getPerformanceDashboard } from './performance-dashboard';
-import { initScoreAnimationManager, getScoreAnimationManager, disposeScoreAnimationManager } from './score-animation-manager';
-import { initTouchControlsManager, getTouchControlsManager, disposeTouchControlsManager } from './touch-controls-manager';
-import { initBallTrailManager, getBallTrailManager, disposeBallTrailManager } from './ball-trail-manager';
+import { initScoreAnimationManager, getScoreAnimationManager } from './score-animation-manager';
+import { initTouchControlsManager } from './touch-controls-manager';
+import { initBallTrailManager, getBallTrailManager } from './ball-trail-manager';
 import {
   calculateResponsiveZoom, getResponsiveCameraTilt, getResponsiveFOV,
   getResponsiveFlipperX, getOptimalPixelRatio, calcSafeFlipperLength,
   detectDeviceType,
 } from './app/responsive-helpers';
-import { setupScene, type SceneContext } from './app/scene-setup';
+import { setupScene } from './app/scene-setup';
 import { setupPostProcessing } from './app/post-processing';
-import { initSyncTransport, emitSyncFrame, onSyncFrame, destroySyncTransport } from './app/sync-transport';
+import { initSyncTransport, emitSyncFrame, onSyncFrame } from './app/sync-transport';
 
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
@@ -1066,53 +1061,12 @@ function triggerVideoEvent(eventType: string): void {
   }
 }
 
-// Game event video triggers
-function onBumperHitVideo(): void {
-  triggerVideoEvent('bumper_hit');
-}
-
-function onTargetHitVideo(): void {
-  triggerVideoEvent('target_hit');
-}
-
-function onRampCompleteVideo(): void {
-  triggerVideoEvent('ramp_complete');
-}
-
 function onMultiballStartVideo(): void {
   triggerVideoEvent('multiball_start');
 }
 
-function onBallDrainVideo(): void {
-  triggerVideoEvent('ball_drain');
-  // ─── Phase 25: Play ball drain sound ───
-  getSoundManager().then((sm) => sm.playBallDrain()).catch(() => {});
-}
-
-function onFlipperHitVideo(): void {
-  triggerVideoEvent('flipper_hit');
-}
-
-function onSlingshotVideo(): void {
-  triggerVideoEvent('slingshot');
-}
-
-function onSpinnerVideo(): void {
-  triggerVideoEvent('spinner');
-}
-
-function onComboVideo(): void {
-  triggerVideoEvent('combo');
-}
-
 function onTiltVideo(): void {
   triggerVideoEvent('tilt');
-}
-
-function onGameOverVideo(): void {
-  triggerVideoEvent('game_over');
-  // ─── Phase 25: Play game over sound ───
-  getSoundManager().then((sm) => sm.playGameOver()).catch(() => {});
 }
 
 // ─── Tilt ────────────────────────────────────────────────────────────────────
@@ -3422,43 +3376,6 @@ async function openMultiscreenWindow(
   return window.open(url, name, features);
 }
 
-// ─── Helper function to open windows with verification ───
-function openMultiScreenWindow(url: string, name: string, features: string, role: string): Window | null {
-  devLog(`🪟 Opening ${role} window: ${url}`);
-  try {
-    const win = window.open(url, name, features);
-    if (win) {
-      _msWindowStatus[role] = { opened: true, verified: false };
-      devLog(`✓ ${role} window opened successfully`);
-
-      // Verify window loaded after delay
-      setTimeout(() => {
-        try {
-          if (!win.closed && win.document && win.document.readyState === 'complete') {
-            _msWindowStatus[role].verified = true;
-            devLog(`✓ ${role} window verified - fully loaded`);
-          } else {
-            console.warn(`⚠ ${role} window opened but may not be fully loaded yet`);
-          }
-        } catch (e) {
-          console.warn(`⚠ Cannot verify ${role} window (cross-origin):`, e);
-        }
-      }, 2000);
-
-      return win;
-    } else {
-      _msWindowStatus[role] = { opened: false, verified: false };
-      console.error(`✗ ${role} window failed to open - likely blocked by browser`);
-      showNotification(`⚠ ${role} window blocked. Enable popups for localhost`);
-      return null;
-    }
-  } catch (err) {
-    _msWindowStatus[role] = { opened: false, verified: false };
-    console.error(`✗ ${role} window error:`, err);
-    return null;
-  }
-}
-
 // ─── Screen Role Management ───
 const resetScreenRoles = (screenCount?: number) => {
   const count = screenCount || _msLayout;
@@ -3502,28 +3419,6 @@ const applyStartupScreenConfig = async () => {
     setTimeout(() => applyMsLayout(), 300);
   }
 };
-
-// see window-api.ts — autoDetectScreens, applyStartupScreenConfig
-
-function _winSpec(role: string, dw: number, dh: number, screenIdx?: number): string {
-  // Try to use saved position first
-  try { const s=JSON.parse(localStorage.getItem(`fpw_winpos_${role}`)??'null'); if(s?.w>100) return `width=${s.w},height=${s.h},left=${s.x},top=${s.y}`; } catch { /* ignore */ void 0; }
-
-  // If screen index provided, use that screen's position
-  if (screenIdx !== undefined) {
-    try {
-      if ('getScreenDetails' in window) {
-        const screens = window.screens || [];
-        if (screens.length > screenIdx) {
-          const scr = screens[screenIdx];
-          return `width=${dw},height=${dh},left=${scr.availLeft},top=${scr.availTop}`;
-        }
-      }
-    } catch (e) { console.warn('[main] Screen detection fallback:', (e || 'unknown')); /* fallback */ }
-  }
-
-  return `width=${dw},height=${dh}`;
-}
 
 const applyMsLayout = async () => {
   closeMultiscreenModal();
