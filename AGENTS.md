@@ -245,3 +245,36 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 - **#4 console.log gaten** — 139 ungated `console.log` (non-test), davon **47 in main.ts**. Hinter `devLog`/`import.meta.env.DEV` (§3.6). Rest v.a. in Runtime-Test-Harnessen (`test-security.ts` 24, `test-suite.ts` 19, `integration-testing.ts` 16) — dort ggf. bewusste CLI-Ausgabe, zuerst main.ts.
 
 **Rails für opencode (§3) gelten unverändert**: tsc muss clean bleiben, 762/762 Tests grün, `Verified:`-Zeile im Commit-Body, granulare Commits (3–8/Topic), Sandbox nie weiten, kein force-push ohne Mensch.
+
+### 2026-06-11 — opencode/Throughput: console gating + main.ts extractions + dead code + as any + game barrel
+
+**Basis**: `main` nach fast-forward merge von `claude/musing-bouman-e8c53b` (3 Commits von Claude).
+
+**5 Commits von opencode (gepusht):**
+- `5f30b1dd` — Gate 37 ungated console.log calls behind `import.meta.env.DEV` (19 Dateien)
+- `c7eda0f0` — Extract 3 pure helpers from main.ts (`saveRotation`, `calculateFlipperPowerCurve`, `getOptimizedTableView`) → `src/app/rotation-utils.ts`, `flipper-utils.ts`, `view-utils.ts`
+- `459689bd` — Remove 11 dead functions + 55 unused imports from main.ts
+- `bdcebaef` — Reduce as any by 41 (147→106): performance-report-generator + integration-testing + audio + sync-transport
+- `3015e8ac` — Split game.ts into 5 sub-module barrel: `game/state.ts`, `game/resources.ts`, `game/refs.ts`, `game/elements.ts`, `game/callbacks.ts`
+
+**4 weitere Commits in zweiter Session:**
+- `daaa2218` — Extract 9 DOM UI helpers: `showNotification` → notification.ts, loading overlay → loader-ui.ts, `switchTab`/`closeLoader`/`toggleFullscreen`/`toggleViewPanel` → ui-utils.ts
+- `028c7081` — Remove 31 unused barrel re-exports from table/visual-polish/score-display/profiler/cabinet-system/coin-system
+- `77fe0395` — Add `getIntegratedEditor`/`webkitAudioContext`/`playSound`/`__DMD_MODULE__` to Window interface; reduce as any to 95
+- `be4be189` — Remove 12 dead local variables (main.ts, view-utils, profiler, gpu-diagnostics, script-engine)
+
+**Nettobilanz**:
+- `src/app/` gewachsen: `rotation-utils.ts`, `flipper-utils.ts`, `view-utils.ts`, `log-utils.ts`, `screen-utils.ts`, `notification.ts`, `loader-ui.ts`, `ui-utils.ts` (8 neue Module)
+- `src/game/` neu: 5 Sub-Module (state, resources, refs, elements, callbacks)
+- main.ts: 4668 → ~4270 Zeilen (−400)
+- as any (non-test, non-DEV): 188 → **95**
+- Unused imports in main.ts: 55 entfernt
+- Unused barrel re-exports: 31 entfernt
+- Dead functions: 11 entfernt
+- Tests: 762/762 grün (unverändert)
+- 9 Commits gesamt diese Session
+
+**Offene Punkte für Folgesession:**
+- as any noch 95 (v.a. fpt-parser.ts CFB 10, graphics passes 10, script-engine 6, file-browser/core 5)
+- Dead local variables in graphics passes (dof-pass, film-effects-pass, motion-blur-pass, ssr-pass, etc.) — ~80 noch offen
+- game.ts barrel tested — manueller Smoke-Test empfohlen (Pharaoh Gold laden, Flipper, Score)
