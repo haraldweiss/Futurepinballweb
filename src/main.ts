@@ -21,6 +21,8 @@ import { ParticleField } from './app/particle-field';
 import { createViewSettings } from './app/view-settings';
 import { initMultiscreen } from './app/multiscreen';
 import { initFileBrowser } from './app/file-browser-controller';
+import { createDmdVisibility } from './app/dmd-visibility';
+import { createInlineBackglass } from './app/inline-backglass';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -368,19 +370,6 @@ window.addEventListener('resize', () => {
   }, 250);
 });
 
-function getResponsiveBackglassWidth(): string {
-  const width = window.innerWidth;
-
-  if (width < 768) {
-    return '20vw';  // Mobile: minimal (80% for playfield)
-  } else if (width < 1200) {
-    return '25vw';  // Tablet: moderate
-  } else if (width < 1800) {
-    return '30vw';  // Desktop: original
-  } else {
-    return '35vw';  // Large desktop: more backglass space
-  }
-}
 
 // ─── Role Detection ───────────────────────────────────────────────────────────
 window.FPW_MODULE_LOADED = true;  // Flag to confirm main.ts loaded
@@ -2299,7 +2288,7 @@ function animate(): void {
     }
   }
 
-  if (_bgPanelActive) drawInlineBackglass();
+  inlineBackglass.draw();
 
   // ─── Phase 24: Record performance metrics ───
   const dashboard = getPerformanceDashboard();
@@ -2324,100 +2313,8 @@ function animate(): void {
   });
 }
 
-// ─── Inline Backglass (1-Screen) ──────────────────────────────────────────────
-let _bgPanelActive = false;
-
-function initInlineBackglass(): void {
-  _bgPanelActive = true;
-  document.body.classList.add('show-bg-panel');
-  const canvas = document.getElementById('backglass-canvas') as HTMLCanvasElement;
-  const setSize = () => {
-    const bgWidthVw = parseFloat(getResponsiveBackglassWidth());
-    canvas.width = Math.round(innerWidth * (bgWidthVw / 100));
-    canvas.height = innerHeight;
-  };
-  setSize(); window.addEventListener('resize', setSize);
-}
-
-function stopInlineBackglass(): void {
-  _bgPanelActive = false;
-  document.body.classList.remove('show-bg-panel');
-}
-
-function drawInlineBackglass(): void {
-  const canvas = document.getElementById('backglass-canvas') as HTMLCanvasElement;
-  if (!canvas || !canvas.width) return;
-  const ctx = canvas.getContext('2d')!;
-  const W = canvas.width, H = canvas.height;
-  const toHex = (n: number) => `#${  (`000000${n.toString(16)}`).slice(-6)}`;
-  const accent = currentTableConfig ? toHex(currentTableConfig.accentColor) : '#00ff66';
-  const tcolor = currentTableConfig ? toHex(currentTableConfig.tableColor)  : '#1a4a15';
-
-  const bg = ctx.createLinearGradient(0,0,0,H);
-  bg.addColorStop(0,'#0a0a14'); bg.addColorStop(0.5,`${tcolor}44`); bg.addColorStop(1,'#050508');
-  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
-
-  const bw = Math.max(4,W*0.025);
-  [0,W-bw].forEach(x => {
-    const g=ctx.createLinearGradient(0,0,0,H);
-    g.addColorStop(0,'transparent'); g.addColorStop(0.3,accent);
-    g.addColorStop(0.7,accent); g.addColorStop(1,'transparent');
-    ctx.fillStyle=g; ctx.fillRect(x,0,bw,H);
-  });
-
-  ctx.save(); ctx.shadowColor=accent; ctx.shadowBlur=22; ctx.fillStyle=accent;
-  ctx.font=`bold ${Math.min(H*0.052,W*0.09)}px "Courier New",monospace`;
-  ctx.textAlign='center'; ctx.textBaseline='top';
-  ctx.fillText((currentTableConfig?.name||'FUTURE PINBALL').toUpperCase(), W/2, H*0.02);
-  ctx.restore();
-
-  ctx.save(); ctx.strokeStyle=accent; ctx.lineWidth=1.5; ctx.globalAlpha=0.45;
-  ctx.beginPath(); ctx.moveTo(W*0.08,H*0.11); ctx.lineTo(W*0.92,H*0.11); ctx.stroke(); ctx.restore();
-
-  ctx.save(); ctx.fillStyle='#553300'; ctx.font=`${H*0.030}px "Courier New",monospace`;
-  ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText('SCORE',W/2,H*0.13); ctx.restore();
-
-  ctx.save(); ctx.shadowColor='#ff6600'; ctx.shadowBlur=28; ctx.fillStyle='#ff6600';
-  ctx.font=`bold ${Math.min(H*0.12,W*0.13)}px "Courier New",monospace`;
-  ctx.textAlign='center'; ctx.textBaseline='top';
-  ctx.fillText(state.score.toLocaleString(),W/2,H*0.16); ctx.restore();
-
-  const ms=Math.min(H*0.06,W*0.10);
-  ctx.save(); ctx.shadowColor='#ffcc00'; ctx.shadowBlur=14; ctx.fillStyle='#ffcc00';
-  ctx.font=`bold ${ms}px "Courier New",monospace`; ctx.textAlign='left'; ctx.textBaseline='top';
-  ctx.fillText('MULT',W*0.08,H*0.34); ctx.restore();
-  ctx.save(); ctx.shadowColor='#ffcc00'; ctx.shadowBlur=14; ctx.fillStyle='#ffcc00';
-  ctx.font=`bold ${ms*1.35}px "Courier New",monospace`; ctx.textAlign='left'; ctx.textBaseline='top';
-  ctx.fillText(`×${state.multiplier}`,W*0.08,H*0.375); ctx.restore();
-
-  const ballR=Math.min(W*0.065,H*0.038), bx0=W*0.52, by0=H*0.375;
-  ctx.save(); ctx.fillStyle='#334'; ctx.font=`${H*0.028}px "Courier New",monospace`;
-  ctx.textAlign='left'; ctx.textBaseline='top'; ctx.fillText('BALL',bx0,H*0.344); ctx.restore();
-  for (let i=0;i<3;i++) {
-    ctx.save(); ctx.shadowColor=i<state.ballNum?'#00aaff':'transparent'; ctx.shadowBlur=i<state.ballNum?12:0;
-    ctx.fillStyle=i<state.ballNum?'#00aaff':'#1a2a3a';
-    ctx.beginPath(); ctx.arc(bx0+i*(ballR*2.3)+ballR, by0+ballR, ballR, 0, Math.PI*2); ctx.fill(); ctx.restore();
-  }
-
-  const scores = getTopScores();
-  if (scores.length>0) {
-    ctx.save(); ctx.fillStyle='#446'; ctx.font=`${H*0.026}px "Courier New",monospace`;
-    ctx.textAlign='left'; ctx.textBaseline='top'; ctx.fillText('HIGH SCORES',W*0.08,H*0.51); ctx.restore();
-    scores.slice(0,3).forEach((s,i) => {
-      ctx.save(); ctx.fillStyle=i===0?'#ffcc00':'#556';
-      ctx.shadowColor=i===0?'#ffcc00':'transparent'; ctx.shadowBlur=i===0?8:0;
-      ctx.font=`${H*0.032}px "Courier New",monospace`; ctx.textAlign='left'; ctx.textBaseline='top';
-      ctx.fillText(`#${i+1} ${s.toLocaleString()}`,W*0.08,H*(0.545+i*0.045)); ctx.restore();
-    });
-  }
-
-  const dY=H*0.74, dH=H*0.23, dW=W*0.86, dX=W*0.07;
-  ctx.fillStyle='#050200'; ctx.strokeStyle='#5a2200'; ctx.lineWidth=2;
-  ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(dX,dY,dW,dH,5); else ctx.rect(dX,dY,dW,dH);
-  ctx.fill(); ctx.stroke();
-  if (dmdCanvas) { ctx.save(); ctx.globalAlpha=0.92; ctx.drawImage(dmdCanvas,dX+4,dY+4,dW-8,dH-8); ctx.restore(); }
-}
+// ─── Inline Backglass (1-Screen) — see createInlineBackglass ────────────────
+const inlineBackglass = createInlineBackglass();
 
 // ─── View Settings ─────────────────────────────────────────────────────────────
 // see window-api.ts — toggleViewPanel, applyViewSettings, resetViewSettings
@@ -2483,29 +2380,9 @@ const runFullTestSuite = async (): Promise<any> => {
 
 // see window-api.ts — toggleDMDMode (direct import reference)
 
-let _dmdHidden = false;
-
-// ─── Auto-hide DMD on playfield when using multi-screen mode ───
-// Check if we're in a multi-screen setup with dedicated DMD screen
-const initDMDVisibility = () => {
-  const screenRoleMgr = getScreenRoleManager();
-  const layout = screenRoleMgr.getLayout();
-  const hasDedicatedDMD = layout.screens.some(s => s.role === 'dmd');
-
-  // If multi-screen mode with dedicated DMD, and this is NOT the DMD window, hide it
-  if (layout.screenCount > 1 && hasDedicatedDMD && FPW_ROLE !== 'dmd') {
-    _dmdHidden = true;
-    devLog(`🎮 Multi-screen mode detected: DMD hidden on ${FPW_ROLE || 'playfield'} window`);
-  }
-};
-
-const toggleHideDMD = () => {
-  _dmdHidden = !_dmdHidden;
-  const wrap=document.getElementById('dmd-wrap')!, btn=document.getElementById('hide-dmd-btn')!;
-  wrap.style.display=_dmdHidden?'none':'';
-  btn.classList.toggle('dmd-hidden',_dmdHidden);
-};
+// ─── DMD on-screen visibility ───
 // see window-api.ts — toggleHideDMD
+const { initDMDVisibility, toggleHideDMD, getDmdHidden } = createDmdVisibility(FPW_ROLE);
 
 // ─── Initialize DMD visibility based on multi-screen configuration ───
 document.addEventListener('DOMContentLoaded', () => {
@@ -2513,8 +2390,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Apply DMD visibility to the UI
   const wrap = document.getElementById('dmd-wrap');
   const btn = document.getElementById('hide-dmd-btn');
-  if (wrap) wrap.style.display = _dmdHidden ? 'none' : '';
-  if (btn) btn.classList.toggle('dmd-hidden', _dmdHidden);
+  if (wrap) wrap.style.display = getDmdHidden() ? 'none' : '';
+  if (btn) btn.classList.toggle('dmd-hidden', getDmdHidden());
 }, { once: true });
 
 // Fallback for if DOMContentLoaded already fired
@@ -2523,8 +2400,8 @@ setTimeout(() => {
     initDMDVisibility();
     const wrap = document.getElementById('dmd-wrap');
     const btn = document.getElementById('hide-dmd-btn');
-    if (wrap) wrap.style.display = _dmdHidden ? 'none' : '';
-    if (btn) btn.classList.toggle('dmd-hidden', _dmdHidden);
+    if (wrap) wrap.style.display = getDmdHidden() ? 'none' : '';
+    if (btn) btn.classList.toggle('dmd-hidden', getDmdHidden());
   }
 }, 100);
 
@@ -2571,14 +2448,7 @@ window.addEventListener('resize', () => {
   fxaaPass.uniforms['resolution'].value.y = 1 / (innerHeight * renderer.getPixelRatio());
 
   // Update inline backglass if active
-  if (_bgPanelActive) {
-    const bgWidthVw = parseFloat(getResponsiveBackglassWidth());
-    const canvas = document.getElementById('backglass-canvas') as HTMLCanvasElement;
-    if (canvas) {
-      canvas.width = Math.round(innerWidth * (bgWidthVw / 100));
-      canvas.height = innerHeight;
-    }
-  }
+  inlineBackglass.resize();
 
   // Update device detection
   window.FPW_DEVICE = detectDeviceType();
@@ -2625,10 +2495,10 @@ const {
   selectMsLayout, openMultiscreenModal, closeMultiscreenModal, applyMsLayout,
   resetScreenRoles, swapScreenRoles, autoDetectScreens, applyStartupScreenConfig,
 } = initMultiscreen({
-  initInlineBackglass,
-  stopInlineBackglass,
+  initInlineBackglass: inlineBackglass.init,
+  stopInlineBackglass: inlineBackglass.stop,
   initDMDVisibility,
-  getDmdHidden: () => _dmdHidden,
+  getDmdHidden,
   loadDemoTable,
 });
 
@@ -3391,7 +3261,7 @@ if (FPW_ROLE === 'dmd') {
       console.error('❌ Error starting animate:', err);
       setDevFlag('INIT_ANIMATE_ERROR', (err as Error).message);
     }
-    initInlineBackglass();
+    inlineBackglass.init();
     document.getElementById('multiscreen-btn')?.classList.add('active-multi');
 
     // ─── Auto-apply multi-screen layout on startup (Electron only) ───────────
