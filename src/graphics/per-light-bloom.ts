@@ -113,7 +113,7 @@ export class PerLightBloomPass {
       fragmentShader: PerLightBloomShader.fragmentShader,
     });
 
-    console.log('✓ Per-Light Bloom Pass initialized');
+    if (import.meta.env.DEV) console.log('✓ Per-Light Bloom Pass initialized');
   }
 
   /**

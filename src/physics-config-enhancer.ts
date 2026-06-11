@@ -148,7 +148,7 @@ export function createWorkerConfig(config: EnhancedPhysicsConfig): any {
  */
 export function logPhysicsConfig(config: EnhancedPhysicsConfig, label: string = ''): void {
   const tag = label ? `[Physics Config: ${label}]` : '[Physics Config]';
-  console.log(`${tag}
+  if (import.meta.env.DEV) console.log(`${tag}
   Ball:
     ├─ Restitution: ${config.ball.restitution} (bounce)
     ├─ Friction: ${config.ball.friction}

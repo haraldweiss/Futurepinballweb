@@ -135,7 +135,7 @@ export class MotionBlurPass {
     this.velocityScene = new THREE.Scene();
     this.velocityCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-    console.log('✓ Motion Blur Pass initialized');
+    if (import.meta.env.DEV) console.log('✓ Motion Blur Pass initialized');
   }
 
   /**

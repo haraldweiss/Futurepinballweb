@@ -194,7 +194,7 @@ export class PerformanceReportGenerator {
         }
 
         // Log detected GPU for debugging
-        console.log(`🖥️ GPU Detection: Renderer="${rendererInfo}", Vendor="${vendorInfo}" → Tier: ${profile.gpu}`);
+        if (import.meta.env.DEV) console.log(`🖥️ GPU Detection: Renderer="${rendererInfo}", Vendor="${vendorInfo}" → Tier: ${profile.gpu}`);
       }
     } catch (e) {
       console.warn(`⚠️ GPU detection failed:`, e);
@@ -558,7 +558,7 @@ export class PerformanceReportGenerator {
    * Print report to console
    */
   printReport(report: PerformanceReport): void {
-    console.log(this.exportAsText(report));
+    if (import.meta.env.DEV) console.log(this.exportAsText(report));
   }
 
   /**

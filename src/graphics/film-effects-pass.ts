@@ -148,7 +148,7 @@ export class FilmEffectsPass {
       fragmentShader: FilmEffectsShader.fragmentShader,
     });
 
-    console.log('✓ Film Effects Pass initialized');
+    if (import.meta.env.DEV) console.log('✓ Film Effects Pass initialized');
   }
 
   /**

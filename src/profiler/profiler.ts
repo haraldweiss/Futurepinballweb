@@ -105,7 +105,7 @@ export class PerformanceProfiler {
     if (preset) {
       this.qualityPreset = preset;
       this.saveQualityPreset(name);
-      console.log(`🎨 Quality preset: ${preset.label}`);
+      if (import.meta.env.DEV) console.log(`🎨 Quality preset: ${preset.label}`);
     }
   }
 

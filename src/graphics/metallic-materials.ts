@@ -314,7 +314,7 @@ export function getMetallicMaterialFactory(): EnhancedMetallicMaterialFactory {
  */
 export function initializeMetallicMaterials() {
   globalMetallicFactory = new EnhancedMetallicMaterialFactory();
-  console.log('✓ Enhanced metallic material factory initialized');
+  if (import.meta.env.DEV) console.log('✓ Enhanced metallic material factory initialized');
 }
 
 /**

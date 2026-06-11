@@ -86,7 +86,7 @@ export class AdvancedParticleSystem {
     // Pre-allocate particle pool
     this.initializeParticlePool();
 
-    console.log(`✓ Advanced Particle System initialized (${this.config.maxParticles} max particles)`);
+    if (import.meta.env.DEV) console.log(`✓ Advanced Particle System initialized (${this.config.maxParticles} max particles)`);
   }
 
   /**

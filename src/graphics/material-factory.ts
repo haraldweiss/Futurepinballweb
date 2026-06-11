@@ -323,6 +323,6 @@ export class MaterialFactory {
     }
     this.normalMapCache.clear();
 
-    console.log('✓ MaterialFactory disposed');
+    if (import.meta.env.DEV) console.log('✓ MaterialFactory disposed');
   }
 }

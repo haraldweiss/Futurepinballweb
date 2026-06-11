@@ -12,7 +12,7 @@ export class FileSystemBrowser {
       try {
         this.tableDirectory = await (window as any).showDirectoryPicker();
         if (this.tableDirectory) {
-          console.log('✓ Table directory selected (FSA):', this.tableDirectory.name);
+          if (import.meta.env.DEV) console.log('✓ Table directory selected (FSA):', this.tableDirectory.name);
           return this.scanDirectory(this.tableDirectory, '.fpt');
         }
       } catch (error) {
@@ -30,7 +30,7 @@ export class FileSystemBrowser {
       try {
         this.libraryDirectory = await (window as any).showDirectoryPicker();
         if (this.libraryDirectory) {
-          console.log('✓ Library directory selected (FSA):', this.libraryDirectory.name);
+          if (import.meta.env.DEV) console.log('✓ Library directory selected (FSA):', this.libraryDirectory.name);
           return this.scanDirectory(this.libraryDirectory, ['.fpl', '.lib']);
         }
       } catch (error) {

@@ -123,7 +123,7 @@ export class ModelLibrary {
     });
 
     if (toDelete.length > 0) {
-      console.log(`🧹 ModelLibrary cleaned up ${toDelete.length} unused models`);
+      if (import.meta.env.DEV) console.log(`🧹 ModelLibrary cleaned up ${toDelete.length} unused models`);
     }
   }
 
@@ -218,7 +218,7 @@ export function extractMS3DModels(cfbStreams: Map<string, Uint8Array>): Extracte
   });
 
   if (models.length > 0) {
-    console.log(`📦 Found ${models.length} MS3D models in FPT file`);
+    if (import.meta.env.DEV) console.log(`📦 Found ${models.length} MS3D models in FPT file`);
   }
 
   return models;
@@ -260,7 +260,7 @@ export function parseAndCacheModels(extractedModels: ExtractedModel[]): Map<stri
     modelLibrary.cacheModel(modelName, model, mesh);
     modelMap.set(modelName, mesh);
 
-    console.log(`✅ Loaded model: ${modelName} (${model.vertices.length} vertices, ${model.triangles.length} triangles)`);
+    if (import.meta.env.DEV) console.log(`✅ Loaded model: ${modelName} (${model.vertices.length} vertices, ${model.triangles.length} triangles)`);
   });
 
   return modelMap;

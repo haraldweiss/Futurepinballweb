@@ -98,7 +98,7 @@ export class DMDBoundsTracker {
     // Listen for scroll events
     window.addEventListener('scroll', () => this.throttledUpdate(), { passive: true });
 
-    console.log('✅ DMD bounds tracker initialized');
+    if (import.meta.env.DEV) console.log('✅ DMD bounds tracker initialized');
   }
 
   /**
@@ -382,7 +382,7 @@ export class DMDBoundsTracker {
     this.dmdWrap = null;
     this.currentBounds = null;
 
-    console.log('🧹 DMD bounds tracker disposed');
+    if (import.meta.env.DEV) console.log('🧹 DMD bounds tracker disposed');
   }
 }
 

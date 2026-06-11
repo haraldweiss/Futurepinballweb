@@ -233,7 +233,7 @@ export function createSafeDataURI(dataUri: string): string {
  * @internal
  */
 export function logSecurityEvent(event: string, details: any): void {
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     console.log(`[Security Event] ${event}`, details);
   }
 }

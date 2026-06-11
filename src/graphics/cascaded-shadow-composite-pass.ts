@@ -165,7 +165,7 @@ export class CascadedShadowCompositePass extends ShaderPass {
     });
 
     super(material);
-    console.log('✓ Cascaded Shadow Composite Pass initialized');
+    if (import.meta.env.DEV) console.log('✓ Cascaded Shadow Composite Pass initialized');
   }
 
   /**

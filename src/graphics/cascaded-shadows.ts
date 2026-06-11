@@ -64,7 +64,7 @@ export class CascadedShadowMapper {
     this.lightIntensity = config.lightIntensity;
 
     this.initializeCascades();
-    console.log(`✓ Cascaded Shadow Mapper initialized (${config.cascadeCount} cascades)`);
+    if (import.meta.env.DEV) console.log(`✓ Cascaded Shadow Mapper initialized (${config.cascadeCount} cascades)`);
   }
 
   /**

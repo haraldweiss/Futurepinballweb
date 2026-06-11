@@ -156,7 +156,7 @@ export class DepthOfFieldPass {
     // Set initial camera values
     this.updateCameraUniforms();
 
-    console.log('✓ Depth of Field Pass initialized');
+    if (import.meta.env.DEV) console.log('✓ Depth of Field Pass initialized');
   }
 
   /**

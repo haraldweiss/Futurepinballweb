@@ -233,6 +233,6 @@ export class GeometryPool {
       cache.clear();
     }
 
-    console.log('✓ GeometryPool disposed');
+    if (import.meta.env.DEV) console.log('✓ GeometryPool disposed');
   }
 }

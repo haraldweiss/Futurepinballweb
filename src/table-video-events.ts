@@ -229,7 +229,7 @@ export async function setupExtendedVideoEvents(
     });
   }
 
-  console.log(`✓ Setup ${eventConfigs.length} extended video events for ${tableKey}`);
+  if (import.meta.env.DEV) console.log(`✓ Setup ${eventConfigs.length} extended video events for ${tableKey}`);
 }
 
 /**

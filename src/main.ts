@@ -225,7 +225,7 @@ if (import.meta.env.DEV) {
       return;
     }
     bridge.setWorldGravity?.(x, y);
-    console.log(`[testGravity] world gravity set to (${x}, ${y})`);
+    if (import.meta.env.DEV) console.log(`[testGravity] world gravity set to (${x}, ${y})`);
   };
 
   // Force-set the score — call from playfield DevTools to test cross-window bridge
@@ -234,23 +234,27 @@ if (import.meta.env.DEV) {
     state.ballNum = Math.max(1, state.ballNum);
     state.multiplier = Math.max(1, state.multiplier);
     if (dmdState.mode === 'attract') dmdState.mode = 'playing';
-    console.log(`[forceScore] state.score = ${n}, dmdState.mode = ${dmdState.mode}`);
-    console.log(`              expecting Backglass + DMD windows to show ${n} within 1 frame`);
+    if (import.meta.env.DEV) {
+      console.log(`[forceScore] state.score = ${n}, dmdState.mode = ${dmdState.mode}`);
+      console.log(`              expecting Backglass + DMD windows to show ${n} within 1 frame`);
+    }
   };
 
   // Debug: dump current state diagnostics
   (window as any).dumpState = () => {
     const diag = (window as any)._msDiag || {};
-    console.log('=== STATE DIAGNOSTICS ===');
-    console.log(`state.score = ${state.score}`);
-    console.log(`state.ballNum = ${state.ballNum}`);
-    console.log(`state.multiplier = ${state.multiplier}`);
-    console.log(`state.bumperHits = ${state.bumperHits}`);
-    console.log(`dmdState.mode = ${dmdState.mode}`);
-    console.log(`dmdState.animFrame = ${dmdState.animFrame}`);
-    console.log(`outgoing total = ${diag.outgoing_total}, bc=${diag.outgoing_bc_ok}, ipc=${diag.outgoing_ipc_ok}, ls=${diag.outgoing_ls_ok}`);
-    console.log(`bridge_present = ${diag.bridge_present}`);
-    console.log(`ipc_error = ${diag.outgoing_ipc_error}`);
+    if (import.meta.env.DEV) {
+      console.log('=== STATE DIAGNOSTICS ===');
+      console.log(`state.score = ${state.score}`);
+      console.log(`state.ballNum = ${state.ballNum}`);
+      console.log(`state.multiplier = ${state.multiplier}`);
+      console.log(`state.bumperHits = ${state.bumperHits}`);
+      console.log(`dmdState.mode = ${dmdState.mode}`);
+      console.log(`dmdState.animFrame = ${dmdState.animFrame}`);
+      console.log(`outgoing total = ${diag.outgoing_total}, bc=${diag.outgoing_bc_ok}, ipc=${diag.outgoing_ipc_ok}, ls=${diag.outgoing_ls_ok}`);
+      console.log(`bridge_present = ${diag.bridge_present}`);
+      console.log(`ipc_error = ${diag.outgoing_ipc_error}`);
+    }
   }
 };
 
@@ -413,7 +417,7 @@ window.FPW_SCREEN_INDEX = FPW_SCREEN_INDEX || '0';
 if (FPW_ROLE) document.body.classList.add(`role-${  FPW_ROLE}`);
 window.FPW_DEVICE = detectDeviceType();
 
-console.log(`🎮 FPW Window Started - Role: ${window.FPW_ROLE}, Screen: ${window.FPW_SCREEN_INDEX}, Size: ${window.innerWidth}x${window.innerHeight}`);
+if (import.meta.env.DEV) console.log(`🎮 FPW Window Started - Role: ${window.FPW_ROLE}, Screen: ${window.FPW_SCREEN_INDEX}, Size: ${window.innerWidth}x${window.innerHeight}`);
 
 // ─── Screen Configuration from URL ────────────────────────────────────────────
 // Support for startup scripts: ?screens=1|2|3|auto
@@ -476,16 +480,18 @@ let lastAppliedQualityPreset = '';  // Track quality changes for application
 (async () => {
   const userPick = localStorage.getItem('fpw_quality_preset');
   if (userPick) {
-    console.log(`[fpw-config] Using saved quality preset: ${userPick}`);
+    if (import.meta.env.DEV) console.log(`[fpw-config] Using saved quality preset: ${userPick}`);
     return;
   }
   const config = await loadFpwConfig();
   if (!config) return;  // Installer hasn't run, or file is malformed — keep default.
-  console.log(
-    `[fpw-config] Applying installer-detected quality preset: ${config.qualityPreset} ` +
-    `(${config.system.osName}, ${config.system.totalMemoryGB}GB RAM, ` +
-    `${config.display.primaryResolution.width}x${config.display.primaryResolution.height})`
-  );
+  if (import.meta.env.DEV) {
+    console.log(
+      `[fpw-config] Applying installer-detected quality preset: ${config.qualityPreset} ` +
+      `(${config.system.osName}, ${config.system.totalMemoryGB}GB RAM, ` +
+      `${config.display.primaryResolution.width}x${config.display.primaryResolution.height})`
+    );
+  }
   profiler.setQualityPreset(config.qualityPreset);
   // The animate() loop calls applyQualityPreset() on its next FPS tick, which
   // diff-checks against `lastAppliedQualityPreset` and reconfigures the
@@ -1759,7 +1765,7 @@ document.addEventListener('keydown', e => {
       musicMgr.toggle();
       const status = musicMgr.isPlaying() ? '🎵 Music ON' : '🔇 Music OFF';
       showNotification(status);
-      console.log('[Music]', status);
+      if (import.meta.env.DEV) console.log('[Music]', status);
     }).catch((e) => console.warn('[Music] Error:', e));
   }
   if (e.key === 'z' || e.key === 'Z') nudgeTable(-1);
@@ -2111,7 +2117,7 @@ function animate(): void {
     if (currentFps < 45 && pixelRatioTarget > 1) {
       pixelRatioTarget = Math.max(1, pixelRatioTarget - 0.25);
       renderer.setPixelRatio(pixelRatioTarget);
-      console.log(`⚠️ Low FPS (${currentFps.toFixed(0)}) → reducing DPI to ${pixelRatioTarget.toFixed(2)}`);
+      if (import.meta.env.DEV) console.log(`⚠️ Low FPS (${currentFps.toFixed(0)}) → reducing DPI to ${pixelRatioTarget.toFixed(2)}`);
     } else if (currentFps > 55 && pixelRatioTarget < Math.min(devicePixelRatio, 2)) {
       pixelRatioTarget = Math.min(Math.min(devicePixelRatio, 2), pixelRatioTarget + 0.1);
       renderer.setPixelRatio(pixelRatioTarget);
@@ -2125,7 +2131,7 @@ function animate(): void {
 
     // Log performance every 2s
     if (now % 2000 < 500 && showProfiler) {
-      console.log(`🎮 ${profiler.getMetricsDisplay()}`);
+      if (import.meta.env.DEV) console.log(`🎮 ${profiler.getMetricsDisplay()}`);
     }
   }
 
@@ -3992,7 +3998,7 @@ async function initializeFPTBrowser(): Promise<void> {
   const scan = async (path: string | null) => {
     if (!path) { allEntries = []; refreshList(); return; }
     allEntries = await scanFPTDirectory(path);
-    console.log(`[fpt-browser] scanned ${allEntries.length} files in ${path}`);
+    if (import.meta.env.DEV) console.log(`[fpt-browser] scanned ${allEntries.length} files in ${path}`);
     refreshList();
   };
 
