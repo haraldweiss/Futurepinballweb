@@ -132,6 +132,9 @@ import {
 import { setupScene } from './app/scene-setup';
 import { appendLogEntry } from './app/log-utils';
 import { getAllScreensForLayout, type ScreenLike } from './app/screen-utils';
+import { showNotification } from './app/notification';
+import { showLoadingOverlay, hideLoadingOverlay, updateLoadingProgress } from './app/loader-ui';
+import { switchTab, closeLoader, toggleFullscreen, toggleViewPanel } from './app/ui-utils';
 import { setupPostProcessing } from './app/post-processing';
 import { initSyncTransport, emitSyncFrame, onSyncFrame } from './app/sync-transport';
 
@@ -1284,16 +1287,7 @@ function updateHUD(): void {
 }
 
 // ─── Notification ─────────────────────────────────────────────────────────────
-function showNotification(msg: string): void {
-  const n = document.getElementById('notification') as HTMLElement;
-  n.textContent = msg; n.style.opacity = '1';
-  setTimeout(() => n.style.opacity = '0', 2500);
-  // eslint-disable-next-line security/detect-unsafe-regex -- emoji codepoint ranges, no quantifiers
-  const clean = msg.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
-  if (clean.length > 1) dmdEvent(clean.substring(0, 22).toUpperCase());
-}
 // see window-api.ts — showNotification
-
 // ─── Library Selector ─────────────────────────────────────────────────────────
 function showLibrarySelector(lib: any): void {
   const selector = document.getElementById('library-selector');
@@ -2496,7 +2490,7 @@ function drawInlineBackglass(): void {
 const VIEW_KEY = 'fpw_view';
 let viewSettings: Record<string,number> = (() => { try { return JSON.parse(localStorage.getItem(VIEW_KEY)??'{}')??{}; } catch (e) { console.debug('[main] View settings parse failed:', (e || 'unknown')); return {}; } })();
 
-const toggleViewPanel = () => document.getElementById('view-panel')!.classList.toggle('open');
+
 
 const applyViewSettings = () => {
   const zoom = parseFloat((document.getElementById('vp-zoom') as HTMLInputElement).value);
@@ -2569,14 +2563,7 @@ function initViewSettings(): void {
   if(zoom!==16||tilt!==0.5||fov!==58) window.applyViewSettings();
 }
 
-// ─── Global UI Callbacks ───────────────────────────────────────────────────────
-const switchTab = (tab: string) => {
-  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['demo','import','browser','info','script'][i]===tab));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  (document.getElementById(`tab-${tab}`) as HTMLElement)?.classList.add('active');
-};
-// see window-api.ts — switchTab
-
+// ─── Phase 4: Setup Backglass After Table Load ──────────────────────────────────
 // ─── Phase 4: Setup Backglass After Table Load ──────────────────────────────────
 function setupBackglassForTable(): void {
   if (backglassRenderer) {
@@ -2607,98 +2594,10 @@ const loadDemoTable = async (key: string) => {
 };
 // see window-api.ts — loadDemoTable
 
-const closeLoader = async () => {
-  const el = document.getElementById('loader-modal');
-  if (el) el.style.display = 'none';
-};
-// see window-api.ts — closeLoader
 
 (document.getElementById('open-loader') as HTMLElement).onclick = () => {
   (document.getElementById('loader-modal') as HTMLElement).style.display='flex';
 };
-
-// ─── Phase 2: Loading Overlay Management ─────────────────────────────────────────
-const currentLoadingState = {
-  isLoading: false,
-  resourcesLoaded: 0,
-  totalResources: 0,
-  currentPhase: '',
-};
-
-function showLoadingOverlay(): void {
-  const overlay = document.getElementById('loading-overlay')!;
-  overlay.style.display = 'flex';
-  currentLoadingState.isLoading = true;
-
-  // Setup ESC to cancel
-  const handleEsc = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      hideLoadingOverlay();
-      document.removeEventListener('keydown', handleEsc);
-    }
-  };
-  document.addEventListener('keydown', handleEsc);
-}
-
-function hideLoadingOverlay(): void {
-  const overlay = document.getElementById('loading-overlay')!;
-  overlay.style.display = 'none';
-  currentLoadingState.isLoading = false;
-  currentLoadingState.resourcesLoaded = 0;
-  currentLoadingState.totalResources = 0;
-}
-
-function updateLoadingProgress(phase: string, current: number, total: number): void {
-  if (!currentLoadingState.isLoading) return;
-
-  currentLoadingState.resourcesLoaded = current;
-  currentLoadingState.totalResources = total;
-  currentLoadingState.currentPhase = phase;
-
-  // Update phase name
-  const phaseNameEl = document.getElementById('phase-name')!;
-  const phaseText = phase === 'images' ? '🖼️ Loading Textures'
-                   : phase === 'audio' ? '🎵 Loading Audio'
-                   : phase === 'scripts' ? '📜 Loading Scripts'
-                   : 'Processing...';
-  phaseNameEl.textContent = phaseText;
-  phaseNameEl.style.color = phase === 'images' ? '#00ff88'
-                           : phase === 'audio' ? '#ffaa00'
-                           : '#0088ff';
-
-  // Calculate total progress (weighted: textures 40%, audio 40%, scripts 20%)
-  const imageWeight = 0.4;
-  const audioWeight = 0.4;
-  const scriptWeight = 0.2;
-
-  let totalProgress = 0;
-  if (currentLoadingState.currentPhase === 'images' && total > 0) {
-    totalProgress = (current / total) * imageWeight * 100;
-  } else if (currentLoadingState.currentPhase === 'audio' && total > 0) {
-    totalProgress = imageWeight * 100 + (current / total) * audioWeight * 100;
-  } else if (currentLoadingState.currentPhase === 'scripts') {
-    totalProgress = (imageWeight + audioWeight) * 100;
-  }
-
-  // Update progress bar
-  const progressBar = document.getElementById('progress-bar')!;
-  progressBar.style.width = `${Math.min(totalProgress, 100)  }%`;
-
-  // Update progress text
-  const progressText = document.getElementById('progress-text')!;
-  progressText.textContent = `${Math.floor(Math.min(totalProgress, 100))  }%`;
-
-  // Update details
-  const detailsEl = document.getElementById('loading-details')!;
-  // eslint-disable-next-line no-unsanitized/property -- loading-state values are internal counters and phase enum
-  detailsEl.innerHTML = `
-    <div style="color:#00ff88;">🖼️ Textures:</div>
-    <div style="margin-left:10px;color:#556;margin-bottom:8px;">${currentLoadingState.currentPhase === 'images' ? currentLoadingState.resourcesLoaded : currentLoadingState.totalResources} / ${currentLoadingState.totalResources} loaded</div>
-    <div style="color:#ffaa00;">🎵 Audio:</div>
-    <div style="margin-left:10px;color:#556;margin-bottom:8px;">${currentLoadingState.currentPhase === 'audio' ? currentLoadingState.resourcesLoaded : currentLoadingState.totalResources} / ${currentLoadingState.totalResources} loaded</div>
-    <div style="color:#0088ff;">⏱️ Phase: ${currentLoadingState.currentPhase}</div>
-  `;
-}
 
 // ─── Phase 7: File Browser Integration ──────────────────────────────────────────
 const fileBrowserState = {
@@ -3024,11 +2923,6 @@ const sortTableFiles = (field: string, files?: FileInfo[]): FileInfo[] => {
 const runFullTestSuite = async (): Promise<any> => {
   const testSuite = getTestSuite();
   return await testSuite.runAllTests();
-};
-
-const toggleFullscreen = () => {
-  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(()=>{});
-  else document.exitFullscreen?.();
 };
 
 // see window-api.ts — toggleDMDMode (direct import reference)
