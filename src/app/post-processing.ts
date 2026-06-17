@@ -206,54 +206,34 @@ export function setupPostProcessing(
   let fillLight: THREE.PointLight | null = null;
   let rimLight: THREE.DirectionalLight | null = null;
 
-  const lightManager = getGraphicsPipeline()?.getLightManager();
-  if (lightManager) {
-    lightManager.initialize();
-    ambLight = new THREE.AmbientLight(0xffffff, 0.55);
-    scene.add(ambLight);
-    mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI / 3.0, 0.20);
-    mainSpot.position.set(0, 14, 16);
-    mainSpot.castShadow = true;
-    mainSpot.shadow.mapSize.set(2048, 2048);
-    mainSpot.shadow.bias = -0.0020;
-    mainSpot.shadow.normalBias = 0.030;
-    mainSpot.shadow.camera.near = 0.5;
-    mainSpot.shadow.camera.far = 120;
-    mainSpot.shadow.blurSamples = 16;
-    scene.add(mainSpot);
-    fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
-    fillLight.position.set(-9, 6, 9);
-    fillLight.castShadow = true;
-    scene.add(fillLight);
-    const accentLight = new THREE.PointLight(0xccddff, 0.8, 25);
-    accentLight.position.set(9, 4, 5);
-    scene.add(accentLight);
-    rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
-    rimLight.position.set(0, 22, -12);
-    rimLight.castShadow = true;
-    scene.add(rimLight);
-  } else {
-    ambLight = new THREE.AmbientLight(0xffffff, 0.55);
-    scene.add(ambLight);
-    mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI / 3.0, 0.20);
-    mainSpot.position.set(0, 14, 16);
-    mainSpot.castShadow = true;
-    mainSpot.shadow.mapSize.set(2048, 2048);
-    mainSpot.shadow.bias = -0.0020;
-    mainSpot.shadow.normalBias = 0.030;
-    scene.add(mainSpot);
-    fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
-    fillLight.position.set(-9, 6, 9);
-    fillLight.castShadow = true;
-    scene.add(fillLight);
-    const accentLight = new THREE.PointLight(0xccddff, 0.8, 25);
-    accentLight.position.set(9, 4, 5);
-    scene.add(accentLight);
-    rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
-    rimLight.position.set(0, 22, -12);
-    rimLight.castShadow = true;
-    scene.add(rimLight);
-  }
+  // Light rig is identical whether or not the LightManager is present; only the
+  // optional initialize() call differs. The full shadow-camera config is applied
+  // in both cases so the fallback path stays consistent with the primary one.
+  getGraphicsPipeline()?.getLightManager()?.initialize();
+
+  ambLight = new THREE.AmbientLight(0xffffff, 0.55);
+  scene.add(ambLight);
+  mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI / 3.0, 0.20);
+  mainSpot.position.set(0, 14, 16);
+  mainSpot.castShadow = true;
+  mainSpot.shadow.mapSize.set(2048, 2048);
+  mainSpot.shadow.bias = -0.0020;
+  mainSpot.shadow.normalBias = 0.030;
+  mainSpot.shadow.camera.near = 0.5;
+  mainSpot.shadow.camera.far = 120;
+  mainSpot.shadow.blurSamples = 16;
+  scene.add(mainSpot);
+  fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
+  fillLight.position.set(-9, 6, 9);
+  fillLight.castShadow = true;
+  scene.add(fillLight);
+  const accentLight = new THREE.PointLight(0xccddff, 0.8, 25);
+  accentLight.position.set(9, 4, 5);
+  scene.add(accentLight);
+  rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
+  rimLight.position.set(0, 22, -12);
+  rimLight.castShadow = true;
+  scene.add(rimLight);
 
   return {
     composer, bloomPass, ssrPass, motionBlurPass,
