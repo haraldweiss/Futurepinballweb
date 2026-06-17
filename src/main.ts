@@ -1819,20 +1819,24 @@ function applyQualityPreset(): void {
     appendLogEntry(`⚙️ Applying quality preset: ${currentPreset.label}`, 'ok');
 
     // ─── Bloom Pass ───
-    bloomPass?.setEnabled?.(currentPreset.bloomEnabled);
-    if (currentPreset.bloomEnabled && bloomPass) {
-      bloomPass.strength = currentPreset.bloomStrength;
-      bloomPass.radius = currentPreset.bloomRadius;
-      bloomPass.threshold = 0.25;
+    // UnrealBloomPass has no setEnabled(); toggle the inherited Pass.enabled flag.
+    if (bloomPass) {
+      bloomPass.enabled = currentPreset.bloomEnabled;
+      if (currentPreset.bloomEnabled) {
+        bloomPass.strength = currentPreset.bloomStrength;
+        bloomPass.radius = currentPreset.bloomRadius;
+        bloomPass.threshold = 0.25;
+      }
     }
 
     // ─── Shadow Maps ───
+    // THREE.SpotLight has no setProperty(); set castShadow directly.
     if (currentPreset.shadowsEnabled) {
-      mainSpot?.setProperty?.('castShadow', true);
+      if (mainSpot) mainSpot.castShadow = true;
       mainSpot?.shadow?.mapSize.set(currentPreset.shadowMapSize, currentPreset.shadowMapSize);
       renderer.shadowMap.enabled = true;
     } else {
-      mainSpot?.setProperty?.('castShadow', false);
+      if (mainSpot) mainSpot.castShadow = false;
       renderer.shadowMap.enabled = false;
     }
 
