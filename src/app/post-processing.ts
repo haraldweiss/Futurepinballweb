@@ -5,7 +5,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { SSRPass } from '../graphics/ssr-pass';
 import { MotionBlurPass } from '../graphics/motion-blur-pass';
 import { CascadedShadowMapper, initializeCascadedShadows } from '../graphics/cascaded-shadows';
@@ -36,7 +36,7 @@ export interface PostProcessingContext {
   volumetricPass: any;
   filmEffectsPass: FilmEffectsPass | null;
   dofPass: DepthOfFieldPass | null;
-  fxaaPass: ShaderPass;
+  smaaPass: SMAAPass;
   mainSpot: THREE.SpotLight | null;
   ambLight: THREE.AmbientLight | null;
   fillLight: THREE.PointLight | null;
@@ -191,15 +191,18 @@ export function setupPostProcessing(
   // at the end of the linear-HDR composer chain. Without this, the renderer's
   // toneMapping/outputColorSpace are bypassed for the composited image and the
   // raw FXAAShader does no sRGB encoding. FXAA runs after, on gamma-corrected
-  // output, where its luma-based edge detection is more accurate.
+  // output, where edge-detection works in the perceptual (gamma) domain.
   const outputPass = new OutputPass();
   composer.addPass(outputPass);
 
-  const fxaaPass = new ShaderPass(FXAAShader);
-  fxaaPass.uniforms['resolution'].value.x = 1 / (innerWidth * renderer.getPixelRatio());
-  fxaaPass.uniforms['resolution'].value.y = 1 / (innerHeight * renderer.getPixelRatio());
-  fxaaPass.renderToScreen = true;
-  composer.addPass(fxaaPass);
+  // SMAA as the final antialiasing pass — sharper edges than FXAA at similar
+  // cost, which suits the high-contrast, glossy playfield. Runs on the
+  // tone-mapped sRGB output. EffectComposer's MSAA does not apply to the
+  // composited result, so this post-AA pass is what actually antialiases.
+  const pixelRatio = renderer.getPixelRatio();
+  const smaaPass = new SMAAPass(innerWidth * pixelRatio, innerHeight * pixelRatio);
+  smaaPass.renderToScreen = true;
+  composer.addPass(smaaPass);
 
   initializeGraphicsPipeline(renderer, scene, camera, composer);
   initializePlayfieldVisualEnhancement(scene, camera, renderer, composer);
@@ -244,7 +247,7 @@ export function setupPostProcessing(
   return {
     composer, bloomPass, ssrPass, motionBlurPass,
     cascadedShadowMapper, cascadedShadowCompositePass, perLightBloomPass,
-    particleSystem, volumetricPass, filmEffectsPass, dofPass, fxaaPass,
+    particleSystem, volumetricPass, filmEffectsPass, dofPass, smaaPass,
     mainSpot, ambLight, fillLight, rimLight,
   };
 }

@@ -580,7 +580,7 @@ requestAnimationFrame(function initViewSettingsAndVisuals() {
 const {
   composer, bloomPass, ssrPass, motionBlurPass,
   cascadedShadowMapper, perLightBloomPass,
-  particleSystem, volumetricPass, filmEffectsPass, dofPass, fxaaPass,
+  particleSystem, volumetricPass, filmEffectsPass, dofPass, smaaPass,
   mainSpot, ambLight, fillLight, rimLight,
 } = setupPostProcessing(scene, camera, renderer, profiler);
 
@@ -2423,9 +2423,9 @@ window.addEventListener('resize', () => {
   // here with raw innerWidth/innerHeight conflicts with the primary's HiDPI
   // logic and was the cause of the table disappearing on resize.
 
-  // Update FXAA resolution to match current renderer state
-  fxaaPass.uniforms['resolution'].value.x = 1 / (innerWidth * renderer.getPixelRatio());
-  fxaaPass.uniforms['resolution'].value.y = 1 / (innerHeight * renderer.getPixelRatio());
+  // Update SMAA internal render targets to match current renderer state
+  const aaPixelRatio = renderer.getPixelRatio();
+  smaaPass.setSize(innerWidth * aaPixelRatio, innerHeight * aaPixelRatio);
 
   // Update inline backglass if active
   inlineBackglass.resize();
