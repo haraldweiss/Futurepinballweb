@@ -51,6 +51,7 @@ declare module 'three' {
   export type RenderPass = _;
   export type UnrealBloomPass = _;
   export type ShaderPass = _;
+  export type OutputPass = _;
   export type FXAAShader = _;
   export type LineSegments = _;
   export type EdgesGeometry = _;
@@ -141,6 +142,21 @@ declare module 'three/addons/postprocessing/ShaderPass.js' {
 declare module 'three/addons/shaders/FXAAShader.js' {
   const FXAAShader: any;
   export { FXAAShader };
+}
+declare module 'three/addons/postprocessing/OutputPass' {
+  interface OutputPass { [key: string]: any }
+  const OutputPass: new (...args: any[]) => OutputPass;
+  export { OutputPass };
+}
+declare module 'three/addons/postprocessing/OutputPass.js' {
+  interface OutputPass { [key: string]: any }
+  const OutputPass: new (...args: any[]) => OutputPass;
+  export { OutputPass };
+}
+declare module 'three/examples/jsm/postprocessing/OutputPass.js' {
+  interface OutputPass { [key: string]: any }
+  const OutputPass: new (...args: any[]) => OutputPass;
+  export { OutputPass };
 }
 declare module 'three/examples/jsm/postprocessing/EffectComposer.js' {
   interface EffectComposer { [key: string]: any }

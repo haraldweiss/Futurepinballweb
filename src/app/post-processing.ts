@@ -4,6 +4,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 import { SSRPass } from '../graphics/ssr-pass';
 import { MotionBlurPass } from '../graphics/motion-blur-pass';
@@ -179,6 +180,14 @@ export function setupPostProcessing(
       }
     }
   );
+
+  // Final color management: apply tone mapping (ACESFilmic) + sRGB encoding once,
+  // at the end of the linear-HDR composer chain. Without this, the renderer's
+  // toneMapping/outputColorSpace are bypassed for the composited image and the
+  // raw FXAAShader does no sRGB encoding. FXAA runs after, on gamma-corrected
+  // output, where its luma-based edge detection is more accurate.
+  const outputPass = new OutputPass();
+  composer.addPass(outputPass);
 
   const fxaaPass = new ShaderPass(FXAAShader);
   fxaaPass.uniforms['resolution'].value.x = 1 / (innerWidth * renderer.getPixelRatio());
