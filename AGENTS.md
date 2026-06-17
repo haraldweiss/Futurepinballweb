@@ -401,3 +401,40 @@ captured scene/camera/physics/state/profiler — DI nötig), Physics-Bridge.
 - **Release 0.23.0**: Version bump, Changelog, AGENTS.md handoff
 - main.ts: 3504 → **3298 Zeilen** (Gesamt −1032, −24% seit Runde 1)
 - Verified: tsc clean, 762/762 tests, vite build ✓
+
+### 2026-06-17 — Claude/Care: Post-Processing-Farbpipeline + Bloom/AA-Fixes
+
+Review „check for graphical improvements" → 5 granulare Commits auf
+`claude/focused-lalande-3e1ad6`. Jeder Commit end-to-end verifiziert
+(tsc + 762 Tests + vite build + Browser-Smoke auf Pharaoh's Gold, da die
+Unit-Tests die Renderer-Orchestrierung nicht abdecken).
+
+- `78a49fa2` ⚠ **OutputPass fehlte** — die EffectComposer-Kette endete auf einem
+  rohen FXAA-ShaderPass (`renderToScreen`), der **weder** Tone-Mapping **noch**
+  sRGB-Encoding macht. Composer-Targets sind linear-HDR → `renderer.toneMapping`/
+  `outputColorSpace` wurden für das komponierte Bild umgangen, lineares HDR
+  ungekoppelt auf den Screen → das gesamte Playfield als überstrahlter Glow ohne
+  lesbare Geometrie. Fix: `OutputPass` (ACESFilmic + sRGB) als finale Stufe,
+  AA läuft danach im Gamma-Raum. **Vorher/Nachher dramatisch sichtbar.**
+  + `OutputPass`-Typdeklarationen in `src/types/three.d.ts` (Projekt rollt
+  three-addon-Typen selbst, kein `@types/three`).
+- `4e2ee39b` **Quality-Toggles waren tote No-ops** — `applyQualityPreset()` rief
+  `bloomPass?.setEnabled?.()` + `mainSpot?.setProperty?.()`; **beide Methoden
+  existieren nicht** auf `UnrealBloomPass`/`THREE.SpotLight` → optional-chain
+  no-op'd still. Bloom/Schatten ließen sich nie abschalten (low/medium-Preset
+  sparte diese Kosten nie). Fix: `bloomPass.enabled` / `mainSpot.castShadow`.
+- `aefa2449` **Refactor**: dupliziertes `if (lightManager) / else` Light-Rig
+  (~95 % identisch) auf einen Pfad kollabiert; volle Shadow-Camera-Config jetzt
+  in beiden Fällen (Fallback-Pfad war inkonsistent).
+- `99a227db` **Bloom-Reihenfolge**: globaler `UnrealBloomPass` lag direkt nach
+  RenderPass → fing weder SSR-Reflexionen noch Per-Light-Bloom ein und war
+  hardcodiert. Jetzt nach SSR/Per-Light-Bloom, aus dem Quality-Preset geseedet.
+- `e94adaf3` **FXAA → SMAA** als finale AA-Stufe (schärfere Kanten, läuft auf
+  dem tone-gemappten sRGB-Output). Resize ruft `smaaPass.setSize()` statt
+  FXAA-Resolution-Uniform; `fxaaPass` → `smaaPass` im PostProcessingContext.
+
+Pass-Kette jetzt: `Render → SSR → MotionBlur → CascadedShadow → PerLightBloom
+→ Bloom → Volumetric → Film → DOF → OutputPass (tone-map + sRGB) → SMAA`.
+
+- Verified: tsc clean, 762/762 tests, vite build ✓, Browser-Smoke ✓
+- Offen: keine — die Review-Liste (#1–#5) ist abgearbeitet.
