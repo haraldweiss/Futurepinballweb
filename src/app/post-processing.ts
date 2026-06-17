@@ -4,7 +4,8 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { SSRPass } from '../graphics/ssr-pass';
 import { MotionBlurPass } from '../graphics/motion-blur-pass';
 import { CascadedShadowMapper, initializeCascadedShadows } from '../graphics/cascaded-shadows';
@@ -35,7 +36,7 @@ export interface PostProcessingContext {
   volumetricPass: any;
   filmEffectsPass: FilmEffectsPass | null;
   dofPass: DepthOfFieldPass | null;
-  fxaaPass: ShaderPass;
+  smaaPass: SMAAPass;
   mainSpot: THREE.SpotLight | null;
   ambLight: THREE.AmbientLight | null;
   fillLight: THREE.PointLight | null;
@@ -51,12 +52,6 @@ export function setupPostProcessing(
   const composer = new EffectComposer(renderer);
   const renderPass = new RenderPass(scene, camera);
   composer.addPass(renderPass);
-
-  const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.8, 0.8, 0.20);
-  bloomPass.threshold = 0.25;
-  bloomPass.strength = 0.9;
-  bloomPass.radius = 0.6;
-  composer.addPass(bloomPass);
 
   const initPreset = profiler.getQualityPreset();
 
@@ -139,6 +134,18 @@ export function setupPostProcessing(
     }
   );
 
+  // Global bloom runs after the reflection (SSR) and per-light bloom passes so
+  // their contributions glow, and before final color management. Seeded from
+  // the active quality preset; applyQualityPreset() keeps it in sync at runtime.
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(innerWidth, innerHeight),
+    initPreset.bloomStrength,
+    initPreset.bloomRadius,
+    0.25,
+  );
+  bloomPass.enabled = initPreset.bloomEnabled;
+  composer.addPass(bloomPass);
+
   const particleSystem: AdvancedParticleSystem | null = initializeGraphicsPass(
     'ParticleSystem',
     initPreset.advancedParticlesEnabled,
@@ -180,11 +187,22 @@ export function setupPostProcessing(
     }
   );
 
-  const fxaaPass = new ShaderPass(FXAAShader);
-  fxaaPass.uniforms['resolution'].value.x = 1 / (innerWidth * renderer.getPixelRatio());
-  fxaaPass.uniforms['resolution'].value.y = 1 / (innerHeight * renderer.getPixelRatio());
-  fxaaPass.renderToScreen = true;
-  composer.addPass(fxaaPass);
+  // Final color management: apply tone mapping (ACESFilmic) + sRGB encoding once,
+  // at the end of the linear-HDR composer chain. Without this, the renderer's
+  // toneMapping/outputColorSpace are bypassed for the composited image and the
+  // raw FXAAShader does no sRGB encoding. FXAA runs after, on gamma-corrected
+  // output, where edge-detection works in the perceptual (gamma) domain.
+  const outputPass = new OutputPass();
+  composer.addPass(outputPass);
+
+  // SMAA as the final antialiasing pass — sharper edges than FXAA at similar
+  // cost, which suits the high-contrast, glossy playfield. Runs on the
+  // tone-mapped sRGB output. EffectComposer's MSAA does not apply to the
+  // composited result, so this post-AA pass is what actually antialiases.
+  const pixelRatio = renderer.getPixelRatio();
+  const smaaPass = new SMAAPass(innerWidth * pixelRatio, innerHeight * pixelRatio);
+  smaaPass.renderToScreen = true;
+  composer.addPass(smaaPass);
 
   initializeGraphicsPipeline(renderer, scene, camera, composer);
   initializePlayfieldVisualEnhancement(scene, camera, renderer, composer);
@@ -197,59 +215,39 @@ export function setupPostProcessing(
   let fillLight: THREE.PointLight | null = null;
   let rimLight: THREE.DirectionalLight | null = null;
 
-  const lightManager = getGraphicsPipeline()?.getLightManager();
-  if (lightManager) {
-    lightManager.initialize();
-    ambLight = new THREE.AmbientLight(0xffffff, 0.55);
-    scene.add(ambLight);
-    mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI / 3.0, 0.20);
-    mainSpot.position.set(0, 14, 16);
-    mainSpot.castShadow = true;
-    mainSpot.shadow.mapSize.set(2048, 2048);
-    mainSpot.shadow.bias = -0.0020;
-    mainSpot.shadow.normalBias = 0.030;
-    mainSpot.shadow.camera.near = 0.5;
-    mainSpot.shadow.camera.far = 120;
-    mainSpot.shadow.blurSamples = 16;
-    scene.add(mainSpot);
-    fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
-    fillLight.position.set(-9, 6, 9);
-    fillLight.castShadow = true;
-    scene.add(fillLight);
-    const accentLight = new THREE.PointLight(0xccddff, 0.8, 25);
-    accentLight.position.set(9, 4, 5);
-    scene.add(accentLight);
-    rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
-    rimLight.position.set(0, 22, -12);
-    rimLight.castShadow = true;
-    scene.add(rimLight);
-  } else {
-    ambLight = new THREE.AmbientLight(0xffffff, 0.55);
-    scene.add(ambLight);
-    mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI / 3.0, 0.20);
-    mainSpot.position.set(0, 14, 16);
-    mainSpot.castShadow = true;
-    mainSpot.shadow.mapSize.set(2048, 2048);
-    mainSpot.shadow.bias = -0.0020;
-    mainSpot.shadow.normalBias = 0.030;
-    scene.add(mainSpot);
-    fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
-    fillLight.position.set(-9, 6, 9);
-    fillLight.castShadow = true;
-    scene.add(fillLight);
-    const accentLight = new THREE.PointLight(0xccddff, 0.8, 25);
-    accentLight.position.set(9, 4, 5);
-    scene.add(accentLight);
-    rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
-    rimLight.position.set(0, 22, -12);
-    rimLight.castShadow = true;
-    scene.add(rimLight);
-  }
+  // Light rig is identical whether or not the LightManager is present; only the
+  // optional initialize() call differs. The full shadow-camera config is applied
+  // in both cases so the fallback path stays consistent with the primary one.
+  getGraphicsPipeline()?.getLightManager()?.initialize();
+
+  ambLight = new THREE.AmbientLight(0xffffff, 0.55);
+  scene.add(ambLight);
+  mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI / 3.0, 0.20);
+  mainSpot.position.set(0, 14, 16);
+  mainSpot.castShadow = true;
+  mainSpot.shadow.mapSize.set(2048, 2048);
+  mainSpot.shadow.bias = -0.0020;
+  mainSpot.shadow.normalBias = 0.030;
+  mainSpot.shadow.camera.near = 0.5;
+  mainSpot.shadow.camera.far = 120;
+  mainSpot.shadow.blurSamples = 16;
+  scene.add(mainSpot);
+  fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
+  fillLight.position.set(-9, 6, 9);
+  fillLight.castShadow = true;
+  scene.add(fillLight);
+  const accentLight = new THREE.PointLight(0xccddff, 0.8, 25);
+  accentLight.position.set(9, 4, 5);
+  scene.add(accentLight);
+  rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
+  rimLight.position.set(0, 22, -12);
+  rimLight.castShadow = true;
+  scene.add(rimLight);
 
   return {
     composer, bloomPass, ssrPass, motionBlurPass,
     cascadedShadowMapper, cascadedShadowCompositePass, perLightBloomPass,
-    particleSystem, volumetricPass, filmEffectsPass, dofPass, fxaaPass,
+    particleSystem, volumetricPass, filmEffectsPass, dofPass, smaaPass,
     mainSpot, ambLight, fillLight, rimLight,
   };
 }
