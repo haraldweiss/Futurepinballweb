@@ -53,12 +53,6 @@ export function setupPostProcessing(
   const renderPass = new RenderPass(scene, camera);
   composer.addPass(renderPass);
 
-  const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.8, 0.8, 0.20);
-  bloomPass.threshold = 0.25;
-  bloomPass.strength = 0.9;
-  bloomPass.radius = 0.6;
-  composer.addPass(bloomPass);
-
   const initPreset = profiler.getQualityPreset();
 
   const ssrPass: SSRPass | null = initializeGraphicsPass(
@@ -139,6 +133,18 @@ export function setupPostProcessing(
       composer.addPass(perLightBloomShaderPass);
     }
   );
+
+  // Global bloom runs after the reflection (SSR) and per-light bloom passes so
+  // their contributions glow, and before final color management. Seeded from
+  // the active quality preset; applyQualityPreset() keeps it in sync at runtime.
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(innerWidth, innerHeight),
+    initPreset.bloomStrength,
+    initPreset.bloomRadius,
+    0.25,
+  );
+  bloomPass.enabled = initPreset.bloomEnabled;
+  composer.addPass(bloomPass);
 
   const particleSystem: AdvancedParticleSystem | null = initializeGraphicsPass(
     'ParticleSystem',
