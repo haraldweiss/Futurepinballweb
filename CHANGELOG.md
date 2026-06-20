@@ -25,6 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Profiler optimization**: getCurrentPresetName() avoids unnecessary object copy per frame.
 - **Shadow blur**: blurSamples now scales per preset (low=4, medium=8, high/ultra=16).
 
+### Physics Fixes
+- **Ball too heavy / Flipper too light**: Fixed critical physics material mismatch in
+  `src/physics-worker/physics-init.ts`. Ball density reduced from 1.0 to 0.15, flipper
+  density increased from 0.5 to 2.0 (ratio 13:1 instead of 2:1).
+- **Restitution alignment**: Ball restitution default 0.5→0.85, flipper restitution
+  default 0.5→0.95. Ball friction default 0.3→0.25. Defaults now match
+  `getDefaultPhysicsConfig()` values.
+- **Impact**: Tables now playable. Ball no longer flies uncontrollably into drains.
+  Flippers can properly control and launch the ball.
+
 ### FPT/FPL Parser Improvements
 - **Table Elements classification**: 21-element type classification (bumper, target, ramp,
   wall, light, flipper, rail, gate, spinner, slingshot, etc.) via new
