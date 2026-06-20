@@ -17,7 +17,8 @@
 
 ### 🌐 Web Version (PWA) — No Installation Needed
 
-**→ [Play in Browser](https://your-domain.com)** (recommended for first-time users)
+**→ [Play in Browser](https://futurepinball.wolfinisoftware.de)** (recommended for first-time users)
+> 🚀 **Live on the web** — deployed at [futurepinball.wolfinisoftware.de](https://futurepinball.wolfinisoftware.de)
 
 Click "📥 Install App" to add to your home screen, then play offline!
 

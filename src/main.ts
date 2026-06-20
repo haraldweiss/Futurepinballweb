@@ -876,6 +876,19 @@ function handlePhysicsFrame(frame: PhysicsFrameData): void {
   state.ballVel.x = frame.ballVel.x;
   state.ballVel.y = frame.ballVel.y;
 
+  // ─── Sync main thread ball body ──────────────────────────────────────────
+  // The animate() loop reads ball position from physics.ballBody (main thread).
+  // But the physics worker runs its OWN ball body (stepped every frame).
+  // Without this sync, the main thread ball body stays frozen at its init
+  // position — the ball appears to never leave the plunger lane.
+  // See: main.ts ~line 1979 "const pos = physics.ballBody.translation()"
+  if (physics) {
+    try {
+      physics.ballBody.setTranslation({ x: frame.ballPos.x, y: frame.ballPos.y }, true);
+      physics.ballBody.setLinvel({ x: frame.ballVel.x, y: frame.ballVel.y }, true);
+    } catch { /* main thread ball body may not be ready */ }
+  }
+
   // Handle collisions
   for (const collision of frame.collisions) {
     switch (collision.type) {

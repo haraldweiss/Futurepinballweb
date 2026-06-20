@@ -463,3 +463,24 @@ Pass-Kette jetzt: `Render → SSR → MotionBlur → CascadedShadow → PerLight
 
 **Verified:** tsc clean, 762/762 tests, vite build ✓
 **Commits:** (noch nicht committed — siehe git status — 11 modified files)
+
+### 2026-06-20 — Live-Deployment auf futurepinball.wolfinisoftware.de
+- README "Play in Browser"-Link auf https://futurepinball.wolfinisoftware.de geändert
+- Oracle-VM (oracle-vm, 92.5.18.29): Apache 2.4.62 + Let's Encrypt
+- Deploy-Pfad: /var/www/futurepinball/dist/ (scp dist/* → sudo systemctl reload httpd)
+- Security-Header + 1y Asset-Caching + HTTP→HTTPS-Redirect
+- Deployed: 0.23.0 build, HTTPS cert bis 2026-09-18
+
+**Anmerkung:** Der lokale `npm run serve` (port 3000) braucht nur noch für lokale Tests. Der README-Link zeigt auf die Live-URL.
+
+### 2026-06-20 — Auto-Deploy-Regel
+
+**Ab jetzt gilt:** Nach jeder Session, in der funktionale Änderungen am Futurepinball Web vorgenommen wurden, wird automatisch auf `futurepinball.wolfinisoftware.de` deployed.
+
+**Deploy-Kürzel:**
+```bash
+npm run build && scp -r dist/* oracle-vm:/var/www/futurepinball/dist/ && ssh oracle-vm "sudo systemctl reload httpd"
+```
+
+**Voraussetzung:** Build muss grün sein, tsc clean, Tests bestanden.
+**Projekt-Skill:** `deploy-futurepinball` (Pi `skill_manage`) für detaillierte Steps/Pitfalls.
