@@ -464,6 +464,20 @@ Pass-Kette jetzt: `Render → SSR → MotionBlur → CascadedShadow → PerLight
 **Verified:** tsc clean, 762/762 tests, vite build ✓
 **Commits:** (noch nicht committed — siehe git status — 11 modified files)
 
+### 2026-06-20 — Physics-Fix: Ball zu schwer, Flipper powerless
+- **Kritisches Problem:** Tische oft unspielbar — Ball flog unkontrolliert und ging ins Aus
+- **Ursache:** Ball density 1.0, Flipper density 0.5 (Ratio 2:1 statt 13:1)
+- **Hardcoded Defaults stimmten nicht:** Ball restitution 0.5 (sollte 0.85), Flipper restitution 0.5 (sollte 0.95)
+- **Fix in `src/physics-worker/physics-init.ts`:**
+  - Ball density: 1.0 → 0.15 (leichterer Ball)
+  - Flipper density: 0.5 → 2.0 (schwerere Flipper)
+  - Ball restitution default: 0.5 → 0.85
+  - Ball friction default: 0.3 → 0.25
+  - Flipper restitution default: 0.5 → 0.95
+- **Dokumentation:** CHANGELOG.md + FAQ_TROUBLESHOOTING.md aktualisiert
+- **Commits:** `cd0e1d03` (Fix), `8fd2c54a` (Changelog), `3f89084d` (FAQ), `fe3f108d` (README version bump)
+- **Verified:** tsc clean, 762/762 tests, deployed auf futurepinball.wolfinisoftware.de
+
 ### 2026-06-20 — Live-Deployment auf futurepinball.wolfinisoftware.de
 - README "Play in Browser"-Link auf https://futurepinball.wolfinisoftware.de geändert
 - Oracle-VM (oracle-vm, 92.5.18.29): Apache 2.4.62 + Let's Encrypt
