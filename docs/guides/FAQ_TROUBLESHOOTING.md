@@ -414,6 +414,50 @@
 
 ---
 
+## Gameplay Issues
+
+### "Ball flies uncontrollably / always goes into drain"
+
+**What's happening:** Ball doesn't respond properly to flippers, flies around randomly
+
+**Why it happens (before 0.24.0):**
+- Physics materials misconfigured (ball too heavy, flippers too light)
+- Default restitution/friction values didn't match config
+- Flipper-to-ball mass ratio was only 2:1 instead of 13:1
+
+**Solutions:**
+1. **Update to version 0.24.0 or later:**
+   - This version includes physics fixes
+   - Ball density: 1.0 → 0.15 (lighter)
+   - Flipper density: 0.5 → 2.0 (heavier)
+   - Restitution defaults aligned
+
+2. **If still having issues after update:**
+   - Check browser console for errors (F12)
+   - Try a different table
+   - Lower quality preset (reduces physics load)
+   - Restart browser
+
+3. **Report if persistent:**
+   - Include version number
+   - Describe table behavior
+   - Note if affects all tables or specific ones
+
+### "Flippers feel weak / can't launch ball"
+
+**What's happening:** Flippers don't have enough power to control ball
+
+**Why it happens:**
+- Same physics issue as above (fixed in 0.24.0)
+- Ball too heavy for flippers
+
+**Solutions:**
+1. Update to version 0.24.0 (see above)
+2. If still weak: try different table (some have heavy balls)
+3. Check quality preset is not on "low"
+
+---
+
 ## Still Having Problems?
 
 ### Getting Help
@@ -473,6 +517,10 @@ Steps to reproduce:
 ### "Uncaught TypeError"
 **Means:** JavaScript code error
 **Solution:** Refresh page, try different browser
+
+### "Ball physics feels wrong / uncontrollable"
+**Means:** Physics materials misconfigured (fixed in 0.24.0)
+**Solution:** Update to latest version - ball density corrected, flippers now have proper mass ratio
 
 ---
 
