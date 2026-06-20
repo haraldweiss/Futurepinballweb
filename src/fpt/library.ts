@@ -1,15 +1,34 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // © 2026 Harald Weiss
+import type * as THREE from 'three';
 import { logMsg } from './log';
 import { getLibraryCache } from '../library-cache';
 
 // ─── Library Dependency Detection ──────────────────────────────────────────
 export interface LibraryDependency {
   name: string;
-  type: 'graphics' | 'sound' | 'music' | 'script' | 'font' | 'model' | 'voice' | 'unknown';
+  type: 'graphics' | 'sound' | 'music' | 'script' | 'font' | 'model' | 'voice'
+       | 'bam_animation' | 'bam_lighting' | 'bam_physics' | 'unknown';
   required: boolean;
   loaded: boolean;
   suggestedPath?: string;
+}
+
+/** Extended library info with BAM support */
+export interface ParsedLibrary {
+  name: string;
+  textures: Record<string, THREE.Texture>;
+  sounds: Record<string, AudioBuffer>;
+  scripts: Record<string, string>;
+  models: Record<string, Uint8Array>;
+  fonts: Record<string, Uint8Array>;
+  physicsPresets: Record<string, any>;
+  /** BAM animation sequence definitions from FPL */
+  bamAnimations?: Record<string, Uint8Array>;
+  /** BAM lighting configuration */
+  bamLighting?: any[];
+  /** BAM physics/config overrides */
+  bamPhysics?: Record<string, any>;
 }
 
 // Get cached library by name (Phase 5: now uses TTL-enabled cache)
@@ -17,13 +36,35 @@ export function getLibraryByName(name: string): any | null {
   return getLibraryCache().get(name) || null;
 }
 
+/**
+ * Detect BAM-related library dependencies from a table script.
+ */
+function detectBAMDependencies(script: string): LibraryDependency[] {
+  const result: LibraryDependency[] = [];
+  const patterns = [
+    { regex: /bam\.(?:load|import|require)\s*\(\s*["']([^"']+)["']/gi, type: 'bam_animation' as const },
+    { regex: /bam\.(?:anim|animation|sequence)\s*\(\s*["']([^"']+)["']/gi, type: 'bam_animation' as const },
+    { regex: /bam\.(?:light|lighting|illum)\s*\(\s*["']([^"']+)["']/gi, type: 'bam_lighting' as const },
+    { regex: /bam\.(?:phys|config|preset)\s*\(\s*["']([^"']+)["']/gi, type: 'bam_physics' as const },
+  ];
+
+  for (const { regex, type } of patterns) {
+    let match;
+    while ((match = regex.exec(script)) !== null) {
+      const libName = match[1].trim();
+      if (libName && libName.length > 0) {
+        const loaded = getLibraryCache().has(libName) || getLibraryCache().has(libName.toLowerCase());
+        result.push({ name: libName, type, required: true, loaded });
+      }
+    }
+  }
+  return result;
+}
+
 export function detectLibraryDependencies(tableName: string, script: string | null, coordCount: number): LibraryDependency[] {
   const dependencies = new Map<string, LibraryDependency>();
 
-  if (!script) {
-    // Heuristic-based detection from table name
-    logMsg(`ℹ️ Keine Script-Analyse möglich, verwende Tabellen-Name Heuristik`, 'info');
-  } else {
+  if (script) {
     const scriptL = script.toLowerCase();
 
     // Pattern matching for library references in VBScript
@@ -44,18 +85,21 @@ export function detectLibraryDependencies(tableName: string, script: string | nu
         if (libName && libName.length > 0 && !libName.endsWith('.')) {
           const key = libName.toLowerCase();
           if (!dependencies.has(key)) {
-            // Phase 5: Check TTL-enabled cache
             const loaded = getLibraryCache().has(libName) || getLibraryCache().has(key);
-            dependencies.set(key, {
-              name: libName,
-              type,
-              required: true,
-              loaded,
-            });
+            dependencies.set(key, { name: libName, type, required: true, loaded });
           }
         }
       }
     }
+
+    // BAM-specific dependencies
+    const bamDeps = detectBAMDependencies(script);
+    for (const dep of bamDeps) {
+      const key = dep.name.toLowerCase();
+      if (!dependencies.has(key)) dependencies.set(key, dep);
+    }
+  } else {
+    logMsg(`ℹ️ Keine Script-Analyse möglich, verwende Tabellen-Name Heuristik`, 'info');
   }
 
   // Common libraries based on table name patterns
@@ -74,7 +118,7 @@ export function detectLibraryDependencies(tableName: string, script: string | nu
       for (const libName of libs) {
         const key = libName.toLowerCase();
         if (!dependencies.has(key)) {
-          const type = libName.includes('music') || libName.includes('mus') || libName.includes('msc')
+          const type: LibraryDependency['type'] = libName.includes('music') || libName.includes('mus') || libName.includes('msc')
             ? 'music'
             : libName.includes('sound') || libName.includes('snd') || libName.includes('sfx') || libName.includes('fx')
             ? 'sound'
@@ -83,15 +127,8 @@ export function detectLibraryDependencies(tableName: string, script: string | nu
             : libName.includes('font') || libName.includes('dmd') || libName.includes('char')
             ? 'font'
             : 'graphics';
-
-          // Phase 5: Check TTL-enabled cache
           const loaded = getLibraryCache().has(libName) || getLibraryCache().has(key);
-          dependencies.set(key, {
-            name: libName,
-            type,
-            required: false,
-            loaded,
-          });
+          dependencies.set(key, { name: libName, type, required: false, loaded });
         }
       }
     }

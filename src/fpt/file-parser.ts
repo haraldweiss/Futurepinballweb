@@ -4,7 +4,8 @@ import type { CFB$Container } from 'cfb';
 import { fptResources } from '../game';
 import { runFPScript } from '../script-engine';
 import { extractImageFromBytes, extractSoundFromBytes } from './media';
-import { extractTableCoordsFromCFB } from './table-elements';
+import { extractTableCoordsFromCFB, extractTableElementsFromCFB, ELEM_TYPE } from './table-elements';
+import type { ParsedTableElement } from './table-elements';
 import { logMsg } from './log';
 import type { ResourceLoadingCallbacks } from './log';
 import { extractFPCoords, assignBumperSizes, extractRampCoords, extractFPTPhysics } from './coords';
@@ -89,11 +90,70 @@ export async function parseFPTFile(
 
       const tableName = file.name.replace(/\.(fpt|fp)$/i, '');
 
-      let coords: Array<{x:number;y:number}>;
+      // Phase 1+2+3: Enhanced Table Elements parsing with type classification
+      const elements = extractTableElementsFromCFB(buffer, { includeIncomplete: false });
       const tableCoords = extractTableCoordsFromCFB(buffer);
+
+      if (elements.length > 0) {
+        // Count by type for the log
+        const kindCounts = new Map<string, number>();
+        for (const el of elements) {
+          kindCounts.set(el.kind, (kindCounts.get(el.kind) ?? 0) + 1);
+        }
+        const summary = Array.from(kindCounts.entries())
+          .map(([k, c]) => `${c}×${k}`).join(', ');
+        logMsg(`📍 Table Elements: ${elements.length} Elemente (${summary})`, 'ok');
+
+        // Detect BAM animation config streams (stored as named streams)
+        tryParseBAMConfigFromCFB(buffer, tableName);
+
+        // Use elements for smarter bumper/target/ramp classification
+        {const kindMap = new Map<string, ParsedTableElement[]>();
+        for (const el of elements) {
+          const arr = kindMap.get(el.kind) ?? [];
+          arr.push(el);
+          kindMap.set(el.kind, arr);
+        }
+
+        // Build bumped config from classified bumper elements
+        const bumperElements = kindMap.get('bumper') ?? [];
+        if (bumperElements.length > 0) {
+          logMsg(`  🎯 ${bumperElements.length} Bumper erkannt`, 'ok');
+        }
+
+        // Target elements
+        const targetElements = kindMap.get('target') ?? [];
+        if (targetElements.length > 0) {
+          logMsg(`  🎯 ${targetElements.length} Targets erkannt`, 'ok');
+        }
+
+        // Ramps
+        const rampElements = kindMap.get('ramp') ?? [];
+        if (rampElements.length > 0) {
+          logMsg(`  🛤️ ${rampElements.length} Rampen erkannt`, 'ok');
+        }
+
+        // Flipper elements
+        const flipperElements = kindMap.get('flipper') ?? [];
+        if (flipperElements.length > 0) {
+          logMsg(`  🦾 ${flipperElements.length} Flipper erkannt`, 'ok');
+        }
+
+        // Lights
+        const lightElements = kindMap.get('light') ?? [];
+        if (lightElements.length > 0) {
+          logMsg(`  💡 ${lightElements.length} Lichter erkannt`, 'ok');
+        }
+
+        void (kindMap);} // silence unused
+      }
+
+      let coords: Array<{x:number;y:number}>;
       if (tableCoords.length > 0) {
         coords = tableCoords;
-        logMsg(`📍 Koordinaten aus Table Elements: ${coords.length} Punkte`, 'ok');
+        if (elements.length === 0) {
+          logMsg(`📍 Koordinaten aus Table Elements: ${coords.length} Punkte`, 'ok');
+        }
       } else {
         const bytes = new Uint8Array(buffer);
         coords = extractFPCoords(bytes);
@@ -327,6 +387,60 @@ export async function parseFPTFile(
   logMsg(`✓ "${tableName}" geladen!`, 'ok');
 }
 
+// ─── BAM Config Extractor ──────────────────────────────────────────────────
+/**
+ * Try to extract BAM (Better Arcade Mode) configuration data from a CFB container.
+ * BAM extensions add named streams to FPT files with animation definitions,
+ * advanced lighting configs, and physics overrides.
+ *
+ * This is best-effort — most tables don't carry BAM data, and those that do
+ * use an ad-hoc format. We parse what we can and log the results.
+ */
+function tryParseBAMConfigFromCFB(arrayBuffer: ArrayBuffer, tableName: string): void {
+  let cfb: CFB$Container;
+  try {
+    cfb = CFB.read(new Uint8Array(arrayBuffer), { type: 'array' });
+  } catch { return; }
+
+  const entries = (cfb.FileIndex || []).filter(e => e.size > 0 && e.name);
+  let bamCount = 0;
+
+  for (const entry of entries) {
+    const raw = entry.content;
+    const bytes = raw instanceof Uint8Array ? raw : new Uint8Array(raw as ArrayLike<number>);
+    const name: string = entry.name || '';
+    const nameL = name.toLowerCase();
+
+    // BAM animation data: "BAM_Anim", "BAM_Sequence", "AnimationData"
+    if (/bam.*(anim|seq|motion|pose|action)/i.test(nameL)) {
+      bamCount++;
+      if (import.meta.env.DEV) logMsg(`  🎬 BAM Animation: "${name}" (${bytes.length} bytes)`, 'info');
+    }
+
+    // BAM lighting: "BAM_Light", "BAM_Lighting"
+    if (/bam.*(light|illum|glow|color)/i.test(nameL)) {
+      bamCount++;
+      if (import.meta.env.DEV) logMsg(`  💡 BAM Lighting: "${name}" (${bytes.length} bytes)`, 'info');
+    }
+
+    // BAM physics: "BAM_Physics", "BAM_Config"  
+    if (/bam.*(phys|conf|config|preset)/i.test(nameL)) {
+      bamCount++;
+      if (import.meta.env.DEV) logMsg(`  ⚙️ BAM Physics: "${name}" (${bytes.length} bytes)`, 'info');
+    }
+
+    // BAM camera definition
+    if (/bam.*(camera|view|fov)/i.test(nameL)) {
+      bamCount++;
+      if (import.meta.env.DEV) logMsg(`  📷 BAM Camera: "${name}" (${bytes.length} bytes)`, 'info');
+    }
+  }
+
+  if (bamCount > 0) {
+    logMsg(`  📦 BAM-Erweiterungen: ${bamCount} Stream(s) in "${tableName}"`, 'ok');
+  }
+}
+
 export async function parseFPLFile(
   file: File,
   onLoaded: (lib: any) => void,
@@ -355,7 +469,8 @@ export async function parseFPLFile(
     logMsg(`📚 FPL Parser: Found ${entries.length} streams in "${libName}"`);
 
     const categories = {
-      textures: 0, sounds: 0, music: 0, models: 0, fonts: 0, scripts: 0, voices: 0, other: 0
+      textures: 0, sounds: 0, music: 0, models: 0, fonts: 0, scripts: 0,
+      voices: 0, bamAnim: 0, bamLight: 0, bamPhysics: 0, physics: 0, other: 0
     };
 
     for (const entry of entries) {
@@ -364,7 +479,44 @@ export async function parseFPLFile(
       const bytes: Uint8Array = rawContent instanceof Uint8Array ? rawContent : new Uint8Array(rawContent);
       const nameL = name.toLowerCase();
 
-      if (/image|texture|gfx|playfield|backdrop|translite|sprite/i.test(nameL)) {
+      // ─── BAM extension streams ───
+      if (/bam.*(anim|seq|motion|pose|action)/i.test(nameL)) {
+        library.bamAnimations = library.bamAnimations || {};
+        library.bamAnimations[name] = bytes;
+        categories.bamAnim++;
+        logMsg(`  🎬 BAM Animation: "${name}"`, 'ok');
+      }
+      else if (/bam.*(light|illum|glow|color|lighting)/i.test(nameL)) {
+        library.bamLighting = library.bamLighting || [];
+        try {
+          library.bamLighting.push(JSON.parse(new TextDecoder().decode(bytes)));
+        } catch {
+          library.bamLighting.push(bytes);
+        }
+        categories.bamLight++;
+        logMsg(`  💡 BAM Lighting: "${name}"`, 'ok');
+      }
+      else if (/bam.*(phys|config|conf|preset)/i.test(nameL)) {
+        library.bamPhysics = library.bamPhysics || {};
+        try {
+          library.bamPhysics[name] = JSON.parse(new TextDecoder().decode(bytes));
+        } catch {
+          library.bamPhysics[name] = bytes;
+        }
+        categories.bamPhysics++;
+        logMsg(`  ⚙️ BAM Config: "${name}"`, 'ok');
+      }
+      else if (/physics|preset|config/i.test(nameL) && nameL.endsWith('.json')) {
+        try {
+          const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+          const preset = JSON.parse(text);
+          const presetName = name.replace(/\.json$/i, '');
+          library.physicsPresets[presetName] = preset;
+          categories.physics++;
+          logMsg(`  ⚙️ Physics: "${presetName}"`, 'ok');
+        } catch { void 0; }
+      }
+      else if (/image|texture|gfx|playfield|backdrop|translite|sprite/i.test(nameL)) {
         const texture = await extractImageFromBytes(bytes);
         if (texture) {
           library.textureLibrary[name] = texture;
@@ -414,15 +566,6 @@ export async function parseFPLFile(
             categories.scripts++;
             logMsg(`  📝 Script: "${name}" (${text.split('\n').length} lines)`, 'ok');
           }
-        } catch { void 0; }
-      }
-      else if (/physics|preset|config/i.test(nameL) && nameL.endsWith('.json')) {
-        try {
-          const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-          const preset = JSON.parse(text);
-          const presetName = name.replace(/\.json$/i, '');
-          library.physicsPresets[presetName] = preset;
-          logMsg(`  ⚙️ Physics: "${presetName}"`, 'ok');
         } catch { void 0; }
       }
       else {

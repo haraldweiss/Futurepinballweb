@@ -17,3 +17,5 @@ export { mapFPTSounds, populateCatalogFromFPTResources } from './fpt/io';
 export { extractFPCoords, assignBumperSizes, extractFPTPhysics, extractRampCoords } from './fpt/coords';
 export { parseFPTFile, parseFPLFile } from './fpt/file-parser';
 export { extractMS3DModelsFromCFB, extractAnimationSequencesFromCFB } from './fpt/models';
+export { parseTableElement, extractTableElementsFromCFB, extractTableCoordsFromCFB, ELEM_TYPE } from './fpt/table-elements';
+export type { ParsedTableElement, BulkExtractOptions } from './fpt/table-elements';
