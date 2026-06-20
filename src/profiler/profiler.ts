@@ -96,6 +96,10 @@ export class PerformanceProfiler {
     return [...this.fpsHistory];
   }
 
+  public getCurrentPresetName(): string {
+    return this.qualityPreset.name;
+  }
+
   public getQualityPreset(): QualityPreset {
     return { ...this.qualityPreset };
   }

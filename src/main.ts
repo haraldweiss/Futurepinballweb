@@ -670,7 +670,9 @@ playgroundGroup.add(ballGroup);
 // ─── Phase 13+ Enhancement: Brighter ball light for visual impact ───
 const ballLight = new THREE.PointLight(0xbbddff, 3.0, 6.0);
 ballLight.position.set(0.05, 0.05, 0.15);  // Slight offset for realism
-ballLight.castShadow = true;
+// Ball light shadow casting disabled — the light follows the ball and covers
+// a tiny radius (6 units). Shadow-mapping a moving point light at 3.0 intensity
+// costs GPU time for negligible visual benefit on such a small, fast object.
 ballGroup.add(ballLight);
 
 // ─── Partikel-System (Adaptive: Desktop=300, Tablet=200, Mobile=100) ───────────
@@ -1809,13 +1811,13 @@ document.addEventListener('keyup', e => {
 // This function applies the profiler's quality preset to actual rendering systems
 function applyQualityPreset(): void {
   try {
-    const currentPreset = profiler.getQualityPreset();
-    const presetName = currentPreset.name;
-
-    // Skip if no change
+    // Check name first (string compare, no object copy). Only fetch the full
+    // preset object when a change is actually detected.
+    const presetName = profiler.getCurrentPresetName();
     if (lastAppliedQualityPreset === presetName) return;
     lastAppliedQualityPreset = presetName;
 
+    const currentPreset = profiler.getQualityPreset();
     appendLogEntry(`⚙️ Applying quality preset: ${currentPreset.label}`, 'ok');
 
     // ─── Bloom Pass ───
@@ -1832,8 +1834,15 @@ function applyQualityPreset(): void {
     // ─── Shadow Maps ───
     // THREE.SpotLight has no setProperty(); set castShadow directly.
     if (currentPreset.shadowsEnabled) {
-      if (mainSpot) mainSpot.castShadow = true;
-      mainSpot?.shadow?.mapSize.set(currentPreset.shadowMapSize, currentPreset.shadowMapSize);
+      if (mainSpot) {
+        mainSpot.castShadow = true;
+        mainSpot.shadow.mapSize.set(currentPreset.shadowMapSize, currentPreset.shadowMapSize);
+        // Scale shadow blur quality with preset: lower presets use fewer samples
+        const blurSamplesMap: Record<string, number> = {
+          low: 4, medium: 8, high: 16, ultra: 16
+        };
+        mainSpot.shadow.blurSamples = blurSamplesMap[currentPreset.name] ?? 16;
+      }
       renderer.shadowMap.enabled = true;
     } else {
       if (mainSpot) mainSpot.castShadow = false;

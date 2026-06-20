@@ -127,6 +127,17 @@ export class LightManager {
   }
 
   /**
+   * Get a managed light by ID.
+   * @returns The ManagedLight entry, or undefined if not found.
+   */
+  getLight(id: string): ManagedLight | undefined {
+    return this.lights.get(id);
+  }
+
+  /**
+   * Update light configuration.
+
+  /**
    * Update light configuration.
    */
   updateLight(id: string, config: Partial<LightConfig>): void {

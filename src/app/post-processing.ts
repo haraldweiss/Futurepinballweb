@@ -12,7 +12,7 @@ import { CascadedShadowMapper, initializeCascadedShadows } from '../graphics/cas
 import { CascadedShadowCompositePass, initializeCascadedShadowComposite } from '../graphics/cascaded-shadow-composite-pass';
 import { PerLightBloomPass, initializePerLightBloom } from '../graphics/per-light-bloom';
 import { AdvancedParticleSystem, initializeParticleSystem } from '../graphics/advanced-particle-system';
-import { createVolumetricLightingPass } from '../graphics/volumetric-lighting';
+import { VolumetricLightingPass, createVolumetricLightingPass } from '../graphics/volumetric-lighting';
 import { FilmEffectsPass, initializeFilmEffects } from '../graphics/film-effects-pass';
 import { DepthOfFieldPass, initializeDepthOfField } from '../graphics/dof-pass';
 import { initializeGraphicsPass } from '../graphics/pass-initializer';
@@ -33,7 +33,7 @@ export interface PostProcessingContext {
   cascadedShadowCompositePass: CascadedShadowCompositePass | null;
   perLightBloomPass: PerLightBloomPass | null;
   particleSystem: AdvancedParticleSystem | null;
-  volumetricPass: any;
+  volumetricPass: VolumetricLightingPass | null;
   filmEffectsPass: FilmEffectsPass | null;
   dofPass: DepthOfFieldPass | null;
   smaaPass: SMAAPass;
@@ -155,10 +155,19 @@ export function setupPostProcessing(
     }
   );
 
-  const volumetricPass = createVolumetricLightingPass(renderer);
-  volumetricPass.setExposure(1.2);
-  volumetricPass.setParameters(0.5, 0.4, 0.95, 32);
-  composer.addPass(volumetricPass);
+  const volumetricPass = initializeGraphicsPass(
+    'VolumetricLighting',
+    initPreset.volumetricEnabled,
+    () => {
+      const pass = createVolumetricLightingPass(renderer);
+      pass.setExposure(1.2);
+      pass.setParameters(0.5, 0.4, 0.95, 32);
+      return pass;
+    },
+    (pass) => {
+      composer.addPass(pass);
+    }
+  );
 
   const filmEffectsPass: FilmEffectsPass | null = initializeGraphicsPass(
     'FilmEffects',
@@ -195,11 +204,57 @@ export function setupPostProcessing(
   const outputPass = new OutputPass();
   composer.addPass(outputPass);
 
+  // Color grading on the tone-mapped sRGB output: slight warmth, saturation,
+  // and contrast boost for a more vibrant playfield appearance. This pass
+  // deliberately avoids tone mapping (OutputPass already handles it).
+  const colorGradingPass = new ShaderPass({
+    uniforms: {
+      tDiffuse: { value: null },
+      saturation: { value: 1.1 },
+      contrast: { value: 1.05 },
+      colorTemp: { value: 0.1 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+    `,
+    fragmentShader: `
+      uniform sampler2D tDiffuse;
+      uniform float saturation;
+      uniform float contrast;
+      uniform float colorTemp;
+      varying vec2 vUv;
+      void main() {
+        vec4 texColor = texture2D(tDiffuse, vUv);
+        vec3 col = texColor.rgb;
+        // Color temperature
+        if (colorTemp > 0.0) { col.rb *= mix(1.0, 0.8, colorTemp); col.g *= mix(1.0, 1.1, colorTemp); }
+        else { col.rb *= mix(1.0, 1.2, -colorTemp); col.g *= mix(1.0, 0.9, -colorTemp); }
+        // Saturation
+        float gray = dot(col, vec3(0.299, 0.587, 0.114));
+        col = mix(vec3(gray), col, saturation);
+        // Contrast
+        col = mix(vec3(0.5), col, contrast);
+        gl_FragColor = vec4(col, texColor.a);
+      }
+    `,
+  });
+  colorGradingPass.renderToScreen = false;
+  composer.addPass(colorGradingPass);
+
   // SMAA as the final antialiasing pass — sharper edges than FXAA at similar
   // cost, which suits the high-contrast, glossy playfield. Runs on the
   // tone-mapped sRGB output. EffectComposer's MSAA does not apply to the
   // composited result, so this post-AA pass is what actually antialiases.
-  const pixelRatio = renderer.getPixelRatio();
+  // Scale SMAA resolution by quality preset to save GPU on low-end devices.
+  const smaaQualityScale: Record<string, number> = {
+    low: 0.5,
+    medium: 1.0,
+    high: 1.0,
+    ultra: 1.0,
+  };
+  const smaaScale = smaaQualityScale[initPreset.name] ?? 1.0;
+  const pixelRatio = renderer.getPixelRatio() * smaaScale;
   const smaaPass = new SMAAPass(innerWidth * pixelRatio, innerHeight * pixelRatio);
   smaaPass.renderToScreen = true;
   composer.addPass(smaaPass);
@@ -215,34 +270,20 @@ export function setupPostProcessing(
   let fillLight: THREE.PointLight | null = null;
   let rimLight: THREE.DirectionalLight | null = null;
 
-  // Light rig is identical whether or not the LightManager is present; only the
-  // optional initialize() call differs. The full shadow-camera config is applied
-  // in both cases so the fallback path stays consistent with the primary one.
+  // Use the LightManager to create the scene lighting rig. This replaces the
+  // old approach of creating lights directly here AND calling LightManager.initialize()
+  // which resulted in 5 duplicate lights in the scene graph.
   getGraphicsPipeline()?.getLightManager()?.initialize();
 
-  ambLight = new THREE.AmbientLight(0xffffff, 0.55);
-  scene.add(ambLight);
-  mainSpot = new THREE.SpotLight(0xffffff, 2.5, 45, Math.PI / 3.0, 0.20);
-  mainSpot.position.set(0, 14, 16);
-  mainSpot.castShadow = true;
-  mainSpot.shadow.mapSize.set(2048, 2048);
-  mainSpot.shadow.bias = -0.0020;
-  mainSpot.shadow.normalBias = 0.030;
-  mainSpot.shadow.camera.near = 0.5;
-  mainSpot.shadow.camera.far = 120;
-  mainSpot.shadow.blurSamples = 16;
-  scene.add(mainSpot);
-  fillLight = new THREE.PointLight(0xffffdd, 1.5, 35);
-  fillLight.position.set(-9, 6, 9);
-  fillLight.castShadow = true;
-  scene.add(fillLight);
-  const accentLight = new THREE.PointLight(0xccddff, 0.8, 25);
-  accentLight.position.set(9, 4, 5);
-  scene.add(accentLight);
-  rimLight = new THREE.DirectionalLight(0x88ccff, 0.9);
-  rimLight.position.set(0, 22, -12);
-  rimLight.castShadow = true;
-  scene.add(rimLight);
+  // Retrieve lights from LightManager so downstream code (main.ts applyQualityPreset,
+  // BAMEngine) can still reference them via the PostProcessingContext interface.
+  // LightManager stores lights under string IDs: 'ambient', 'mainSpot', 'fill',
+  // 'accent', 'rim'.
+  const lm = getGraphicsPipeline()?.getLightManager();
+  ambLight = lm?.getLight('ambient')?.light as THREE.AmbientLight ?? null;
+  mainSpot = lm?.getLight('mainSpot')?.light as THREE.SpotLight ?? null;
+  fillLight = lm?.getLight('fill')?.light as THREE.PointLight ?? null;
+  rimLight = lm?.getLight('rim')?.light as THREE.DirectionalLight ?? null;
 
   return {
     composer, bloomPass, ssrPass, motionBlurPass,
