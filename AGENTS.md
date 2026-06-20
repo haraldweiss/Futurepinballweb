@@ -438,3 +438,28 @@ Pass-Kette jetzt: `Render → SSR → MotionBlur → CascadedShadow → PerLight
 
 - Verified: tsc clean, 762/762 tests, vite build ✓, Browser-Smoke ✓
 - Offen: keine — die Review-Liste (#1–#5) ist abgearbeitet.
+
+### 2026-06-20 — Graphics pipeline fixes + FPT/FPL parser improvements
+
+**Graphics (10 Dateien):**
+- **Duplicate lights**: LightManager.initialize() erstellte 5 Lichter + post-processing.ts erstellte 5 weitere → jetzt nur LightManager. `getLight(id)` zu LightManager hinzugefügt.
+- **VolumetricLighting gated**: War immer aktiv, jetzt hinter `initPreset.volumetricEnabled`.
+- **Anisotropic Filtering**: `THREE.Texture.DEFAULT_ANISOTROPY = max` für schärfere Texturen.
+- **SMAA quality-skalierbar**: low=0.5× Auflösung, medium/high/ultra=1.0×.
+- **ColorGrading inline**: Nach OutputPass (kein Double-Tonemap). Sättigung/Kontrast/Farbtemperatur.
+- **Env Map verbessert**: Procedural Equirectangular mit 3 Lichtquellen (warm overhead, cool fill, warm accent).
+- **Fog distance**: 20-50 → 30-80.
+- **Shadow blurSamples per Preset**: low=4, medium=8, high/ultra=16.
+- **Ball light no shadow**: `ballLight.castShadow = false` (kleiner bewegter Light-Schatten kostet GPU ohne visuellen Nutzen).
+- **Dead code entfernt**: `improveShallowAndReflections` (downgradete PCFSoftShadowMap→PCFShadowMap!), `initializeImprovedLighting` (überschrieb LightManager-Lights), SSAO (nie im Composer), ColorGradingShader (nie im Composer).
+- **Profiler**: `getCurrentPresetName()` für effizienten Preset-Check.
+- **`applyQualityPreset()`**: Nutzt `getCurrentPresetName()` vor Object-Copy.
+
+**FPT/FPL Parser (4 Bereiche):**
+- **Table Elements**: Element-Typ-Klassifikation (21 Typen: bumper→decorative). Neue `extractTableElementsFromCFB()` mit kindFilter. Backward-compatibel.
+- **BAM Streams in FPTs**: `tryParseBAMConfigFromCFB()` erkennt BAM-Animations/Lighting/Physics-Streams.
+- **FPL Libraries**: BAM-Stream-Kategorisierung in `bamAnimations`/`bamLighting`/`bamPhysics`. `detectLibraryDependencies()` mit BAM-Pattern-Matching. `ParsedLibrary` Interface.
+- **Error Handling**: Graceful degradation, try/catch in allen Parsing-Funktionen.
+
+**Verified:** tsc clean, 762/762 tests, vite build ✓
+**Commits:** (noch nicht committed — siehe git status — 11 modified files)

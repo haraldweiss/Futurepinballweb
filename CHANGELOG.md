@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.24.0] - 2026-06-20
+
+### Graphics Pipeline Fixes
+- **Duplicate lights**: Eliminated 5 duplicate scene lights caused by LightManager.initialize()
+  running in parallel with direct light creation in post-processing.ts. Fixed shadow quality
+  downgrade (PCFSoftShadowMap → PCFShadowMap) in improveShallowAndReflections(). Cleaned up
+  lighting override conflicts between LightManager and PlayfieldVisualEnhancement.
+- **Anisotropic filtering**: MAX_ANISOTROPY set via THREE.Texture.DEFAULT_ANISOTROPY for
+  sharper playfield textures at oblique viewing angles.
+- **Environment map**: Improved procedural equirectangular env map with 3 distinct light
+  sources (warm overhead, cool fill, warm accent) for richer PBR reflections.
+- **SMAA quality scaling**: Low preset now uses 0.5× resolution for GPU savings.
+- **Volumetric lighting**: Now gated behind quality preset (was always on).
+- **Dead code removal**: Removed SSAOPass (never wired to EffectComposer), custom ACES
+  tonemap in ColorGradingShader (double-tonemap risk), deprecated lighting conflict methods.
+- **Profiler optimization**: getCurrentPresetName() avoids unnecessary object copy per frame.
+- **Shadow blur**: blurSamples now scales per preset (low=4, medium=8, high/ultra=16).
+
+### FPT/FPL Parser Improvements
+- **Table Elements classification**: 21-element type classification (bumper, target, ramp,
+  wall, light, flipper, rail, gate, spinner, slingshot, etc.) via new
+  extractTableElementsFromCFB() with kindFilter option.
+- **BAM stream support**: tryParseBAMConfigFromCFB() detects BAM animation, lighting, and
+  physics configuration streams in FPT CFB containers.
+- **FPL library structure**: BAM streams now categorised into bamAnimations, bamLighting,
+  bamPhysics. Physics JSON presets detected with dedicated counter. New ParsedLibrary
+  interface.
+- **BAM dependency detection**: detectLibraryDependencies() extended with BAM-specific
+  VBScript pattern matching (bam.load/import/require, bam.anim, bam.lighting, bam.physics).
+
 ## [0.23.0] - 2026-06-11
 
 ### 🛠 Refactoring
