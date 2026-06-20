@@ -2,13 +2,13 @@
 
 **Modern cross-platform 3D pinball game in your browser — with VPX-competitive graphics, advanced physics, multi-screen arcade cabinet support, and comprehensive video editing**
 
-![Version](https://img.shields.io/badge/Version-0.20.21-blue)
+![Version](https://img.shields.io/badge/Version-0.23.0-blue)
 ![License](https://img.shields.io/badge/License-AGPLv3-green)
 ![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)
-![Modules](https://img.shields.io/badge/Modules-56-orange)
-![Code](https://img.shields.io/badge/Code-39K%20Lines-purple)
-![Tests](https://img.shields.io/badge/Tests-698%20passing-success)
+![Modules](https://img.shields.io/badge/Modules-248-orange)
+![Code](https://img.shields.io/badge/Code-53K%20Lines-purple)
+![Tests](https://img.shields.io/badge/Tests-762%20passing-success)
 ![TypeScript](https://img.shields.io/badge/TS_Errors-0-success)
 
 ---
@@ -68,8 +68,12 @@ Click "📥 Install App" to add to your home screen, then play offline!
 
 ### Graphics & Physics
 - **VPX-Competitive Visuals** 🎨
+  - 🆕 **Color Grading** — Saturation, contrast & color temperature control
+  - 🆕 **SMAA** — Subpixel Morphological Anti-Aliasing (quality-scalable)
+  - 🆕 **Procedural Environment Map** — 3-source dynamic reflections
+  - 🆕 **Anisotropic Filtering** — Max-quality texture sharpening
   - 🆕 **Volumetric lighting** with quality-based intensity scaling
-  - 🆕 **Cascaded shadow mapping** for detailed real-time shadows
+  - 🆕 **Cascaded shadow mapping** with per-quality blur samples
   - 🆕 **Depth of Field (DOF)** with dynamic focus
   - 🆕 **Film effects** — Chromatic aberration, vignette, grain
   - 🆕 **Advanced particle system** with custom emitters
@@ -77,7 +81,7 @@ Click "📥 Install App" to add to your home screen, then play offline!
   - 🆕 **Motion blur** for dynamic scenes
   - Screen-Space Ambient Occlusion (SSAO)
   - Physically-Based Rendering (PBR)
-  - Advanced lighting & shadows
+  - Advanced lighting & shadows (centralized LightManager)
   - ACES tone mapping
 
 - **Advanced Physics**
@@ -122,6 +126,16 @@ Click "📥 Install App" to add to your home screen, then play offline!
   - 🆕 **Auto-detection system** — Detects screen count and orientation on startup
   - 🆕 **Cross-window synchronization** — Real-time state sync via BroadcastChannel
   - 🆕 **Startup scripts** — Auto-launch on Windows (.bat), macOS (.sh), Linux (.sh)
+
+### FPT/FPL Parser & BAM Engine
+- **Comprehensive FPT/FPL Parsing**
+  - CFB/OLE2 container parsing with LZO1X decompression
+  - VBScript extraction with 3 fallback strategies (CFB, heuristic, bytecode)
+  - 🆕 **Table Elements** — 21 element types (bumper/target/ramp/…) with typed classification
+  - 🆕 **BAM Stream Detection** — Auto-detects BAM animation/lighting/physics configs in .fpt files
+  - 🆕 **FPL Library Support** — BAM stream categorization, dependency detection with pattern matching
+  - Texture & sound extraction from embedded resources
+  - Backward-compatible: all existing import paths preserved
 
 ### Audio & Video
 - **Advanced Audio System**
@@ -595,12 +609,16 @@ MIT License - See LICENSE file for details
 
 ### Graphics Enhancements 🎨
 - ✨ **Volumetric Lighting** — Dynamic light rays with quality scaling
-- 🌑 **Cascaded Shadow Mapping** — Detailed real-time shadows
+- 🌑 **Cascaded Shadow Mapping** — Detailed real-time shadows (per-quality blur)
 - 🔍 **Depth of Field** — Dynamic focus & blur
 - 🎬 **Film Effects** — Chromatic aberration, vignette, film grain
 - 🌟 **Per-Light Bloom** — Individual light bloom control
 - 💫 **Advanced Particles** — Emitter system with custom effects
 - ⚡ **Motion Blur** — Dynamic scene blur
+- 🎨 **Color Grading** — Saturation, contrast & color temperature
+- 🔲 **SMAA** — Subpixel Morphological Anti-Aliasing (quality-scalable)
+- 🌐 **Procedural Environment Map** — 3-source dynamic reflections
+- 🧵 **Anisotropic Filtering** — Max-quality texture sharpening
 
 ### Quality & Documentation 📚
 - ✅ **Comprehensive Documentation** — 30+ guides & technical references
@@ -639,7 +657,7 @@ MIT License - See LICENSE file for details
 
 **Made with ❤️ by Future Pinball Contributors**
 
-Last Updated: May 31, 2026 | Version 0.20.21 | 698 tests ✅ | 56 modules ✅
+Last Updated: June 20, 2026 | Version 0.23.0 | 762 tests ✅ | 248 modules ✅
 
 ---
 
