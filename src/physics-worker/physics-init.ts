@@ -25,9 +25,9 @@ export function initializePhysics(config: any): void {
 
   state.world.createCollider(
     RAPIER.ColliderDesc.ball(0.22)
-      .setRestitution(config.ballRestitution ?? 0.5)
-      .setFriction(config.ballFriction ?? 0.3)
-      .setDensity(1.0),
+      .setRestitution(config.ballRestitution ?? 0.85)
+      .setFriction(config.ballFriction ?? 0.25)
+      .setDensity(0.15),  // Lighter ball = better flipper control
     state.ballBody
   );
 
@@ -39,9 +39,9 @@ export function initializePhysics(config: any): void {
   state.world.createCollider(
     RAPIER.ColliderDesc.cuboid(flipperHalfLen, 0.13)
       .setTranslation(flipperHalfLen, 0.0)
-      .setRestitution(config.flipperRestitution ?? 0.5)
+      .setRestitution(config.flipperRestitution ?? 0.95)
       .setFriction(config.flipperFriction ?? 0.6)
-      .setDensity(0.5),
+      .setDensity(2.0),  // Heavier flippers = more power to ball
     state.lFlipperBody
   );
 
@@ -51,9 +51,9 @@ export function initializePhysics(config: any): void {
   state.world.createCollider(
     RAPIER.ColliderDesc.cuboid(flipperHalfLen, 0.13)
       .setTranslation(-flipperHalfLen, 0.0)
-      .setRestitution(config.flipperRestitution ?? 0.5)
+      .setRestitution(config.flipperRestitution ?? 0.95)
       .setFriction(config.flipperFriction ?? 0.6)
-      .setDensity(0.5),
+      .setDensity(2.0),  // Heavier flippers = more power to ball
     state.rFlipperBody
   );
 
