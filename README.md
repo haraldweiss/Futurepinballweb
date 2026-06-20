@@ -2,7 +2,7 @@
 
 **Modern cross-platform 3D pinball game in your browser — with VPX-competitive graphics, advanced physics, multi-screen arcade cabinet support, and comprehensive video editing**
 
-![Version](https://img.shields.io/badge/Version-0.23.0-blue)
+![Version](https://img.shields.io/badge/Version-0.24.0-blue)
 ![License](https://img.shields.io/badge/License-AGPLv3-green)
 ![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)
@@ -658,7 +658,7 @@ MIT License - See LICENSE file for details
 
 **Made with ❤️ by Future Pinball Contributors**
 
-Last Updated: June 20, 2026 | Version 0.23.0 | 762 tests ✅ | 248 modules ✅
+Last Updated: June 20, 2026 | Version 0.24.0 | 762 tests ✅ | 248 modules ✅
 
 ---
 
