@@ -2,6 +2,8 @@
 // © 2026 Harald Weiss
 import { defineConfig, type Plugin } from 'vite';
 import { resolve } from 'path';
+import wasm from 'vite-plugin-wasm';
+import topLevelAwait from 'vite-plugin-top-level-await';
 import { copyFileSync, existsSync } from 'fs';
 
 function fpwConfigAsset(): Plugin {
@@ -21,13 +23,16 @@ function fpwConfigAsset(): Plugin {
 
 export default defineConfig({
   root: 'src',
-  // Relative base paths in generated HTML/JS — required for the Electron
-  // production build, which loads `dist/index.html` via a `file://` URL.
-  // With Vite's default `'/'` base, asset hrefs like `/assets/main-X.js`
-  // get resolved to the filesystem root and 404 inside the .app bundle.
-  // `'./'` makes them resolve relative to the loading document.
   base: './',
-  plugins: [fpwConfigAsset()],
+  plugins: [
+    wasm(),
+    topLevelAwait(),
+    fpwConfigAsset(),
+  ],
+  worker: {
+    format: 'es',
+    plugins: () => [wasm(), topLevelAwait()],
+  },
   build: {
     outDir: '../dist',
     emptyOutDir: true,
@@ -41,7 +46,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vendor-three':       ['three'],
-          'vendor-rapier':      ['@dimforge/rapier2d-compat'],
+          'vendor-rapier':      ['@dimforge/rapier3d'],
           'vendor-cfb':         ['cfb'],
           'module-script':      ['./src/script-engine.ts'],
           'module-fpt':         ['./src/fpt-parser.ts'],
@@ -56,7 +61,7 @@ export default defineConfig({
   },
   server: { port: 5173, host: 'localhost' },
   optimizeDeps: {
-    include: ['three', '@dimforge/rapier2d-compat', 'cfb'],
-    exclude: ['@dimforge/rapier2d-compat/rapier2d_wasm_bg.wasm']
+    include: ['three', '@dimforge/rapier3d/rapier.js', 'cfb'],
+    exclude: ['@dimforge/rapier3d/rapier_wasm3d_bg.wasm']
   }
 });

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // © 2026 Harald Weiss
 
-import RAPIER from '@dimforge/rapier2d-compat';
+import RAPIER from '@dimforge/rapier3d';
 import { state } from './worker-state';
 import type { WorkerMessage } from './worker-types';
 import { initializePhysics } from './physics-init';
@@ -28,8 +28,7 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
       case 'init': {
         if (!state.rapierInitialized) {
           if (import.meta.env.DEV) { console.log('[Physics Worker] Initializing RAPIER...'); }
-          await RAPIER.init();
-          state.rapierInitialized = true;
+          state.rapierInitialized = true; // RAPIER3D auto-inits
           if (import.meta.env.DEV) { console.log('[Physics Worker] RAPIER initialized'); }
         }
         initializePhysics((params as InitParams).config);

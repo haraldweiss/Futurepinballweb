@@ -21,7 +21,7 @@ export function stepPhysics(dt: number, substeps: number): PhysicsFrame {
 
   const ballPos = state.ballBody.translation();
   const ballVel = state.ballBody.linvel();
-  const ballAng = state.ballBody.angvel();
+  const ballAng = state.ballBody.angvel().z;
 
   const collisions: CollisionEvent[] = [];
 

@@ -13,7 +13,7 @@ export function updateFlipperRotation(side: 'left' | 'right', angle: number): vo
   if (!flipper) return;
 
   const currentPos = flipper.translation();
-  flipper.setNextKinematicRotation(angle);
+  flipper.setNextKinematicRotation({ x: 0, y: 0, z: Math.sin(angle/2), w: Math.cos(angle/2) });
   flipper.setNextKinematicTranslation(currentPos);
 }
 
@@ -23,9 +23,9 @@ export function updateFlipperRotation(side: 'left' | 'right', angle: number): vo
 export function updateBallPosition(x: number, y: number, vx: number = 0, vy: number = 0): void {
   if (!state.ballBody) return;
 
-  state.ballBody.setTranslation({ x, y }, true);
-  state.ballBody.setLinvel({ x: vx, y: vy }, true);
-  state.ballBody.setAngvel(0, true);
+  state.ballBody.setTranslation({ x: x, y: y, z: 0 }, true);
+  state.ballBody.setLinvel({ x: vx, y: vy, z: 0 }, true);
+  state.ballBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
 }
 
 /**

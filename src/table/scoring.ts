@@ -79,7 +79,7 @@ export function updateSpinnerPhysics(): void {
     const dir = dx > 0 ? 1 : -1;
     state.ballVel.x += dir * hitForce * 0.5;
     if (physics) {
-      physics.ballBody.applyImpulse({ x: dir * hitForce, y: 0.5 }, true);
+      physics.ballBody.applyImpulse({ x: dir * hitForce, y: 0.5, z: 0 }, true);
     }
     const spinAngle = (performance.now() * 0.01) % (Math.PI * 2);
     (state as unknown as Record<string, number>).spinnerAngle = spinAngle;
@@ -174,7 +174,7 @@ export function scoreTargetHit(targetData: { x: number; y: number; mesh: any; in
 
 export function scoreSlingshotHit(side: string): void {
   const dir = side === 'left' ? 1 : -1;
-  physics!.ballBody.applyImpulse({ x: dir * 3.0, y: 2.5 }, true);
+  physics!.ballBody.applyImpulse({ x: dir * 3.0, y: 2.5, z: 0 }, true);
   const slingshotScore = 50 * state.multiplier;
   state.score += slingshotScore;
 

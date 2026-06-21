@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import * as CFB from 'cfb';
 import type { CFB$Container } from 'cfb';
-import { fptResources } from '../game';
+import { fptResources, globalAssetCatalog } from '../game';
 import { runFPScript } from '../script-engine';
 import { extractImageFromBytes, extractSoundFromBytes } from './media';
 import { extractTableCoordsFromCFB, extractTableElementsFromCFB, ELEM_TYPE } from './table-elements';
@@ -14,6 +14,7 @@ import { extractNullStrings, extractPascalStrings } from './strings';
 import { parseCFBResources } from './cfb-parser';
 import { mapFPTSounds, populateCatalogFromFPTResources } from './io';
 import { extractMS3DModelsFromCFB, extractAnimationSequencesFromCFB } from './models';
+import { parseFPM, fpmToTHREE } from './fpm-parser';
 import {
   suggestTableLights, extractDominantColors, extractElementColors, getLightConfigFromColor
 } from './lighting';
@@ -77,6 +78,21 @@ export async function parseFPTFile(
           const modelMap = parseAndCacheModels(extractedModels);
           logMsg(`📦 Modelle gecacht: ${modelMap.size} / ${ms3dModels.size}`, modelMap.size > 0 ? 'ok' : 'warn');
           fptResources.models = modelMap;
+
+          // Also register in AssetCatalog so resolveModel() and ModelViewer can find them
+          const cat = globalAssetCatalog();
+          if (cat) {
+            let registered = 0;
+            modelMap.forEach((mesh, name) => {
+              if (mesh) {
+                cat.registerModel(name, mesh);
+                registered++;
+              }
+            });
+            if (registered > 0) {
+              logMsg(`    → ${registered} MS3D-Modelle in AssetCatalog registriert`, 'ok');
+            }
+          }
         } catch (e: any) {
           logMsg(`⚠ Fehler beim Model-Caching: ${e.message}`, 'warn');
         }
@@ -552,6 +568,23 @@ export async function parseFPLFile(
         library.modelLibrary[name] = bytes;
         categories.models++;
         logMsg(`  🎲 Model: "${name}" (${(bytes.length/1024).toFixed(0)} KB)`, 'ok');
+        // Try to parse as FPM format and register in AssetCatalog
+        try {
+          const fpmModel = parseFPM(bytes);
+          if (fpmModel && fpmModel.vertices.length > 0) {
+            const vertCount = fpmModel.vertices.length / 3;
+            const triCount = fpmModel.indices.length / 3;
+            const mesh = fpmToTHREE(fpmModel);
+            const cat = globalAssetCatalog();
+            if (cat && mesh) {
+              const modelName = fpmModel.name;
+              cat.registerModel(modelName, mesh);
+              logMsg(`    → Registered "${modelName}" ${vertCount}v / ${triCount}tri`, 'ok');
+            }
+          }
+        } catch (_e) {
+          // FPM parse failed, data may be MS3D or another format
+        }
       }
       else if (/font|dmd|ttf|char|character/i.test(nameL)) {
         library.fontLibrary[name] = bytes;

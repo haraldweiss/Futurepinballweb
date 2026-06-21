@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // © 2026 Harald Weiss
 
-import RAPIER from '@dimforge/rapier2d-compat';
+import RAPIER from '@dimforge/rapier3d';
 
 export const state = {
   rapierInitialized: false,
@@ -14,7 +14,7 @@ export const state = {
   targetMap: new Map<number, { x: number; y: number; index: number }>(),
   slingshotMap: new Map<number, string>(),
   tableBodies: [] as RAPIER.RigidBody[],
-  gravity: { x: 0, y: -9.8 },
+  gravity: { x: 0, y: -9.8, z: 0.0 },
   frameCount: 0,
   lastPhysicsUpdate: 0,
 };

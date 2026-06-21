@@ -37,6 +37,56 @@ export function extractMS3DModelsFromCFB(arrayBuffer: ArrayBuffer): Map<string, 
   return models;
 }
 
+
+/**
+ * Extract FPM (Future Pinball Model) models from a CFB container.
+ * Detects zLZO markers in model-like streams.
+ */
+export function extractFPMModelsFromCFB(arrayBuffer: ArrayBuffer): Map<string, Uint8Array> {
+  const models = new Map<string, Uint8Array>();
+
+  let cfb: CFB$Container;
+  try { cfb = CFB.read(new Uint8Array(arrayBuffer), { type: 'array' }); }
+  catch(e: any) { logMsg(`CFB Parse-Fehler beim FPM-Extract: ${e.message}`, 'warn'); return models; }
+
+  const entries = (cfb.FileIndex || []).filter((e) => e.size > 0 && e.name && e.name !== 'Root Entry');
+
+  for (const entry of entries) {
+    const name: string = entry.name || '';
+    const raw = entry.content;
+    const bytes: Uint8Array = raw instanceof Uint8Array ? raw : new Uint8Array(raw as ArrayLike<number>);
+    const nameL = name.toLowerCase();
+
+    const isModelStream = nameL.includes('fdat') ||
+                         nameL.includes('mesh') ||
+                         nameL.includes('model') ||
+                         nameL.includes('_3d') ||
+                         nameL.endsWith('.fpm');
+
+    if (!isModelStream || bytes.length < 64) continue;
+
+    // Check for zLZO marker (0x7a 0x4c 0x5a 0x4f) in first 1024 bytes
+    let hasFPM = false;
+    const scanLen = Math.min(bytes.length, 1024);
+    for (let i = 0; i < scanLen - 4; i++) {
+      if (bytes[i] === 0x7a && bytes[i+1] === 0x4c && bytes[i+2] === 0x5a && bytes[i+3] === 0x4f) {
+        hasFPM = true; break;
+      }
+      // Check for LZO6l wrapper
+      if (i + 5 < scanLen &&
+          bytes[i] === 0x5a && bytes[i+1] === 0x4f && bytes[i+2] === 0x36 && bytes[i+3] === 0x6c) {
+        hasFPM = true; break;
+      }
+    }
+
+    if (hasFPM) {
+      models.set(name, bytes);
+      logMsg(`  FPM Model: "${name}" (${(bytes.length/1024).toFixed(0)} KB)`, 'ok');
+    }
+  }
+
+  return models;
+}
 export function extractAnimationSequencesFromCFB(arrayBuffer: ArrayBuffer): Map<string, any> {
   const animations = new Map<string, any>();
 

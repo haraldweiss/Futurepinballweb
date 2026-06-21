@@ -116,6 +116,25 @@ declare module 'three/addons/postprocessing/ShaderPass' {
   const ShaderPass: new (...args: any[]) => ShaderPass;
   export { ShaderPass };
 }
+declare module 'three/examples/jsm/controls/OrbitControls.js' {
+  class OrbitControls {
+    constructor(camera: any, domElement: HTMLElement);
+    enableDamping: boolean;
+    dampingFactor: number;
+    autoRotate: boolean;
+    autoRotateSpeed: number;
+    minDistance: number;
+    maxDistance: number;
+    target: { set(x: number, y: number, z: number): void };
+    update(): void;
+    dispose(): void;
+  }
+  export { OrbitControls };
+}
+declare module 'three/addons/controls/OrbitControls' {
+  export { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+}
+
 declare module 'three/addons/shaders/FXAAShader' {
   const FXAAShader: any;
   export { FXAAShader };
@@ -140,6 +159,25 @@ declare module 'three/addons/postprocessing/ShaderPass.js' {
   const ShaderPass: new (...args: any[]) => ShaderPass;
   export { ShaderPass };
 }
+declare module 'three/examples/jsm/controls/OrbitControls.js' {
+  class OrbitControls {
+    constructor(camera: any, domElement: HTMLElement);
+    enableDamping: boolean;
+    dampingFactor: number;
+    autoRotate: boolean;
+    autoRotateSpeed: number;
+    minDistance: number;
+    maxDistance: number;
+    target: { set(x: number, y: number, z: number): void };
+    update(): void;
+    dispose(): void;
+  }
+  export { OrbitControls };
+}
+declare module 'three/addons/controls/OrbitControls' {
+  export { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+}
+
 declare module 'three/addons/shaders/FXAAShader.js' {
   const FXAAShader: any;
   export { FXAAShader };
@@ -194,6 +232,25 @@ declare module 'three/examples/jsm/postprocessing/ShaderPass.js' {
   const ShaderPass: new (...args: any[]) => ShaderPass;
   export { ShaderPass };
 }
+declare module 'three/examples/jsm/controls/OrbitControls.js' {
+  class OrbitControls {
+    constructor(camera: any, domElement: HTMLElement);
+    enableDamping: boolean;
+    dampingFactor: number;
+    autoRotate: boolean;
+    autoRotateSpeed: number;
+    minDistance: number;
+    maxDistance: number;
+    target: { set(x: number, y: number, z: number): void };
+    update(): void;
+    dispose(): void;
+  }
+  export { OrbitControls };
+}
+declare module 'three/addons/controls/OrbitControls' {
+  export { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+}
+
 declare module 'three/examples/jsm/shaders/FXAAShader.js' {
   const FXAAShader: any;
   export { FXAAShader };

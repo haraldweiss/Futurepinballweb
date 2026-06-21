@@ -100,11 +100,11 @@ export class PhysicsWorkerBridge {
    * Setup physics world with initial configuration.
    */
   initializePhysicsWorld(config: {
-    ballInitialPos: { x: number; y: number };
+    ballInitialPos: { x: number; y: number; z?: number };
     ballRestitution: number;
     ballFriction: number;
-    leftFlipperPos: { x: number; y: number };
-    rightFlipperPos: { x: number; y: number };
+    leftFlipperPos: { x: number; y: number; z?: number };
+    rightFlipperPos: { x: number; y: number; z?: number };
     flipperLength: number;
     flipperRestitution: number;
     flipperFriction: number;

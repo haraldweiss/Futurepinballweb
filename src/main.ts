@@ -20,6 +20,8 @@ import { getOptimizedTableView } from './app/view-utils';
 import { ParticleField } from './app/particle-field';
 import { createViewSettings } from './app/view-settings';
 import { initMultiscreen } from './app/multiscreen';
+import { AssetCatalog } from './assets/asset-catalog';
+import { globalAssetCatalog, setGlobalAssetCatalog } from './game';
 import { initFileBrowser } from './app/file-browser-controller';
 import { createDmdVisibility } from './app/dmd-visibility';
 import { createInlineBackglass } from './app/inline-backglass';
@@ -127,7 +129,7 @@ import { DirectoryPathManager } from './directory-path-manager';
 import { escapeHtml } from './utils/html-escape';
 import { loadFpwConfig } from './utils/fpw-config';
 import { initializeEventHandlers } from './event-handlers-init';
-import { setupWindowAPI, setDevFlag } from './window-api';
+import { setupWindowAPI, setDevFlag, toggleModelViewer } from './window-api';
 import { getDefaultPhysicsConfig, logPhysicsConfig, validatePhysicsConfig } from './physics-config-enhancer';
 import { getInputOptimizer } from './input-optimizer';
 import { getPerformanceDashboard } from './performance-dashboard';
@@ -682,29 +684,29 @@ const particleField = new ParticleField(scene, profiler, particleSystem);
 let RAPIER: any = null;  // Global reference, loaded on demand
 
 async function initPhysics(): Promise<void> {
-  if (!RAPIER) RAPIER = await import('@dimforge/rapier2d-compat').then(m => m.default);
-  await RAPIER.init();
-  const world      = new RAPIER.World({ x: 0.0, y: -9.8 });
+  if (!RAPIER) RAPIER = await import('@dimforge/rapier3d').then(m => m.default);
+  /*RAPIER3D auto-inits*/;
+  const world      = new RAPIER.World({ x: 0.0, y: -9.8, z: 0.0 });
   const eventQueue = new RAPIER.EventQueue(true);
 
   const ballBody = world.createRigidBody(
-    RAPIER.RigidBodyDesc.dynamic().setTranslation(2.55, -5.0).setGravityScale(0.0).setLinearDamping(0.0).setAngularDamping(0.9).setCcdEnabled(true)
+    RAPIER.RigidBodyDesc.dynamic().setTranslation(2.55, -5.0, 0.0).setGravityScale(0.0).setLinearDamping(0.0).setAngularDamping(0.9).setCcdEnabled(true)
   );
   const ballCollider = world.createCollider(
     RAPIER.ColliderDesc.ball(0.22).setRestitution(0.5).setFriction(0.3), ballBody
   );
 
-  const lFlipperBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(-1.15, -4.6).setCcdEnabled(true));
-  const lFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13).setTranslation(1.05, 0.0).setRestitution(0.5).setFriction(0.6), lFlipperBody);
+  const lFlipperBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(-1.15, -4.6, 0.0).setCcdEnabled(true));
+  const lFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13, 0.15).setTranslation(1.05, 0.0, 0.0).setRestitution(0.5).setFriction(0.6), lFlipperBody);
   leftFlipperColliderHandle = lFlipperCollider.handle;  // Phase 5: Save handle
 
-  const rFlipperBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(1.15, -4.6).setCcdEnabled(true));
-  const rFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13).setTranslation(-1.05, 0.0).setRestitution(0.5).setFriction(0.6), rFlipperBody);
+  const rFlipperBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(1.15, -4.6, 0.0).setCcdEnabled(true));
+  const rFlipperCollider = world.createCollider(RAPIER.ColliderDesc.cuboid(1.05, 0.13, 0.15).setTranslation(-1.05, 0.0, 0.0).setRestitution(0.5).setFriction(0.6), rFlipperBody);
   rightFlipperColliderHandle = rFlipperCollider.handle;  // Phase 5: Save handle
 
   const addFixedBox = (x:number,y:number,hw:number,hh:number,angle=0,restitution=0.75) => {
-    const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(x,y).setRotation(angle));
-    world.createCollider(RAPIER.ColliderDesc.cuboid(hw,hh).setRestitution(restitution).setFriction(0.2), body);
+    const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(x, y, 0.0).setRotation({ x: 0, y: 0, z: Math.sin(angle/2), w: Math.cos(angle/2) }));
+    world.createCollider(RAPIER.ColliderDesc.cuboid(hw, hh, 0.15).setRestitution(restitution).setFriction(0.2), body);
     return body;
   };
   addFixedBox(-3.15, 0.0,  0.11, 6.25);
@@ -714,9 +716,9 @@ async function initPhysics(): Promise<void> {
 
   const slingshotMap = new Map<number, string>();
   const addSlingshot = (x:number,y:number,angle:number,side:string) => {
-    const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(x,y).setRotation(angle));
+    const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(x, y, 0.0).setRotation({ x: 0, y: 0, z: Math.sin(angle/2), w: Math.cos(angle/2) }));
     const col  = world.createCollider(
-      RAPIER.ColliderDesc.cuboid(0.09, 0.65).setRestitution(0.85).setFriction(0.1)
+      RAPIER.ColliderDesc.cuboid(0.09, 0.65, 0.1).setRestitution(0.85).setFriction(0.1)
         .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
       body
     );
@@ -833,11 +835,11 @@ async function setupPhysicsWorker(): Promise<void> {
       ];
 
       bridge.initializePhysicsWorld({
-        ballInitialPos: { x: 2.65, y: -5.2 },
+        ballInitialPos: { x: 2.65, y: -5.2, z: 0 },
         ballRestitution: physicsConfig.ball.restitution,
         ballFriction: physicsConfig.ball.friction,
-        leftFlipperPos: { x: -getResponsiveFlipperX(innerWidth / innerHeight), y: -4.6 },
-        rightFlipperPos: { x: getResponsiveFlipperX(innerWidth / innerHeight), y: -4.6 },
+        leftFlipperPos: { x: -getResponsiveFlipperX(innerWidth / innerHeight), y: -4.6, z: 0 },
+        rightFlipperPos: { x: getResponsiveFlipperX(innerWidth / innerHeight), y: -4.6, z: 0 },
         flipperLength: physicsConfig.flipper.length,
         flipperRestitution: physicsConfig.flipper.restitution,
         flipperFriction: physicsConfig.flipper.friction,
@@ -884,8 +886,8 @@ function handlePhysicsFrame(frame: PhysicsFrameData): void {
   // See: main.ts ~line 1979 "const pos = physics.ballBody.translation()"
   if (physics) {
     try {
-      physics.ballBody.setTranslation({ x: frame.ballPos.x, y: frame.ballPos.y }, true);
-      physics.ballBody.setLinvel({ x: frame.ballVel.x, y: frame.ballVel.y }, true);
+      physics.ballBody.setTranslation({ x: frame.ballPos.x, y: frame.ballPos.y, z: 0 }, true);
+      physics.ballBody.setLinvel({ x: frame.ballVel.x, y: frame.ballVel.y, z: 0 }, true);
     } catch { /* main thread ball body may not be ready */ }
   }
 
@@ -1033,9 +1035,9 @@ function launchMultiBall(): void {
   const startX = (Math.random()-0.5)*1.2, startY = 2.5+Math.random();
   let rapierBody: any = null;
   if (physics && RAPIER) {
-    rapierBody = physics.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(startX,startY).setLinearDamping(0.0).setAngularDamping(0.9).setCcdEnabled(true));
+    rapierBody = physics.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(startX, startY, 0.0).setLinearDamping(0.0).setAngularDamping(0.9).setCcdEnabled(true));
     physics.world.createCollider(RAPIER.ColliderDesc.ball(0.22).setRestitution(0.5).setFriction(0.3), rapierBody);
-    rapierBody.setLinvel({ x:-3+Math.random()*6, y:5+Math.random()*5 }, true);
+    rapierBody.setLinvel({ x:-3+Math.random()*6, y:5+Math.random()*5, z: 0 }, true);
   }
   extraBalls.push({ pos:new THREE.Vector3(startX,startY,0.5), vel:{x:0,y:0}, mesh, rapierBody });
 
@@ -1078,7 +1080,7 @@ function updateExtraBalls(dt: number): void {
         const dx=b.pos.x-bu.x, dy=b.pos.y-bu.y, d=Math.sqrt(dx*dx+dy*dy);
         if (d<0.55&&d>0.001){
           const spd=Math.max(Math.hypot(vel.x,vel.y),5.5)*1.1;
-          b.rapierBody!.setLinvel({x:(dx/d)*spd,y:(dy/d)*spd},true);
+          b.rapierBody!.setLinvel({x:(dx/d)*spd,y:(dy/d)*spd,z:0},true);
           state.score+=150*state.multiplier; particleField.spawn(bu.x,bu.y,bu.mesh.userData.color,8,currentFps); updateHUD();
         }
       });
@@ -1136,10 +1138,10 @@ function updateFlippers(): void {
       // Sync both position and rotation for kinematic bodies to prevent sticking
       const lPos = leftFlipperGroup.position;
       const rPos = rightFlipperGroup.position;
-      physics.lFlipperBody.setNextKinematicTranslation({ x: lPos.x, y: lPos.y });
-      physics.rFlipperBody.setNextKinematicTranslation({ x: rPos.x, y: rPos.y });
-      physics.lFlipperBody.setNextKinematicRotation(leftFlipperGroup.rotation.z);
-      physics.rFlipperBody.setNextKinematicRotation(rightFlipperGroup.rotation.z);
+      physics.lFlipperBody.setNextKinematicTranslation({ x: lPos.x, y: lPos.y, z: 0 });
+      physics.rFlipperBody.setNextKinematicTranslation({ x: rPos.x, y: rPos.y, z: 0 });
+      physics.lFlipperBody.setNextKinematicRotation({ x: 0, y: 0, z: Math.sin(leftFlipperGroup.rotation.z/2), w: Math.cos(leftFlipperGroup.rotation.z/2) });
+      physics.rFlipperBody.setNextKinematicRotation({ x: 0, y: 0, z: Math.sin(rightFlipperGroup.rotation.z/2), w: Math.cos(rightFlipperGroup.rotation.z/2) });
     }
   }
 
@@ -1578,6 +1580,11 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === 'Enter' && state.inLane && !state.plungerCharging) state.plungerCharging = true;
   if (e.key === 'r' || e.key === 'R') resetBall();
+  if (e.key === 'F12') {
+    if (import.meta.env.DEV) {
+      import('./app/model-viewer').then(m => m.initModelViewer({ allowDrop: true })?.toggle());
+    }
+  }
   if (e.key === 'm' || e.key === 'M') {
     // ─── Phase 26: Toggle background music ───
     getMusicManager().then((musicMgr) => {
@@ -1806,8 +1813,8 @@ document.addEventListener('keyup', e => {
       console.warn('⚠️ Physics worker error, using fallback:', e);
       if (physics) {
         physics.ballBody.setGravityScale(1.0, true);
-        physics.ballBody.setTranslation({ x:2.65, y:-5.0 }, true);
-        physics.ballBody.setLinvel({ x:vx, y:vy }, true);
+        physics.ballBody.setTranslation({ x:2.65, y:-5.0, z: 0 }, true);
+        physics.ballBody.setLinvel({ x:vx, y:vy, z: 0 }, true);
         if (import.meta.env.DEV) { console.log('✅ Ball launched via fallback (main thread physics)'); }
       } else {
         console.error('❌ No physics system available!');
@@ -2006,6 +2013,7 @@ function animate(): void {
             physics!.ballBody.setLinvel({
               x: vel.x * powerMult,
               y: Math.max(vel.y * powerMult, 3.0),  // Ensure upward momentum
+              z: 0,
             }, true);
             return;
           }
@@ -2015,6 +2023,7 @@ function animate(): void {
             physics!.ballBody.setLinvel({
               x: vel.x * powerMult,
               y: Math.max(vel.y * powerMult, 3.0),  // Ensure upward momentum
+              z: 0,
             }, true);
             return;
           }
@@ -2040,10 +2049,11 @@ function animate(): void {
           physics.ballBody.setLinvel({
             x: ballVel.x * frictionFactor,
             y: ballVel.y * frictionFactor,
+            z: 0,
           }, true);
         } else if (speed > 0) {
           // Stop completely below threshold
-          physics.ballBody.setLinvel({ x: 0, y: 0 }, true);
+          physics.ballBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
         }
       }
 
@@ -2481,8 +2491,8 @@ window.addEventListener('resize', () => {
         state.inLane=false; state.plungerCharge=0; state.ballSaveTimer=3.5;
         if(physics){
           physics.ballBody.setGravityScale(1.0, true);
-          physics.ballBody.setTranslation({ x:2.65, y:-5.0 }, true);
-          physics.ballBody.setLinvel({ x:0, y:16.0+charge*14.0 }, true);
+          physics.ballBody.setTranslation({ x:2.65, y:-5.0, z: 0 }, true);
+          physics.ballBody.setLinvel({ x:0, y:16.0+charge*14.0, z: 0 }, true);
         }
         playSound('bumper'); startBGMusic();
       }
@@ -2986,6 +2996,19 @@ if (FPW_ROLE === 'dmd') {
     initializePhysicsWorker().catch(() => {});
     setDevFlag('INIT_PHYSICS_WORKER_OK', true);
 
+    // Pre-create AssetCatalog so dev models and 3D fixtures are available
+    if (!globalAssetCatalog()) {
+      setGlobalAssetCatalog(new AssetCatalog());
+    }
+
+    // Register dev-mode 3D model fixtures (before table loads)
+    if (import.meta.env.DEV) {
+      try {
+        const { registerDevModels } = await import('./app/dev-models');
+        registerDevModels();
+      } catch {}
+    }
+
     // Auto-load a demo table on startup (Pharaoh's Gold — medium difficulty)
     setDevFlag('INIT_TABLE_LOAD_START', true);
     await loadDemoTable('pharaoh');
@@ -3232,6 +3255,62 @@ const comparePerformanceReports = (report1: any, report2: any) => {
 };
 
 // ─── Register all public API on window ─────────────────────────────────────────
+// ─── NAS source ────────────────────────────────────────────────────────────
+// Enable loading FPL/FPT files from local NAS file server
+window.connectNAS = async () => {
+  try {
+    const { connectNAS, showNASBrowser } = await import('./app/nas-source');
+    const ok = await connectNAS();
+    if (ok) showNASBrowser();
+    return ok;
+  } catch { return false; }
+};
+try {
+  // Auto-detect NAS server (non-blocking)
+  import('./app/nas-source').then(m => {
+    m.checkNASConnection().then(connected => {
+      if (connected) {
+        console.log('[NAS] Ready — call connectNAS() to browse');
+      }
+    });
+  });
+} catch {}
+
+// Handle files loaded from NAS browser
+window.addEventListener('fpl-file-loaded', async (e: Event) => {
+  const detail = (e as CustomEvent).detail;
+  if (!detail?.file) return;
+  const file = detail.file as File;
+  try {
+    if (file.name.endsWith('.fpl')) {
+      const { parseFPLFile } = await import('./fpt-parser');
+      await parseFPLFile(
+        file,
+        (lib: any) => {
+          setLoadedLibrary(lib);
+          window.showLibrarySelector(lib);
+          appendLogEntry('[NAS] Library loaded: ' + lib.name);
+        },
+        (err: string) => appendLogEntry('[NAS] FPL Error: ' + err, 'error')
+      );
+    } else if (file.name.endsWith('.fpt')) {
+      resetGameState();
+      const { parseFPTFile } = await import('./fpt-parser');
+      await parseFPTFile(
+        file,
+        async (cfg: any) => {
+          await loadTableWithPhysicsWorker(cfg, scene);
+          setupBackglassForTable();
+        },
+        () => {},
+        (tab: string) => {}
+      );
+    }
+  } catch (err) {
+    appendLogEntry('[NAS] Error loading ' + file.name + ': ' + err, 'error');
+  }
+});
+
 setupWindowAPI(window, {
   showNotification,
   showLibrarySelector,
@@ -3300,6 +3379,7 @@ setupWindowAPI(window, {
   setupTableDragDrop,
   sortTableFiles,
   runFullTestSuite,
+  toggleModelViewer,
 });
 
 interface BeforeInstallPromptEvent extends Event {

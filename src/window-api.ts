@@ -76,6 +76,8 @@ export interface DebugWindow {
   PHYSICS_WORKER_TIME_MS?:     number;
   PHYSICS_WORKER_ERROR?:       string;
   LOAD_TABLE_COMPLETE?:        boolean;
+  /** Dev-mode 3D model inspector — call toggleModelViewer() */
+  modelViewer?:                { toggle(): void; refresh(): void; dispose(): void };
 }
 
 // ─── Electron preload API ──────────────────────────────────────────────────────
@@ -260,10 +262,17 @@ declare global {
     resizeTimer?:       ReturnType<typeof setTimeout>;
     dmdResizeTimer?:    ReturnType<typeof setTimeout>;
 
+    // ── NAS source — load files from local file server ───────────────
+    connectNAS?:        () => Promise<boolean>;
+    NAS_SOURCE?:        { check(): Promise<boolean>; list(dir: string): Promise<any>; status: string };
+
     // ── DEV-only debug helpers ────────────────────────────────────────
     testGravity?:       (x: number, y: number) => void;
     forceScore?:        (n: number) => void;
     dumpState?:         () => void;
+
+    // ── DEV-only: 3D model viewer ─────────────────────────────────────
+    toggleModelViewer?: () => void;
 
     // ── Diagnostics bags ──────────────────────────────────────────────
     _msDiag?:           Record<string, any>;
@@ -356,6 +365,33 @@ export interface WindowAPI {
   setupTableDragDrop:             Window['setupTableDragDrop'];
   sortTableFiles:                 Window['sortTableFiles'];
   runFullTestSuite:               Window['runFullTestSuite'];
+  toggleModelViewer?:              () => void;
+}
+
+// ─── DEV-only: 3D Model Viewer toggle ──────────────────────────────────────
+/**
+ * Toggles the dev-mode 3D model inspector panel.
+ * No-op in production builds.
+ */
+export function toggleModelViewer(): void {
+  if (!import.meta.env.DEV) return;
+  import('./app/model-viewer').then(m => {
+    const dw = window.debugWindow;
+    const viewer = dw?.modelViewer;
+    if (viewer) {
+      viewer.toggle();
+    } else {
+      const handle = m.initModelViewer({ allowDrop: true });
+      if (handle) {
+        if (dw) {
+          dw.modelViewer = handle;
+        } else {
+          (window as any).debugWindow = { modelViewer: handle };
+        }
+        handle.toggle();
+      }
+    }
+  }).catch(() => {});
 }
 
 // ─── Registration helper ───────────────────────────────────────────────────────
@@ -429,4 +465,5 @@ export function setupWindowAPI(win: Window, api: WindowAPI): void {
   win.setupTableDragDrop        = api.setupTableDragDrop;
   win.sortTableFiles            = api.sortTableFiles;
   win.runFullTestSuite          = api.runFullTestSuite;
+  if (api.toggleModelViewer) win.toggleModelViewer = api.toggleModelViewer;
 }

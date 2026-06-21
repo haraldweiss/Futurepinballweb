@@ -498,3 +498,147 @@ npm run build && scp -r dist/* oracle-vm:/var/www/futurepinball/dist/ && ssh ora
 
 **Voraussetzung:** Build muss grün sein, tsc clean, Tests bestanden.
 **Projekt-Skill:** `deploy-futurepinball` (Pi `skill_manage`) für detaillierte Steps/Pitfalls.
+
+
+### 2026-06-21 — FPM/FPL Model Format Research
+
+**Background:** Goal to import original Future Pinball tables with accurate 3D models from NAS.
+
+**FPL Library Structure (CFB format, ConanModels.fpl analyzed via node scripts):**
+- Each model entry has 4 CFB subentries:
+  - FTYP (4 bytes): Type identifier = 0xe0d0cf11
+  - FLAD (8 bytes): Binary data
+  - FPAT (60-80 bytes): Contains Windows file paths like  — these are creator paths, not actual model locations
+  - FDAT (3KB-59KB): LZO-compressed model data (actual model data)
+
+**Models found in ConanModels.fpl:**
+-  (32KB FDAT),  (16KB FDAT),  (13.5KB FDAT),  (33KB),  (58KB FDAT), plus 50+ more
+
+**FPM File Format (Flipper.fpm from hexdump of Flipper.fpm):**
+- Header (offsets 0-15): 
+- 8 zero bytes (offsets 16-23)
+- Bytes 24-27:  (little-endian)
+- Bytes 28-31:  (little-endian)
+- Bytes 32-35:  (little-endian)
+- Text strings at offsets ~0x200+: "Flipper", "Flipper-T1", "Long-Preview.bmp"
+- LZO compression marker  appears around offset ~0x285
+- BMP texture marker  indicates embedded textures
+- LZO compressed region size: 32KB → 21KB decompressed (21,626 bytes)
+
+**Key Insight:** FPT tables reference models by name, FPL libraries provide the model data via LZO compression. The FDAT data contains the actual vertex/triangle data needed to create THREE.js meshes. MS3D files in samples directory are reference format, not what's actually in tables.
+
+
+
+### 2026-06-21 — FPM/FPL Model Format Research
+
+Background: Goal to import original Future Pinball tables with accurate 3D models from NAS.
+
+FPL Library Structure (CFB format, ConanModels.fpl analyzed via node scripts):
+- Each model entry has 4 CFB subentries:
+  - FTYP (4 bytes): Type identifier = 0xe0d0cf11
+  - FLAD (8 bytes): Binary data
+  - FPAT (60-80 bytes): Contains Windows file paths like C:\Users\Seppo\Documents\Varasto\FP-Conan\Models\SC-Flipper-T1.fpm
+  - FDAT (3KB-59KB): LZO-compressed model data (actual model data)
+
+Models found in ConanModels.fpl:
+- sc-flipper-t1 (32KB FDAT), sc-droptarget (16KB FDAT), sc-ramp (13.5KB FDAT), sc-rock1 (33KB), sc-rock2 (58KB FDAT), plus 50+ more
+
+FPM File Format (Flipper.fpm from hexdump via node scripts):
+- Header (offsets 0-15): d0 cf 11 e0 a1 b1 1a e1 00 00 00 00 00 00 00 00
+- 8 zero bytes (offsets 16-23)
+- Bytes 24-27: 3e 00 03 00 (little-endian)
+- Bytes 28-31: fe ff 09 00 (little-endian)
+- Bytes 32-35: 06 00 00 00 (little-endian)
+- Text strings at offsets ~0x200+: Flipper, Flipper-T1, Long-Preview.bmp
+- LZO compression marker zLZO6l appears around offset ~0x285
+- BMP texture marker BM6l indicates embedded textures
+- LZO compressed region size: 32KB to 21KB decompressed (21,626 bytes)
+
+Key Insight: FPT tables reference models by name, FPL libraries provide the model data via LZO compression. The FDAT data contains the actual vertex/triangle data needed to create THREE.js meshes. MS3D files in samples directory are reference format, not what is actually in tables.
+
+Decompression Test (Flipper.fpm via node scripts):
+- LZO offset: 645 (0x285)
+- Compressed: 32,123 bytes
+- Decompressed: 21,626 bytes
+- Binary contains: LZO6l, BM6l markers, embedded texture data, mesh vertex data (format TBD)
+
+Next Step: Parse the FDAT binary format to extract vertices/triangles/UVs for THREE.js mesh creation.
+
+### 2026-06-21 — FPM/FPL Model Pipeline Vollendet
+
+**FPM-Format validiert (models.fpl, 45/53 Modelle geparst):**
+- FPL FDAT entries sind **verschachtelte CFB-Container** (erkennbar an `d0 cf 11 e0` Header)
+- Jeder FDAT → CFB → "ModelData" Stream → TLV-Header (Name, Metadaten) → zLZO-Daten
+- Die zLZO Regionen enthalten MS3D0-Marker bei Offset 7 (häufigst) oder 8
+- Vertex-Strides: 12 (xyz-only), 15 (Standard MS3D), 16, 24, 28, 48
+- Model-Namen werden aus TLV-Header vor zLZO extrahiert
+
+**Parser-Pipeline:**
+```
+FPL → FDAT → CFB → ModelData → TLV Header → zLZO → LZO → MS3D0 → Vertices/Triangles → THREE.Mesh
+```
+
+**Getestet:** `models.fpl` vom NAS (212 CFB-Entries, 53 FDAT-Modelle)
+- 45 erfolgreich geparst (85%)
+- Stride-Verteilung: 12=22, 15=7, 16=9, 24=3, 28=1, 48=2, 60=1
+- Vertexanzahl: 4–3.072, gesamt ~24.000 Vertices
+
+**Integration:**
+- `src/fpt/fpm-parser.ts` — Full FPL+FPM parser mit CFB-Nesting + TLV-Name-Extraktion
+- `src/fpt/file-parser.ts:553` — FPM models werden im FPL-Modell-Loading automatisch in AssetCatalog registriert
+- `src/fpt/models.ts:45` — `extractFPMModelsFromCFB()` für zLZO-Marker-Erkennung
+
+**Nächste Schritte (vorgeschlagen):**
+1. Weitere FPL Libraries testen (ConanModels.fpl, GBModels.fpl, T2_MODELS.fpl usw.)
+2. Textur-Extraktion aus den embedded BMPs in FPM Region 0
+3. FPM-Modelle im Spiel anzeigen: `resolveModel()` in `table/builder.ts` nutzt AssetCatalog
+4. Rapier2D → Rapier3D Upgrade für 3D-Physics
+
+### 2026-06-21 — Rapier2D → Rapier3D Upgrade + FPL Modelle + Deployment
+
+**Rapier3D Migration (10 Dateien geändert):**
+- `@dimforge/rapier2d-compat v0.12.0` → `@dimforge/rapier3d v0.19.3`
+- **API-Änderungen**: `{x,y}`→`{x,y,z}`, `setRotation(angle)`→`Quaternion`, `setAngvel(0)`→`Vector3`
+- **Vite-Konfiguration**: `vite-plugin-wasm` + `vite-plugin-top-level-await` für WASM-Unterstützung
+- **Worker-Konfiguration**: `worker.format: 'es'` + separate `worker.plugins` für WASM
+- `main`-Feld zu `node_modules/@dimforge/rapier3d/package.json` hinzugefügt (Vite-Resolution)
+- **Build**: rapier_wasm3d_bg.wasm (1.57 MB) korrekt als Asset eingebunden
+
+**FPL Modelle (6 Libraries getestet):**
+- 264/369 Modelle (72%) erfolgreich geparst (5 MB fpModels.fpl = 194/260)
+- Pipeline: `CFB → FDAT → nested CFB → ModelData → TLV name → zLZO → LZO → MS3D0 → THREE.Mesh`
+- AssetCatalog-Registration im FPL-Loader
+
+**Alles getestet und deployed:** tsc clean, 762/762 Tests, Live-Update
+
+### 2026-06-21 — NAS File Server + 3D Model Viewer + FPM Enhancement
+
+**NAS File Server (`scripts/nas-file-server.cjs`):**
+- Lokaler HTTP-Server auf dem Mac (Port 4157, CORS enabled)
+- Serviert NAS-Verzeichnis `/Volumes/.../FuturePinball/` über REST-API
+- Endpoints: `/api/health`, `/api/list?dir=...`, `/api/file?path=...`, `/api/search?q=...`
+- Scan: 6.192 Dateien, 635 FPL, 2.146 FPT, 40 FPM (recursive)
+- Start: `node scripts/nas-file-server.cjs`
+
+**NAS Client (`src/app/nas-source.ts`):**
+- `window.connectNAS()` → verbindet + zeigt NAS Browser Panel
+- Auto-Detection beim App-Start (non-blocking)
+- Custom Event `fpl-file-loaded` → integriert mit parseFPLFile/parseFPTFile
+- NAS Browser Panel: Pfad-Navigation, FPL/FPT Listing, Download + Load
+
+**FPM Parser Enhancement (`src/fpt/fpm-parser.ts`):**
+- Vertex Normal Extraktion: 11 Stride-Layouts mit packed byte + float32
+- UV Extraktion: Stride ≥ 28 bei offset 24 (float32×2)
+- `fpmToTHREE()`: setzt Normal/UV Attribute, compute nur als Fallback
+
+**Model Viewer (`src/app/model-viewer.ts`):**
+- Wireframe-Toggle (SHOW/HIDE WIRE link)
+- Normal/UV/Texture Badges im Info-Pane
+- Drag-and-Drop FPL/FPM ins Viewport
+
+**Dev-Mode 3D Fixtures (`src/app/dev-models.ts`):**
+- Procedurale 3D Bumper/Target/Flipper/Plunger
+- AssetCatalog pre-creation vor loadDemoTable
+- `registerDevModels()` → fallback wenn keine FPL Models
+
+**Build:** tsc clean, 762/762 tests, Vite build, live deploy

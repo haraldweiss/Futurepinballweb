@@ -929,7 +929,7 @@ function buildFPScriptAPI() {
     FireKickback: (power?: number) => {
       if (!physics || !physics.ballBody || state.kickbacksRemaining <= 0) return;
       const p = Math.max(0, Math.min(10, Number(power) || 5));
-      physics.ballBody.applyImpulse({ x: 0, y: p * 1.5 }, true);
+      physics.ballBody.applyImpulse({ x: 0, y: p * 1.5, z: 0 }, true);
       state.kickbacksRemaining--;
       state.kickbackActive = true;
       setTimeout(() => { state.kickbackActive = false; }, 500);
@@ -1614,7 +1614,7 @@ function buildFPScriptAPI() {
     SetBallSpin: (x: number, y: number, z: number) => {
       if (!physics || !physics.ballBody) return;
       try {
-        physics.ballBody.setAngvel(Number(z) || 0, true);
+        physics.ballBody.setAngvel({ x: 0, y: 0, z: Number(z) || 0 }, true);
         fpScriptLog(`SetBallSpin: (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)})`);
       } catch (e) {
         fpScriptLog(`SetBallSpin ERROR: ${e}`);
@@ -1628,7 +1628,7 @@ function buildFPScriptAPI() {
         const fy = Number(y) || 0;
         const duration = Math.max(0.001, Number(dt) || 0.016);  // Minimum 1ms
         physics.ballBody.applyImpulse(
-          { x: fx * duration, y: fy * duration },
+          { x: fx * duration, y: fy * duration, z: 0 },
           true
         );
         fpScriptLog(`ApplyBallForce: (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}) for ${duration.toFixed(3)}s`);
