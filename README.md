@@ -635,6 +635,15 @@ MIT License - See LICENSE file for details
 - 🔄 Transparent auto-updates for all platforms
 - 📥 One-click installation
 
+### NAS File Server 🖥️
+Lokaler HTTP-Server zum Laden von FPL/FPT/FPM-Dateien vom NAS.
+
+- **Server starten:** `node scripts/nas-file-server.cjs` (Port 4157, CORS enabled)
+- **Client:** `connectNAS()` in der Browser-Console → NAS Browser Panel
+- **6.267 Dateien:** 635 FPL Libraries, 2.146 FPT Tables, 40 FPM Models
+- **NAS-Pfad:** `/Volumes/WindowsBackup/Vpin Backup Atgames 4kP/FuturePinball/`
+- **Endpoints:** `/api/health`, `/api/list`, `/api/file`, `/api/search`
+
 ---
 
 ## 🔗 Links
