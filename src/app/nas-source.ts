@@ -7,7 +7,13 @@
  * files from /Volumes/WindowsBackup/.../FuturePinball/ over HTTP with CORS.
  */
 
-const NAS_SERVER = 'http://localhost:4157';
+// Use proxy on same origin (Apache ProxyPass /nas/ → localhost:4157)
+// Falls kein Proxy: node scripts/nas-file-server.cjs & connectNAS() nutzt diesen Port
+const NAS_SERVER = window.location.origin + '/nas';
+
+// Fallback: direkter localhost-Zugriff (für dev mode ohne Proxy)
+const NAS_LOCAL = 'http://localhost:4157';
+export function getNASServers(): [string, string] { return [NAS_SERVER, NAS_LOCAL]; }
 
 export type NASStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -42,38 +48,45 @@ function notify(): void {
   _listeners.forEach(fn => fn(s));
 }
 
+const NAS_URLS = [
+  window.location.origin + '/nas',   // Apache proxy (production)
+  'http://localhost:4157',            // Local server (dev mode)
+];
+
 export async function checkNASConnection(): Promise<boolean> {
   _state.status = 'connecting';
   notify();
-  try {
-    const res = await fetch(`${NAS_SERVER}/api/health`, {
-      mode: 'cors',
-      signal: AbortSignal.timeout(3000),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      _state.status = 'connected';
-      _state.error = '';
-      notify();
-      if (import.meta.env.DEV) {
-        console.log(`[NAS] Connected: ${data.fplCount} FPL, ${data.fptCount} FPT files`);
+  
+  for (const url of NAS_URLS) {
+    try {
+      const res = await fetch(`${url}/api/health`, {
+        mode: 'cors',
+        signal: AbortSignal.timeout(3000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        _state.status = 'connected';
+        _state.error = '';
+        _state.serverUrl = url;
+        notify();
+        if (import.meta.env.DEV) {
+          console.log(`[NAS] Connected via ${url}: ${data.fplCount} FPL, ${data.fptCount} FPT files`);
+        }
+        return true;
       }
-      return true;
-    }
-  } catch (e: any) {
-    _state.status = 'error';
-    _state.error = e.message || 'Connection failed';
-    notify();
-    return false;
+    } catch {}
   }
-  _state.status = 'disconnected';
+  
+  _state.status = 'error';
+  _state.error = 'Not reachable';
   notify();
   return false;
 }
 
 export async function listNASDirectory(dir: string = ''): Promise<NASEntry[]> {
+  const base = _state.serverUrl || NAS_URLS[0];
   try {
-    const res = await fetch(`${NAS_SERVER}/api/list?dir=${encodeURIComponent(dir)}`, {
+    const res = await fetch(`${base}/api/list?dir=${encodeURIComponent(dir)}`, {
       mode: 'cors',
       signal: AbortSignal.timeout(10000),
     });
@@ -91,8 +104,9 @@ export async function listNASDirectory(dir: string = ''): Promise<NASEntry[]> {
 }
 
 export async function downloadNASFile(filePath: string): Promise<ArrayBuffer | null> {
+  const base = _state.serverUrl || NAS_URLS[0];
   try {
-    const res = await fetch(`${NAS_SERVER}/api/file?path=${encodeURIComponent(filePath)}`, {
+    const res = await fetch(`${base}/api/file?path=${encodeURIComponent(filePath)}`, {
       mode: 'cors',
       signal: AbortSignal.timeout(120000),
     });
@@ -108,8 +122,9 @@ export async function downloadNASFile(filePath: string): Promise<ArrayBuffer | n
 }
 
 export async function searchNASFiles(query: string): Promise<NASEntry[]> {
+  const base = _state.serverUrl || NAS_URLS[0];
   try {
-    const res = await fetch(`${NAS_SERVER}/api/search?q=${encodeURIComponent(query)}`, {
+    const res = await fetch(`${base}/api/search?q=${encodeURIComponent(query)}`, {
       mode: 'cors',
       signal: AbortSignal.timeout(15000),
     });
