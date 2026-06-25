@@ -38,6 +38,7 @@ import { handlePhysicsFrame, triggerVideoEvent, onMultiballStartVideo, onTiltVid
 import { applyPhysicsGravityForRotation } from './app/game-helpers';
 import { resetBall, resetGameState } from './app/game-state';
 import { initPWAInstall, installPWA } from './app/pwa-install';
+import { updateHUD } from './app/hud';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -1000,35 +1001,7 @@ function updatePlunger(dt: number): void {
 }
 
 // ─── HUD ─────────────────────────────────────────────────────────────────────
-function updateHUD(): void {
-  (document.getElementById('score') as HTMLElement).textContent   = state.score.toLocaleString();
-  (document.getElementById('ballnum') as HTMLElement).textContent = String(state.ballNum);
-  (document.getElementById('multi') as HTMLElement).textContent   = String(state.multiplier);
-
-  // Phase 6 Enhancement: Update sequence display
-  const seqDisplay = document.getElementById('sequence-display') as HTMLElement;
-  if (state.targetSequence && state.targetSequence.length > 0) {
-    seqDisplay.style.display = 'block';
-    const seqProgress = document.getElementById('seq-progress') as HTMLElement;
-    seqProgress.textContent = `${state.targetsHitSequence.length}/${state.targetSequence.length}`;
-  } else {
-    seqDisplay.style.display = 'none';
-  }
-
-  // Show/hide editor button based on whether a table is loaded
-  const editorBtn = document.getElementById('editor-btn');
-  if (editorBtn) {
-    editorBtn.style.display = currentTableConfig ? 'inline-block' : 'none';
-  }
-
-  // Default DMD to 'playing' on HUD updates ONLY while a game is in progress.
-  // Pre-game modes (tableinfo / attract / launch) are driven from explicit
-  // transitions in loadDemoTable / closeCoinScreen / plunger-release; we
-  // must not yank the DMD out of them every time the HUD ticks.
-  if (dmdState.mode === 'playing' || dmdState.mode === 'event' || dmdState.mode === 'gameover') {
-    if (dmdState.mode !== 'event' && dmdState.mode !== 'gameover') dmdState.mode = 'playing';
-  }
-}
+// updateHUD — moved to src/app/hud.ts
 
 // ─── Notification ─────────────────────────────────────────────────────────────
 // ─── Library Selector — moved to src/app/library-selector.ts ─────────────────
