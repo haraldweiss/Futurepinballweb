@@ -44,6 +44,7 @@ import { createQualitySystem } from './app/quality-system';
 import { initTableShake } from './app/table-shake';
 import { createTableLoader } from './app/table-loader';
 import { createRotateAndRedraw } from './app/rotation';
+import { initResizeHandler } from './app/resize-handler';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -184,107 +185,16 @@ async function rotateAndRedraw(targetDegrees: 0 | 90 | 180 | 270, duration: numb
   if (!_rotateAndRedrawImpl) throw new Error('rotateAndRedraw called before initRotation');
   return _rotateAndRedrawImpl(targetDegrees, duration);
 }
-// ─── COMPREHENSIVE RESPONSIVE RESIZE HANDLER ───
-// Adjusts all UI elements to fit the current browser window size
-window.addEventListener('resize', () => {
-  // Throttle resize events to avoid performance issues
-  clearTimeout(window.resizeTimer);
-  window.resizeTimer = setTimeout(() => {
-    try {
-      // Apply optimized table view
-      qualitySystem.applyOptimizedTableView();
-
-      // ─── Canvas Sizing ───
-      // Use displayWidth/displayHeight (CSS pixels) — Three.js applies pixelRatio
-      // internally. Passing canvasWidth (already pixelRatio-multiplied) here
-      // would double-scale the canvas on HiDPI displays.
-      const canvasSize = getPlayfieldCanvasSize();
-      renderer.setPixelRatio(getOptimalPixelRatio());
-      renderer.setSize(canvasSize.displayWidth, canvasSize.displayHeight);
-
-      // Update camera aspect ratio
-      camera.aspect = canvasSize.displayWidth / canvasSize.displayHeight;
-      camera.updateProjectionMatrix();
-
-      // ─── Update Post-Processing Passes ───
-      // Composer/passes also expect CSS pixels — they manage their own
-      // backbuffer allocation based on the renderer's pixelRatio.
-      if (composer) {
-        composer.setSize(canvasSize.displayWidth, canvasSize.displayHeight);
-      }
-      if (ssrPass) {
-        ssrPass.setSize(canvasSize.displayWidth, canvasSize.displayHeight);
-      }
-      if (motionBlurPass) {
-        motionBlurPass.setSize(canvasSize.displayWidth, canvasSize.displayHeight);
-      }
-      if (perLightBloomPass) {
-        perLightBloomPass.setSize(canvasSize.displayWidth, canvasSize.displayHeight);
-      }
-
-      // ─── Reposition UI Elements for Different Viewport Sizes ───
-      const isSmallMobile = window.innerWidth < 480;
-      const isPortrait = window.innerHeight > window.innerWidth;
-
-      const hud = document.getElementById('hud');
-      const buttons = [
-        'open-loader', 'editor-btn', 'fullscreen-btn', 'multiscreen-btn',
-        'hide-dmd-btn', 'install-btn', 'view-btn', 'dmd-mode-btn'
-      ];
-
-      // Adjust HUD for small screens
-      if (hud && isSmallMobile) {
-        hud.style.flexDirection = 'column';
-        hud.style.gap = '4px';
-      } else if (hud) {
-        hud.style.flexDirection = 'row';
-        hud.style.gap = 'clamp(8px, 2vw, 20px)';
-      }
-
-      // Hide/show buttons based on screen size
-      buttons.forEach(btnId => {
-        const btn = document.getElementById(btnId);
-        if (btn) {
-          if (isSmallMobile && ['editor-btn', 'multiscreen-btn'].includes(btnId)) {
-            btn.style.display = 'none';
-          } else {
-            btn.style.display = btn.classList.contains('hidden') ? 'none' : 'block';
-          }
-        }
-      });
-
-      // Adjust dmd-wrap positioning
-      const dmdWrap = document.getElementById('dmd-wrap');
-      if (dmdWrap) {
-        if (isPortrait) {
-          dmdWrap.style.maxHeight = '60vh';
-          dmdWrap.style.maxWidth = '90vw';
-        } else {
-          dmdWrap.style.maxHeight = '80vh';
-          dmdWrap.style.maxWidth = '95vw';
-        }
-      }
-
-      // Adjust modal max-height for small viewports
-      const loaderModal = document.getElementById('loader-modal');
-      if (loaderModal) {
-        loaderModal.style.maxHeight = '100vh';
-      }
-
-      const loaderBox = document.getElementById('loader-box');
-      if (loaderBox) {
-        loaderBox.style.maxHeight = `${Math.min(90, window.innerHeight / 10)}vh`;
-      }
-
-      // Log resize info in debug mode (Vite exposes import.meta.env, not Node's process.env)
-      if (import.meta.env.DEV) {
-        console.log(`📐 Window Resized: ${window.innerWidth}x${window.innerHeight} (DPR: ${window.devicePixelRatio})`);
-      }
-    } catch (error) {
-      console.error('Error during resize handler:', error);
-    }
-  }, 250);
-});
+// ─── Resize Handler — moved to src/app/resize-handler.ts (lazy init) ────────
+let _resizeInitDone = false;
+function initResizeHandlerLazy(): void {
+  if (_resizeInitDone) return;
+  _resizeInitDone = true;
+  initResizeHandler({
+    renderer, camera: camera as THREE.PerspectiveCamera, qualitySystem,
+    composer, ssrPass, motionBlurPass, perLightBloomPass,
+  });
+}
 
 
 // ─── Role Detection ───────────────────────────────────────────────────────────
@@ -2182,6 +2092,9 @@ const qualitySystem = createQualitySystem({
 initRotation({
   scene, camera: camera as THREE.PerspectiveCamera, renderer, composer, qualitySystem,
 });
+
+// Initialize resize handler (needs composer + post-processing deps)
+initResizeHandlerLazy();
 
 const { browseTableDirectory, browseLibraryDirectory } = initFileBrowserUI({
   loadTableWithPhysicsWorker,
