@@ -37,6 +37,7 @@ import { createLibrarySelector } from './app/library-selector';
 import { handlePhysicsFrame, triggerVideoEvent, onMultiballStartVideo, onTiltVideo } from './app/physics-frame-handler';
 import { applyPhysicsGravityForRotation } from './app/game-helpers';
 import { resetBall, resetGameState } from './app/game-state';
+import { initPWAInstall, installPWA } from './app/pwa-install';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -2453,33 +2454,8 @@ if (FPW_ROLE === 'dmd') {
   })();
 }
 
-// ─── PWA: Service Worker + Install Prompt ─────────────────────────────────────
-if ('serviceWorker' in navigator && !import.meta.env.DEV) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js');
-  });
-}
-
-let _installPrompt: BeforeInstallPromptEvent | null = null;
-const _installBtn = document.getElementById('install-btn') as HTMLButtonElement | null;
-
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  _installPrompt = e as BeforeInstallPromptEvent;
-  _installBtn?.classList.add('visible');
-});
-
-window.addEventListener('appinstalled', () => {
-  _installBtn?.classList.remove('visible');
-  _installPrompt = null;
-});
-
-function installPWA() {
-  if (!_installPrompt) return;
-  _installPrompt.prompt();
-  _installPrompt.userChoice.then(() => { _installPrompt = null; });
-}
-// see window-api.ts — installPWA
+// ─── PWA Install — moved to src/app/pwa-install.ts ───────────────────────────
+initPWAInstall();
 
 // ─── Phase 5: Quality System Exports ──────────────────────────────────────────
 const setQualityPreset = (name: string) => {
@@ -2697,11 +2673,6 @@ setupWindowAPI(window, {
   runFullTestSuite,
   toggleModelViewer,
 });
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
 
 // ─── Guaranteed Event Handler Initialization ───
 // Module scripts are deferred, so DOM is ready when this runs.
