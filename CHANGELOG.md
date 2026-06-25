@@ -22,7 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extracted file browsing UI (browseTableDirectory, renderTableFileGrid, etc.) → `src/app/file-browser-ui.ts` (−230 lines)
 - Extracted `showLibrarySelector()` → `src/app/library-selector.ts:createLibrarySelector()` (−24 lines)
 - Extracted `handlePhysicsFrame()` + `triggerVideoEvent()`/`onMultiballStartVideo()`/`onTiltVideo()` → `src/app/physics-frame-handler.ts` (−74 lines, pure imports, no DI)
-- main.ts this session: 3404 → 2823 (−581 lines, −17.1%)
+- Extracted `applyPhysicsGravityForRotation()` + DEV debug helpers (testGravity, forceScore, dumpState) → `src/app/game-helpers.ts` (−65 lines, pure imports)
+- main.ts this session: 3404 → 2758 (−646 lines, −19.0%)
   using `BAMInitDeps` dependency injection interface
 
 ---
