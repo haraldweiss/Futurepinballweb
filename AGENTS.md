@@ -654,7 +654,8 @@ FPL → FDAT → CFB → ModelData → TLV Header → zLZO → LZO → MS3D0 →
   (reine Modul-Imports, kein DI nötig).
 - **Secondary windows**: `setupDMDWindow()` + `setupBackglassWindow()` → `src/app/secondary-windows.ts`
   (beide standalone, pure Modul-Imports, ~234 Zeilen entfernt).
-- **main.ts netto**: 3404 → 3151 (−253, −7.4%) in dieser Session.
+- **File browser UI**: `browseTableDirectory`/`browseLibraryDirectory`/`renderTableFileGrid`/`renderLibraryFileList`/`handleFile` + alle DOM-Event-Listener → `src/app/file-browser-ui.ts:initFileBrowserUI()` (Factory mit DI für `loadTableWithPhysicsWorker`, `resetGameState`, `scene`, `showLibrarySelector`). −230 Z netto.
+- **main.ts netto**: 3404 → 2921 (−483, −14.2%) in dieser Session.
 - **Verbleibende Haupt-Blöcke in main.ts**: `animate()` (~400 Z, captured state/profiler),
   `setupBackglassForTable()` (~180 Z), `setupDMDWindow()` / `setupBackglassWindow()` (~234 Z),
   Flipper-Update-Logik (~70 Z), `loadTableWithPhysicsWorker()` (~36 Z).
