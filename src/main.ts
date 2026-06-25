@@ -34,6 +34,7 @@ import { initTouchControls } from './app/touch-controls';
 import { setupDMDWindow, setupBackglassWindow } from './app/secondary-windows';
 import { initFileBrowserUI } from './app/file-browser-ui';
 import { createLibrarySelector } from './app/library-selector';
+import { handlePhysicsFrame, triggerVideoEvent, onMultiballStartVideo, onTiltVideo } from './app/physics-frame-handler';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -877,60 +878,7 @@ async function setupPhysicsWorker(): Promise<void> {
 }
 
 // ─── Phase 15: Handle Physics Frame Updates ────────────────────────────────────
-function handlePhysicsFrame(frame: PhysicsFrameData): void {
-  // Update ball position and velocity from physics worker
-  state.ballPos.set(frame.ballPos.x, frame.ballPos.y, frame.ballPos.z);
-  state.ballVel.x = frame.ballVel.x;
-  state.ballVel.y = frame.ballVel.y;
-
-  // ─── Sync main thread ball body ──────────────────────────────────────────
-  // The animate() loop reads ball position from physics.ballBody (main thread).
-  // But the physics worker runs its OWN ball body (stepped every frame).
-  // Without this sync, the main thread ball body stays frozen at its init
-  // position — the ball appears to never leave the plunger lane.
-  // See: main.ts ~line 1979 "const pos = physics.ballBody.translation()"
-  if (physics) {
-    try {
-      physics.ballBody.setTranslation({ x: frame.ballPos.x, y: frame.ballPos.y, z: 0 }, true);
-      physics.ballBody.setLinvel({ x: frame.ballVel.x, y: frame.ballVel.y, z: 0 }, true);
-    } catch { /* main thread ball body may not be ready */ }
-  }
-
-  // Handle collisions
-  for (const collision of frame.collisions) {
-    switch (collision.type) {
-      case 'bumper': {
-        const bumperData = physics?.bumperMap.get(collision.data.index);
-        if (bumperData) {
-          scoreBumperHit(bumperData);
-          // ─── Phase 25: Play bumper sound ───
-          getSoundManager().then((sm) => sm.playBumperHit()).catch(() => {});
-        }
-        break;
-      }
-      case 'target': {
-        const targetData = physics?.targetMap.get(collision.data.index);
-        if (targetData) {
-          scoreTargetHit(targetData);
-          // ─── Phase 25: Play target sound ───
-          getSoundManager().then((sm) => sm.playTargetHit()).catch(() => {});
-        }
-        break;
-      }
-      case 'slingshot': {
-        scoreSlingshotHit(collision.data.side);
-        // ─── Phase 25: Play slingshot sound ───
-        getSoundManager().then((sm) => sm.playSlingshot()).catch(() => {});
-        break;
-      }
-      case 'flipper_left':
-      case 'flipper_right': {
-        // Flipper collision handled in physics engine
-        break;
-      }
-    }
-  }
-}
+// handlePhysicsFrame — moved to src/app/physics-frame-handler.ts
 
 // ─── Phase 16+: Helper function to apply enhanced visuals to playfield ────────
 // applyEnhancedVisualsToTable moved to src/app/enhanced-visuals.ts
@@ -970,29 +918,7 @@ async function loadTableWithPhysicsWorker(tableConfig: any, sceneTarget: THREE.S
   if (import.meta.env.DEV) { console.log('[loadTableWithPhysicsWorker] COMPLETE'); }
 }
 
-// ─── Phase 17+: Video Event Trigger System ───────────────────────────────────
-// Helper functions to trigger videos based on game events
-function triggerVideoEvent(eventType: string): void {
-  const videoManager = getVideoManager();
-  const bindingManager = getVideoBindingManager();
-
-  if (!videoManager || !bindingManager) return;
-
-  // Find best binding for this event trigger
-  const binding = bindingManager.findBestBinding(eventType, state);
-
-  if (binding) {
-    videoManager.triggerVideoForEvent(eventType);
-  }
-}
-
-function onMultiballStartVideo(): void {
-  triggerVideoEvent('multiball_start');
-}
-
-function onTiltVideo(): void {
-  triggerVideoEvent('tilt');
-}
+// triggerVideoEvent / onMultiballStartVideo / onTiltVideo — moved to src/app/physics-frame-handler.ts
 
 // ─── Tilt ────────────────────────────────────────────────────────────────────
 function nudgeTable(direction: number): void {
