@@ -41,6 +41,7 @@ import { initPWAInstall, installPWA } from './app/pwa-install';
 import { updateHUD } from './app/hud';
 import { setupBackglassForTable } from './app/backglass-setup';
 import { createQualitySystem } from './app/quality-system';
+import { initTableShake } from './app/table-shake';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -1050,37 +1051,10 @@ cb.updateBackglassModeInfo = (text: string) => {
  * @param magnitude - Shake amount (0.01-0.05 typical)
  * @param duration - Shake duration in milliseconds
  */
-let shakeStartTime = 0;
-let currentShakeMagnitude = 0;
-let currentShakeDuration = 0;
-
-cb.tableShake = (magnitude: number, duration: number) => {
-  shakeStartTime = Date.now();
-  currentShakeMagnitude = magnitude;
-  currentShakeDuration = duration;
-};
-
-// Apply shake effect in animation loop (integrate with camera)
-function applyTableShake(): void {
-  if (shakeStartTime === 0 || !camera) return;
-
-  const elapsed = Date.now() - shakeStartTime;
-  if (elapsed > currentShakeDuration) {
-    shakeStartTime = 0;
-    return;
-  }
-
-  // Fade out shake over duration
-  const progress = elapsed / currentShakeDuration;
-  const magnitude = currentShakeMagnitude * (1.0 - progress * progress);
-
-  // Apply random shake to camera position
-  const shakeX = (Math.random() - 0.5) * magnitude;
-  const shakeY = (Math.random() - 0.5) * magnitude * 0.5;
-
-  camera.position.x += shakeX;
-  camera.position.y += shakeY;
-}
+// ─── Table Shake — moved to src/app/table-shake.ts ──────────────────────────
+const { applyTableShake } = initTableShake({
+  camera: camera as THREE.PerspectiveCamera,
+});
 
 // ─── Phase 9: Score Display Callbacks ──────────────────────────────────────────
 /**
