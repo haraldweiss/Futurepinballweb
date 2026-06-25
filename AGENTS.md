@@ -650,6 +650,11 @@ FPL → FDAT → CFB → ModelData → TLV Header → zLZO → LZO → MS3D0 →
 - **main.ts BAM init extraction**: `src/app/bam-init.ts` — `initializeBAMEngine()` Factory
   mit `BAMInitDeps` DI. Extrahiert: BAM Engine, Bridge, Animation Loading, Binding System,
   Scheduler, Debugger, Quality Preset, Animate Loop. −88 Zeilen netto (3404→3316).
+- **Touch controls**: `(function setupTouch(){...})()` → `src/app/touch-controls.ts:initTouchControls()`
+  (reine Modul-Imports, kein DI nötig).
+- **Secondary windows**: `setupDMDWindow()` + `setupBackglassWindow()` → `src/app/secondary-windows.ts`
+  (beide standalone, pure Modul-Imports, ~234 Zeilen entfernt).
+- **main.ts netto**: 3404 → 3151 (−253, −7.4%) in dieser Session.
 - **Verbleibende Haupt-Blöcke in main.ts**: `animate()` (~400 Z, captured state/profiler),
   `setupBackglassForTable()` (~180 Z), `setupDMDWindow()` / `setupBackglassWindow()` (~234 Z),
   Flipper-Update-Logik (~70 Z), `loadTableWithPhysicsWorker()` (~36 Z).

@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### main.ts decomposition
 - Extracted BAM engine + animation initialization block (−88 lines, net −91+3)
 - New module: `src/app/bam-init.ts` with `initializeBAMEngine()` factory
+- Extracted touch controls IIFE → `src/app/touch-controls.ts` (−27 lines)
+- Extracted `setupDMDWindow()` + `setupBackglassWindow()` → `src/app/secondary-windows.ts` (−138 lines)
+- main.ts this session: 3404 → 3151 (−253 lines, −7.4%)
   using `BAMInitDeps` dependency injection interface
 
 ---
