@@ -46,7 +46,7 @@ export async function registerDevModels(): Promise<void> {
     }
 
     if (count > 0) {
-      console.log('[DEV] Registered ' + count + ' procedural 3D models');
+      if (import.meta.env.DEV) console.log('[DEV] Registered ' + count + ' procedural 3D models');
     }
   } catch {
     // Game module not yet loaded — retry

@@ -3270,7 +3270,7 @@ try {
   import('./app/nas-source').then(m => {
     m.checkNASConnection().then(connected => {
       if (connected) {
-        console.log('[NAS] Ready — call connectNAS() to browse');
+        if (import.meta.env.DEV) console.log('[NAS] Ready — call connectNAS() to browse');
       }
     });
   });
