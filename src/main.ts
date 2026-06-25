@@ -39,6 +39,7 @@ import { applyPhysicsGravityForRotation } from './app/game-helpers';
 import { resetBall, resetGameState } from './app/game-state';
 import { initPWAInstall, installPWA } from './app/pwa-install';
 import { updateHUD } from './app/hud';
+import { setupBackglassForTable } from './app/backglass-setup';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -2112,22 +2113,13 @@ const { applyViewSettings, resetViewSettings, initViewSettings } = createViewSet
 
 // ─── Phase 4: Setup Backglass After Table Load ──────────────────────────────────
 // ─── Phase 4: Setup Backglass After Table Load ──────────────────────────────────
-function setupBackglassForTable(): void {
-  if (backglassRenderer) {
-    // Extract and set artwork from FPT resources
-    const artwork = getBackglassArtwork();
-    backglassRenderer.setArtwork(artwork);
-
-    // Set mode indicator
-    backglassRenderer.setModeIndicator(`BALL ${state.ballNum}/3`);
-  }
-}
+// setupBackglassForTable — moved to src/app/backglass-setup.ts
 
 const loadDemoTable = async (key: string) => {
   resetGameState();
   resetCoinSystem();
   await loadTableWithPhysicsWorker(TABLE_CONFIGS[key], scene);
-  setupBackglassForTable();
+  setupBackglassForTable(() => backglassRenderer);
   closeLoader();
 
   dmdState.mode = 'tableinfo';
@@ -2158,7 +2150,7 @@ const {
   loadTableConfig: async (cfg) => {
     // Physics-worker table build + backglass wiring stay on the entry point (§3.3).
     await loadTableWithPhysicsWorker(cfg, scene);
-    setupBackglassForTable();
+    setupBackglassForTable(() => backglassRenderer);
   },
 });
 
@@ -2565,7 +2557,7 @@ window.addEventListener('fpl-file-loaded', async (e: Event) => {
         file,
         async (cfg: any) => {
           await loadTableWithPhysicsWorker(cfg, scene);
-          setupBackglassForTable();
+          setupBackglassForTable(() => backglassRenderer);
         },
         () => {},
         (tab: string) => {}
