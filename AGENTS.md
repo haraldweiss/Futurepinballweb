@@ -642,3 +642,17 @@ FPL → FDAT → CFB → ModelData → TLV Header → zLZO → LZO → MS3D0 →
 - `registerDevModels()` → fallback wenn keine FPL Models
 
 **Build:** tsc clean, 762/762 tests, Vite build, live deploy
+
+### 2026-06-25 — console.log gating + main.ts extraction (BAM init)
+- **console.log cleanup**: Gated 2 ungated calls (NAS Ready + dev-models registration).
+  Verified via brace-nesting analysis: 0 remaining ungated `console.log` in prod paths.
+  All `console.warn`/`console.err` bleiben bewusst ungated für Prod-Diagnostik.
+- **main.ts BAM init extraction**: `src/app/bam-init.ts` — `initializeBAMEngine()` Factory
+  mit `BAMInitDeps` DI. Extrahiert: BAM Engine, Bridge, Animation Loading, Binding System,
+  Scheduler, Debugger, Quality Preset, Animate Loop. −88 Zeilen netto (3404→3316).
+- **Verbleibende Haupt-Blöcke in main.ts**: `animate()` (~400 Z, captured state/profiler),
+  `setupBackglassForTable()` (~180 Z), `setupDMDWindow()` / `setupBackglassWindow()` (~234 Z),
+  Flipper-Update-Logik (~70 Z), `loadTableWithPhysicsWorker()` (~36 Z).
+- **Nächste Ziele**: `setupBackglassForTable` + `setupDMDWindow`/`setupBackglassWindow`
+  extrahieren (nächstgrößte abgeschlossene Blöcke). animate() braucht DI-Factory.
+- Verified: tsc clean, 762/762 tests, vite build

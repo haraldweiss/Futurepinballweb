@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Gate console.log calls
+- Gated 2 ungated `console.log` behind `import.meta.env.DEV`
+  (`src/main.ts:3273` NAS Ready, `src/app/dev-models.ts:49` model registration)
+- Verified: no remaining ungated `console.log` in production code paths
+
+### main.ts decomposition
+- Extracted BAM engine + animation initialization block (−88 lines, net −91+3)
+- New module: `src/app/bam-init.ts` with `initializeBAMEngine()` factory
+  using `BAMInitDeps` dependency injection interface
+
+---
+
 ## [0.24.0] - 2026-06-20
 
 ### Graphics Pipeline Fixes
