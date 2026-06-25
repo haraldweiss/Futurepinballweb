@@ -20,7 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extracted touch controls IIFE → `src/app/touch-controls.ts` (−27 lines)
 - Extracted `setupDMDWindow()` + `setupBackglassWindow()` → `src/app/secondary-windows.ts` (−138 lines)
 - Extracted file browsing UI (browseTableDirectory, renderTableFileGrid, etc.) → `src/app/file-browser-ui.ts` (−230 lines)
-- main.ts this session: 3404 → 2921 (−483 lines, −14.2%)
+- Extracted `showLibrarySelector()` → `src/app/library-selector.ts:createLibrarySelector()` (−24 lines)
+- Extracted `handlePhysicsFrame()` + `triggerVideoEvent()`/`onMultiballStartVideo()`/`onTiltVideo()` → `src/app/physics-frame-handler.ts` (−74 lines, pure imports, no DI)
+- main.ts this session: 3404 → 2823 (−581 lines, −17.1%)
   using `BAMInitDeps` dependency injection interface
 
 ---
