@@ -29,6 +29,7 @@ import { applyEnhancedVisualsToTable } from './app/enhanced-visuals';
 import { drawBGCanvas } from './app/backglass-canvas';
 import { updateTablePathShortcuts, updateLibraryPathShortcuts } from './app/path-shortcuts';
 import { initializeFPTBrowser, loadFPTFromPath } from './app/fpt-browser';
+import { initializeBAMEngine } from './app/bam-init';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -3014,97 +3015,8 @@ if (FPW_ROLE === 'dmd') {
     await loadDemoTable('pharaoh');
     setDevFlag('INIT_TABLE_LOAD_OK', true);
 
-    // Initialize B.A.M. Engine (after table is loaded and currentTableConfig is set)
-    if (import.meta.env.DEV) {
-      setDevFlag('INIT_BAM_ENGINE_START', true);
-      console.log('🔄 About to initialize B.A.M. Engine...');
-    }
-    const bam = new BAMEngine(currentTableConfig?.name || 'classic', mainSpot);
-    setBAMEngine(bam);
-    if (import.meta.env.DEV) {
-      console.log('✅ B.A.M. Engine initialized');
-      setDevFlag('INIT_BAM_ENGINE_OK', true);
-    }
-
-    // Phase 13 Task 2: Initialize BAM Bridge (connects VBScript to BAMEngine)
-    setDevFlag('INIT_BAM_BRIDGE_START', true);
-    initializeBamBridge(bam);
-    if (import.meta.env.DEV) {
-      console.log('✅ B.A.M. Bridge initialized');
-      setDevFlag('INIT_BAM_BRIDGE_OK', true);
-    }
-
-    // Phase 13: Load animations from FPT resources into BAM engine
-    setDevFlag('INIT_ANIM_LOAD_START', true);
-    if (fptResources.animations && fptResources.animations.size > 0) {
-      const bamSequencer = bam.getAnimationSequencer();
-      let loadedCount = 0;
-      for (const [name, sequence] of fptResources.animations) {
-        try {
-          // Use sequence name as ID (fallback to index)
-          const seqId = loadedCount + 1;
-          bamSequencer.loadSequence(seqId, JSON.stringify(sequence));
-          loadedCount++;
-          devLog(`📽️ Animation loaded: "${name}" (ID: ${seqId})`);
-        } catch (e: any) {
-          console.warn(`⚠️ Failed to load animation "${name}": ${e.message}`);
-        }
-      }
-      if (loadedCount > 0) {
-        devLog(`✅ ${loadedCount} animation(s) loaded into BAM engine`);
-      }
-    }
-    setDevFlag('INIT_ANIM_LOAD_OK', true);
-
-    // Phase 13 Task 3: Initialize animation binding system
-    if (import.meta.env.DEV) {
-      setDevFlag('INIT_ANIM_BINDING_START', true);
-      console.log('🔄 About to initialize animation binding...');
-    }
-    initializeAnimationBinding();
-    initializeAnimationScheduler();
-    if (import.meta.env.DEV) {
-      console.log('✅ Animation binding system initialized');
-      setDevFlag('INIT_ANIM_BINDING_OK', true);
-    }
-
-    // Phase 13 Task 5: Initialize animation debugger (Ctrl+D to toggle)
-    setDevFlag('INIT_ANIM_DEBUGGER_START', true);
-    const animationDebugger = initializeAnimationDebugger();
-    if (bamEngine) {
-      animationDebugger.setBamEngine(bamEngine);
-    }
-    if (import.meta.env.DEV) {
-      console.log('✅ Animation debugger initialized (Ctrl+D to toggle)');
-      setDevFlag('INIT_ANIM_DEBUGGER_OK', true);
-    }
-
-    // ─── Phase 5: Apply initial quality preset ───
-    setDevFlag('INIT_BEFORE_QUALITY_PRESET', true);
-    try {
-      applyQualityPreset();
-      if (import.meta.env.DEV) {
-        console.log('✅ Quality preset applied successfully');
-        setDevFlag('INIT_QUALITY_PRESET_OK', true);
-      }
-    } catch (err) {
-      console.error('❌ Error in applyQualityPreset:', err);
-      setDevFlag('INIT_QUALITY_PRESET_ERROR', (err as Error).message);
-    }
-
-    setDevFlag('INIT_BEFORE_ANIMATE_CALL', true);
-    try {
-      if (import.meta.env.DEV) { console.log('🎬 Starting animate loop...'); }
-      animate();
-      if (import.meta.env.DEV) {
-        setDevFlag('INIT_ANIMATE_CALLED', true);
-        console.log('✅ Animate loop started');
-      }
-    } catch (err) {
-      console.error('❌ Error starting animate:', err);
-      setDevFlag('INIT_ANIMATE_ERROR', (err as Error).message);
-    }
-    inlineBackglass.init();
+    // Initialize B.A.M. Engine + animation systems + animate loop
+    initializeBAMEngine({ mainSpot, applyQualityPreset, animate, inlineBackglass });
     document.getElementById('multiscreen-btn')?.classList.add('active-multi');
 
     // ─── Auto-apply multi-screen layout on startup (Electron only) ───────────
