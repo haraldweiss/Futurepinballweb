@@ -40,6 +40,7 @@ import { resetBall, resetGameState } from './app/game-state';
 import { initPWAInstall, installPWA } from './app/pwa-install';
 import { updateHUD } from './app/hud';
 import { setupBackglassForTable } from './app/backglass-setup';
+import { createQualitySystem } from './app/quality-system';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -164,25 +165,7 @@ import { initSyncTransport, emitSyncFrame, onSyncFrame } from './app/sync-transp
 // ─── Phase 14: Export graphics pipeline for use in other modules ───
 export { getGraphicsPipeline };
 
-function applyOptimizedTableView(): void {
-  const view = getOptimizedTableView();
-
-  // Apply camera settings
-  if (camera instanceof THREE.PerspectiveCamera) {
-    camera.fov = view.fov;
-    camera.position.z = view.zoom;
-    camera.position.y = view.tilt;
-    camera.updateProjectionMatrix();
-  }
-
-  // Apply quality preset if changed
-  const currentQuality = localStorage.getItem('fpw_quality_preset') || 'auto';
-  if (currentQuality !== view.quality) {
-    profiler.setQualityPreset(view.quality);
-    applyQualityPreset();
-    localStorage.setItem('fpw_quality_preset', view.quality);
-  }
-}
+// applyOptimizedTableView — moved to src/app/quality-system.ts
 
 
 // applyPhysicsGravityForRotation — moved to src/app/game-helpers.ts
@@ -197,7 +180,7 @@ async function rotateAndRedraw(targetDegrees: 0 | 90 | 180 | 270, duration: numb
   
   // After rotation completes, redraw with optimized view for new orientation
   requestAnimationFrame(() => {
-    applyOptimizedTableView();
+    qualitySystem.applyOptimizedTableView();
 
     // Force renderer update
     if (renderer) {
@@ -227,7 +210,7 @@ window.addEventListener('resize', () => {
   window.resizeTimer = setTimeout(() => {
     try {
       // Apply optimized table view
-      applyOptimizedTableView();
+      qualitySystem.applyOptimizedTableView();
 
       // ─── Canvas Sizing ───
       // Use displayWidth/displayHeight (CSS pixels) — Three.js applies pixelRatio
@@ -1377,9 +1360,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'x' || e.key === 'X') nudgeTable( 1);
   if (e.key === 'p' || e.key === 'P') {
     // ─── Phase 5: Toggle profiler display ───
-    showProfiler = !showProfiler;
-    localStorage.setItem('fpw_show_profiler', showProfiler.toString());
-    devLog(`📊 Performance profiler: ${showProfiler ? 'ON' : 'OFF'}`);
+    togglePerformanceMonitor();
   }
 
   // ─── Arcade Mode: Player Start & Coin Input ───
@@ -1746,7 +1727,7 @@ function animate(): void {
     applyQualityPreset();
 
     // Log performance every 2s
-    if (now % 2000 < 500 && showProfiler) {
+    if (now % 2000 < 500 && showProfilerRef.current) {
       if (import.meta.env.DEV) console.log(`🎮 ${profiler.getMetricsDisplay()}`);
     }
   }
@@ -2260,6 +2241,17 @@ const {
 
 // ─── File Input ────────────────────────────────────────────────────────────────
 // ─── File Browser UI — moved to src/app/file-browser-ui.ts ───────────────────
+// ─── Quality System (presets, view optimization, performance monitor) ────────
+const showProfilerRef = { current: showProfiler };
+const lastAppliedQualityPresetRef = { current: lastAppliedQualityPreset };
+const qualitySystem = createQualitySystem({
+  camera: camera as THREE.PerspectiveCamera,
+  profiler: profiler as any,
+  lastAppliedQualityPreset: lastAppliedQualityPresetRef,
+  showProfilerRef,
+  applyQualityPreset,
+});
+
 const { browseTableDirectory, browseLibraryDirectory } = initFileBrowserUI({
   loadTableWithPhysicsWorker,
   resetGameState,
@@ -2422,27 +2414,11 @@ if (FPW_ROLE === 'dmd') {
 // ─── PWA Install — moved to src/app/pwa-install.ts ───────────────────────────
 initPWAInstall();
 
-// ─── Phase 5: Quality System Exports ──────────────────────────────────────────
-const setQualityPreset = (name: string) => {
-  profiler.setQualityPreset(name);
-  applyQualityPreset();
-  devLog(`✅ Quality preset changed to: ${name}`);
-};
-
-const getQualityPreset = () => profiler.getQualityPreset();
-const getAvailableQualityPresets = () => Object.keys(QUALITY_PRESETS);
-const toggleAutoQuality = () => {
-  const current = profiler.isAutoAdjusting();
-  profiler.setAutoAdjust(!current);
-  devLog(`🎯 Auto-quality adjustment: ${!current ? 'ON' : 'OFF'}`);
-};
-
-const getPerformanceMetrics = () => profiler.getMetrics();
-const togglePerformanceMonitor = () => {
-  showProfiler = !showProfiler;
-  localStorage.setItem('fpw_show_profiler', showProfiler.toString());
-  devLog(`📊 Performance monitor: ${showProfiler ? 'ON' : 'OFF'}`);
-};
+// ─── Quality System — moved to src/app/quality-system.ts ─────────────────────
+const {
+  setQualityPreset, getQualityPreset, getAvailableQualityPresets,
+  toggleAutoQuality, getPerformanceMetrics, togglePerformanceMonitor,
+} = qualitySystem;
 
 // ─── Phase 14: Graphics Pipeline System Exports ──────────────────────────────────
 const getGeometryPool = () => getGraphicsPipeline()?.getGeometryPool?.();
