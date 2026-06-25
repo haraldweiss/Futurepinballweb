@@ -35,6 +35,7 @@ import { setupDMDWindow, setupBackglassWindow } from './app/secondary-windows';
 import { initFileBrowserUI } from './app/file-browser-ui';
 import { createLibrarySelector } from './app/library-selector';
 import { handlePhysicsFrame, triggerVideoEvent, onMultiballStartVideo, onTiltVideo } from './app/physics-frame-handler';
+import { applyPhysicsGravityForRotation } from './app/game-helpers';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -180,75 +181,9 @@ function applyOptimizedTableView(): void {
 }
 
 
-// Rotate the physics gravity vector to match the visual rotation. The scene
-// is rotated visually around Z by `deg` clockwise; for the ball to *appear*
-// to fall toward the player's bottom-of-screen, gravity in physics space
-// must be the inverse rotation of (0, -9.8). Without this, after a 90°
-// visual rotation the ball physically falls in the unrotated -Y direction —
-// which on the rotated screen looks like sideways drift, ball goes out of
-// bounds before reaching bumpers, no scoring → no animations to display.
-function applyPhysicsGravityForRotation(deg: 0 | 90 | 180 | 270): void {
-  const G = 9.8;
-  let gx = 0, gy = -G;
-  switch (deg) {
-    case 0:   gx = 0;   gy = -G; break;
-    case 90:  gx = -G;  gy = 0;  break;  // visual CW 90° → physics gravity left
-    case 180: gx = 0;   gy = G;  break;
-    case 270: gx = G;   gy = 0;  break;
-  }
-  // The physics worker is created lazily during table load. If we get here
-  // before that (e.g. saved-rotation restore on startup) the worker call
-  // throws — wrap in try/catch and rely on the next rotation pass after
-  // table load to get the gravity right.
-  try {
-    const bridge = getPhysicsWorker();
-    bridge?.setWorldGravity?.(gx, gy);
-  } catch (e) {
-    console.warn('[gravity] physics worker not ready yet, will retry after table load:', (e as Error).message);
-  }
-}
+// applyPhysicsGravityForRotation — moved to src/app/game-helpers.ts
 
-if (import.meta.env.DEV) {
-  // Runtime gravity tester — call from DevTools console.
-  window.testGravity = (x: number, y: number) => {
-    const bridge = getPhysicsWorker();
-    if (!bridge) {
-      console.warn('[testGravity] physics worker not ready');
-      return;
-    }
-    bridge.setWorldGravity?.(x, y);
-    if (import.meta.env.DEV) console.log(`[testGravity] world gravity set to (${x}, ${y})`);
-  };
-
-  // Force-set the score — call from playfield DevTools to test cross-window bridge
-  window.forceScore = (n: number) => {
-    state.score = n;
-    state.ballNum = Math.max(1, state.ballNum);
-    state.multiplier = Math.max(1, state.multiplier);
-    if (dmdState.mode === 'attract') dmdState.mode = 'playing';
-    if (import.meta.env.DEV) {
-      console.log(`[forceScore] state.score = ${n}, dmdState.mode = ${dmdState.mode}`);
-      console.log(`              expecting Backglass + DMD windows to show ${n} within 1 frame`);
-    }
-  };
-
-  // Debug: dump current state diagnostics
-  window.dumpState = () => {
-    const diag = window._msDiag || {};
-    if (import.meta.env.DEV) {
-      console.log('=== STATE DIAGNOSTICS ===');
-      console.log(`state.score = ${state.score}`);
-      console.log(`state.ballNum = ${state.ballNum}`);
-      console.log(`state.multiplier = ${state.multiplier}`);
-      console.log(`state.bumperHits = ${state.bumperHits}`);
-      console.log(`dmdState.mode = ${dmdState.mode}`);
-      console.log(`dmdState.animFrame = ${dmdState.animFrame}`);
-      console.log(`outgoing total = ${diag.outgoing_total}, bc=${diag.outgoing_bc_ok}, ipc=${diag.outgoing_ipc_ok}, ls=${diag.outgoing_ls_ok}`);
-      console.log(`bridge_present = ${diag.bridge_present}`);
-      console.log(`ipc_error = ${diag.outgoing_ipc_error}`);
-    }
-  }
-};
+// DEV debug helpers (testGravity, forceScore, dumpState) — moved to src/app/game-helpers.ts
 
 async function rotateAndRedraw(targetDegrees: 0 | 90 | 180 | 270, duration: number = 400): Promise<void> {
   // Rotate the playfield smoothly
