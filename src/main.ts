@@ -33,6 +33,7 @@ import { initializeBAMEngine } from './app/bam-init';
 import { initTouchControls } from './app/touch-controls';
 import { setupDMDWindow, setupBackglassWindow } from './app/secondary-windows';
 import { initFileBrowserUI } from './app/file-browser-ui';
+import { createLibrarySelector } from './app/library-selector';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -1206,34 +1207,10 @@ function updateHUD(): void {
 }
 
 // ─── Notification ─────────────────────────────────────────────────────────────
-// see window-api.ts — showNotification
-// ─── Library Selector ─────────────────────────────────────────────────────────
-function showLibrarySelector(lib: any): void {
-  const selector = document.getElementById('library-selector');
-  const nameEl = document.getElementById('library-name');
-  const tableEl = document.getElementById('library-tables');
-
-  if (!selector || !nameEl || !tableEl) return;
-
-  nameEl.textContent = `${lib.name} — ${Object.keys(lib.tableTemplates).length} tables available`;
-  tableEl.innerHTML = '';
-
-  for (const [templateName, templateConfig] of Object.entries(lib.tableTemplates)) {
-    const btn = document.createElement('button');
-    btn.className = 'library-table-btn';
-    btn.textContent = templateName;
-    btn.onclick = async () => {
-      resetGameState();
-      await loadTableWithPhysicsWorker(templateConfig, scene, lib);
-      window.closeLoader();
-      appendLogEntry(`✓ Loaded: ${lib.name} / ${templateName}`);
-    };
-    tableEl.appendChild(btn);
-  }
-
-  selector.style.display = 'block';
-}
-// see window-api.ts — showLibrarySelector
+// ─── Library Selector — moved to src/app/library-selector.ts ─────────────────
+const showLibrarySelector = createLibrarySelector({
+  loadTableWithPhysicsWorker, resetGameState, scene,
+});
 
 // ─── Callbacks registrieren ───────────────────────────────────────────────────
 cb.updateHUD        = updateHUD;
@@ -2498,7 +2475,6 @@ const { browseTableDirectory, browseLibraryDirectory } = initFileBrowserUI({
   loadTableWithPhysicsWorker,
   resetGameState,
   scene,
-  showLibrarySelector,
 });
 
 // ─── DMD Init-Label ───────────────────────────────────────────────────────────

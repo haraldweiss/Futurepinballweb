@@ -16,6 +16,7 @@ import { appendLogEntry } from './log-utils';
 import { escapeHtml } from '../utils/html-escape';
 import { parseFPTFile, parseFPLFile } from '../fpt-parser';
 import { setLoadedLibrary } from '../game';
+import { createLibrarySelector } from './library-selector';
 
 export interface FileBrowserUIDeps {
   /** Main entry point to load a table with physics worker. */
@@ -24,8 +25,6 @@ export interface FileBrowserUIDeps {
   resetGameState: () => void;
   /** The current THREE.Scene instance. */
   scene: THREE.Scene;
-  /** Show library selector UI after loading an FPL file. */
-  showLibrarySelector: (lib: any) => void;
 }
 
 export interface FileBrowserUIApi {
@@ -39,7 +38,8 @@ export interface FileBrowserUIApi {
  * for use by path-shortcut callbacks and window-api registration.
  */
 export function initFileBrowserUI(deps: FileBrowserUIDeps): FileBrowserUIApi {
-  const { loadTableWithPhysicsWorker, resetGameState, scene, showLibrarySelector } = deps;
+  const { loadTableWithPhysicsWorker, resetGameState, scene } = deps;
+  const showLibrarySelector = createLibrarySelector({ loadTableWithPhysicsWorker, resetGameState, scene });
   const libraryRef = () => (window as any)._loadedLibrary;
 
   // ─── File Input / Drag-and-Drop ───
