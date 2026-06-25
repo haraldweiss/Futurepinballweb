@@ -32,6 +32,7 @@ import { initializeFPTBrowser, loadFPTFromPath } from './app/fpt-browser';
 import { initializeBAMEngine } from './app/bam-init';
 import { initTouchControls } from './app/touch-controls';
 import { setupDMDWindow, setupBackglassWindow } from './app/secondary-windows';
+import { initFileBrowserUI } from './app/file-browser-ui';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -2492,253 +2493,22 @@ const {
 // ─── Secondary Windows — moved to src/app/secondary-windows.ts ───────────────
 
 // ─── File Input ────────────────────────────────────────────────────────────────
-const fileInput = document.getElementById('file-input') as HTMLInputElement;
-const dropZone  = document.getElementById('drop-zone') as HTMLElement;
-
-const handleFile = async (f: File) => {
-  if (f.name.endsWith('.fpl')) {
-    // Handle FPL library file
-    await parseFPLFile(
-      f,
-      (lib: any) => {
-        setLoadedLibrary(lib);
-        window.showLibrarySelector(lib);
-        appendLogEntry(`📚 Library loaded: ${lib.name} (${Object.keys(lib.tableTemplates).length} tables)`);
-      },
-      (err) => appendLogEntry(`❌ FPL Error: ${err}`, 'error')
-    );
-  } else if (f.name.endsWith('.fpt')) {
-    // Handle FPT table file (apply loaded library if available)
-    resetGameState();
-    parseFPTFile(f,
-      cfg => loadTableWithPhysicsWorker(cfg, scene, loadedLibrary),
-      () => window.closeLoader(),
-      (t: string) => window.switchTab(t)
-    );
-  }
-};
-
-// ─── Table Directory Browser ────────────────────────────────────────────────────
-async function browseTableDirectory(): Promise<void> {
-  const dirPathInput = document.getElementById('table-dir-path') as HTMLInputElement;
-  const tableInput = document.getElementById('table-dir-input') as HTMLInputElement;
-
-  appendLogEntry('📂 Verzeichnis wird ausgewählt...', 'info');
-
-  if ('showDirectoryPicker' in window) {
-    // Modern API: showDirectoryPicker (Chrome/Edge)
-    try {
-      const dirHandle = await window.showDirectoryPicker!();
-      dirPathInput.value = dirHandle.name || 'Tabellenverzeichnis';
-
-      // Pfad speichern
-      DirectoryPathManager.saveTablePath(dirHandle.name || 'Tabellenverzeichnis');
-      updateTablePathShortcuts(browseTableDirectory);
-
-      const files: File[] = [];
-      for await (const [name, handle] of dirHandle.entries()) {
-        if (name.endsWith('.fpt') || name.endsWith('.fp')) {
-          try {
-            const file = await (handle as FileSystemFileHandle).getFile();
-            files.push(file);
-          } catch (e) {
-            console.warn(`⚠ Fehler beim Lesen der Datei ${name}:`, e);
-          }
-        }
-      }
-
-      appendLogEntry(`✅ ${files.length} Tabellen-Dateien gefunden`, 'ok');
-      renderTableFileGrid(files);
-    } catch (e: any) {
-      if (e.name === 'AbortError') {
-        appendLogEntry('❌ Verzeichnis-Auswahl abgebrochen', 'warn');
-      } else {
-        appendLogEntry(`❌ Fehler beim Verzeichnis-Picker: ${e.message}`, 'error');
-      }
-      return;
-    }
-  } else if (tableInput) {
-    // Fallback: use webkitdirectory (Firefox/Safari)
-    tableInput.onchange = (e) => {
-      const input = e.target as HTMLInputElement;
-      if (input.files && input.files.length > 0) {
-        const files: File[] = [];
-        Array.from(input.files).forEach(f => {
-          if (f.name.endsWith('.fpt') || f.name.endsWith('.fp')) {
-            files.push(f);
-          }
-        });
-
-        dirPathInput.value = 'Tabellenverzeichnis';
-        DirectoryPathManager.saveTablePath('Tabellenverzeichnis');
-        updateTablePathShortcuts(browseTableDirectory);
-
-        appendLogEntry(`✅ ${files.length} Tabellen-Dateien gefunden`, 'ok');
-        renderTableFileGrid(files);
-      } else {
-        appendLogEntry('❌ Keine Dateien ausgewählt', 'warn');
-      }
-    };
-    tableInput.click();
-    return;
-  } else {
-    appendLogEntry('❌ Verzeichnis-Auswahl wird in diesem Browser nicht unterstützt', 'error');
-  }
-}
-
-function renderTableFileGrid(files: File[]): void {
-  const grid = document.getElementById('table-file-grid')!;
-  grid.innerHTML = '';
-  if (files.length === 0) {
-    grid.innerHTML = '<p style="color:#667; font-size:12px; text-align:center;">Keine .fpt Dateien gefunden.</p>';
-    return;
-  }
-
-  files.sort((a, b) => a.name.localeCompare(b.name));
-  for (const f of files) {
-    const card = document.createElement('div');
-    card.className = 'table-card';
-    const sizeMB = (f.size / 1024 / 1024).toFixed(2);
-    const displayName = escapeHtml(f.name.replace(/\.fpt$/i, ''));
-    // eslint-disable-next-line no-unsanitized/property -- displayName is escapeHtml'd; sizeMB is numeric
-    card.innerHTML = `<div class="preview">🎱</div><h3>${displayName}</h3><span>${sizeMB} MB</span>`;
-    card.style.cursor = 'pointer';
-    card.onclick = () => {
-      resetGameState();
-      parseFPTFile(f,
-        cfg => loadTableWithPhysicsWorker(cfg, scene, loadedLibrary),
-        () => window.closeLoader(),
-        (t: string) => window.switchTab(t)
-      );
-    };
-    grid.appendChild(card);
-  }
-}
-
-// ─── Phase B0: FPT Browser Init — moved to src/app/fpt-browser.ts ──────────
-
-// ─── Library Directory Browser ──────────────────────────────────────────────────
-async function browseLibraryDirectory(): Promise<void> {
-  const dirPathInput = document.getElementById('lib-dir-path') as HTMLInputElement;
-  const libInput = document.getElementById('lib-dir-input') as HTMLInputElement;
-
-  appendLogEntry('📚 Bibliotheksverzeichnis wird ausgewählt...', 'info');
-
-  if ('showDirectoryPicker' in window) {
-    // Modern API: showDirectoryPicker (Chrome/Edge)
-    try {
-      const dirHandle = await window.showDirectoryPicker!();
-      dirPathInput.value = dirHandle.name || 'Bibliotheksverzeichnis';
-
-      // Pfad speichern
-      DirectoryPathManager.saveLibraryPath(dirHandle.name || 'Bibliotheksverzeichnis');
-      updateLibraryPathShortcuts(browseLibraryDirectory);
-
-      const files: File[] = [];
-      for await (const [name, handle] of dirHandle.entries()) {
-        if (name.endsWith('.fpl')) {
-          try {
-            const file = await (handle as FileSystemFileHandle).getFile();
-            files.push(file);
-          } catch (e) {
-            console.warn(`⚠ Fehler beim Lesen der Datei ${name}:`, e);
-          }
-        }
-      }
-
-      appendLogEntry(`✅ ${files.length} Bibliotheks-Dateien gefunden`, 'ok');
-      renderLibraryFileList(files);
-    } catch (e: any) {
-      if (e.name === 'AbortError') {
-        appendLogEntry('❌ Verzeichnis-Auswahl abgebrochen', 'warn');
-      } else {
-        appendLogEntry(`❌ Fehler beim Verzeichnis-Picker: ${e.message}`, 'error');
-      }
-      return;
-    }
-  } else if (libInput) {
-    // Fallback: use webkitdirectory (Firefox/Safari)
-    libInput.onchange = (e) => {
-      const input = e.target as HTMLInputElement;
-      if (input.files && input.files.length > 0) {
-        const files: File[] = [];
-        Array.from(input.files).forEach(f => {
-          if (f.name.endsWith('.fpl')) {
-            files.push(f);
-          }
-        });
-
-        dirPathInput.value = 'Bibliotheksverzeichnis';
-        DirectoryPathManager.saveLibraryPath('Bibliotheksverzeichnis');
-        updateLibraryPathShortcuts(browseLibraryDirectory);
-
-        appendLogEntry(`✅ ${files.length} Bibliotheks-Dateien gefunden`, 'ok');
-        renderLibraryFileList(files);
-      } else {
-        appendLogEntry('❌ Keine Dateien ausgewählt', 'warn');
-      }
-    };
-    libInput.click();
-    return;
-  } else {
-    appendLogEntry('❌ Verzeichnis-Auswahl wird in diesem Browser nicht unterstützt', 'error');
-  }
-}
-
-function renderLibraryFileList(files: File[]): void {
-  const list = document.getElementById('lib-file-list')!;
-  list.innerHTML = '';
-
-  if (files.length === 0) {
-    list.innerHTML = '<p style="color:#667; font-size:12px;">Keine .fpl Dateien gefunden.</p>';
-    return;
-  }
-
-  for (const f of files) {
-    const btn = document.createElement('button');
-    btn.className = 'tab-btn';
-    btn.style.display = 'block';
-    btn.style.marginBottom = '6px';
-    btn.style.width = '100%';
-    btn.style.textAlign = 'left';
-    btn.textContent = `📚 ${f.name.replace(/\.fpl$/i, '')} (${(f.size / 1024).toFixed(0)} KB)`;
-    btn.onclick = async () => {
-      await parseFPLFile(f,
-        (lib: any) => {
-          setLoadedLibrary(lib);
-          (document.getElementById('lib-status') as HTMLElement).textContent =
-            `✅ ${lib.name} geladen (${Object.keys(lib.tableTemplates || {}).length} Tabellen)`;
-          appendLogEntry(`📚 Library: ${lib.name}`);
-        },
-        (err: string) => appendLogEntry(`❌ FPL Error: ${err}`, 'error')
-      );
-    };
-    list.appendChild(btn);
-  }
-}
-
-// ─── Path Shortcuts — moved to src/app/path-shortcuts.ts ────────────────────
-
-fileInput.addEventListener('change', e => { const f=(e.target as HTMLInputElement).files?.[0]; if(f) handleFile(f); });
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); const f=e.dataTransfer?.files[0]; if(f) handleFile(f); });
-
-// ─── Directory Browser Button Event Listeners ──────────────────────────────────
-const btnBrowseTables = document.getElementById('btn-browse-tables');
-if (btnBrowseTables) btnBrowseTables.addEventListener('click', () => browseTableDirectory());
-
-const btnBrowseLibrary = document.getElementById('btn-browse-library');
-if (btnBrowseLibrary) btnBrowseLibrary.addEventListener('click', () => browseLibraryDirectory());
+// ─── File Browser UI — moved to src/app/file-browser-ui.ts ───────────────────
+const { browseTableDirectory, browseLibraryDirectory } = initFileBrowserUI({
+  loadTableWithPhysicsWorker,
+  resetGameState,
+  scene,
+  showLibrarySelector,
+});
 
 // ─── DMD Init-Label ───────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
   const btn=document.getElementById('dmd-mode-btn');
   if(btn) btn.textContent=dmdSolidMode?'SOLID':'DOT';
 
-  // Initialize path shortcuts
-  updateTablePathShortcuts(browseTableDirectory);
-  updateLibraryPathShortcuts(browseLibraryDirectory);
+  // Initialize path shortcuts (browseTableDirectory/browseLibraryDirectory from initFileBrowserUI)
+  if (typeof browseTableDirectory === 'function') updateTablePathShortcuts(browseTableDirectory as () => Promise<void>);
+  if (typeof browseLibraryDirectory === 'function') updateLibraryPathShortcuts(browseLibraryDirectory as () => Promise<void>);
 
   // Show table selector if no table is loaded
   if (!currentTableConfig) {
