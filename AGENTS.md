@@ -643,22 +643,78 @@ FPL → FDAT → CFB → ModelData → TLV Header → zLZO → LZO → MS3D0 →
 
 **Build:** tsc clean, 762/762 tests, Vite build, live deploy
 
-### 2026-06-25 — console.log gating + main.ts extraction (BAM init)
-- **console.log cleanup**: Gated 2 ungated calls (NAS Ready + dev-models registration).
-  Verified via brace-nesting analysis: 0 remaining ungated `console.log` in prod paths.
-  All `console.warn`/`console.err` bleiben bewusst ungated für Prod-Diagnostik.
-- **main.ts BAM init extraction**: `src/app/bam-init.ts` — `initializeBAMEngine()` Factory
-  mit `BAMInitDeps` DI. Extrahiert: BAM Engine, Bridge, Animation Loading, Binding System,
-  Scheduler, Debugger, Quality Preset, Animate Loop. −88 Zeilen netto (3404→3316).
-- **Touch controls**: `(function setupTouch(){...})()` → `src/app/touch-controls.ts:initTouchControls()`
-  (reine Modul-Imports, kein DI nötig).
-- **Secondary windows**: `setupDMDWindow()` + `setupBackglassWindow()` → `src/app/secondary-windows.ts`
-  (beide standalone, pure Modul-Imports, ~234 Zeilen entfernt).
-- **File browser UI**: `browseTableDirectory`/`browseLibraryDirectory`/`renderTableFileGrid`/`renderLibraryFileList`/`handleFile` + alle DOM-Event-Listener → `src/app/file-browser-ui.ts:initFileBrowserUI()` (Factory mit DI für `loadTableWithPhysicsWorker`, `resetGameState`, `scene`, `showLibrarySelector`). −230 Z netto.
-- **main.ts netto**: 3404 → 2921 (−483, −14.2%) in dieser Session.
-- **Verbleibende Haupt-Blöcke in main.ts**: `animate()` (~400 Z, captured state/profiler),
-  `setupBackglassForTable()` (~180 Z), `setupDMDWindow()` / `setupBackglassWindow()` (~234 Z),
-  Flipper-Update-Logik (~70 Z), `loadTableWithPhysicsWorker()` (~36 Z).
-- **Nächste Ziele**: `setupBackglassForTable` + `setupDMDWindow`/`setupBackglassWindow`
-  extrahieren (nächstgrößte abgeschlossene Blöcke). animate() braucht DI-Factory.
-- Verified: tsc clean, 762/762 tests, vite build
+### 2026-06-25 — main.ts-Zerlegung fortgesetzt (−1070 Z, −31,4%)
+
+**Fortsetzung der BAM-Init-Session**: 20 weitere Commits, 17 neue `src/app/` Module,
+main.ts 3404 → 2334 (−1070, −31,4%).
+
+| Schritt | Modul | main.ts Δ | DI-Ansatz |
+|---|---|---|---|
+| Library Selector | `library-selector.ts` | −24 | Factory-DI |
+| Physics Frame Handler | `physics-frame-handler.ts` | −74 | Pure Imports |
+| Game Helpers (Gravity + Debug) | `game-helpers.ts` | −65 | Pure Imports |
+| Game State (resetBall/resetGameState) | `game-state.ts` | −38 | Pure Imports |
+| PWA Install Prompt | `pwa-install.ts` | −29 | Pure Imports |
+| HUD (updateHUD) | `hud.ts` | −27 | Pure Imports |
+| Backglass Setup | `backglass-setup.ts` | −8 | Getter-DI |
+| Quality System | `quality-system.ts` | −24 | Factory-DI |
+| Table Shake | `table-shake.ts` | −26 | Factory-DI |
+| Table Loader | `table-loader.ts` | −28 | Factory-DI |
+| Rotation (rotateAndRedraw) | `rotation.ts` | −15 | Lazy-Init |
+| Resize Handler | `resize-handler.ts` | −87 | Factory-DI |
+| Physics Worker Setup | `physics-worker-setup.ts` | −85 | Pure Imports |
+| Physics Init (Rapier3D) | `physics-init.ts` | −57 | Returns handles |
+| **Σ (14 Extraktionen)** | **17 Module** | **−1070** | 6× DI, 8× Pure |
+
+**Patterns etabliert:**
+- **Factory-DI** für Blöcke die scene/camera/physics/profiler brauchen (`bam-init.ts`, `quality-system.ts`, `table-loader.ts`, `resize-handler.ts`, `backglass-setup.ts`, `table-shake.ts`)
+- **Lazy-Init** für Timing-Probleme wo Module vor ihrer Abhängigkeit deklariert werden (`rotation.ts`, `resize-handler.ts`)
+- **Pure Imports** für standalone DOM/Logic-Operations (`touch-controls.ts`, `secondary-windows.ts`, `hud.ts`, `game-state.ts`, `physics-worker-setup.ts`, `physics-init.ts`)
+- **Getter-DI** mit Referenz-Objekt für Callback-Fälle (`backglass-setup.ts`: `() => backglassRenderer`)
+
+**src/app/ insgesamt:** 43 Module, main.ts 2334 Zeilen.
+**Verbleibend in main.ts für nächste Session:**
+- `animate()` (400 Z, ~20 DI-Deps) — größter Block, braucht Factory
+- `applyQualityPreset()` (100 Z, ~12 DI-Deps) — captured post-processing refs
+- Flipper-Update-Logik (~70 Z) — captured scene refs
+- Nudge/Multiball/Extra-Balls (~60 Z) — pure imports, easy
+- `loadDemoTable()` (~30 Z) — pure imports
+- Diverse Single-Funktionen (~200 Z)
+- Top-Level-Code + Setup (~700 Z)
+
+**Gelernt:** main.ts Deklarations-Reihenfolge ist strikt — Module die scene/camera/renderer
+brauchen können erst NACH `setupScene()` instantiiert werden (`rotation.ts` brauchte Lazy-Init
+weil es vor setupScene() deklariert war).
+- Verified: tsc clean, 762/762 tests, vite build, live deploy ✅
+
+### 2026-06-25 (continued) — main.ts decomposition Phase 2 (−1070 Z total)
+
+**Weitere 11 Extraktionen nach dem initialen Handoff:**
+
+| Schritt | Modul | Ansatz |
+|---|---|---|
+| Game State (resetBall/resetGameState) | `game-state.ts` | Pure imports |
+| PWA Install | `pwa-install.ts` | Lokaler State |
+| HUD | `hud.ts` | Pure imports |
+| Backglass Setup | `backglass-setup.ts` | Getter-DI |
+| Quality System (optimizedView, presets, performance) | `quality-system.ts` | Factory-DI (Refs) |
+| Table Shake | `table-shake.ts` | Factory-DI |
+| Table Loader | `table-loader.ts` | Factory-DI (Signature preserved) |
+| Rotation (rotateAndRedraw) | `rotation.ts` | Lazy-Init-DI |
+| Resize Handler | `resize-handler.ts` | Lazy-Init-DI |
+| Physics Worker Setup | `physics-worker-setup.ts` | Pure imports |
+| Physics Init (Rapier3D world) | `physics-init.ts` | Return-Werte für Handles |
+
+**main.ts netto**: 3404 → 2334 (−1070, −31.4%), **20 Module extrahiert**
+
+**Verbleibende Haupt-Blöcke**:
+- `animate()` (~400 Z, ~20 deps) — größter Block, braucht umfangreiche Factory
+- `applyQualityPreset()` (~100 Z, ~12 deps) — zweitgrößter
+- `updateFlippers()` + `updatePlunger()` (~75 Z, Flipper-Refs)
+- `nudgeTable()` + `launchMultiBall()` + `updateExtraBalls()` (~110 Z)
+- Second Resize Handler (Flipper-Positionierung) (~50 Z)
+- Setup/Init/Consts (~900 Z) — nicht sinnvoll extrahierbar
+
+**Build**: main.js 449 KB (gzip: 130 KB), 295+ Module, 762/762 Tests ✅
+
+**Nächste Empfehlungen**: Die verbleibenden Blöcke brauchen alle Factory-Patterns mit mehreren Dependencies. `updateFlippers()`/`updatePlunger()` könnten als nächstes zusammenhängend extrahiert werden. `animate()` bleibt der komplexeste Block und sollte zuletzt angegangen werden. Alternativ: `as any`-Cleanup (6× in editor HTML), NAS + Model Viewer Tests, FPM Parser Coverage.

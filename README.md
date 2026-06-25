@@ -6,8 +6,8 @@
 ![License](https://img.shields.io/badge/License-AGPLv3-green)
 ![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)
-![Modules](https://img.shields.io/badge/Modules-248-orange)
-![Code](https://img.shields.io/badge/Code-53K%20Lines-purple)
+![Modules](https://img.shields.io/badge/Modules-295-orange)
+![Code](https://img.shields.io/badge/Code-42K%20Lines-purple)
 ![Tests](https://img.shields.io/badge/Tests-762%20passing-success)
 ![TypeScript](https://img.shields.io/badge/TS_Errors-0-success)
 

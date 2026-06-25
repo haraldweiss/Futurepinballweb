@@ -23,7 +23,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extracted `showLibrarySelector()` → `src/app/library-selector.ts:createLibrarySelector()` (−24 lines)
 - Extracted `handlePhysicsFrame()` + `triggerVideoEvent()`/`onMultiballStartVideo()`/`onTiltVideo()` → `src/app/physics-frame-handler.ts` (−74 lines, pure imports, no DI)
 - Extracted `applyPhysicsGravityForRotation()` + DEV debug helpers (testGravity, forceScore, dumpState) → `src/app/game-helpers.ts` (−65 lines, pure imports)
-- main.ts this session: 3404 → 2758 (−646 lines, −19.0%)
+- Extracted `resetBall()` + `resetGameState()` → `src/app/game-state.ts` (−38 lines, pure imports)
+- Extracted PWA install prompt → `src/app/pwa-install.ts` (−29 lines)
+- Extracted `updateHUD()` → `src/app/hud.ts` (−27 lines, pure imports)
+- Extracted `setupBackglassForTable()` → `src/app/backglass-setup.ts` (−8 lines, getter-pattern DI)
+- Extracted quality system (`applyOptimizedTableView`, `setQualityPreset`, `toggleAutoQuality`, etc.) → `src/app/quality-system.ts` (−24 lines, Factory-DI)
+- Extracted table shake system → `src/app/table-shake.ts` (−26 lines, Factory-DI)
+- Extracted `loadTableWithPhysicsWorker()` → `src/app/table-loader.ts` (−28 lines, Factory-DI, preserves original signature)
+- Extracted `rotateAndRedraw()` → `src/app/rotation.ts` (−15 lines, lazy-init pattern)
+- Extracted comprehensive resize handler → `src/app/resize-handler.ts` (−87 lines, Factory-DI)
+- Extracted `setupPhysicsWorker()` → `src/app/physics-worker-setup.ts` (−85 lines, pure imports)
+- Extracted `initPhysics()` (Rapier3D world) → `src/app/physics-init.ts` (−57 lines, returns flipper handles)
+- main.ts this session: 3404 → 2334 (−1070 lines, −31.4%)
   using `BAMInitDeps` dependency injection interface
 
 ---
