@@ -30,6 +30,8 @@ import { drawBGCanvas } from './app/backglass-canvas';
 import { updateTablePathShortcuts, updateLibraryPathShortcuts } from './app/path-shortcuts';
 import { initializeFPTBrowser, loadFPTFromPath } from './app/fpt-browser';
 import { initializeBAMEngine } from './app/bam-init';
+import { initTouchControls } from './app/touch-controls';
+import { setupDMDWindow, setupBackglassWindow } from './app/secondary-windows';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -2471,35 +2473,7 @@ window.addEventListener('resize', () => {
 });
 
 // ─── Touch Controls ────────────────────────────────────────────────────────────
-(function setupTouch() {
-  if (!('ontouchstart' in window) && navigator.maxTouchPoints<1) return;
-  ['touch-left','touch-right','touch-plunger'].forEach(id => {
-    const el=document.getElementById(id); if(el) el.style.display='flex';
-  });
-  const bindFlipper = (id: string, side: 'left'|'right') => {
-    const el=document.getElementById(id); if(!el) return;
-    el.addEventListener('touchstart',e=>{e.preventDefault();keys[side]=true;getAudioCtx();playSound('flipper');},{passive:false});
-    el.addEventListener('touchend',  e=>{e.preventDefault();keys[side]=false;},{passive:false});
-  };
-  bindFlipper('touch-left','left'); bindFlipper('touch-right','right');
-  const plBtn=document.getElementById('touch-plunger');
-  if(plBtn){
-    plBtn.addEventListener('touchstart',e=>{e.preventDefault();getAudioCtx();if(state.inLane&&!state.plungerCharging)state.plungerCharging=true;},{passive:false});
-    plBtn.addEventListener('touchend',  e=>{
-      e.preventDefault();
-      if(state.inLane&&state.plungerCharging){
-        state.plungerCharging=false; const charge=state.plungerCharge;
-        state.inLane=false; state.plungerCharge=0; state.ballSaveTimer=3.5;
-        if(physics){
-          physics.ballBody.setGravityScale(1.0, true);
-          physics.ballBody.setTranslation({ x:2.65, y:-5.0, z: 0 }, true);
-          physics.ballBody.setLinvel({ x:0, y:16.0+charge*14.0, z: 0 }, true);
-        }
-        playSound('bumper'); startBGMusic();
-      }
-    },{passive:false});
-  }
-})();
+initTouchControls();
 
 // ─── Multi-Screen ─────────────────────────────────────────────────────────────
 // see window-api.ts — selectMsLayout / openMultiscreenModal / closeMultiscreenModal /
@@ -2515,146 +2489,7 @@ const {
   loadDemoTable,
 });
 
-// ─── Secondary Windows ────────────────────────────────────────────────────────
-function setupDMDWindow(): void {
-  document.title='FPW — DMD';
-  window.addEventListener('beforeunload',()=>{
-    try{localStorage.setItem('fpw_winpos_dmd',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{ /* localStorage can throw, ignore */ void 0; }
-    disposePhysicsWorker();
-  });
-  const wrap=document.getElementById('dmd-wrap')!, canvas=document.getElementById('dmd') as HTMLCanvasElement;
-
-  // Frameless Electron child windows aren't draggable by default. Mark the
-  // entire body as a drag region so the user can grab any part of the DMD
-  // window with the mouse and reposition it freely across monitors.
-  // `app-region: no-drag` on resize handles preserves drag-to-resize.
-  document.body.style.setProperty('-webkit-app-region', 'drag');
-  document.body.style.setProperty('app-region', 'drag');
-
-  // ─── DMD sizing for standalone window ───
-  // The DMD content is 4:1 aspect (128×32 dots). On a 16:9 1920×1080 monitor
-  // we maximize the *width* (full 1920px) which gives a 1920×480 strip — the
-  // largest the DMD content can be without distortion. Black bars above/below
-  // are the classic cabinet DMD look. (If the user later wants the DMD to
-  // share the screen with score panels / table info, this is where to do it.)
-  const resizeDMD=()=>{
-    const a = DMD_W / DMD_H;  // 4:1
-    const ww = innerWidth, wh = innerHeight;
-    // Fit-to-width first; if that overflows height, fall back to fit-to-height.
-    let w = ww, h = ww / a;
-    if (h > wh) { h = wh; w = h * a; }
-    // CSS display size
-    canvas.style.width = `${w}px`;
-    canvas.style.height = `${h}px`;
-    // Bitmap (drawing buffer) size — was missing before, leaving canvas
-    // empty on the standalone DMD window. dmdFlush() does
-    // `drawImage(dmdOff, 0, 0, canvas.width, canvas.height)` so we need
-    // these to be non-zero for anything to render.
-    canvas.width = Math.max(256, Math.floor(w));
-    canvas.height = Math.max(64, Math.floor(h));
-
-    if (window.updateResponsiveDMDScale) {
-      window.updateResponsiveDMDScale();
-    }
-  };
-
-  resizeDMD();
-  window.addEventListener('resize', resizeDMD);
-  window.addEventListener('orientationchange', resizeDMD);
-
-  // Initialize drag-to-resize functionality
-  initDMDResizing(canvas, wrap);
-
-  // On-canvas diagnostic — visible WITHOUT DevTools. Shows in top-left:
-  //   F:1234 M:567
-  // F = render frame counter (proves DMD render loop runs)
-  // M = state messages received from playfield (any of BC/IPC/LS)
-  // If F grows but M stays 0 → playfield→DMD bridge is the problem.
-  // If both grow but score doesn't update → render-side issue.
-  // If neither grows → DMD render loop itself is dead.
-  let dmdRenderFrames = 0;
-  const dmdCtx = canvas.getContext('2d');
-  const drawDmdDiag = () => {
-    if (!dmdCtx) return;
-    const m = window._msStateMessages || {};
-    const total = (m.broadcastChannel || 0) + (m.electronIPC || 0) + (m.localStorage || 0);
-    dmdCtx.save();
-    dmdCtx.fillStyle = 'rgba(0,0,0,0.6)';
-    dmdCtx.fillRect(2, 2, 110, 14);
-    dmdCtx.fillStyle = '#0f0';
-    dmdCtx.font = '10px monospace';
-    dmdCtx.fillText(`F:${dmdRenderFrames} M:${total}`, 4, 12);
-    dmdCtx.restore();
-  };
-
-  const dmdLoop = () => {
-    requestAnimationFrame(dmdLoop);
-    dmdRenderFrames++;
-    dmdState.animFrame++;
-    switch (dmdState.mode) {
-      case 'attract': dmdRenderAttract(); break;
-      case 'playing': dmdRenderPlaying(); break;
-      case 'event': dmdRenderEvent(); break;
-      case 'gameover': dmdRenderGameOver(); break;
-    }
-    if (dmdState.mode === 'event') {
-      dmdState.eventTimer--;
-      if (dmdState.eventTimer <= 0) dmdState.mode = 'playing';
-    }
-    drawDmdDiag();
-  };
-  dmdLoop();
-  onSyncFrame((data: any) => {
-    if (data.type !== 'state') return;
-    Object.assign(dmdState, {
-      mode: data.dmdMode, eventText: data.dmdEventText, animFrame: data.dmdAnimFrame,
-      scrollX: data.dmdScrollX, eventTimer: data.dmdEventTimer,
-    });
-    state.score = data.score; state.ballNum = data.ballNum;
-    state.multiplier = data.multiplier; state.lastRank = data.lastRank;
-    state.lastScore = data.lastScore;
-  });
-}
-
-function setupBackglassWindow(): void {
-  document.title='FPW — Backglass';
-  window.addEventListener('beforeunload',()=>{try{localStorage.setItem('fpw_winpos_backglass',JSON.stringify({x:window.screenX,y:window.screenY,w:window.outerWidth,h:window.outerHeight}));}catch{ /* localStorage can throw, ignore */ void 0; }
-disposePhysicsWorker();});
-  document.body.style.setProperty('-webkit-app-region', 'drag');
-  document.body.style.setProperty('app-region', 'drag');
-  const canvas=document.getElementById('backglass-canvas') as HTMLCanvasElement;
-  const showEmbedDMD=!new URLSearchParams(location.search).has('nodmd');
-  const bgState:any={score:0,ballNum:1,multiplier:1,tableName:'FUTURE PINBALL',tableAccent:0x00ff66,tableColor:0x1a4a15,dmdMode:'attract',dmdEventText:'',dmdAnimFrame:0,dmdScrollX:0,dmdEventTimer:0,lastRank:0,lastScore:0,highScores:[]};
-
-  const setSize=()=>{canvas.width=innerWidth;canvas.height=innerHeight;};
-  setSize(); window.addEventListener('resize',setSize);
-
-  let bgRenderFrames = 0;
-  const bgLoop = () => {
-    requestAnimationFrame(bgLoop);
-    bgRenderFrames++;
-    bgState.dmdAnimFrame++;
-    if (bgState.dmdEventTimer > 0) { bgState.dmdEventTimer--; bgState.dmdMode = 'event'; }
-    else if (bgState.dmdMode === 'event') bgState.dmdMode = 'playing';
-    Object.assign(state, { score: bgState.score, ballNum: bgState.ballNum, multiplier: bgState.multiplier, lastRank: bgState.lastRank, lastScore: bgState.lastScore });
-    Object.assign(dmdState, { mode: bgState.dmdMode, eventText: bgState.dmdEventText, animFrame: bgState.dmdAnimFrame, scrollX: bgState.dmdScrollX, eventTimer: bgState.dmdEventTimer });
-    drawBGCanvas(canvas, bgState, showEmbedDMD, dmdCanvas);
-  };
-  bgLoop();
-  onSyncFrame((data: any) => {
-    if (data.type !== 'state') return;
-    Object.assign(bgState, {
-      score: data.score, ballNum: data.ballNum, multiplier: data.multiplier,
-      tableName: data.tableName, tableAccent: data.tableAccent, tableColor: data.tableColor,
-      dmdMode: data.dmdMode, dmdEventText: data.dmdEventText, dmdAnimFrame: data.dmdAnimFrame,
-      dmdScrollX: data.dmdScrollX, dmdEventTimer: data.dmdEventTimer,
-      lastRank: data.lastRank, lastScore: data.lastScore,
-      highScores: data.highScores || [],
-    });
-  });
-}
-
-// drawBGCanvas moved to src/app/backglass-canvas.ts
+// ─── Secondary Windows — moved to src/app/secondary-windows.ts ───────────────
 
 // ─── File Input ────────────────────────────────────────────────────────────────
 const fileInput = document.getElementById('file-input') as HTMLInputElement;
