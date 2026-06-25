@@ -43,6 +43,7 @@ import { setupBackglassForTable } from './app/backglass-setup';
 import { createQualitySystem } from './app/quality-system';
 import { initTableShake } from './app/table-shake';
 import { createTableLoader } from './app/table-loader';
+import { createRotateAndRedraw } from './app/rotation';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -174,35 +175,14 @@ export { getGraphicsPipeline };
 
 // DEV debug helpers (testGravity, forceScore, dumpState) — moved to src/app/game-helpers.ts
 
+// ─── Rotation — moved to src/app/rotation.ts ────────────────────────────────
+let _rotateAndRedrawImpl: ReturnType<typeof createRotateAndRedraw> | null = null;
+function initRotation(deps: import('./app/rotation').RotationDeps): void {
+  _rotateAndRedrawImpl = createRotateAndRedraw(deps);
+}
 async function rotateAndRedraw(targetDegrees: 0 | 90 | 180 | 270, duration: number = 400): Promise<void> {
-  // Rotate the playfield smoothly
-  await rotatePlayfieldSmooth(targetDegrees, duration);
-  saveRotation(targetDegrees);
-  applyPhysicsGravityForRotation(targetDegrees);
-  
-  // After rotation completes, redraw with optimized view for new orientation
-  requestAnimationFrame(() => {
-    qualitySystem.applyOptimizedTableView();
-
-    // Force renderer update
-    if (renderer) {
-      renderer.render(scene, camera);
-    }
-
-    // Update composer if post-processing is active via graphics pipeline
-    if (composer) {
-      try {
-        const pipeline = getGraphicsPipeline();
-        if (pipeline) {
-          pipeline.renderFrame(0);  // dt=0 for one-off renders
-        } else {
-          composer.render();
-        }
-      } catch (error) {
-        composer.render();  // Fallback
-      }
-    }
-  });
+  if (!_rotateAndRedrawImpl) throw new Error('rotateAndRedraw called before initRotation');
+  return _rotateAndRedrawImpl(targetDegrees, duration);
 }
 // ─── COMPREHENSIVE RESPONSIVE RESIZE HANDLER ───
 // Adjusts all UI elements to fit the current browser window size
@@ -2196,6 +2176,11 @@ const qualitySystem = createQualitySystem({
   lastAppliedQualityPreset: lastAppliedQualityPresetRef,
   showProfilerRef,
   applyQualityPreset,
+});
+
+// Initialize rotation after quality system (needs qualitySystem dep)
+initRotation({
+  scene, camera: camera as THREE.PerspectiveCamera, renderer, composer, qualitySystem,
 });
 
 const { browseTableDirectory, browseLibraryDirectory } = initFileBrowserUI({
