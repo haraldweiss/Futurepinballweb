@@ -42,6 +42,7 @@ import { updateHUD } from './app/hud';
 import { setupBackglassForTable } from './app/backglass-setup';
 import { createQualitySystem } from './app/quality-system';
 import { initTableShake } from './app/table-shake';
+import { createTableLoader } from './app/table-loader';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -767,40 +768,11 @@ async function setupPhysicsWorker(): Promise<void> {
 // ─── Phase 16+: Helper function to apply enhanced visuals to playfield ────────
 // applyEnhancedVisualsToTable moved to src/app/enhanced-visuals.ts
 
-// ─── Phase 15: Helper function to load table with physics worker ────────────────
-async function loadTableWithPhysicsWorker(tableConfig: any, sceneTarget: THREE.Scene, library?: any): Promise<void> {
-  if (import.meta.env.DEV) {
-    console.log('[loadTableWithPhysicsWorker] START');
-    setDevFlag('BUILD_TABLE_START', Date.now());
-    console.log('[loadTableWithPhysicsWorker] Building table...');
-  }
-  buildTable(tableConfig, sceneTarget, library, playgroundGroup);
-  if (import.meta.env.DEV) {
-    setDevFlag('BUILD_TABLE_OK', Date.now());
-    setDevFlag('BUILD_TABLE_TIME_MS', (window.debugWindow?.BUILD_TABLE_OK ?? 0) - (window.debugWindow?.BUILD_TABLE_START ?? 0));
-    console.log('[loadTableWithPhysicsWorker] Table built in', window.debugWindow?.BUILD_TABLE_TIME_MS, 'ms');
-  }
-
-  applyEnhancedVisualsToTable(sceneTarget);
-
-  if (import.meta.env.DEV) {
-    setDevFlag('PHYSICS_WORKER_START', Date.now());
-    console.log('[loadTableWithPhysicsWorker] Setting up physics worker...');
-  }
-  try {
-    await setupPhysicsWorker();
-    if (import.meta.env.DEV) {
-      setDevFlag('PHYSICS_WORKER_OK', Date.now());
-      setDevFlag('PHYSICS_WORKER_TIME_MS', (window.debugWindow?.PHYSICS_WORKER_OK ?? 0) - (window.debugWindow?.PHYSICS_WORKER_START ?? 0));
-      console.log('[loadTableWithPhysicsWorker] Physics worker setup OK in', window.debugWindow?.PHYSICS_WORKER_TIME_MS, 'ms');
-      setDevFlag('LOAD_TABLE_COMPLETE', true);
-    }
-  } catch (error) {
-    setDevFlag('PHYSICS_WORKER_ERROR', (error as Error)?.message ?? '');
-    console.error('Physics worker setup failed:', error);
-  }
-  if (import.meta.env.DEV) { console.log('[loadTableWithPhysicsWorker] COMPLETE'); }
-}
+// ─── Table Loader — moved to src/app/table-loader.ts ─────────────────────────
+const loadTableWithPhysicsWorker = createTableLoader({
+  playgroundGroup,
+  setupPhysicsWorker,
+});
 
 // triggerVideoEvent / onMultiballStartVideo / onTiltVideo — moved to src/app/physics-frame-handler.ts
 
