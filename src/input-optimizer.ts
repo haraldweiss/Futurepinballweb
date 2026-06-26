@@ -16,6 +16,10 @@ export interface InputState {
   plungerPower: number;  // 0.0 to 1.0
   nudgeX: number;        // -1, 0, or 1
   nudgeY: number;        // -1, 0, or 1
+  // Enhanced touch support
+  flipperPowerLevel: number;  // 0.4 (light) to 1.0 (heavy)
+  touchPressure: number;     // 0.0 to 1.0 for touch pressure
+  lastInputSource: 'keyboard' | 'touch' | 'none';
 }
 
 export interface InputMetrics {
@@ -36,6 +40,9 @@ export class InputOptimizer {
     plungerPower: 0,
     nudgeX: 0,
     nudgeY: 0,
+    flipperPowerLevel: 0.8,  // Default medium power
+    touchPressure: 0,
+    lastInputSource: 'none',
   };
 
   private lastState: InputState = { ...this.state };
@@ -63,8 +70,36 @@ export class InputOptimizer {
     document.addEventListener('keydown', this.handleKeyDown.bind(this), true);
     document.addEventListener('keyup', this.handleKeyUp.bind(this), true);
     
-    devLog('[Input Optimizer] Initialized with capture phase listeners');
+    devLog('[Input Optimizer] Initialized with capture phase listeners and touch support');
   }
+
+  /**
+   * Register touch control callbacks for integration
+   */
+  registerTouchCallbacks(
+    onLeftFlipperPress: (powerLevel: number) => void,
+    onLeftFlipperRelease: () => void,
+    onRightFlipperPress: (powerLevel: number) => void,
+    onRightFlipperRelease: () => void,
+    onPlungerChange: (power: number) => void
+  ): void {
+    this.touchCallbacks = {
+      onLeftFlipperPress,
+      onLeftFlipperRelease,
+      onRightFlipperPress,
+      onRightFlipperRelease,
+      onPlungerChange,
+    };
+    devLog('[Input Optimizer] Touch callbacks registered');
+  }
+
+  private touchCallbacks: {
+    onLeftFlipperPress?: (powerLevel: number) => void;
+    onLeftFlipperRelease?: () => void;
+    onRightFlipperPress?: (powerLevel: number) => void;
+    onRightFlipperRelease?: () => void;
+    onPlungerChange?: (power: number) => void;
+  } = {};
 
   /**
    * Get current input state (read-only copy)
@@ -91,8 +126,33 @@ export class InputOptimizer {
     if (this.state.plungerPower !== this.lastState.plungerPower) {
       delta.plungerPower = this.state.plungerPower;
     }
+    if (this.state.flipperPowerLevel !== this.lastState.flipperPowerLevel) {
+      delta.flipperPowerLevel = this.state.flipperPowerLevel;
+    }
+    if (this.state.touchPressure !== this.lastState.touchPressure) {
+      delta.touchPressure = this.state.touchPressure;
+    }
 
     return delta;
+  }
+
+  /**
+   * Get enhanced flipper state for physics integration
+   */
+  getFlipperState(): {
+    leftActive: boolean;
+    rightActive: boolean;
+    leftPower: number;
+    rightPower: number;
+    inputSource: 'keyboard' | 'touch' | 'none';
+  } {
+    return {
+      leftActive: this.state.flipperLeft,
+      rightActive: this.state.flipperRight,
+      leftPower: this.state.flipperLeft ? this.state.flipperPowerLevel : 0,
+      rightPower: this.state.flipperRight ? this.state.flipperPowerLevel : 0,
+      inputSource: this.state.lastInputSource,
+    };
   }
 
   /**
@@ -197,6 +257,76 @@ export class InputOptimizer {
   }
 
   /**
+   * Process touch flipper press with power level
+   */
+  processTouchFlipperPress(side: 'left' | 'right', powerLevel: number): void {
+    const now = performance.now();
+    this.metrics.lastInputTime = now;
+    this.state.lastInputSource = 'touch';
+    this.state.flipperPowerLevel = powerLevel;
+    this.state.touchPressure = powerLevel;
+
+    if (side === 'left') {
+      this.state.flipperLeft = true;
+    } else {
+      this.state.flipperRight = true;
+    }
+
+    // Update external callbacks if registered
+    if (side === 'left' && this.touchCallbacks.onLeftFlipperPress) {
+      this.touchCallbacks.onLeftFlipperPress(powerLevel);
+    } else if (side === 'right' && this.touchCallbacks.onRightFlipperPress) {
+      this.touchCallbacks.onRightFlipperPress(powerLevel);
+    }
+  }
+
+  /**
+   * Process touch flipper release
+   */
+  processTouchFlipperRelease(side: 'left' | 'right'): void {
+    const now = performance.now();
+    this.metrics.lastInputTime = now;
+    this.state.lastInputSource = 'touch';
+    this.state.touchPressure = 0;
+
+    if (side === 'left') {
+      this.state.flipperLeft = false;
+    } else {
+      this.state.flipperRight = false;
+    }
+
+    // Update external callbacks if registered
+    if (side === 'left' && this.touchCallbacks.onLeftFlipperRelease) {
+      this.touchCallbacks.onLeftFlipperRelease();
+    } else if (side === 'right' && this.touchCallbacks.onRightFlipperRelease) {
+      this.touchCallbacks.onRightFlipperRelease();
+    }
+  }
+
+  /**
+   * Process touch plunger change
+   */
+  processTouchPlungerChange(power: number): void {
+    const now = performance.now();
+    this.metrics.lastInputTime = now;
+    this.state.lastInputSource = 'touch';
+    this.state.plungerPower = power;
+    this.state.plungerActive = power > 0;
+
+    // Update external callbacks if registered
+    if (this.touchCallbacks.onPlungerChange) {
+      this.touchCallbacks.onPlungerChange(power);
+    }
+  }
+
+  /**
+   * Get current power level (for enhanced flipper physics)
+   */
+  getFlipperPowerLevel(): number {
+    return this.state.flipperPowerLevel;
+  }
+
+  /**
    * Set nudge force
    */
   setNudge(x: number, y: number): void {
@@ -223,6 +353,9 @@ export class InputOptimizer {
       plungerPower: 0,
       nudgeX: 0,
       nudgeY: 0,
+      flipperPowerLevel: 0.8,
+      touchPressure: 0,
+      lastInputSource: 'none',
     };
     this.inputQueue = [];
   }

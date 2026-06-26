@@ -17,6 +17,7 @@
 import { state, currentTableConfig } from '../game';
 import { dmdState } from '../dmd';
 import { devLog } from '../utils/dev-log';
+import { getInputOptimizer } from '../input-optimizer';
 
 // Animation utilities for smooth HUD updates
 const animationUtils = {
@@ -345,5 +346,52 @@ export function initializeEnhancedHUD(): void {
     chargeDisplay.className = 'charge-level';
     chargeDisplay.textContent = '0%';
     document.body.appendChild(chargeDisplay);
+  }
+}
+
+/**
+ * Update input metrics display (development mode only)
+ */
+function updateInputMetrics(now: number): void {
+  if (!import.meta.env.DEV) return;
+  
+  const optimizer = getInputOptimizer();
+  const metrics = optimizer.getMetrics();
+  const flipperState = optimizer.getFlipperState();
+  
+  // Create or update input metrics display
+  let metricsDisplay = document.getElementById('input-metrics') as HTMLElement;
+  if (!metricsDisplay) {
+    metricsDisplay = document.createElement('div');
+    metricsDisplay.id = 'input-metrics';
+    metricsDisplay.style.cssText = `
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.7);
+      color: #0f0;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 12px;
+      z-index: 10000;
+      pointer-events: none;
+    `;
+    document.body.appendChild(metricsDisplay);
+  }
+  
+  // Update metrics display every 100ms
+  if (now % 100 < 16) {
+    const inputSourceColor = flipperState.inputSource === 'touch' ? '#4ecdc4' : 
+                              flipperState.inputSource === 'keyboard' ? '#ff6b6b' : '#888';
+    
+    metricsDisplay.innerHTML = `
+      <div style="color: #fff; font-weight: bold; margin-bottom: 5px;">📊 INPUT METRICS</div>
+      <div>Latency: ${metrics.keyDownLatency.toFixed(1)}ms</div>
+      <div>Queue: ${metrics.inputQueueSize}</div>
+      <div>Source: <span style="color: ${inputSourceColor}">${flipperState.inputSource.toUpperCase()}</span></div>
+      <div>L-Power: ${(flipperState.leftPower * 100).toFixed(0)}%</div>
+      <div>R-Power: ${(flipperState.rightPower * 100).toFixed(0)}%</div>
+    `;
   }
 }

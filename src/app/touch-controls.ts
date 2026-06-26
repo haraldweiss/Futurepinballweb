@@ -15,6 +15,7 @@
 import { keys, state, physics } from '../game';
 import { getAudioCtx, playSound, startBGMusic } from '../audio-system';
 import { devLog } from '../utils/dev-log';
+import { getInputOptimizer } from '../input-optimizer';
 
 /**
  * Touch control visual states for enhanced user experience
@@ -88,6 +89,7 @@ export function initTouchControls(): void {
     let touchStartTime = 0;
     let powerLevel: number = FLIPPER_POWER_LEVELS.MEDIUM;
     let isTouchActive = false;
+    const optimizer = getInputOptimizer();
 
     // Enhanced touchstart with pressure detection
     el.addEventListener('touchstart', (e) => {
@@ -110,6 +112,8 @@ export function initTouchControls(): void {
         navigator.vibrate(HAPTIC_PATTERNS.FLIPPER_PRESS);
       }
 
+      // Use InputOptimizer for integrated input handling
+      optimizer.processTouchFlipperPress(side, powerLevel);
       keys[side] = true;
       (el as any).powerLevel = powerLevel;
       getAudioCtx();
@@ -134,6 +138,8 @@ export function initTouchControls(): void {
         navigator.vibrate(HAPTIC_PATTERNS.FLIPPER_RELEASE);
       }
 
+      // Use InputOptimizer for integrated input handling
+      optimizer.processTouchFlipperRelease(side);
       keys[side] = false;
       
       // Add brief hover state before returning to idle
