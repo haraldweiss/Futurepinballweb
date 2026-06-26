@@ -720,3 +720,24 @@ weil es vor setupScene() deklariert war).
 **Build**: main.js 449 KB (gzip: 130 KB), 295+ Module, 762/762 Tests ✅
 
 **Nächste Empfehlungen**: Die verbleibenden Blöcke brauchen alle Factory-Patterns mit mehreren Dependencies. `updateFlippers()`/`updatePlunger()` könnten als nächstes zusammenhängend extrahiert werden. `animate()` bleibt der komplexeste Block und sollte zuletzt angegangen werden. Alternativ: `as any`-Cleanup (6× in editor HTML), NAS + Model Viewer Tests, FPM Parser Coverage.
+
+### 2026-06-26 — Input System Architecture Analysis
+**Evidence-based investigation of multi-system input handling:**
+
+**Finding**: Multiple input systems modify the same `keys` object (`{ left: false, right: false }`):
+
+1. **Direct Keyboard Listeners**: `document.addEventListener('keydown'/'keyup')` in main.ts directly modifies `keys.left` and `keys.right`
+2. **Touch System 1** (`src/touch-controls/manager.ts`): Zone-based touch detection, conditional initialization (`if ('ontouchstart' in window)`), callbacks modify `keys` object
+3. **Touch System 2** (`src/app/touch-controls.ts`): DOM-based touch controls, unconditional initialization, directly modifies `keys` object
+4. **InputOptimizer** (`src/input-optimizer.ts`): Low-latency queue system, maintains separate internal `InputState`, **no verified connection to `keys` object**
+
+**Impact**: On touch devices, both touch systems run simultaneously. InputOptimizer's `processInputQueue()` is called in animation loop but its internal state doesn't connect to the game.
+
+**Documented Files Inspected**:
+- `src/main.ts` (2335 lines) - All input system integrations
+- `src/input-optimizer.ts` (265 lines) - Keyboard-only, no touch integration  
+- `src/game/state.ts` - Contains `export const keys = { left: false, right: false };`
+- `src/app/touch-controls.ts` (382 lines) - Enhanced touch with visual states
+- `src/touch-controls/manager.ts` (220 lines) - Zone-based touch detection
+
+**Note**: No evidence of input conflicts, but architecture shows multiple independent paths to the same state object.
