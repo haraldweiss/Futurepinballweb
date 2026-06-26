@@ -133,6 +133,7 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 | Extracted modules | `src/app/` (20+ modules) |
 | main.ts size | 2334 lines (−31%) |
 | TS modules | 295+ total |
+| Input system | `src/input-optimizer.ts` + `src/app/touch-controls.ts` — unified keyboard/touch |
 | Table configs | `src/table/configs.ts` — demo table definitions |
 | Table scoring | `src/table/scoring.ts` — bumper/target/ramp scoring logic |
 | FPT parser modules | `src/fpt/lzo.ts` (decompressor), `src/fpt/media.ts` (image/audio extraction) |
@@ -741,3 +742,21 @@ weil es vor setupScene() deklariert war).
 - `src/touch-controls/manager.ts` (220 lines) - Zone-based touch detection
 
 **Note**: No evidence of input conflicts, but architecture shows multiple independent paths to the same state object.
+
+### 2026-06-26 (continued) — Phase 2: InputOptimizer Touch Integration
+**Commits:** `be34a1e7`, `e119e3c7`
+
+**Enhanced InputOptimizer (`src/input-optimizer.ts`):**
+- Added touch support: `processTouchFlipperPress()`, `processTouchFlipperRelease()`
+- Enhanced `InputState` interface: `flipperPowerLevel`, `touchPressure`, `lastInputSource` (keyboard/touch)
+- Integrated touch controls with InputOptimizer for unified input handling
+- Added `getFlipperState()` method for enhanced physics integration
+- Added input metrics display in HUD (dev mode) showing latency/power levels
+- Registered touch callbacks for bidirectional communication
+
+**Files changed:**
+- `src/input-optimizer.ts` (+135 lines) — Core touch integration
+- `src/app/touch-controls.ts` (+6 lines) — Bidirectional callback registration
+- `src/app/hud.ts` (+48 lines) — Dev-mode input metrics display
+
+**Verification:** tsc clean, 762/762 tests, vite build ✓
