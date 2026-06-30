@@ -40,6 +40,10 @@
     "audit:dependencies": "npm audit --audit-level=moderate",
     "security:check": "npm run lint:security && npm run test:security && npm run audit:dependencies"
   },
+  "overrides": {
+    "uuid": "^11.1.1",
+    "esbuild": "^0.28.1"
+  },
   "dependencies": {
     "@codemirror/commands": "^6.10.3",
     "@codemirror/language": "^6.12.3",
@@ -49,6 +53,7 @@
     "@dimforge/rapier3d": "^0.19.3",
     "cfb": "1.2.2",
     "electron-updater": "^6.8.0",
+    "esbuild": "^0.28.1",
     "three": "0.162.0",
     "vite-plugin-top-level-await": "^1.6.0",
     "vite-plugin-wasm": "^3.6.0"
