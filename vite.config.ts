@@ -44,19 +44,21 @@ export default defineConfig({
         editor: resolve(__dirname, 'src/editor.html'),
       },
       output: {
-        manualChunks: {
-          'vendor-three':       ['three'],
-          'vendor-rapier':      ['@dimforge/rapier3d'],
-          'vendor-cfb':         ['cfb'],
-          'module-script':      ['./src/script-engine.ts'],
-          'module-fpt':         ['./src/fpt-parser.ts'],
-          'module-editor':      ['./src/integrated-editor.ts'],
-          'module-file-browser':['./src/file-browser.ts'],
-          'module-video':       ['./src/video-manager.ts', './src/video-editor.ts', './src/mechanics/video-binding.ts'],
-          'module-audio':       ['./src/audio-enhanced.ts', './src/audio-system.ts', './src/sound-manager.ts', './src/music-manager.ts'],
-          'module-graphics':    ['./src/graphics/graphics-pipeline.ts', './src/graphics/playfield-visual-enhancement.ts'],
-        }
-      }
+        // Rolldown (Vite 8) erfordert Function statt Object für manualChunks
+        manualChunks(id: string) {
+          if (id.includes('/node_modules/three/')) return 'vendor-three';
+          if (id.includes('/node_modules/@dimforge/rapier3d/')) return 'vendor-rapier';
+          if (id.includes('/node_modules/cfb/')) return 'vendor-cfb';
+          if (id.includes('/src/script-engine')) return 'module-script';
+          if (id.includes('/src/fpt-parser')) return 'module-fpt';
+          if (id.includes('/src/integrated-editor')) return 'module-editor';
+          if (id.includes('/src/file-browser')) return 'module-file-browser';
+          if (id.includes('video-manager') || id.includes('video-editor') || id.includes('video-binding')) return 'module-video';
+          if (id.includes('audio-enhanced') || id.includes('audio-system') || id.includes('sound-manager') || id.includes('music-manager')) return 'module-audio';
+          if (id.includes('graphics-pipeline') || id.includes('playfield-visual-enhancement')) return 'module-graphics';
+          return null;
+        },
+      },
     }
   },
   server: { port: 5173, host: 'localhost' },
