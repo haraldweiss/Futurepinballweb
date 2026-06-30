@@ -760,3 +760,40 @@ weil es vor setupScene() deklariert war).
 - `src/app/hud.ts` (+48 lines) — Dev-mode input metrics display
 
 **Verification:** tsc clean, 762/762 tests, vite build ✓
+
+### 2026-06-30 — Dependabot Security Fixes + Vite 7 → 8 Migration
+**Aufgaben:** 6 ungemergte Dependabot-PRs auf GitHub gemerged, 14 Security Alerts geschlossen, Vite 8 Migration durchgeführt.
+
+**6 Dependabot PRs gemerged** (Form-data, js-yaml, tar, tmp, undici, vite):
+- `bc15efe1` — form-data 4.0.5 → 4.0.6 (CRLF injection fix)
+- `38673311` — tmp 0.2.5 → 0.2.7 (path traversal fix)
+- `5afafcff` — undici 6.25.0 → 6.27.0 (HTTP header injection, DoS fix)
+- `f34a19ca` — tar 7.5.13 → 7.5.16 (PAX smuggling fix)
+- `756f0d63` — js-yaml 4.1.1 → 4.2.0 (minor bump)
+- `60142a69` — vite 7.3.2 → 8.0.16 (major bump, NTLM hash + fs.deny fix)
+
+**Zusätzliche Fixes:**
+- `d7ef7a56` — overrides für uuid ^11.1.1 und esbuild ^0.28.1; rollup als devDep
+- `bb6fd0d6` — Vite 8 Config-Adaption: `manualChunks` Object→Function (Rolldown kompatibel)
+
+**Vite 7 → 8 Migration:**
+- **Breaking Change**: Vite 8 verwendet **Rolldown** (Rust) statt Rollup als Bundler
+- **manualChunks**: Object-Syntax nicht mehr unterstützt → **Function**-Syntax erforderlich
+  ```ts
+  // Vorher (Vite 7):
+  manualChunks: { 'vendor-three': ['three'] }
+  // Nachher (Vite 8):
+  manualChunks(id: string) { if (id.includes('/three/')) return 'vendor-three'; }
+  ```
+- **rollup**: nicht mehr in Vite 8 enthalten → explizit als devDep installiert
+  (wird von `vite-plugin-top-level-await` via `@rollup/plugin-virtual` benötigt)
+- **Build-Zeit**: 2.5s → 1.97s (Rolldown ist schneller)
+- **Bundle**: unverändert, ~20 Chunks, identische Chunk-Namen
+- **Warnung**: `IMPORT_IS_UNDEFINED` für `ShaderPass` aus three.module.js (unschädlich)
+
+**14 Dependabot Alerts geschlossen:** 0 open, alle fixed ✅
+- Fix durch Merges: 8 Alerts (undici×4, form-data, tar, vite×2)
+- Fix durch overrides: 2 Alerts (uuid, esbuild)
+- Bereits resolved: 4 Alerts (ws×2, brace-expansion, vite war schon auf 8.x)
+
+**Verification:** tsc clean, 762/762 tests, npm audit: 0 vulnerabilities, vite build ✓

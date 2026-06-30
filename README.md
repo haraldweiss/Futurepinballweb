@@ -9,6 +9,7 @@
 ![Modules](https://img.shields.io/badge/Modules-295-orange)
 ![Code](https://img.shields.io/badge/Code-42K%20Lines-purple)
 ![Tests](https://img.shields.io/badge/Tests-762%20passing-success)
+![Vulnerabilities](https://img.shields.io/badge/Vulnerabilities-0-success)
 ![TypeScript](https://img.shields.io/badge/TS_Errors-0-success)
 
 ---
@@ -261,7 +262,7 @@ All documentation is organised in `docs/`:
 |-----------|-----------|---------|
 | Rendering | Three.js | 0.162 |
 | Physics | Rapier2D | 0.12 |
-| Build Tool | Vite | 7.3 |
+| Build Tool | Vite | 8.1 |
 | Language | TypeScript | 5.4 |
 | Desktop | Electron | ^41.0.0 |
 | Audio | Web Audio API | Native |
@@ -667,7 +668,7 @@ Lokaler HTTP-Server zum Laden von FPL/FPT/FPM-Dateien vom NAS.
 
 **Made with ❤️ by Future Pinball Contributors**
 
-Last Updated: June 20, 2026 | Version 0.24.0 | 762 tests ✅ | 248 modules ✅
+Last Updated: June 30, 2026 | Version 0.24.0 | 762 tests ✅ | 248 modules ✅ | 0 vulnerabilities ✅
 
 ---
 

@@ -9,10 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Gate console.log calls
-- Gated 2 ungated `console.log` behind `import.meta.env.DEV`
-  (`src/main.ts:3273` NAS Ready, `src/app/dev-models.ts:49` model registration)
-- Verified: no remaining ungated `console.log` in production code paths
+### Dependabot Dependency Updates (14 Security Alerts Closed)
+- Merged 6 Dependabot PRs:
+  - **form-data** 4.0.5 → 4.0.6 (1 high: CRLF injection)
+  - **js-yaml** 4.1.1 → 4.2.0 (minor bump)
+  - **tar** 7.5.13 → 7.5.16 (1 medium: PAX smuggling)
+  - **tmp** 0.2.5 → 0.2.7 (1 high: path traversal)
+  - **undici** 6.25.0 → 6.27.0 (1 high, 1 medium, 2 low: HTTP header injection, DoS)
+  - **vite** 7.3.2 → 8.0.16 (1 high, 1 medium: NTLM hash disclosure, fs.deny bypass)
+- Added `overrides` for **uuid** ^11.1.1 (bounds check) and **esbuild** ^0.28.1 (file disclosure)
+- Added **rollup** as explicit devDependency (Vite 8 no longer ships it)
+- Total: **14 alerts closed** (3 high, 5 moderate, 3 low — 3 already resolved)
+- `npm audit`: 0 vulnerabilities
+
+### Vite 7 → 8 Migration
+- **Build tool**: Vite 7.3.6 → **8.1.1** (Rolldown instead of Rollup)
+- **Config-Fix**: `manualChunks` changed from Object to Function
+  (`manualChunks: { name: ['path'] }` → `manualChunks(id) { if (...) return name; }`)
+- **New dependency**: `rollup` as devDep (for `vite-plugin-top-level-await`)
+- **Bundle unchanged**: main.js 338 KB (gzip 80 KB), ~20 chunks
+- **Build time**: 1.97s (Vite 7: ~2.5s)
+- **Warning (benign)**: `IMPORT_IS_UNDEFINED` for `ShaderPass` from three.module.js
 
 ### main.ts decomposition
 - Extracted BAM engine + animation initialization block (−88 lines, net −91+3)
