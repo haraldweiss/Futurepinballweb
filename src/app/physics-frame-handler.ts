@@ -6,7 +6,7 @@
  *
  * Extracted from main.ts.
  */
-import { state, physics } from '../game';
+import { state, physics, bumpers, targets } from '../game';
 import { scoreBumperHit, scoreTargetHit, scoreSlingshotHit } from '../table';
 import { getSoundManager } from '../audio-system';
 import { getVideoManager } from '../video-manager';
@@ -37,19 +37,15 @@ export function handlePhysicsFrame(frame: PhysicsFrameData): void {
   for (const collision of frame.collisions) {
     switch (collision.type) {
       case 'bumper': {
-        const bumperData = physics?.bumperMap.get(collision.data.index);
-        if (bumperData) {
-          scoreBumperHit(bumperData);
-          getSoundManager().then((sm) => sm.playBumperHit()).catch(() => {});
-        }
+        const bumperMesh = bumpers[collision.data.index]?.mesh ?? null;
+        scoreBumperHit({ x: collision.data.x, y: collision.data.y, index: collision.data.index, mesh: bumperMesh });
+        getSoundManager().then((sm) => sm.playBumperHit()).catch(() => {});
         break;
       }
       case 'target': {
-        const targetData = physics?.targetMap.get(collision.data.index);
-        if (targetData) {
-          scoreTargetHit(targetData);
-          getSoundManager().then((sm) => sm.playTargetHit()).catch(() => {});
-        }
+        const targetMesh = targets[collision.data.index]?.mesh ?? null;
+        scoreTargetHit({ x: collision.data.x, y: collision.data.y, index: collision.data.index, mesh: targetMesh });
+        getSoundManager().then((sm) => sm.playTargetHit()).catch(() => {});
         break;
       }
       case 'slingshot': {

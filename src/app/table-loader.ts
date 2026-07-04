@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { buildTable } from '../table';
 import { applyEnhancedVisualsToTable } from './enhanced-visuals';
 import { setDevFlag } from '../window-api';
+import { setLoadPhase, completePhase, advancePhase } from './loader-ui';
 
 export interface TableLoaderDeps {
   /** THREE.Group for playground (supports cabinet rotation). */
@@ -32,9 +33,11 @@ export function createTableLoader(deps: TableLoaderDeps): LoadTableFn {
     if (import.meta.env.DEV) {
       console.log('[loadTableWithPhysicsWorker] START');
       setDevFlag('BUILD_TABLE_START', Date.now());
-      console.log('[loadTableWithPhysicsWorker] Building table...');
     }
+
+    advancePhase('building-scene');
     buildTable(tableConfig, sceneTarget, library, playgroundGroup);
+
     if (import.meta.env.DEV) {
       setDevFlag('BUILD_TABLE_OK', Date.now());
       setDevFlag('BUILD_TABLE_TIME_MS',
@@ -43,12 +46,14 @@ export function createTableLoader(deps: TableLoaderDeps): LoadTableFn {
         window.debugWindow?.BUILD_TABLE_TIME_MS, 'ms');
     }
 
+    advancePhase('visuals');
     applyEnhancedVisualsToTable(sceneTarget);
 
     if (import.meta.env.DEV) {
       setDevFlag('PHYSICS_WORKER_START', Date.now());
       console.log('[loadTableWithPhysicsWorker] Setting up physics worker...');
     }
+    advancePhase('building-physics');
     try {
       await setupPhysicsWorker();
       if (import.meta.env.DEV) {
@@ -63,6 +68,8 @@ export function createTableLoader(deps: TableLoaderDeps): LoadTableFn {
       setDevFlag('PHYSICS_WORKER_ERROR', (error as Error)?.message ?? '');
       console.error('Physics worker setup failed:', error);
     }
+    advancePhase('ready');
+    completePhase();
     if (import.meta.env.DEV) { console.log('[loadTableWithPhysicsWorker] COMPLETE'); }
   };
 }

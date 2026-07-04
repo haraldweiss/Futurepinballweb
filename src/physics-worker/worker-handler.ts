@@ -31,7 +31,9 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
           state.rapierInitialized = true; // RAPIER3D auto-inits
           if (import.meta.env.DEV) { console.log('[Physics Worker] RAPIER initialized'); }
         }
-        initializePhysics((params as InitParams).config);
+        initializePhysics((params as InitParams).config, (detail: string) => {
+          self.postMessage({ type: 'progress', detail });
+        });
         self.postMessage({ type: 'ready' });
         break;
       }

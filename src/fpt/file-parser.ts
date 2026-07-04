@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import * as CFB from 'cfb';
 import type { CFB$Container } from 'cfb';
-import { fptResources, globalAssetCatalog } from '../game';
+import { fptResources, fptRawBytes, globalAssetCatalog } from '../game';
 import { runFPScript } from '../script-engine';
 import { extractImageFromBytes, extractSoundFromBytes } from './media';
 import { extractTableCoordsFromCFB, extractTableElementsFromCFB, ELEM_TYPE } from './table-elements';
@@ -24,6 +24,7 @@ import { playFPTMusic } from '../audio-system';
 export type { FPLLibrary } from '../types';
 
 import { getLibraryCache } from '../library-cache';
+import { generateCacheKeyFromBuffer, getCachedTable, setCachedTable } from '../storage/fpt-cache';
 
 export async function parseFPTFile(
   file: File,
@@ -51,6 +52,93 @@ export async function parseFPTFile(
   const buffer = await file.arrayBuffer();
   const bytes  = new Uint8Array(buffer);
   logMsg('Analysiere Binärformat...', 'info');
+
+  // ─── Phase 1.2: IndexedDB-Cache-Check ───
+  const cacheKey = generateCacheKeyFromBuffer(buffer, file.name, file.size);
+  const cached = await getCachedTable(cacheKey);
+  if (cached) {
+    logMsg(`📦 Cache-Hit: "${cached.meta.tableName}" (${(cached.meta.storageSize / 1024).toFixed(0)} KB cached)`, 'ok');
+    logMsg('⏩ Rekonstruiere aus Cache...', 'info');
+
+    // Rebuild fptResources from cached raw bytes
+    fptResources.textures = {};
+    fptResources.sounds = {};
+    fptResources.playfield = null;
+    fptResources.script = cached.meta.script;
+    fptResources.mapped = { bumper: null, flipper: null, drain: null };
+    delete fptResources.musicTrack;
+
+    for (const tex of cached.textures) {
+      const texBytes = new Uint8Array(tex.data);
+      const texture = await extractImageFromBytes(texBytes);
+      if (texture) {
+        fptResources.textures[tex.name] = texture;
+        if (tex.name === cached.meta.playfieldTextureName) {
+          fptResources.playfield = texture;
+        }
+      }
+    }
+
+    for (const snd of cached.sounds) {
+      const sndBytes = new Uint8Array(snd.data);
+      const buffer_ = await extractSoundFromBytes(sndBytes);
+      if (buffer_) {
+        const isMusic = (buffer_ as AudioBuffer).duration > 8;
+        if (isMusic && !fptResources.musicTrack) {
+          fptResources.musicTrack = buffer_;
+        } else {
+          fptResources.sounds[snd.name] = buffer_;
+        }
+      }
+    }
+
+    if (cached.musicTrack) {
+      const musicBuf = await extractSoundFromBytes(new Uint8Array(cached.musicTrack));
+      if (musicBuf) fptResources.musicTrack = musicBuf;
+    }
+
+    if (cached.meta.script) {
+      logMsg(`📝 VBScript aus Cache (${cached.meta.script.split('\n').length} Zeilen)`, 'ok');
+      runFPScript(cached.meta.script);
+      if (switchTabFn) switchTabFn('script');
+    }
+
+    if (fptResources.playfield) logMsg('✓ Spielfeld-Textur geladen', 'ok');
+
+    // Model reconstruction from cached model data
+    if (cached.models.length > 0) {
+      logMsg(`🎲 ${cached.models.length} Modell(e) aus Cache`, 'ok');
+      for (const model of cached.models) {
+        const fpm = parseFPM(new Uint8Array(model.data));
+        if (fpm) {
+          const mesh = fpmToTHREE(fpm);
+          const cat = globalAssetCatalog();
+          if (cat) {
+            cat.registerModel(fpm.name, mesh);
+          }
+        }
+      }
+    }
+
+    // Rebuild fptRawBytes (needed for re-exports/resave)
+    // Store minimal set: the cached textures/sounds bytes
+    for (const tex of cached.textures) {
+      fptResources.textures[tex.name] = fptResources.textures[tex.name]; // already set
+    }
+
+    // Call buildTableFn with cached config
+    logMsg(`✅ "${cached.meta.tableName}" aus Cache geladen!`, 'ok');
+    buildTableFn?.(cached.meta.config);
+    closeLoaderFn?.();
+
+    // Trigger FPT music if present
+    if (fptResources.musicTrack && cached.meta.config.name) {
+      playFPTMusic(fptResources.musicTrack);
+    }
+
+    return;
+  }
+  logMsg('📦 Cache-Miss — parse neu...', 'info');
 
   if (typeof CFB !== 'undefined') {
     logMsg('🔍 Analysiere CFB/OLE2-Struktur...', 'info');
@@ -310,6 +398,71 @@ export async function parseFPTFile(
           logMsg(`  📦 ${lib.name} (${lib.type})`, 'warn');
         });
         logMsg(`💡 Tipp: Laden Sie die fehlenden Dateien über "FP IMPORT"`, 'info');
+      }
+
+      // ─── Phase 1.2: In IndexedDB-Cache speichern ───
+      try {
+        const cacheTextures = Object.entries(fptRawBytes.textures ?? {}).map(([name, data]) => ({
+          name,
+          data: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer,
+        }));
+        const cacheSounds = Object.entries(fptRawBytes.sounds ?? {}).map(([name, data]) => ({
+          name,
+          data: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer,
+        }));
+
+        let musicTrackBytes: ArrayBuffer | null = null;
+        const rawMusic = (fptRawBytes as any)?.musicTrack;
+        if (rawMusic) {
+          musicTrackBytes = rawMusic.buffer.slice(rawMusic.byteOffset, rawMusic.byteOffset + rawMusic.byteLength) as ArrayBuffer;
+        }
+
+        // Collect model data from fptResources.models (Map<string, Uint8Array> for raw)
+        const cachedModels: Array<{ name: string; data: ArrayBuffer }> = [];
+        if ((fptResources as any).modelBytes) {
+          const modelBytes = (fptResources as any).modelBytes as Map<string, Uint8Array>;
+          modelBytes.forEach((data, name) => {
+            cachedModels.push({
+              name,
+              data: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer,
+            });
+          });
+        }
+
+        // Also try to capture MS3D model bytes from fptRawBytes.otherStreams
+        const rawOtherStreams: Array<{ name: string; data: Uint8Array }> = (fptRawBytes as any)?.otherStreams ?? [];
+        for (const stream of rawOtherStreams) {
+          if (/mesh|model|ms3d|fpm/i.test(stream.name) && stream.data.length > 100) {
+            cachedModels.push({
+              name: stream.name,
+              data: stream.data.buffer.slice(stream.data.byteOffset, stream.data.byteOffset + stream.data.byteLength) as ArrayBuffer,
+            });
+          }
+        }
+
+        await setCachedTable(cacheKey, {
+          meta: {
+            tableName,
+            fileSize: file.size,
+            version: 1,
+            config,
+            coords,
+            elements,
+            script: fptResources.script,
+            playfieldTextureName: fptResources.playfield
+              ? (Object.entries(fptResources.textures).find(([, t]) => t === fptResources.playfield)?.[0] ?? null)
+              : null,
+          },
+          textures: cacheTextures,
+          sounds: cacheSounds,
+          musicTrack: musicTrackBytes,
+          models: cachedModels,
+          animations: [],
+          scriptOriginal: fptResources.script,
+        });
+        logMsg(`💾 In Cache gespeichert (${cacheTextures.length} Texturen, ${cacheSounds.length} Sounds, ${cachedModels.length} Modelle)`, 'ok');
+      } catch (e) {
+        logMsg(`⚠ Cache-Fehler: ${(e as Error)?.message ?? e}`, 'warn');
       }
 
       logMsg(`✨ "${tableName}" vollständig geladen!`, 'ok');

@@ -49,6 +49,8 @@ export class PhysicsWorkerBridge {
   private worker: Worker | null = null;
   private initialized = false;
   private frameCallback: PhysicsFrameCallback | null = null;
+  /** Callback for worker progress messages (Phase 3) */
+  private progressCallback: ((detail: string) => void) | null = null;
   private pendingFrame: PhysicsFrameData | null = null;
   private lastFrameTime = 0;
   private frameCount = 0;
@@ -112,6 +114,30 @@ export class PhysicsWorkerBridge {
     bumperMap: Map<number, any>;
     targetMap: Map<number, any>;
     slingshotMap: Map<number, string>;
+    /** Table config from builder — worker builds bumpers/targets/ramps directly */
+    tableConfig?: {
+      bumpers: Array<{ x: number; y: number; size?: number }>;
+      targets?: Array<{ x: number; y: number }>;
+      ramps?: Array<{ x1: number; y1: number; x2: number; y2: number }>;
+      physics?: {
+        ballRestitution?: number;
+        ballFriction?: number;
+        bumperRestitution?: number;
+        bumperFriction?: number;
+        targetRestitution?: number;
+        targetFriction?: number;
+        flipperRestitution?: number;
+        flipperFriction?: number;
+        rampRestitution?: number;
+        rampFriction?: number;
+        slingshotRestitution?: number;
+      };
+      elementPhysics?: {
+        bumpers?: Record<number, { restitution?: number; friction?: number }>;
+        targets?: Record<number, { restitution?: number; friction?: number }>;
+        ramps?: Record<number, { restitution?: number; friction?: number }>;
+      };
+    };
   }): void {
     if (!this.worker) {
       throw new Error('Physics worker not initialized');
@@ -140,6 +166,14 @@ export class PhysicsWorkerBridge {
    */
   setFrameCallback(callback: PhysicsFrameCallback): void {
     this.frameCallback = callback;
+  }
+
+  /**
+   * Set callback for worker progress messages.
+   * Called during initializePhysicsWorld() to report build steps.
+   */
+  setProgressCallback(callback: (detail: string) => void): void {
+    this.progressCallback = callback;
   }
 
   /**
@@ -219,6 +253,13 @@ export class PhysicsWorkerBridge {
         // Call user callback if set
         if (this.frameCallback) {
           this.frameCallback(data as PhysicsFrameData);
+        }
+        break;
+      }
+
+      case 'progress': {
+        if (this.progressCallback && data?.detail) {
+          this.progressCallback(data.detail);
         }
         break;
       }

@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Physics — vollständiger Aufbau im Worker + Dead Code entfernt
+- `src/table/builder.ts` — `buildPhysicsTable()` + `import RAPIER` entfernt (−181 Zeilen)
+- **Phase 2**: Physics-Bodies (Bumper, Targets, Ramps, Walls, Plunger) werden jetzt im Worker aufgebaut (`physics-worker/physics-init.ts`)
+- **Fix**: Kollisionserkennung nutzt `bumpers[index].mesh` statt defektem `bumperMap.get(index)` (handle-basierte Map matchte nie)
+- **Slingshot**: Erkennung im Worker via `side`-Feld, korrekte Worker-Handle-Keys
+- tsc clean, 762/762 tests
+
+### Progress UI mit 8-Phasen-Modell + Worker-Detail
+- `src/app/loader-ui.ts` — 8 gewichtete Phasen mit Echtzeit-Fortschritt:
+  `parsing-table` (10%) → `loading-textures` (25%) → `loading-audio` (15%) → `building-scene` (25%) → `visuals` (5%) → `building-physics` (15%) → `ready` (5%)
+- Worker sendet 7 Checkpoints: "Creating ball...", "Creating flippers...", "Building walls...", "Walls: i/n", "Creating N bumpers...", "N targets...", "N ramps...", "Physics ready!"
+- Legacy `updateLoadingProgress()` bleibt kompatibel
+- `setWorkerDetail()` zeigt Worker-Meldungen im UI
+
+### IndexedDB Cache — repeat table loads < 50ms
+- `src/storage/fpt-cache.ts` (neu) — IndexedDB-Cache für parsed FPT data
+  - Cache-Key: filename + size + hash(4KB header)
+  - LRU-Eviction, 100 MB Limit
+  - Cached: Texturen, Sounds, Modelle, Config als raw bytes
+- **Cache Hit**: Rekonstruktion aus IndexedDB — kein LZO/CFB-Parsing, keine decompression
+- **Cache Miss**: Parse wie gehabt, dann Speicherung für nächsten Load
+
 ### Dependabot Dependency Updates (14 Security Alerts Closed)
 - Merged 6 Dependabot PRs:
   - **form-data** 4.0.5 → 4.0.6 (1 high: CRLF injection)

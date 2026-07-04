@@ -5,7 +5,6 @@
  * Extracted from the original table.ts barrel.
  */
 import * as THREE from 'three';
-import RAPIER from '@dimforge/rapier3d';
 import type { TableConfig, BumperUserData, TargetUserData } from '../types';
 import {
   fptResources, physics, tableGroup, extraBalls,
@@ -671,190 +670,7 @@ export function buildRamp(x1: number, y1: number, x2: number, y2: number, color:
   ramps.push({ x1, y1, x2, y2, nx, ny });
 }
 
-// ─── Physics: Per-Tisch Bodies ────────────────────────────────────────────────
-export function buildPhysicsTable(config: TableConfig, phys: any): void {
-  const { world } = phys;
-  phys.tableBodies.forEach((b: any) => { try { world.removeRigidBody(b); } catch { /* ignore */ } });
-  phys.tableBodies = [];
-  phys.bumperMap.clear();
-  phys.targetMap.clear();
-
-  // Physics-Parameter aus Config oder Fallback zu Defaults
-  const physCfg = config.physics ?? {};
-  const bumperRest = physCfg.bumperRestitution ?? 0.7;
-  const bumperFric = physCfg.bumperFriction ?? 0.0;
-  const targetRest = physCfg.targetRestitution ?? 0.7;
-  const targetFric = physCfg.targetFriction ?? 0.2;
-  const rampRest = physCfg.rampRestitution ?? 0.8;
-  const rampFric = physCfg.rampFriction ?? 0.25;
-  const elemPhys = config.elementPhysics ?? {};
-
-  config.bumpers.forEach((b, i) => {
-    const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(b.x, b.y, 0.0));
-    phys.tableBodies.push(body);
-    // Per-element physics override
-    const elemOvr = elemPhys.bumpers?.[i] ?? {};
-    const rest = elemOvr.restitution ?? bumperRest;
-    const fric = elemOvr.friction ?? bumperFric;
-    // Scale physics collider by bumper size
-    const sizeScale = b.size ?? 1.0;
-    const collider = world.createCollider(
-      RAPIER.ColliderDesc.ball(0.42 * sizeScale).setRestitution(rest).setFriction(fric)
-        .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
-      body
-    );
-    phys.bumperMap.set(collider.handle, { x:b.x, y:b.y, mesh:bumpers[i]?.mesh??null, index:i });
-  });
-
-  (config.targets || []).forEach((t, i) => {
-    const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(t.x, t.y, 0.0));
-    phys.tableBodies.push(body);
-    // Per-element physics override
-    const elemOvr = elemPhys.targets?.[i] ?? {};
-    const rest = elemOvr.restitution ?? targetRest;
-    const fric = elemOvr.friction ?? targetFric;
-    const collider = world.createCollider(
-      RAPIER.ColliderDesc.cuboid(0.28, 0.21, 0.15).setRestitution(rest).setFriction(fric)
-        .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
-      body
-    );
-    phys.targetMap.set(collider.handle, { x:t.x, y:t.y, mesh:targets[i]?.mesh??null, index:i });
-  });
-
-  (config.ramps || []).forEach((r, i) => {
-    const cx=(r.x1+r.x2)/2, cy=(r.y1+r.y2)/2;
-    const dx=r.x2-r.x1, dy=r.y2-r.y1;
-    const len=Math.sqrt(dx*dx+dy*dy);
-    // Per-element physics override
-    const elemOvr = elemPhys.ramps?.[i] ?? {};
-    const rest = elemOvr.restitution ?? rampRest;
-    const fric = elemOvr.friction ?? rampFric;
-    const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(cx, cy, 0.0).setRotation(new RAPIER.Quaternion(0, 0, Math.sin(Math.atan2(dy,dx)/2), Math.cos(Math.atan2(dy,dx)/2))));
-    phys.tableBodies.push(body);
-    world.createCollider(RAPIER.ColliderDesc.cuboid(len/2, 0.07, 0.15).setRestitution(rest).setFriction(fric), body);
-  });
-
-  // ─── PERIMETER WALLS (Main Enclosure) ───
-  // Top wall (completely seals top)
-  const topWall = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(0, 6.3, 0.0)
-  );
-  phys.tableBodies.push(topWall);
-  world.createCollider(
-    RAPIER.ColliderDesc.cuboid(3.3, 0.2, 0.3).setFriction(0.2),
-    topWall
-  );
-
-  // Left wall (extended to fully seal left side from top to drain)
-  const leftWall = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(-3.15, 0, 0.0)
-  );
-  phys.tableBodies.push(leftWall);
-  world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.15, 7.0, 0.3).setFriction(0.2),
-    leftWall
-  );
-
-  // Right wall (extended to fully seal right side from top to drain)
-  const rightWall = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(3.15, 0, 0.0)
-  );
-  phys.tableBodies.push(rightWall);
-  world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.15, 7.0, 0.3).setFriction(0.2),
-    rightWall
-  );
-
-  // ─── CLEAR DRAIN GAP (between flippers) ───
-  // Ball radius: 0.22 (diameter 0.44)
-  // Flipper gap: 3.0 units wide (from -1.5 to +1.5)
-  // Clearance: 3.0 - 0.44 = 2.56 units (plenty of space for ball to drain)
-  // NO barriers in drain zone - ball falls straight through via gravity
-
-  // ─── SLINGSHOT WALLS (Outer side barriers) ───
-  // Left slingshot barrier (at angle, guards left flipper side)
-  const leftSlingshotWall = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(-2.2, -1.5, 0.0).setRotation({ x: 0, y: 0, z: Math.sin(-0.5/2), w: Math.cos(-0.5/2) })
-  );
-  phys.tableBodies.push(leftSlingshotWall);
-  world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.12, 0.9, 0.15).setFriction(0.3),
-    leftSlingshotWall
-  );
-
-  // Right slingshot barrier (at angle, guards right flipper side)
-  const rightSlingshotWall = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(2.2, -1.5, 0.0).setRotation({ x: 0, y: 0, z: Math.sin(0.5/2), w: Math.cos(0.5/2) })
-  );
-  phys.tableBodies.push(rightSlingshotWall);
-  world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.12, 0.9, 0.15).setFriction(0.3),
-    rightSlingshotWall
-  );
-
-  // ─── DRAIN LANE WALLS (Guide ball straight down between flippers) ───
-  // Left side of drain lane - prevents ball from escaping left
-  const drainLeftWall = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(-1.15, -5.05, 0.0)
-  );
-  phys.tableBodies.push(drainLeftWall);
-  world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.1, 1.0, 0.15).setFriction(0.2),
-    drainLeftWall
-  );
-
-  // Right side of drain lane - prevents ball from escaping right
-  const drainRightWall = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(1.15, -5.05, 0.0)
-  );
-  phys.tableBodies.push(drainRightWall);
-  world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.1, 1.0, 0.15).setFriction(0.2),
-    drainRightWall
-  );
-
-  // ─── DRAIN ZONE BOTTOM (Detects ball loss) ───
-  // Extends below drain level to catch any escaping balls
-  const drainBottom = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(0, -6.0, 0.0)
-  );
-  phys.tableBodies.push(drainBottom);
-  world.createCollider(
-    RAPIER.ColliderDesc.cuboid(3.2, 0.2, 0.3).setFriction(0.1),
-    drainBottom
-  );
-
-  // ─── Phase 1: PLUNGER PHYSICS ───
-  // Left wall of plunger lane
-  const plungerLaneLeft = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(2.35, -4.8, 0.0)
-  );
-  phys.tableBodies.push(plungerLaneLeft);
-  world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.08, 2.2, 0.15).setFriction(0.3),
-    plungerLaneLeft
-  );
-
-  // Right wall of plunger lane
-  const plungerLaneRight = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(2.95, -4.8, 0.0)
-  );
-  phys.tableBodies.push(plungerLaneRight);
-  world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.08, 2.2, 0.15).setFriction(0.3),
-    plungerLaneRight
-  );
-
-  // Bottom plunger guide (prevent ball escape)
-  const plungerGuide = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(2.65, -6.3, 0.0)
-  );
-  phys.tableBodies.push(plungerGuide);
-  world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.35, 0.12, 0.3).setFriction(0.5),
-    plungerGuide
-  );
-}
+// Physics body creation moved to physics-worker/physics-init.ts (Phase 2)
 
 // ─── Tisch bauen ─────────────────────────────────────────────────────────────
 export function buildTable(config: TableConfig, scene: THREE.Scene, library?: any, playgroundGroup?: THREE.Group): void {
@@ -1113,7 +929,6 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
 
   setCurrentTableConfig(config);
 
-  devLog('[buildTable] Building physics - physics:', !!physics);
-  if (physics) buildPhysicsTable(config, physics);
+  devLog('[buildTable] Physics skipped — building in worker (Phase 2)');
   devLog('[buildTable] COMPLETE');
 }
