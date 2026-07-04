@@ -23,6 +23,7 @@ import { playFPTMusic } from '../audio-system';
 
 export type { FPLLibrary } from '../types';
 
+import * as THREE from 'three';
 import { getLibraryCache } from '../library-cache';
 import { generateCacheKeyFromBuffer, getCachedTable, setCachedTable } from '../storage/fpt-cache';
 
@@ -139,6 +140,157 @@ export async function parseFPTFile(
     return;
   }
   logMsg('📦 Cache-Miss — parse neu...', 'info');
+
+  // ─── Phase 1.1: Parse Worker (CPU-heavy lifting offloaded) ───
+  try {
+    const { parseFileInWorker } = await import('../workers/parse-worker-bridge');
+    const workerResult = await parseFileInWorker(buffer, file.name, file.size, {
+      onLog: (level, text) => logMsg(text, level),
+    });
+
+    logMsg(`🧑‍🏭 Worker fertig: ${workerResult.textures.length} Texturen, ${workerResult.sounds.length} Sounds, ${workerResult.models.length} Modelle`, 'ok');
+
+    fptResources.textures = {};
+    fptResources.sounds = {};
+    fptResources.playfield = null;
+    fptResources.script = workerResult.script;
+    fptResources.mapped = { bumper: null, flipper: null, drain: null };
+    delete fptResources.musicTrack;
+
+    for (const tex of workerResult.textures) {
+      try {
+        const texture = await extractImageFromBytes(tex.data);
+        if (texture) fptResources.textures[tex.name] = texture;
+      } catch { /* skip failed texture */ }
+    }
+
+    const texEntries = Object.entries(fptResources.textures);
+    if (texEntries.length > 0) {
+      texEntries.sort(([, a], [, b]) => (b.image?.height ?? 0) - (a.image?.height ?? 0));
+      fptResources.playfield = texEntries[0][1];
+    }
+
+    for (const snd of workerResult.sounds) {
+      try {
+        const buf = await extractSoundFromBytes(snd.data);
+        if (buf) {
+          const isMusic = (buf as AudioBuffer).duration > 8;
+          if (isMusic && !fptResources.musicTrack) {
+            fptResources.musicTrack = buf;
+          } else {
+            fptResources.sounds[snd.name] = buf;
+          }
+        }
+      } catch { /* skip failed sound */ }
+    }
+
+    if (workerResult.script) {
+      logMsg(`📝 VBScript (${workerResult.script.split('\n').length} Zeilen)`, 'ok');
+      runFPScript(workerResult.script);
+      if (switchTabFn) switchTabFn('script');
+    }
+
+    for (const model of workerResult.models) {
+      try {
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(model.vertices, 3));
+        if (model.normals.length > 0) geometry.setAttribute('normal', new THREE.Float32BufferAttribute(model.normals, 3));
+        if (model.uvs.length > 0) geometry.setAttribute('uv', new THREE.Float32BufferAttribute(model.uvs, 2));
+        if (model.indices.length > 0) geometry.setIndex(new THREE.BufferAttribute(model.indices, 1));
+        if (model.normals.length === 0) geometry.computeVertexNormals();
+        geometry.computeBoundingSphere();
+        const mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.5, roughness: 0.5, side: THREE.DoubleSide });
+        const mesh = new THREE.Mesh(geometry, mat);
+        mesh.name = model.name; mesh.castShadow = true; mesh.receiveShadow = true;
+        const cat = globalAssetCatalog();
+        if (cat) cat.registerModel(model.name, mesh);
+      } catch (e) {
+        logMsg(`⚠ Modell "${model.name}" fehlgeschlagen: ${(e as Error)?.message}`, 'warn');
+      }
+    }
+
+    // Use raw coord bytes from worker for main-thread classification.
+    const tableCoords = workerResult.coordBytes
+      ? extractFPCoords(workerResult.coordBytes)
+      : workerResult.coords.map((c) => ({ x: c.x, y: c.y }));
+    const bumperColors = [0xff2200, 0xff9900, 0x00aaff, 0xff00cc, 0x00ff88];
+    const upperCoords = tableCoords.filter((c) => c.y > 0 && c.y < 5 && Math.abs(c.x) < 2.5);
+    const bumperCoords = upperCoords.length >= 3
+      ? upperCoords.slice(0, Math.min(6, upperCoords.length)).sort((a, b) => b.y - a.y)
+      : tableCoords.slice(0, Math.min(5, tableCoords.length));
+    const bumperSizes = assignBumperSizes(bumperCoords);
+    const bumpers = bumperCoords.map((coord, i) => {
+      const color = bumperColors[i % bumperColors.length];
+      return { ...coord, color, size: bumperSizes[i], light: getLightConfigFromColor(color) };
+    });
+
+    const rightCoords = tableCoords.filter((c) => c.x > 1.5 && c.x < 2.8 && c.y > -1.5 && c.y < 1.5);
+    const targets = rightCoords.sort((a, b) => b.y - a.y).slice(0, 3).map((coord, i) => {
+      const color = bumperColors[(i + 1) % bumperColors.length];
+      return { ...coord, color, light: getLightConfigFromColor(color) };
+    });
+
+    const ramps = extractRampCoords(tableCoords).map((ramp, i) => {
+      const color = bumperColors[(i + 3) % bumperColors.length];
+      return { ...ramp, color, light: getLightConfigFromColor(color) };
+    });
+    const tableName = workerResult.tableName || file.name.replace(/\.(fpt|fpl)$/i, '');
+    const physicsMap = workerResult.coordBytes
+      ? extractFPTPhysics(workerResult.coordBytes, tableCoords)
+      : new Map<string, { restitution: number; friction: number; maxVelocity?: number; gravityScale?: number }>();
+    const elementPhysics: {
+      bumpers: Record<number, { restitution: number; friction: number; maxVelocity?: number; gravityScale?: number }>;
+      targets: Record<number, { restitution: number; friction: number; maxVelocity?: number; gravityScale?: number }>;
+      ramps: Record<number, { restitution: number; friction: number; maxVelocity?: number; gravityScale?: number }>;
+    } = { bumpers: {}, targets: {}, ramps: {} };
+    physicsMap.forEach((phys, key) => {
+      const elemIdx = parseInt(key.split('_')[1]);
+      if (elemIdx < 3) elementPhysics.bumpers[elemIdx] = phys;
+      else if (elemIdx < 6) elementPhysics.targets[elemIdx - 3] = phys;
+      else elementPhysics.ramps[elemIdx - 6] = phys;
+    });
+    const elemMeta = workerResult.elements.map((e) => ({ name: e.name, kind: 'decorative' }));
+
+    const config = {
+      name: tableName, bumpers, targets, ramps,
+      tableColor: 0x1a1a2e,
+      lights: [{ color: 0xff8800, intensity: 0.6, dist: 8, x: 0, y: 3, z: 3 }],
+      elementPhysics: physicsMap.size > 0 ? elementPhysics : undefined,
+      tableElements: elemMeta, confidence: workerResult.confidence,
+    };
+
+    logMsg(`✅ "${tableName}" via Worker geladen!`, 'ok');
+    buildTableFn?.(config);
+    closeLoaderFn?.();
+    if (fptResources.musicTrack) playFPTMusic(fptResources.musicTrack);
+
+    // Cache-store
+    try {
+      const cacheTextures = workerResult.textures.map((t: any) => ({
+        name: t.name,
+        data: t.data.buffer.slice(t.data.byteOffset, t.data.byteOffset + t.data.byteLength),
+      }));
+      const cacheSounds = workerResult.sounds.map((s: any) => ({
+        name: s.name,
+        data: s.data.buffer.slice(s.data.byteOffset, s.data.byteOffset + s.data.byteLength),
+      }));
+      let musicTrackBytes: ArrayBuffer | null = null;
+      if (workerResult.musicTrack) {
+        musicTrackBytes = workerResult.musicTrack.buffer.slice(
+          workerResult.musicTrack.byteOffset,
+          workerResult.musicTrack.byteOffset + workerResult.musicTrack.byteLength,
+        ) as ArrayBuffer;
+      }
+      await setCachedTable(cacheKey, {
+        meta: { tableName, fileSize: file.size, version: 1, config, coords: workerResult.coords, elements: workerResult.elements, script: workerResult.script, playfieldTextureName: texEntries[0]?.[0] ?? null },
+        textures: cacheTextures, sounds: cacheSounds, musicTrack: musicTrackBytes, models: [], animations: [], scriptOriginal: workerResult.script,
+      });
+    } catch { /* cache save best-effort */ }
+
+    return;
+  } catch (e) {
+    logMsg(`⚠ Worker-Fehler — Fallback: ${(e instanceof Error ? e.message : 'worker unavailable')}`, 'warn');
+  }
 
   if (typeof CFB !== 'undefined') {
     logMsg('🔍 Analysiere CFB/OLE2-Struktur...', 'info');

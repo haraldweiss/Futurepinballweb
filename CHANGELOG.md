@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### FPT Parse Worker + build warning cleanup
+- **FPT/FPL Parse Worker**: CPU-heavy CFB/LZO/resource parsing runs through
+  `src/workers/parse-worker.ts` and `src/workers/parse-worker-bridge.ts` before
+  falling back to the legacy main-thread parser on worker errors.
+- **Coordinate contract fixed**: Worker returns raw `coordBytes` alongside parsed
+  coordinates so the main thread can reuse the existing bumper/target/ramp and
+  physics classification path.
+- **Transferable safety**: Worker-owned byte arrays are copied/deduplicated before
+  `postMessage()` transfer to avoid shared CFB backing-buffer issues.
+- **Config shape fixed**: Worker path now builds full bumper/target/ramp config
+  entries with colors, lights, sizes, and `elementPhysics` instead of passing raw
+  numeric size arrays.
+- **Build warnings removed**: `ShaderPass` is imported from the Three.js addon
+  module, and `library-cache` now uses a static import where the bundle already
+  included it.
+- Verified: tsc clean, 763/763 tests, vite build clean
+
 ### Physics — vollständiger Aufbau im Worker + Dead Code entfernt
 - `src/table/builder.ts` — `buildPhysicsTable()` + `import RAPIER` entfernt (−181 Zeilen)
 - **Phase 2**: Physics-Bodies (Bumper, Targets, Ramps, Walls, Plunger) werden jetzt im Worker aufgebaut (`physics-worker/physics-init.ts`)
@@ -40,7 +57,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **undici** 6.25.0 → 6.27.0 (1 high, 1 medium, 2 low: HTTP header injection, DoS)
   - **vite** 7.3.2 → 8.0.16 (1 high, 1 medium: NTLM hash disclosure, fs.deny bypass)
 - Added `overrides` for **uuid** ^11.1.1 (bounds check) and **esbuild** ^0.28.1 (file disclosure)
-- Added **rollup** as explicit devDependency (Vite 8 no longer ships it)
 - Total: **14 alerts closed** (3 high, 5 moderate, 3 low — 3 already resolved)
 - `npm audit`: 0 vulnerabilities
 
@@ -48,10 +64,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Build tool**: Vite 7.3.6 → **8.1.1** (Rolldown instead of Rollup)
 - **Config-Fix**: `manualChunks` changed from Object to Function
   (`manualChunks: { name: ['path'] }` → `manualChunks(id) { if (...) return name; }`)
-- **New dependency**: `rollup` as devDep (for `vite-plugin-top-level-await`)
 - **Bundle unchanged**: main.js 338 KB (gzip 80 KB), ~20 chunks
 - **Build time**: 1.97s (Vite 7: ~2.5s)
-- **Warning (benign)**: `IMPORT_IS_UNDEFINED` for `ShaderPass` from three.module.js
 
 ### main.ts decomposition
 - Extracted BAM engine + animation initialization block (−88 lines, net −91+3)

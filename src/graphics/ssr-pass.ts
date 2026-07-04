@@ -15,6 +15,7 @@
  */
 
 import * as THREE from 'three';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 /**
  * SSR Shader Definition
@@ -312,7 +313,7 @@ export function createSSRPass(
   const pass = new SSRPass(renderer, scene, camera, width, height);
 
   return {
-    pass: new (THREE.ShaderPass)(SSRShader),
+    pass: new ShaderPass(SSRShader),
     ssrPass: pass,
     setIntensity: (intensity: number) => pass.setIntensity(intensity),
     setParameters: (samples: number, maxDistance: number, thickness: number) =>

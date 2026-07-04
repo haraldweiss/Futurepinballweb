@@ -12,6 +12,8 @@
  * Version:    Bump CACHE_VERSION when format changes
  */
 
+import { getLibraryCache } from '../library-cache';
+
 const DB_NAME = 'fpt-table-cache';
 const STORE_NAME = 'parsed-tables';
 const CACHE_VERSION = 1;
@@ -198,7 +200,6 @@ export async function setCachedTable(
     tx.objectStore(STORE_NAME).put(entry);
 
     // Also update LibraryCache for in-memory access
-    const { getLibraryCache } = await import('../library-cache');
     const libCache = getLibraryCache();
     libCache.set(`fpt:${key}`, { config: data.meta.config }, simpleHash(new TextEncoder().encode(key)));
   } catch (e) {
