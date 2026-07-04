@@ -81,7 +81,7 @@ If `user.email` is unset, empty, or fake — **stop, fix it, then proceed**.
 - Free-Modelle ohne structured output (`json_schema`) sind für browser-use unbrauchbar
 
 ### 3.7 Cabinet deploy (Windows-Cabinet `vpin4kp`)
-- **SSH-Alias**: `cabinet` (= `vpx@192.168.178.44`, Ed25519-Key, passwortlos). User ist **non-admin**.
+- **SSH-Alias**: `cabinet` (= `vpx@192.168.178.180`, Ed25519-Key, passwortlos). User ist **non-admin**.
 - **Build-Pflicht**: auf Mac **`electron-builder --win dir --x64`** (kein wine vorhanden → NSIS-Installer nicht baubar). Liefert `release/win-unpacked/`.
 - **Push**: `taskkill` → `scp` ZIP nach `%TEMP%` → `Expand-Archive` → `robocopy /MIR` nach `C:\Users\vpx\AppData\Local\Programs\Future Pinball Web\`.
 - **Robocopy-Exit-Codes 0–7 sind alle Erfolg** (2 = "Extra files purged"); bei `set -e` muss man `$LASTEXITCODE < 8` abfangen.
@@ -139,7 +139,7 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 | FPT parser modules | `src/fpt/lzo.ts` (decompressor), `src/fpt/media.ts` (image/audio extraction) |
 | Docs | `docs/` — all documentation organised in subdirectories |
 | browser-use | `docs/guides/BROWSER_USE.md` — KI-Browser-Automation mit OpenCode-Free-Modellen; `browser-use-run` nach §3.8 global nutzbar |
-| Cabinet deploy | `ssh cabinet` → `vpx@192.168.178.44` (vpin4kp.fritz.box), Install-Pfad `C:\Users\vpx\AppData\Local\Programs\Future Pinball Web` — siehe §3.7 |
+| Cabinet deploy | `ssh cabinet` → `vpx@192.168.178.180` (vpin4kp.fritz.box), Install-Pfad `C:\Users\vpx\AppData\Local\Programs\Future Pinball Web` — siehe §3.7 |
 
 ---
 
@@ -178,7 +178,7 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 ### 2026-05-31 — Cabinet-Deploy 0.21.0 + SSH-Setup (`vpin4kp`)
 - Erstmaliger Push von Future Pinball Web 0.21.0 auf das Windows-Cabinet
 - Build via `npx electron-builder --win dir --x64` (kein wine → kein NSIS-Installer); danach ZIP + SCP + robocopy /MIR
-- SSH-Setup: `cabinet`-Alias in `~/.ssh/config` (vpx@192.168.178.44), passwortlos via Ed25519-Key
+- SSH-Setup: `cabinet`-Alias in `~/.ssh/config` (vpx@192.168.178.180), passwortlos via Ed25519-Key
 - Fallstricke aufgedeckt (siehe §3.7): `ssh-copy-id` legt Key auf Windows OpenSSH falsch in `administrators_authorized_keys` ab; `vpx` ist non-admin → musste `~/.ssh/authorized_keys` manuell anlegen
 - Verknüpfungen (Desktop OneDrive + Startmenü) per WScript.Shell-Shortcut erstellt
 - Verified: EXE 222.973.952 bytes auf Cabinet, app.asar 19 MB, passwortloser Login bestätigt
@@ -797,3 +797,26 @@ weil es vor setupScene() deklariert war).
 - Bereits resolved: 4 Alerts (ws×2, brace-expansion, vite war schon auf 8.x)
 
 **Verification:** tsc clean, 762/762 tests, npm audit: 0 vulnerabilities, vite build ✓
+
+### 2026-07-04 — Physics-only-in-worker (Phase 2) + Progress UI (Phase 3) + IndexedDB Cache (Phase 1.2)
+
+**Commit:** `f06b977e`
+
+**Phase 2 — Physics-Only-in-Worker** (5 Dateien):
+- `src/table/builder.ts`: `buildPhysicsTable()` + `import RAPIER` entfernt (−181 Zeilen Dead Code)
+- `physics-worker/physics-init.ts`: Erzeugt Bumper/Targets/Ramps/Walls/Plunger aus `currentTableConfig`
+- `physics-worker-setup.ts`: Sendet `currentTableConfig` + `side`-Feld für Slingshots
+- `physics-frame-handler.ts`: Fix Kollisionserkennung — `bumpers[index].mesh` statt defektem `bumperMap.get(index)` (handle-basierte Map matchte nie)
+- `worker-handler.ts` + `physics-worker-bridge.ts`: Progress-Callback-Forwarding
+
+**Phase 3 — Progress UI** (3 Dateien):
+- `loader-ui.ts`: 8 gewichtete Phasen mit Worker-Detail-Text
+- Fortschritt: `parsing-table`(10%) → `loading-textures`(25%) → `loading-audio`(15%) → `building-scene`(25%) → `visuals`(5%) → `building-physics`(15%) → `ready`(5%)
+- Worker: 7 Checkpoints (Creating ball → flippers → walls mit Zähler → bumpers/targets/ramps → ready)
+
+**Phase 1.2 — IndexedDB Cache** (2 Dateien):
+- `src/storage/fpt-cache.ts` (neu): IndexedDB-Cache, LRU-Eviction, 100 MB, format-versioned
+- `file-parser.ts`: Cache-Check vor Parse, Store nach erfolgreichem Parse
+- Cache-Hit: Skip LZO/CFB/Parsing, reconstruct aus raw bytes
+
+**Verification:** tsc clean, 762/762 tests, vite build ✓, live deploy ✓
