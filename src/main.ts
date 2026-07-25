@@ -4,9 +4,9 @@
 // Must run before any other code because an old SW (cached from a prior
 // visit) blocks Vite's HMR /@vite/client and /main.ts with TLS errors.
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs =>
-    regs.forEach(r => r.unregister())
-  );
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
+  }).catch(() => {}); // SW registration may fail in some environments
 }
 // © 2026 Harald Weiss
 /**
@@ -352,8 +352,9 @@ requestAnimationFrame(function initViewSettingsAndVisuals() {
     try {
       const soundMgr = await getSoundManager();
       devLog('[Sound Manager] ✓ Initialized');
-      if (soundMgr.isEnabled()) {
-        setTimeout(() => soundMgr.playSound('scoreUp'), 100);
+      if (soundMgr.isEnabled() && import.meta.env.DEV) {
+        devLog('[Sound Manager] Playing startup sound (DEV only)');
+        soundMgr.playSound('scoreUp');
       }
     } catch (e) {
       console.warn('[Sound Manager] Failed to initialize:', e);
@@ -367,7 +368,7 @@ requestAnimationFrame(function initViewSettingsAndVisuals() {
         // Register flipper callbacks
         touchCtrl.onLeftFlipperPressCallback(() => {
           keys.left = true;
-          getSoundManager().then((sm) => sm.playFlipperHit(0.8)).catch(() => {});
+          getSoundManager().then((sm) => sm.playFlipperHit(0.8)).catch(() => devLog("[Sound] Flipper left sound failed"));
         });
         touchCtrl.onLeftFlipperReleaseCallback(() => {
           keys.left = false;
@@ -375,7 +376,7 @@ requestAnimationFrame(function initViewSettingsAndVisuals() {
         
         touchCtrl.onRightFlipperPressCallback(() => {
           keys.right = true;
-          getSoundManager().then((sm) => sm.playFlipperHit(0.8)).catch(() => {});
+          getSoundManager().then((sm) => sm.playFlipperHit(0.8)).catch(() => devLog("[Sound] Flipper right sound failed"));
         });
         touchCtrl.onRightFlipperReleaseCallback(() => {
           keys.right = false;
@@ -650,7 +651,7 @@ function updateFlippers(): void {
         soundMgr.playFlipperHit(0.8);
       }
     }).catch(() => {
-      // Sound unavailable, continue silently
+      devLog("[Sound] Flipper sound unavailable in animation loop"); // Sound unavailable, continue silently
     });
     _lastLeftFlipperPressed = keys.left;
     _lastRightFlipperPressed = keys.right;
@@ -1036,7 +1037,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'r' || e.key === 'R') resetBall();
   if (e.key === 'F12') {
     if (import.meta.env.DEV) {
-      import('./app/model-viewer').then(m => m.initModelViewer({ allowDrop: true })?.toggle());
+      import('./app/model-viewer').then(m => m.initModelViewer({ allowDrop: true })?.toggle()).catch(() => devLog("[Dev] Model viewer failed to load"));
     }
   }
   if (e.key === 'm' || e.key === 'M') {
@@ -2058,7 +2059,7 @@ if (FPW_ROLE === 'dmd') {
 
     // Warm up physics worker thread early (no table config yet — just spawns the worker)
     setDevFlag('INIT_PHYSICS_WORKER_START', true);
-    initializePhysicsWorker().catch(() => {});
+    initializePhysicsWorker().catch(() => devLog("[Physics] Worker initialization failed (will retry on table load)"));
     setDevFlag('INIT_PHYSICS_WORKER_OK', true);
 
     // Pre-create AssetCatalog so dev models and 3D fixtures are available
@@ -2071,7 +2072,7 @@ if (FPW_ROLE === 'dmd') {
       try {
         const { registerDevModels } = await import('./app/dev-models');
         registerDevModels();
-      } catch {}
+      } catch (e) { devLog("[Dev] Model registration failed:", e); }
     }
 
     // Auto-load a demo table on startup (Pharaoh's Gold — medium difficulty)
@@ -2209,7 +2210,7 @@ try {
       }
     });
   });
-} catch {}
+} catch (e) { devLog("[NAS] Failed to load NAS source module:", e); }
 
 // Handle files loaded from NAS browser
 window.addEventListener('fpl-file-loaded', async (e: Event) => {

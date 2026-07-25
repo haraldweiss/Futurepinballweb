@@ -2,13 +2,13 @@
 
 **Modern cross-platform 3D pinball game in your browser — with VPX-competitive graphics, advanced physics, multi-screen arcade cabinet support, and comprehensive video editing**
 
-![Version](https://img.shields.io/badge/Version-0.24.0-blue)
+![Version](https://img.shields.io/badge/Version-0.25.0-blue)
 ![License](https://img.shields.io/badge/License-AGPLv3-green)
 ![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)
 ![Modules](https://img.shields.io/badge/Modules-295-orange)
 ![Code](https://img.shields.io/badge/Code-42K%20Lines-purple)
-![Tests](https://img.shields.io/badge/Tests-762%20passing-success)
+![Tests](https://img.shields.io/badge/Tests-775%20passing-success)
 ![Vulnerabilities](https://img.shields.io/badge/Vulnerabilities-0-success)
 ![TypeScript](https://img.shields.io/badge/TS_Errors-0-success)
 
@@ -189,7 +189,7 @@ npm run build
 # Node built-ins only). Serves dist/ on PORT or 3000.
 npm run serve
 
-# Tests (698 passing, vitest)
+# Tests (775 passing, vitest)
 npm run test:run
 
 # Security checks (eslint security plugin + audit + custom XSS tests)
@@ -420,7 +420,7 @@ scripts/
 - **TypeScript Errors**: 0 ✓
 - **Code Size**: ~39K lines
 - **VBScript Functions**: 179+
-- **Tests**: 698 passing across 33 vitest files
+- **Tests**: 775 passing across 38 vitest files
 - **Git Commits**: 470+
 
 ### Performance

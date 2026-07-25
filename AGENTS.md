@@ -820,3 +820,32 @@ weil es vor setupScene() deklariert war).
 - Cache-Hit: Skip LZO/CFB/Parsing, reconstruct aus raw bytes
 
 **Verification:** tsc clean, 762/762 tests, vite build ✓, live deploy ✓
+
+### 2026-07-25 — Code Review + Bugfixes + Refactoring (4 Themen)
+**Fokus:** Silent error handling, Type-Sicherheit, TypeScript-Config, Modul-Splitting, Integrationstests
+
+**Bugfixes (7 Fixes):**
+- **Startup-Sound-Bug**: `scoreUp`-Sound spielte bei jedem App-Start — nun hinter `import.meta.env.DEV` gegatet
+- **Service-Worker Promise-Chain repariert**: `.catch()` war an falsche Promise gehängt (inneres `r.unregister()` statt äußeres `.then()`)
+- **11 leere `catch {}` Blöcke mit Logging versehen**: Fehler werden nun via `devLog`/`console.warn` sichtbar
+- **PWA install `.catch()` ergänzt**: `userChoice.then()` ohne `.catch()` ergänzt  
+- **Physics-Worker-Init**: `initializePhysicsWorker().catch(() => {})` → Logging
+- **Model-Viewer dynamischer Import**: `.catch()` für fehlgeschlagene Imports
+- **Vite-Config**: `catch {}` im Build-Plugin → `console.warn`
+
+**Type-Sicherheit (20 Stellen):**
+- **touch-controls.ts**: 20 `(el as any).X` durch getyptes `TouchButtonElement`-Interface + `asTouchButton()`-Helfer ersetzt
+- **4 ungenutzte Imports aus main.ts entfernt**: `drawBGCanvas`, `getDefaultPhysicsConfig`, `logPhysicsConfig`, `validatePhysicsConfig`
+
+**TypeScript-Config:**
+- `noUnusedLocals: true` + `noUnusedParameters: true` in `tsconfig.json`
+
+**Modul-Extraktion:**
+- **script-engine.ts**: 1902→1632 Zeilen (−14%). Reiner VBScript-Transpiler (`vbsToJS`, `_vbsXpr`, `_vbsStmt`, etc.) nach `src/utils/vbs-transpiler.ts` (274 Z) extrahiert. Keine externen Abhängigkeiten — pure String-Processing-Funktionen.
+
+**Integrationstests:**
+- Neue `src/__tests__/error-handling-patterns.test.ts` (12 Tests): Silent catches, Promise-Chain-Sicherheit, LZO-Fallback-Pattern, Guard-Patterns, Init-Safety
+
+**Netto:** 8 Dateien geändert, 150 Insertions, 355 Deletions, −205 Zeilen
+**Tests:** 38 Testdateien (neu), 775 Tests (+12 seit 762), tsc clean, vite build ✓
+**Neue Dateien:** `src/utils/vbs-transpiler.ts`, `src/__tests__/error-handling-patterns.test.ts`

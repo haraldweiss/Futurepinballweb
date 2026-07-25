@@ -42,5 +42,5 @@ export function initPWAInstall(): void {
 export function installPWA(): void {
   if (!_installPrompt) return;
   _installPrompt.prompt();
-  _installPrompt.userChoice.then(() => { _installPrompt = null; });
+  _installPrompt.userChoice.then(() => { _installPrompt = null; }).catch(() => {});
 }

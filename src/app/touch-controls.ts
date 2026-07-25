@@ -18,6 +18,23 @@ import { devLog } from '../utils/dev-log';
 import { getInputOptimizer } from '../input-optimizer';
 
 /**
+ * Typed interface for touch button DOM elements with custom state properties.
+ * Avoids casting to `any` for accessing touchState and powerLevel.
+ */
+interface TouchButtonElement extends HTMLElement {
+  touchState: string;
+  powerLevel: number;
+}
+
+/**
+ * Safe cast helper — returns the element as TouchButtonElement.
+ * The actual DOM element has these properties set at runtime.
+ */
+function asTouchButton(el: HTMLElement | Element | null): TouchButtonElement {
+  return el as unknown as TouchButtonElement;
+}
+
+/**
  * Touch control visual states for enhanced user experience
  */
 const TOUCH_STATES = {
@@ -64,11 +81,11 @@ export function initTouchControls(): void {
       el.style.display = 'flex';
       // Apply touch-friendly styling for better mobile experience
       el.style.touchAction = 'manipulation'; // Prevents double-tap zoom
-      (el.style as any).webkitTapHighlightColor = 'transparent'; // Remove iOS highlight
+      (el.style as CSSStyleDeclaration & { webkitTapHighlightColor: string }).webkitTapHighlightColor = 'transparent'; // Remove iOS highlight
       
       // Set up for enhanced visual feedback
-      (el as any).touchState = TOUCH_STATES.IDLE;
-      (el as any).powerLevel = FLIPPER_POWER_LEVELS.MEDIUM;
+      asTouchButton(el).touchState = TOUCH_STATES.IDLE;
+      asTouchButton(el).powerLevel = FLIPPER_POWER_LEVELS.MEDIUM;
       
       // Add touch-friendly sizing for mobile
       if ('ontouchstart' in window) {
@@ -104,7 +121,7 @@ export function initTouchControls(): void {
                   FLIPPER_POWER_LEVELS.LIGHT;
 
       // Set visual state to pressed
-      (el as any).touchState = TOUCH_STATES.PRESSED;
+      asTouchButton(el).touchState = TOUCH_STATES.PRESSED;
       el.classList.add('touch-pressed');
       
       // Apply haptic feedback for flip operation
@@ -115,7 +132,7 @@ export function initTouchControls(): void {
       // Use InputOptimizer for integrated input handling
       optimizer.processTouchFlipperPress(side, powerLevel);
       keys[side] = true;
-      (el as any).powerLevel = powerLevel;
+      asTouchButton(el).powerLevel = powerLevel;
       getAudioCtx();
       playSound('flipper');
 
@@ -130,7 +147,7 @@ export function initTouchControls(): void {
       isTouchActive = false;
       
       // Set visual state back to idle with hover
-      (el as any).touchState = TOUCH_STATES.HOVER;
+      asTouchButton(el).touchState = TOUCH_STATES.HOVER;
       el.classList.remove('touch-pressed');
       
       // Apply light haptic feedback for release
@@ -144,8 +161,8 @@ export function initTouchControls(): void {
       
       // Add brief hover state before returning to idle
       setTimeout(() => {
-        if ((el as any).touchState === TOUCH_STATES.HOVER) {
-          (el as any).touchState = TOUCH_STATES.IDLE;
+        if (asTouchButton(el).touchState === TOUCH_STATES.HOVER) {
+          asTouchButton(el).touchState = TOUCH_STATES.IDLE;
         }
       }, 100);
     }, { passive: false });
@@ -153,27 +170,27 @@ export function initTouchControls(): void {
     // Handle mouse events for desktop testing
     el.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      (el as any).touchState = TOUCH_STATES.PRESSED;
+      asTouchButton(el).touchState = TOUCH_STATES.PRESSED;
       el.classList.add('touch-pressed');
       keys[side] = true;
-      (el as any).powerLevel = FLIPPER_POWER_LEVELS.MEDIUM;
+      asTouchButton(el).powerLevel = FLIPPER_POWER_LEVELS.MEDIUM;
     });
 
     el.addEventListener('mouseup', (e) => {
       e.preventDefault();
-      (el as any).touchState = TOUCH_STATES.HOVER;
+      asTouchButton(el).touchState = TOUCH_STATES.HOVER;
       el.classList.remove('touch-pressed');
       keys[side] = false;
       setTimeout(() => {
-        if ((el as any).touchState === TOUCH_STATES.HOVER) {
-          (el as any).touchState = TOUCH_STATES.IDLE;
+        if (asTouchButton(el).touchState === TOUCH_STATES.HOVER) {
+          asTouchButton(el).touchState = TOUCH_STATES.IDLE;
         }
       }, 100);
     });
 
     // Handle touch cancellation
     el.addEventListener('touchcancel', () => {
-      (el as any).touchState = TOUCH_STATES.IDLE;
+      asTouchButton(el).touchState = TOUCH_STATES.IDLE;
       el.classList.remove('touch-pressed');
       isTouchActive = false;
       if (side === 'left') keys.left = false;
@@ -183,12 +200,12 @@ export function initTouchControls(): void {
     // Add hover states for desktop accessibility
     el.addEventListener('mouseenter', () => {
       if (!isTouchActive) {
-        (el as any).touchState = TOUCH_STATES.HOVER;
+        asTouchButton(el).touchState = TOUCH_STATES.HOVER;
       }
     });
 
     el.addEventListener('mouseleave', () => {
-      (el as any).touchState = TOUCH_STATES.IDLE;
+      asTouchButton(el).touchState = TOUCH_STATES.IDLE;
     });
   };
 
@@ -218,7 +235,7 @@ export function initTouchControls(): void {
         
         // Visual feedback for charging
         plBtn.classList.add('plunger-charging');
-        (plBtn as any).touchState = TOUCH_STATES.PRESSED;
+        asTouchButton(plBtn).touchState = TOUCH_STATES.PRESSED;
         
         // Apply stronger haptic feedback for plunger activation
         if ('vibrate' in navigator) {
@@ -243,7 +260,7 @@ export function initTouchControls(): void {
         
         // Visual feedback for launch
         plBtn.classList.remove('plunger-charging');
-        (plBtn as any).touchState = TOUCH_STATES.HOVER;
+        asTouchButton(plBtn).touchState = TOUCH_STATES.HOVER;
         
         // Apply success haptic feedback
         if ('vibrate' in navigator) {
@@ -276,7 +293,7 @@ export function initTouchControls(): void {
         state.plungerCharge = 0;
       }
       plBtn.classList.remove('plunger-charging');
-      (plBtn as any).touchState = TOUCH_STATES.IDLE;
+      asTouchButton(plBtn).touchState = TOUCH_STATES.IDLE;
     });
   };
 
@@ -297,7 +314,7 @@ export function initTouchControls(): void {
  */
 export function getTouchState(buttonId: string): string {
   const el = document.getElementById(buttonId);
-  return el ? (el as any).touchState || TOUCH_STATES.IDLE : TOUCH_STATES.IDLE;
+  return el ? asTouchButton(el).touchState || TOUCH_STATES.IDLE : TOUCH_STATES.IDLE;
 }
 
 /**

@@ -74,7 +74,7 @@ export async function checkNASConnection(): Promise<boolean> {
         }
         return true;
       }
-    } catch {}
+    } catch (e) { if (import.meta.env.DEV) console.warn("[NAS] Connection check failed:", e); }
   }
   
   _state.status = 'error';
@@ -99,7 +99,7 @@ export async function listNASDirectory(dir: string = ''): Promise<NASEntry[]> {
         return data.entries;
       }
     }
-  } catch {}
+  } catch (e) { if (import.meta.env.DEV) console.warn("[NAS] Directory listing failed:", e); }
   return [];
 }
 
@@ -132,7 +132,7 @@ export async function searchNASFiles(query: string): Promise<NASEntry[]> {
       const data = await res.json();
       return data.results || [];
     }
-  } catch {}
+  } catch (e) { if (import.meta.env.DEV) console.warn("[NAS] Search failed:", e); }
   return [];
 }
 

@@ -16,7 +16,7 @@ function fpwConfigAsset(): Plugin {
     closeBundle() {
       if (!existsSync(sourceFile)) return;
       const dest = resolve(projectRoot, 'dist', 'fpw-config.json');
-      try { copyFileSync(sourceFile, dest); } catch {}
+      try { copyFileSync(sourceFile, dest); } catch (e) { console.warn("[fpw-config] Failed to copy config to dist:", e); }
     },
   };
 }
