@@ -21,7 +21,7 @@ If `user.email` is unset, empty, or fake — **stop, fix it, then proceed**.
 - **Browser-based pinball simulator** that loads Future Pinball `.fpt` tables
 - TypeScript + Vite + three.js (renderer) + Rapier2D (physics) + CodeMirror (in-app VBScript editor)
 - Optional **Electron shell** for multi-screen cabinet mode (`electron-main.cjs`, `electron-preload.cjs`)
-- 33 test files (vitest), 698 tests as of 2026-05-31 — **must stay green**
+- 38 test files (vitest), 775 tests (38 test files) as of 2026-07-28 — **must stay green**
 - Default branch: `main`, remote: `github.com:haraldweiss/Futurepinballweb`
 
 ---
@@ -95,7 +95,7 @@ If `user.email` is unset, empty, or fake — **stop, fix it, then proceed**.
 ## 4. Verification standards (write in commit body)
 
 ```
-Verified: tsc clean, 698/698 tests, manual smoke test in dev browser ✓
+Verified: tsc clean, 775/775 tests, manual smoke test in dev browser ✓
 ```
 or
 ```
@@ -173,7 +173,7 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 - Tests: 691→698 (+7), 33 files
 - Netto: −10.500 Zeilen, 25 Dateien entfernt
 - Commit: `f3105969`
-- Verified: tsc clean, 698/698 tests
+- Verified: tsc clean, 775/775 tests
 
 ### 2026-05-31 — Cabinet-Deploy 0.21.0 + SSH-Setup (`vpin4kp`)
 - Erstmaliger Push von Future Pinball Web 0.21.0 auf das Windows-Cabinet

@@ -668,7 +668,7 @@ Lokaler HTTP-Server zum Laden von FPL/FPT/FPM-Dateien vom NAS.
 
 **Made with ❤️ by Future Pinball Contributors**
 
-Last Updated: June 30, 2026 | Version 0.24.0 | 762 tests ✅ | 248 modules ✅ | 0 vulnerabilities ✅
+Last Updated: July 28, 2026 | Version 0.24.0 | 775 tests ✅ | 248 modules ✅ | 0 vulnerabilities ✅
 
 ---
 
