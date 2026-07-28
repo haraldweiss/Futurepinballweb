@@ -106,7 +106,8 @@ describe('Promise chain error handling', () => {
 describe('LZO decompression fallback pattern', () => {
   it('try-first-then-second pattern handles both failures', () => {
     // Pattern from parse-worker.ts and fpm-parser.ts
-    const lzoMock = (data: Uint8Array) => {
+    type LZOResult = Uint8Array | null;
+    const lzoMock = (data: Uint8Array): LZOResult => {
       throw new Error('decompression failed');
     };
     
