@@ -130,9 +130,9 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 | Window API | `src/window-api.ts` — register HTML inline handlers here |
 | Asset catalog | `src/assets/` — Cabinet-PR added this layer |
 | Sample tables | `public/tables/` |
-| Extracted modules | `src/app/` (20+ modules) |
-| main.ts size | 2334 lines (−31%) |
-| TS modules | 295+ total |
+| Extracted modules | `src/app/` (43 modules) |
+| main.ts size | 2335 lines (−31%) |
+| TS modules | 276 total |
 | Input system | `src/input-optimizer.ts` + `src/app/touch-controls.ts` — unified keyboard/touch |
 | Table configs | `src/table/configs.ts` — demo table definitions |
 | Table scoring | `src/table/scoring.ts` — bumper/target/ramp scoring logic |
