@@ -849,3 +849,18 @@ weil es vor setupScene() deklariert war).
 **Netto:** 8 Dateien geändert, 150 Insertions, 355 Deletions, −205 Zeilen
 **Tests:** 38 Testdateien (neu), 775 Tests (+12 seit 762), tsc clean, vite build ✓
 **Neue Dateien:** `src/utils/vbs-transpiler.ts`, `src/__tests__/error-handling-patterns.test.ts`
+
+### 2026-07-28 — Security: fast-uri CVE-2026-18446 + electron + brace-expansion
+
+**Commit:** `81135f67`
+
+`npm audit fix` — 3 High-Severity-Vulnerabilities geschlossen:
+
+- **fast-uri 3.1.4 → 3.1.5** (CVE-2026-18446): Host confusion via backslash authority introducer (GHSA-7p8r-x3mc-p8w7). Transitive via `ajv` → `app-builder-lib`.
+- **electron 41.3.0 → 41.10.4**: 3 GHSA Advisories (custom protocol cross-origin reads, session cache reuse, sandboxed iframe popup bypass).
+- **brace-expansion 5.0.8 → 5.0.9** (GHSA-rgw5-rvv9-x895): DoS via unbounded intermediate arrays.
+- `@electron/get 2.0.3 → 5.1.0`, 8 obsolete transitive deps entfernt (yauzl, pend, fd-slicer, fs-extra, extract-zip, buffer-crc32, semver@6, @types/yauzl).
+- Alle Updates innerhalb bestehender `^`-Ranges — `package.json` unverändert.
+- **npm audit: 0 vulnerabilities** ✅
+- Verified: tsc clean, 775/775 tests, vite build ✓
+

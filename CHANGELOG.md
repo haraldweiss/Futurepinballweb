@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Resolved 3 high-severity npm audit vulnerabilities:
+  - `fast-uri` 3.1.4 → 3.1.5 — CVE-2026-18446 (host confusion via backslash authority introducer)
+  - `electron` 41.3.0 → 41.10.4 — 3 GHSA advisories (protocol/session-cache/sandbox bypass)
+  - `brace-expansion` 5.0.8 → 5.0.9 — GHSA-rgw5-rvv9-x895 (DoS via unbounded intermediate arrays)
+- `@electron/get` 2.0.3 → 5.1.0, removed 8 obsolete transitive deps
+- npm audit: 0 vulnerabilities
+- Commit: `81135f67`
+
 ### FPT Parse Worker + build warning cleanup
 - **FPT/FPL Parse Worker**: CPU-heavy CFB/LZO/resource parsing runs through
   `src/workers/parse-worker.ts` and `src/workers/parse-worker-bridge.ts` before
