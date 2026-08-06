@@ -737,6 +737,52 @@ cb.applyNudgeForce = (x: number, y: number) => {
   }
 };
 
+// ─── Phase 2: Light & Flasher Control — LightManager forwarding ───
+// The base callbacks are in callbacks.ts (using lampStateStore).
+// Here we add LightManager integration for visual output.
+
+const _origSetLampState = cb.setLampState;
+cb.setLampState = (name: string, intensity: number) => {
+  _origSetLampState(name, intensity);
+  const lm = getLightManager();
+  if (lm) { const ml = lm.getLight(name); if (ml) { lm.setDynamicIntensity(name, intensity); } }
+  devLog(`[Light] ${name} = ${intensity.toFixed(2)}`);
+};
+
+const _origSetLampBlink = cb.setLampBlinkPattern;
+cb.setLampBlinkPattern = (name: string, pattern: string, intervalMs: number) => {
+  _origSetLampBlink(name, pattern, intervalMs);
+  devLog(`[Light] ${name} blink pattern="${pattern}" interval=${intervalMs}ms`);
+};
+
+const _origSetGI = cb.setGIState;
+cb.setGIState = (index: number, intensity: number) => {
+  _origSetGI(index, intensity);
+  const lm = getLightManager();
+  if (lm) { const giName = `GI${index}`; const ml = lm.getLight(giName); if (ml) { lm.setDynamicIntensity(giName, intensity); } }
+  devLog(`[GI] Channel ${index} = ${intensity}`);
+};
+
+const _origSetFlasher = cb.setFlasherState;
+cb.setFlasherState = (name: string, intensity: number, r: number = 255, g: number = 255, b: number = 255) => {
+  _origSetFlasher(name, intensity, r, g, b);
+  const flasherMesh = scene.getObjectByName(`flasher_${name}`);
+  if (flasherMesh && (flasherMesh as THREE.Mesh).material) {
+    const mat = (flasherMesh as THREE.Mesh).material as THREE.MeshStandardMaterial;
+    if (mat.emissive) {
+      mat.emissive.setRGB((r / 255) * intensity, (g / 255) * intensity, (b / 255) * intensity);
+      mat.emissiveIntensity = intensity;
+    }
+  }
+  devLog(`[Flasher] ${name} = ${(intensity * 100).toFixed(0)}% RGB(${r},${g},${b})`);
+};
+
+const _origSetFlasherBlink = cb.setFlasherBlinkPattern;
+cb.setFlasherBlinkPattern = (name: string, pattern: string, intervalMs: number) => {
+  _origSetFlasherBlink(name, pattern, intervalMs);
+  devLog(`[Flasher] ${name} blink pattern="${pattern}" interval=${intervalMs}ms`);
+};
+
 // ─── Phase 2: Advanced Lighting Callbacks ──────────────────────────────────────
 cb.triggerBumperFlash = () => {
   if (advancedLightingSystem) {

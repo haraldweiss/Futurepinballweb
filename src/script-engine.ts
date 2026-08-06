@@ -116,13 +116,68 @@ function buildFPScriptAPI() {
     StopMusic:  () => stopBGMusic(),
 
     DMDText:     (text: string) => dmdEvent(String(text).slice(0, 22).toUpperCase()),
-    LightOn:     (name: string) => fpScriptLog(`Light ON: ${  name}`),
-    LightOff:    (name: string) => fpScriptLog(`Light OFF: ${  name}`),
-    LightBlink:  (name: string) => fpScriptLog(`Light BLINK: ${  name}`),
-    SetLight:    (name: string, val: any) => fpScriptLog(`SetLight: ${name}=${val}`),
-    FlasherOn:   (name: string) => { cb.showNotification(`💡 ${  name}`); fpScriptLog(`Flasher ON: ${  name}`); },
-    FlasherOff:  (name: string) => fpScriptLog(`Flasher OFF: ${  name}`),
-    FlasherBlink:(name: string) => fpScriptLog(`Flasher BLINK: ${  name}`),
+    // ─── PHASE 2: Light Control (real implementation) ───
+    SetLamp: (name: string, value: any) => {
+      // name = "L1", "L2", ..., "GI1", "GI2", ...
+      const isOn = value === true || value === 1 || value === 'on' || value === 'On';
+      const intensity = typeof value === 'number' ? Math.max(0, Math.min(1, +value)) : (isOn ? 1 : 0);
+      cb.setLampState?.(name, intensity);
+      fpScriptLog(`SetLamp: ${name}=${intensity}`);
+    },
+
+    SetLampState: (name: string, intensity: number) => {
+      cb.setLampState?.(name, Math.max(0, Math.min(1, +intensity || 0)));
+    },
+
+    SetGI: (index: number, state: any) => {
+      // General Illumination: index=0-4, state=0/off/1/on
+      const s = +index || 0;
+      const isOn = state === true || state === 1 || state === 'on';
+      cb.setGIState?.(s, isOn ? 1 : 0);
+      fpScriptLog(`SetGI[${s}]: ${isOn ? 'ON' : 'OFF'}`);
+    },
+
+    SetGlow: (name: string, intensity: number) => {
+      cb.setLampState?.(name, Math.max(0, Math.min(1, +intensity / 100)));
+    },
+
+    LightState: (name: string) => {
+      // Returns: 0=off, 1=on, 2=blinking
+      return cb.getLampState?.(name) ?? 0;
+    },
+
+    LightBlinkPattern: (name: string, pattern: string, interval: number) => {
+      cb.setLampBlinkPattern?.(name, String(pattern), +interval || 250);
+      fpScriptLog(`LightBlinkPattern: ${name}="${pattern}" ${interval}ms`);
+    },
+
+    GetLightState: (name: string) => cb.getLampState?.(name) ?? 0,
+
+    // Replace stubs with real implementations
+    LightOn: (name: string) => cb.setLampState?.(name, 1),
+    LightOff: (name: string) => cb.setLampState?.(name, 0),
+    LightBlink: (name: string) => cb.setLampBlinkPattern?.(name, '10', 250),
+    SetLight: (name: string, val: any) => {
+      const intensity = typeof val === 'number' ? val : (val ? 1 : 0);
+      cb.setLampState?.(name, intensity);
+    },
+
+    // ─── PHASE 2: Flasher Control (real implementation) ───
+    SetFlasher: (name: string, intensity: number, r?: number, g?: number, b?: number) => {
+      const i = Math.max(0, Math.min(100, +intensity || 0));
+      cb.setFlasherState?.(name, i / 100, r ?? 255, g ?? 255, b ?? 255);
+      fpScriptLog(`SetFlasher: ${name}=${i}% RGB(${r ?? 255},${g ?? 255},${b ?? 255})`);
+    },
+
+    FlasherBlinkPattern: (name: string, pattern: string, interval: number) => {
+      cb.setFlasherBlinkPattern?.(name, String(pattern), +interval || 250);
+      fpScriptLog(`FlasherBlinkPattern: ${name}="${pattern}" ${interval}ms`);
+    },
+
+    // Replace stubs with real implementations
+    FlasherOn: (name: string) => cb.setFlasherState?.(name, 1, 255, 255, 255),
+    FlasherOff: (name: string) => cb.setFlasherState?.(name, 0, 0, 0, 0),
+    FlasherBlink: (name: string) => cb.setFlasherBlinkPattern?.(name, '10', 250),
     FireCoil:    (name: string) => fpScriptLog(`FireCoil: ${  name}`),
     SolenoidOn:  (name: string) => fpScriptLog(`Solenoid ON: ${  name}`),
     SolenoidOff: (name: string) => fpScriptLog(`Solenoid OFF: ${  name}`),
