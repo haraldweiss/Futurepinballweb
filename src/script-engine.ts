@@ -1548,6 +1548,187 @@ function buildFPScriptAPI() {
     })(),
 
     _makeTimer: makeTimer,
+
+    // ─── PHASE 1: Game Control ───
+    StartGame: () => {
+      state.ballNum = 1;
+      state.score = 0;
+      state.numPlayers = Math.max(1, state.numPlayers);
+      state.currentPlayer = 1;
+      state.playerScores = [0, 0, 0, 0];
+      state.tiltWarnings = 0;
+      state.tiltActive = false;
+      state.bumperHits = 0;
+      state.multiplier = 1;
+      cb.updateHUD();
+      cb.showNotification('🎮 GAME STARTED');
+      cb.dmdEvent('GAME STARTED');
+      fpScriptLog('StartGame: New game started');
+    },
+
+    EndGame: () => {
+      cb.showNotification('🕹️ GAME OVER');
+      cb.updateBackglassModeInfo('GAME OVER');
+      cb.triggerDrainVisual();
+      cb.dmdEvent('GAME OVER');
+      fpScriptLog('EndGame: Game over');
+    },
+
+    ResetScores: () => {
+      state.score = 0;
+      state.playerScores = state.playerScores.map(() => 0);
+      cb.updateHUD();
+      fpScriptLog('ResetScores: All scores reset');
+    },
+
+    PauseGame: () => {
+      state.activeModes.set('paused', { type: 'pause', progress: 0, timeout: 0 });
+      cb.showNotification('⏸️ PAUSED');
+      cb.dmdEvent('PAUSED');
+      fpScriptLog('PauseGame: Game paused');
+    },
+
+    ResumeGame: () => {
+      state.activeModes.delete('paused');
+      cb.showNotification('▶️ RESUMED');
+      cb.dmdEvent('PLAY');
+      fpScriptLog('ResumeGame: Game resumed');
+    },
+
+    DrainBall: () => {
+      cb.triggerDrainVisual();
+      cb.playBallDrainSound();
+      fpScriptLog(`DrainBall: Ball ${state.ballNum} drained`);
+      state.ballNum += 1;
+      if (state.ballNum > 3) {
+        cb.showNotification('🕹️ GAME OVER');
+        cb.updateBackglassModeInfo('GAME OVER');
+        cb.triggerDrainVisual();
+        cb.dmdEvent('GAME OVER');
+        fpScriptLog('EndGame: Game over');
+      } else {
+        cb.resetBall();
+        cb.dmdEvent(`BALL ${state.ballNum}`);
+      }
+    },
+
+    SetBallSave: (seconds: number) => {
+      const secs = Math.max(0, +seconds || 3);
+      state.ballSaveTimer = secs * 1000;
+      state.ballSaveMode = 'active';
+      state.ballSavesRemaining = 1;
+      cb.showNotification(`🔵 BALL SAVE: ${secs}s`);
+      fpScriptLog(`SetBallSave: ${secs} seconds`);
+    },
+
+    GetBallSaveTime: () => state.ballSaveTimer / 1000,
+    IsBallSaveActive: () => state.ballSaveMode === 'active' && state.ballSaveTimer > 0,
+
+    // ─── PHASE 1: Tilt System ───
+    Tilt: () => {
+      if (state.tiltActive) return;
+      state.tiltActive = true;
+      state.tiltWarnings = 3;
+      cb.showNotification('⚠️ TILT!');
+      cb.playTargetSound?.(1.0);
+      cb.tableShake?.(0.5, 300);
+      cb.disableFlippers?.();
+      cb.dmdEvent('TILT!');
+      fpScriptLog('TILT! Flippers disabled for 3s');
+      setTimeout(() => {
+        state.tiltActive = false;
+        cb.enableFlippers?.();
+        fpScriptLog('Tilt: Flippers re-enabled');
+      }, 3000);
+    },
+
+    Nudge: (x: number, y: number) => {
+      const nx = +x || 0;
+      const ny = +y || 0;
+      state.ballVel.x += nx * 0.01;
+      state.ballVel.y += ny * 0.01;
+      state.tiltWarnings = Math.min(3, state.tiltWarnings + 1);
+      cb.tableShake?.(Math.abs(nx + ny) * 0.1, 100);
+      cb.applyNudgeForce?.(nx * 0.01, ny * 0.01);
+      fpScriptLog(`Nudge: (${nx}, ${ny}) warnings=${state.tiltWarnings}`);
+      if (state.tiltWarnings >= 3) {
+        if (!state.tiltActive) {
+          state.tiltActive = true;
+          state.tiltWarnings = 3;
+          cb.showNotification('⚠️ TILT!');
+          cb.playTargetSound?.(1.0);
+          cb.tableShake?.(0.5, 300);
+          cb.disableFlippers?.();
+          cb.dmdEvent('TILT!');
+          fpScriptLog('TILT! Flippers disabled for 3s');
+          setTimeout(() => {
+            state.tiltActive = false;
+            cb.enableFlippers?.();
+            fpScriptLog('Tilt: Flippers re-enabled');
+          }, 3000);
+        }
+      }
+    },
+
+    NudgeX: (force: number) => {
+      state.ballVel.x += force * 0.01;
+      state.tiltWarnings = Math.min(3, state.tiltWarnings + 1);
+      cb.tableShake?.(Math.abs(force) * 0.1, 100);
+      cb.applyNudgeForce?.(force * 0.01, 0);
+      if (state.tiltWarnings >= 3 && !state.tiltActive) {
+        state.tiltActive = true;
+        state.tiltWarnings = 3;
+        cb.showNotification?.('⚠️ TILT!');
+        cb.tableShake?.(0.5, 300);
+        cb.disableFlippers?.();
+        cb.dmdEvent?.('TILT!');
+        setTimeout(() => { state.tiltActive = false; cb.enableFlippers?.(); }, 3000);
+      }
+    },
+    NudgeY: (force: number) => {
+      state.ballVel.y += force * 0.01;
+      state.tiltWarnings = Math.min(3, state.tiltWarnings + 1);
+      cb.tableShake?.(Math.abs(force) * 0.1, 100);
+      cb.applyNudgeForce?.(0, force * 0.01);
+      if (state.tiltWarnings >= 3 && !state.tiltActive) {
+        state.tiltActive = true;
+        state.tiltWarnings = 3;
+        cb.showNotification?.('⚠️ TILT!');
+        cb.tableShake?.(0.5, 300);
+        cb.disableFlippers?.();
+        cb.dmdEvent?.('TILT!');
+        setTimeout(() => { state.tiltActive = false; cb.enableFlippers?.(); }, 3000);
+      }
+    },
+
+    GetTiltWarnings: () => state.tiltWarnings,
+    GetTiltActive: () => state.tiltActive,
+    ResetTilt: () => {
+      state.tiltWarnings = 0;
+      state.tiltActive = false;
+      cb.enableFlippers?.();
+      fpScriptLog('ResetTilt: Tilt warnings cleared');
+    },
+
+    // ─── PHASE 1: Player System ───
+    GetPlayerScore: (playerNum?: number) => {
+      const p = (+(playerNum ?? 0) || state.currentPlayer) - 1;
+      return state.playerScores[p] ?? 0;
+    },
+
+    SetCredits: (n: number) => {
+      state.credits = Math.max(0, +n || 0);
+      cb.updateHUD?.();
+      fpScriptLog(`SetCredits: ${state.credits}`);
+    },
+
+    GetCredits: () => state.credits,
+
+    AddCredit: () => {
+      state.credits += 1;
+      cb.updateHUD?.();
+      fpScriptLog(`AddCredit: ${state.credits} credits`);
+    },
   };
 }
 

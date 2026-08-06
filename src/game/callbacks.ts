@@ -36,4 +36,9 @@ export const cb = {
 
   notifyBumperHit: (_data?: any): void => {},
   notifyTargetHit: (_data?: any): void => {},
+
+  // ─── Phase 1: Flipper + Nudge Control ───
+  disableFlippers:    (): void => {},
+  enableFlippers:     (): void => {},
+  applyNudgeForce:    (_x: number, _y: number): void => {},
 };

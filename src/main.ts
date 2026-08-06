@@ -635,26 +635,29 @@ function updateExtraBalls(dt: number): void {
 
 // ─── Flipper Update ───────────────────────────────────────────────────────────
 function updateFlippers(): void {
+  // Phase 1: Respect flippers-disabled state (TILT, script control)
+  const effectiveLeft = _flippersDisabled ? false : keys.left;
+  const effectiveRight = _flippersDisabled ? false : keys.right;
   // Phase 3: Enhanced flipper angles (35° active instead of 28° for better control)
-  const lAngle = keys.left  ? THREE.MathUtils.degToRad(35)  : THREE.MathUtils.degToRad(-28);
-  const rAngle = keys.right ? THREE.MathUtils.degToRad(-35) : THREE.MathUtils.degToRad(28);
+  const lAngle = effectiveLeft  ? THREE.MathUtils.degToRad(35)  : THREE.MathUtils.degToRad(-28);
+  const rAngle = effectiveRight ? THREE.MathUtils.degToRad(-35) : THREE.MathUtils.degToRad(28);
   leftFlipperGroup.rotation.z  += (lAngle - leftFlipperGroup.rotation.z)  * 0.35;
   rightFlipperGroup.rotation.z += (rAngle - rightFlipperGroup.rotation.z) * 0.35;
 
   // ─── Phase 25: Play flipper sound on activation ───
-  if (keys.left || keys.right) {
+  if (effectiveLeft || effectiveRight) {
     getSoundManager().then((soundMgr) => {
-      if (keys.left && !_lastLeftFlipperPressed) {
+      if (effectiveLeft && !_lastLeftFlipperPressed) {
         soundMgr.playFlipperHit(0.8);
       }
-      if (keys.right && !_lastRightFlipperPressed) {
+      if (effectiveRight && !_lastRightFlipperPressed) {
         soundMgr.playFlipperHit(0.8);
       }
     }).catch(() => {
       devLog("[Sound] Flipper sound unavailable in animation loop"); // Sound unavailable, continue silently
     });
-    _lastLeftFlipperPressed = keys.left;
-    _lastRightFlipperPressed = keys.right;
+    _lastLeftFlipperPressed = effectiveLeft;
+    _lastRightFlipperPressed = effectiveRight;
   } else {
     _lastLeftFlipperPressed = false;
     _lastRightFlipperPressed = false;
@@ -721,6 +724,18 @@ cb.dmdEvent         = dmdEvent;
 cb.playSound        = playSound;
 cb.launchMultiBall  = launchMultiBall;
 cb.resetBall        = resetBall;
+
+// ─── Phase 1: Flipper + Nudge Control ───
+let _flippersDisabled = false;
+cb.disableFlippers = () => { _flippersDisabled = true; };
+cb.enableFlippers = () => { _flippersDisabled = false; };
+cb.applyNudgeForce = (x: number, y: number) => {
+  // Apply nudge force to ball physics
+  const ball = physics?.ballBody;
+  if (ball) {
+    ball.applyImpulse({ x, y, z: 0 }, true);
+  }
+};
 
 // ─── Phase 2: Advanced Lighting Callbacks ──────────────────────────────────────
 cb.triggerBumperFlash = () => {
