@@ -892,6 +892,24 @@ Quick Wins aus der Gap-Analyse implementiert (\`docs/superpowers/plans/2026-08-0
 
 **Nächste Optionen:** Mittelfristige Roadmap (Proxy→echte Callbacks, Physics-Worker-Material-Integration,
 Element-Registry für GetElement-by-Name, DisableKeys-Input, PlaySound3D) oder neue Features.
+
+### 2026-08-06 (continued) — VBScript API: Mittelfortige Roadmap (Proxy-Stubs, Coil/Solenoid, DisableKeys, PlaySound3D)
+
+**Commits:** \`411e2418\`, \`a968d789\`
+
+Proxy-Objekte und Stubs mit echten Callbacks verbunden:
+
+- **Bumper.Fire()** → \`cb.triggerBumperFlash\` (vorher nur \`fpScriptLog\`)
+- **Ramp.Fire()** → \`cb.triggerRampCompletion\`
+- **Lights[name].TurnOn/Off()** → \`cb.setLampState(name, 1/0)\`
+- **FireCoil/SolenoidOn/SolenoidOff** → neue Callbacks \`cb.fireCoil/solenoidOn/solenoidOff\` mit Wiring in main.ts
+- **DisableKeys** voll integriert: \`_disabledKeys\` Set in input-optimizer.ts, \`handleKeyDown\` filtert disabled Keys (preventDefault + skip), \`cb.setKeysDisabled → disableKeys()\`
+- **PlaySound3D(name, x, y)**: Neue \`playSound3D()\` in audio.ts mit StereoPanner + Attenuation via \`calculate3DPositioning\`, exportiert über audio-system
+- **StopSound3D** (no-op in web, Fallback-Log)
+- Tests: 10 neue Tests für Proxy-Stubs, Coil/Solenoid, PlaySound3D (891/891)
+- Verified: tsc clean, 891/891 tests, vite build ✓
+
+**Noch offen (Mittelfristig):** Physics-Worker-Material-Integration (#7), Element-Registry für GetElement-by-Name (#8).
 ### 2026-07-28 — Security: fast-uri CVE-2026-18446 + electron + brace-expansion
 
 **Commit:** `81135f67`

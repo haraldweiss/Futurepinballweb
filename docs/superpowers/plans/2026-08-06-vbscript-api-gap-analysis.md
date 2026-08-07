@@ -273,11 +273,11 @@ Die Callbacks in `callbacks.ts` sind unit-testbar, aber das Wiring in `main.ts` 
 5. `GetBallCount` — ✅ 1 + extraBalls.length
 
 ### 🟡 Mittelfristig (3–5 Tage)
-6. Proxy-Stubs mit echten Callbacks verbinden (Bumper.Fire → cb.triggerBumper)
-7. Physics-Worker-Integration für setMaterial/Elasticity/Friction
-8. Object Registry für GetElement-by-Name
-9. DisableKeys → Input-System-Integration
-10. PlaySound3D (PannerNode)
+6. ✅ Proxy-Stubs mit echten Callbacks verbinden (Bumper.Fire → cb.triggerBumper, Ramp.Fire → cb.triggerRamp, Lights.TurnOn/Off → cb.setLampState)
+7. Physics-Worker-Integration für setMaterial/Elasticity/Friction — Callbacks existieren, Worker-Messages fehlen noch
+8. Object Registry für GetElement-by-Name — noch offen
+9. ✅ DisableKeys → Input-System-Integration (input-optimizer filtert disabled keys)
+10. ✅ PlaySound3D (StereoPanner + Attenuation basierend auf Position)
 
 ### 🔴 Langfristig (1–2 Wochen)
 11. Phase 6: Gates, Kickers, Spinners, Triggers als echte Objekte
