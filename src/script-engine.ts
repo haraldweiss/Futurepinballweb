@@ -3,7 +3,7 @@
 /**
  * script-engine.ts — VBScript → JavaScript Transpiler + FP Script API
  */
-import { state, fptResources, setFpScriptHandlers, bumpers, targets, cb, physics, globalAssetCatalog } from './game';
+import { state, fptResources, setFpScriptHandlers, bumpers, targets, cb, physics, globalAssetCatalog, extraBalls, currentTableConfig } from './game';
 import { getAudioCtx, playSound, playFPTMusic, startBGMusic, stopBGMusic } from './audio-system';
 import { dmdEvent } from './dmd';
 import { getBamBridge } from './bam-bridge';
@@ -70,7 +70,7 @@ export function fpScriptLog(msg: string, type = 'info'): void {
 }
 
 // ─── FP Script API ────────────────────────────────────────────────────────────
-function buildFPScriptAPI() {
+export function buildFPScriptAPI() {
   const sounds = fptResources.sounds;
   const timers: Record<string, any> = {};
 
@@ -1807,6 +1807,42 @@ function buildFPScriptAPI() {
       state.credits += 1;
       cb.updateHUD?.();
       fpScriptLog(`AddCredit: ${state.credits} credits`);
+    },
+
+    // ─── Quick Wins: Table Info + Player + Ball + DMD ───
+
+    // Table dimensions (standard FP playfield: 50.8 PU wide, 114 PU tall)
+    GetTableWidth:  () => 50.8,
+    GetTableHeight: () => 114.0,
+
+    // Table name from loaded config
+    TableName: () => currentTableConfig?.name ?? 'FUTURE PINBALL',
+
+    // Add score to specific player (1-indexed)
+    AddPlayerScore: (playerNum: number, points: number) => {
+      const p = (+(playerNum ?? 0) || state.currentPlayer) - 1;
+      const pts = Math.max(0, +points || 0);
+      if (state.playerScores[p] !== undefined) {
+        state.playerScores[p] += pts;
+      }
+      cb.updateHUD?.();
+      fpScriptLog(`AddPlayerScore: Player ${p + 1} +${pts}`);
+    },
+
+    // Quick ball add (wrapper for AddBalls with explicit naming)
+    AddBall: (num?: number) => {
+      const n = Math.max(1, +(num ?? 0) || 1);
+      for (let i = 0; i < n; i++) cb.launchMultiBall?.();
+      fpScriptLog(`AddBall: +${n} ball(s)`);
+    },
+
+    // Active ball count (1 main ball + extra multiball balls)
+    GetBallCount: () => 1 + extraBalls.length,
+
+    // Clear DMD display
+    DMDClear: () => {
+      dmdEvent('');
+      fpScriptLog('DMDClear');
     },
   };
 }
