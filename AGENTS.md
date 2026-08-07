@@ -910,6 +910,23 @@ Proxy-Objekte und Stubs mit echten Callbacks verbunden:
 - Verified: tsc clean, 891/891 tests, vite build ✓
 
 **Noch offen (Mittelfristig):** Physics-Worker-Material-Integration (#7), Element-Registry für GetElement-by-Name (#8).
+
+### 2026-08-06 (continued) — VBScript API: Physics-Worker Material Integration
+
+**Commits:** \`a3ab7467\`, \`5437204d\`
+
+Echte Physics-Worker-Integration fuer Phase-5-Callbacks:
+
+- **Neue Worker-Messages:** \`setMaterial\`, \`setElasticity\`, \`setFriction\` in worker-types.ts
+- **Handler in worker-handler.ts:** Material-Presets (rubber/metal/plastic/wood mit restitution+friction)
+- **Collider-Tracking:** \`state.colliderNames\` (Map<string, handle>) + \`state.allColliders\`
+- **Collider-Registration bei Erstellung:** Ball, LeftFlipper, RightFlipper, Bumper1..N, Target1..N, Ramp1..N
+- **Bridge-Methoden:** \`setMaterial()\`, \`setElasticity()\`, \`setFriction()\`
+- **main.ts Wiring:** cb.setMaterial/Elasticity/Friction -> bridge.postMessage (echte Physics-Integration statt devLog)
+- **Global Updates:** setElasticity/setFriction iterieren uber alle Collider in allColliders
+- Verified: tsc clean, 892/892 tests, vite build ✓
+
+**Noch offen (Mittelfortig):** Object Registry fuer GetElement-by-Name (#8).
 ### 2026-07-28 — Security: fast-uri CVE-2026-18446 + electron + brace-expansion
 
 **Commit:** `81135f67`
