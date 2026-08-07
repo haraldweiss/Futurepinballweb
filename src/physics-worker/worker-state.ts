@@ -17,4 +17,6 @@ export const state = {
   gravity: { x: 0, y: -9.8, z: 0.0 },
   frameCount: 0,
   lastPhysicsUpdate: 0,
+  colliderNames: new Map<string, number>(),
+  allColliders: [] as number[],
 };

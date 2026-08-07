@@ -19,6 +19,17 @@ interface UpdateFlipperParams { side: 'left' | 'right'; angle: number; }
 interface UpdateBallParams { x: number; y: number; vx?: number; vy?: number; }
 interface SetBallGravityParams { scale: number; }
 interface SetWorldGravityParams { x: number; y: number; }
+interface SetMaterialParams { objName: string; material: string; }
+interface SetElasticityParams { value: number; }
+interface SetFrictionParams { value: number; }
+
+const MATERIAL_PRESETS: Record<string, { restitution: number; friction: number }> = {
+  'rubber':    { restitution: 0.85, friction: 0.6 },
+  'metal':     { restitution: 0.15, friction: 0.3 },
+  'plastic':   { restitution: 0.55, friction: 0.4 },
+  'wood':      { restitution: 0.40, friction: 0.5 },
+  'default':   { restitution: 0.50, friction: 0.3 },
+};
 
 self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
   const { type, ...params } = event.data;
@@ -69,6 +80,57 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
           state.world.gravity.x = x;
           state.world.gravity.y = y;
           if (import.meta.env.DEV) { console.log(`[Physics Worker] World gravity → (${x.toFixed(2)}, ${y.toFixed(2)})`); }
+        }
+        break;
+      }
+
+      case 'setMaterial': {
+        const { objName, material } = params as SetMaterialParams;
+        // Map material name to physics properties
+        const matProps = MATERIAL_PRESETS[material] ?? MATERIAL_PRESETS['default'];
+        if (state.world) {
+          // Find collider by name and update its material
+          const handle = state.colliderNames?.get(objName);
+          if (handle !== undefined) {
+            const collider = state.world.getCollider(handle);
+            if (collider) {
+              collider.setRestitution(matProps.restitution);
+              collider.setFriction(matProps.friction);
+              if (import.meta.env.DEV) {
+                console.log(`[Physics Worker] Material '${material}' applied to '${objName}' (rest=${matProps.restitution}, fric=${matProps.friction})`);
+              }
+            }
+          }
+        }
+        break;
+      }
+
+      case 'setElasticity': {
+        const { value } = params as SetElasticityParams;
+        if (state.world) {
+          // Apply to all colliders
+          if (state.allColliders) {
+            for (const handle of state.allColliders) {
+              const collider = state.world.getCollider(handle);
+              if (collider) collider.setRestitution(value);
+            }
+          }
+          if (import.meta.env.DEV) { console.log(`[Physics Worker] Global elasticity → ${value}`); }
+        }
+        break;
+      }
+
+      case 'setFriction': {
+        const { value } = params as SetFrictionParams;
+        if (state.world) {
+          // Apply to all colliders
+          if (state.allColliders) {
+            for (const handle of state.allColliders) {
+              const collider = state.world.getCollider(handle);
+              if (collider) collider.setFriction(value);
+            }
+          }
+          if (import.meta.env.DEV) { console.log(`[Physics Worker] Global friction → ${value}`); }
         }
         break;
       }

@@ -29,13 +29,15 @@ export function initializePhysics(
 
   state.ballBody = state.world.createRigidBody(ballDesc);
 
-  state.world.createCollider(
+  const ballCollider = state.world.createCollider(
     RAPIER.ColliderDesc.ball(0.22)
       .setRestitution(config.ballRestitution ?? 0.85)
       .setFriction(config.ballFriction ?? 0.25)
       .setDensity(0.15),  // Lighter ball = better flipper control
     state.ballBody
   );
+  state.colliderNames!.set('Ball', ballCollider.handle);
+  state.allColliders!.push(ballCollider.handle);
 
   onProgress?.('Creating flippers...');
   const flipperHalfLen = (config.flipperLength ?? 2.1) / 2;
@@ -43,7 +45,7 @@ export function initializePhysics(
   const lFlipperDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
     .setTranslation(config.leftFlipperPos.x, config.leftFlipperPos.y, 0.0);
   state.lFlipperBody = state.world.createRigidBody(lFlipperDesc);
-  state.world.createCollider(
+  const lFlipperCollider = state.world.createCollider(
     RAPIER.ColliderDesc.cuboid(flipperHalfLen, 0.13, 0.1)
       .setTranslation(flipperHalfLen, 0.0, 0.0)
       .setRestitution(config.flipperRestitution ?? 0.95)
@@ -51,11 +53,13 @@ export function initializePhysics(
       .setDensity(2.0),  // Heavier flippers = more power to ball
     state.lFlipperBody
   );
+  state.colliderNames!.set('LeftFlipper', lFlipperCollider.handle);
+  state.allColliders!.push(lFlipperCollider.handle);
 
   const rFlipperDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
     .setTranslation(config.rightFlipperPos.x, config.rightFlipperPos.y, 0.0);
   state.rFlipperBody = state.world.createRigidBody(rFlipperDesc);
-  state.world.createCollider(
+  const rFlipperCollider = state.world.createCollider(
     RAPIER.ColliderDesc.cuboid(flipperHalfLen, 0.13, 0.1)
       .setTranslation(-flipperHalfLen, 0.0, 0.0)
       .setRestitution(config.flipperRestitution ?? 0.95)
@@ -63,6 +67,8 @@ export function initializePhysics(
       .setDensity(2.0),  // Heavier flippers = more power to ball
     state.rFlipperBody
   );
+  state.colliderNames!.set('RightFlipper', rFlipperCollider.handle);
+  state.allColliders!.push(rFlipperCollider.handle);
 
   onProgress?.('Building walls...');
   let wallCount = 0;
@@ -149,6 +155,8 @@ export function initializePhysics(
         body
       );
       state.bumperMap.set(collider.handle, { x: b.x, y: b.y, index: i });
+      state.colliderNames!.set(`Bumper${i + 1}`, collider.handle);
+      state.allColliders!.push(collider.handle);
     });
 
     // Targets
@@ -168,6 +176,8 @@ export function initializePhysics(
         body
       );
       state.targetMap.set(collider.handle, { x: t.x, y: t.y, index: i });
+      state.colliderNames!.set(`Target${i + 1}`, collider.handle);
+      state.allColliders!.push(collider.handle);
     });
 
     // Ramps
@@ -189,11 +199,13 @@ export function initializePhysics(
           })
       );
       state.tableBodies.push(body);
-      state.world!.createCollider(
+      const rampCollider = state.world!.createCollider(
         RAPIER.ColliderDesc.cuboid(len / 2, 0.07, 0.15)
           .setRestitution(rest).setFriction(fric),
         body
       );
+      state.colliderNames!.set(`Ramp${i + 1}`, rampCollider.handle);
+      state.allColliders!.push(rampCollider.handle);
     });
 
     // Slingshots werden bereits im tableBodies-Loop oben aus dem `side`-Feld

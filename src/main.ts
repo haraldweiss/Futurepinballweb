@@ -2399,9 +2399,18 @@ cb.isKeyPressed = (keyCode: number) => false;
 cb.setKeysDisabled = (keyCodes: number[]) => { disableKeys(keyCodes); devLog(`[Input] Disabled keys: ${keyCodes.join(', ')}`); };
 cb.setDMDPixels = (pixels: any) => devLog(`[DMD] Pixels set to ${pixels}`);
 // ─── Phase 5: Physics + Material Control ───
-cb.setMaterial = (objName: string, material: string) => devLog(`[Physics] SetMaterial: ${objName} → ${material}`);
-cb.setElasticity = (value: number) => devLog(`[Physics] SetElasticity: ${value}`);
-cb.setFriction = (value: number) => devLog(`[Physics] SetFriction: ${value}`);
+cb.setMaterial = (objName: string, material: string) => {
+  const bridge = getPhysicsWorker();
+  bridge?.setMaterial(objName, material);
+};
+cb.setElasticity = (value: number) => {
+  const bridge = getPhysicsWorker();
+  bridge?.setElasticity(value);
+};
+cb.setFriction = (value: number) => {
+  const bridge = getPhysicsWorker();
+  bridge?.setFriction(value);
+};
 
 
 // ─── Phase 4: Input + DMD + Table Info ───
@@ -2409,8 +2418,17 @@ cb.isKeyPressed = (keyCode: number) => false;
 cb.setKeysDisabled = (keyCodes: number[]) => { disableKeys(keyCodes); devLog(`[Input] Disabled keys: ${keyCodes.join(', ')}`); };
 cb.setDMDPixels = (pixels: any) => devLog(`[DMD] Pixels set to ${pixels}`);
 // ─── Phase 5: Physics + Material Control ───
-cb.setMaterial = (objName: string, material: string) => devLog(`[Physics] SetMaterial: ${objName} → ${material}`);
-cb.setElasticity = (value: number) => devLog(`[Physics] SetElasticity: ${value}`);
-cb.setFriction = (value: number) => devLog(`[Physics] SetFriction: ${value}`);
+cb.setMaterial = (objName: string, material: string) => {
+  const bridge = getPhysicsWorker();
+  bridge?.setMaterial(objName, material);
+};
+cb.setElasticity = (value: number) => {
+  const bridge = getPhysicsWorker();
+  bridge?.setElasticity(value);
+};
+cb.setFriction = (value: number) => {
+  const bridge = getPhysicsWorker();
+  bridge?.setFriction(value);
+};
 
 

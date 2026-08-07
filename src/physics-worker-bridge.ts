@@ -232,6 +232,18 @@ export class PhysicsWorkerBridge {
     this.postMessage({ type: 'setWorldGravity', x, y });
   }
 
+  setMaterial(objName: string, material: string): void {
+    this.postMessage({ type: 'setMaterial', objName, material });
+  }
+
+  setElasticity(value: number): void {
+    this.postMessage({ type: 'setElasticity', value });
+  }
+
+  setFriction(value: number): void {
+    this.postMessage({ type: 'setFriction', value });
+  }
+
   /**
    * Get the last physics frame (for immediate access if needed).
    */

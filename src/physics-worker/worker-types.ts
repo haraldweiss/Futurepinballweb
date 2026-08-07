@@ -8,7 +8,10 @@ export type WorkerMessage =
   | { type: 'updateBall'; x: number; y: number; vx?: number; vy?: number }
   | { type: 'setBallGravity'; scale: number }
   | { type: 'setWorldGravity'; x: number; y: number }
-  | { type: 'dispose' };
+  | { type: 'dispose' }
+  | { type: 'setMaterial'; objName: string; material: string }
+  | { type: 'setElasticity'; value: number }
+  | { type: 'setFriction'; value: number };
 
 export type PhysicsFrame = {
   ballPos: { x: number; y: number; z: number };
