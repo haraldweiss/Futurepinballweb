@@ -870,6 +870,28 @@ Implementierung der letzten aktiven Phase des VBScript-API-Plans (`2026-08-06-vb
 - Verified: tsc clean, 868/868 tests, vite build ✓
 
 **Offen:** Phase 6 (Gates, Kickers, Spinners, Triggers als echte Physics-Objekte) — deferred bis benötigt.
+
+### 2026-08-06 (continued) — VBScript API Quick Wins + Gap-Analyse
+
+**Commits:** \`50b63289\`, \`9cf603ad\`
+
+Quick Wins aus der Gap-Analyse implementiert (\`docs/superpowers/plans/2026-08-06-vbscript-api-gap-analysis.md\`):
+
+- **GetTableWidth()** → 50.8 (Standard FP Playfield-Breite in PU)
+- **GetTableHeight()** → 114.0 (Standard FP Playfield-Höhe in PU)
+- **TableName()** → \`currentTableConfig.name\` oder Fallback 'FUTURE PINBALL'
+- **AddPlayerScore(playerNum, points)** → Points zu spezifischem Spieler (1-indexed)
+- **AddBall(num)** → Wrapper um launchMultiBall
+- **GetBallCount()** → 1 + extraBalls.length
+- **DMDClear()** → dmdEvent('') (leert DMD)
+- **buildFPScriptAPI** als export für Unit-Tests
+- Import-Ergänzungen: \`extraBalls\`, \`currentTableConfig\` in script-engine.ts
+- 13 neue Tests in \`vbscript-quick-wins.test.ts\`
+- Gap-Analyse erstellt: 60+ fehlende FP/VPX-Funktionen dokumentiert, priorisierte Roadmap
+- Verified: tsc clean, 881/881 tests, vite build ✓
+
+**Nächste Optionen:** Mittelfristige Roadmap (Proxy→echte Callbacks, Physics-Worker-Material-Integration,
+Element-Registry für GetElement-by-Name, DisableKeys-Input, PlaySound3D) oder neue Features.
 ### 2026-07-28 — Security: fast-uri CVE-2026-18446 + electron + brace-expansion
 
 **Commit:** `81135f67`
