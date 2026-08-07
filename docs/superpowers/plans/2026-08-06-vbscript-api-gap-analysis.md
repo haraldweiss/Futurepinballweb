@@ -275,7 +275,7 @@ Die Callbacks in `callbacks.ts` sind unit-testbar, aber das Wiring in `main.ts` 
 ### 🟡 Mittelfristig (3–5 Tage)
 6. ✅ Proxy-Stubs mit echten Callbacks verbinden (Bumper.Fire → cb.triggerBumper, Ramp.Fire → cb.triggerRamp, Lights.TurnOn/Off → cb.setLampState)
 7. ✅ Physics-Worker-Integration für setMaterial/Elasticity/Frictor — Worker-Messages, Bridge, Collider-Tracking, main.ts Wiring komplett
-8. Object Registry für GetElement-by-Name — noch offen
+8. ✅ Object Registry für GetElement-by-Name — "Bumper1"→index 0, "Target1"→index 0, etc. (1-basiert)
 9. ✅ DisableKeys → Input-System-Integration (input-optimizer filtert disabled keys)
 10. ✅ PlaySound3D (StereoPanner + Attenuation basierend auf Position)
 

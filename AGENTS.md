@@ -927,6 +927,20 @@ Echte Physics-Worker-Integration fuer Phase-5-Callbacks:
 - Verified: tsc clean, 892/892 tests, vite build ✓
 
 **Noch offen (Mittelfortig):** Object Registry fuer GetElement-by-Name (#8).
+
+### 2026-08-06 (continued) — VBScript API: GetElement-by-Name Fix
+
+**Commit:** \`011a3d02\`
+
+GetElement("Bumper1") now correctly resolves elements by name:
+- Parses "Bumper1", "Target1", "Ramp1", "Flipper1", "Light1" patterns (1-based)
+- Case-insensitive matching
+- Flipper1=LeftFlipper, Flipper2=RightFlipper
+- Fallback: mesh.userData.name exact match, then partial substring search
+- 5 new tests (897/897 total)
+- Verified: tsc clean, 897/897 tests, vite build ✓
+
+**All mittelfortige items complete.** Next: Phase 6 (Gates/Kickers/Spinners/Triggers) or new features.
 ### 2026-07-28 — Security: fast-uri CVE-2026-18446 + electron + brace-expansion
 
 **Commit:** `81135f67`
