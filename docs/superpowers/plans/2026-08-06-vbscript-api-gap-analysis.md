@@ -265,12 +265,12 @@ Die Callbacks in `callbacks.ts` sind unit-testbar, aber das Wiring in `main.ts` 
 
 ## 8. Priorisierte Roadmap
 
-### 🟢 Quick Wins (1–2 Tage)
-1. `GetTableWidth` / `GetTableHeight` / `TableName` — nur state-Zugriff
-2. `AddPlayerScore(playerNum, points)` — state.playerScores erweitern
-3. `AddBall(num)` — `launchMultiBall` erweitern
-4. `DMDClear` — leeres DMD-Event
-5. `GetBallCount` — `state.activeBalls` oder Physics-Worker-Zähler
+### 🟢 Quick Wins (1–2 Tage) ✅ COMPLETE
+1. `GetTableWidth` / `GetTableHeight` / `TableName` — ✅ 50.8/114.0 PU + config name
+2. `AddPlayerScore(playerNum, points)` — ✅ state.playerScores[player] += pts
+3. `AddBall(num)` — ✅ launchMultiBall wrapper
+4. `DMDClear` — ✅ dmdEvent('')
+5. `GetBallCount` — ✅ 1 + extraBalls.length
 
 ### 🟡 Mittelfristig (3–5 Tage)
 6. Proxy-Stubs mit echten Callbacks verbinden (Bumper.Fire → cb.triggerBumper)
