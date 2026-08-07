@@ -850,6 +850,26 @@ weil es vor setupScene() deklariert war).
 **Tests:** 38 Testdateien (neu), 775 Tests (+12 seit 762), tsc clean, vite build ✓
 **Neue Dateien:** `src/utils/vbs-transpiler.ts`, `src/__tests__/error-handling-patterns.test.ts`
 
+
+### 2026-08-06 — VBScript API Phase 5: Physics + Material Control
+
+**Commits:** `e7a908c2`, `ecf1345f`
+
+Implementierung der letzten aktiven Phase des VBScript-API-Plans (`2026-08-06-vbscript-api-completion.md`):
+
+- **Neue Callbacks** in `src/game/callbacks.ts`: `setMaterial(objName, material)`, `setElasticity(value)`, `setFriction(value)`
+- **Neue API-Funktionen** in `src/script-engine.ts` (`buildFPScriptAPI()`):
+  - `SetMaterial(objName, material)` → delegiert an `cb.setMaterial`
+  - `SetElasticity(value)` → clamped 0-1, delegiert an `cb.setElasticity`
+  - `SetFriction(value)` → clamped 0-1, delegiert an `cb.setFriction`
+  - `ShakeTable(force)` → `cb.tableShake(force, 200)`
+- **Wiring** in `main.ts`: beide Init-Pfade (DEV + prod) mit `devLog`-Logging
+- **Tests:** `src/__tests__/vbscript-physics.test.ts` — 9 Tests für alle 4 Fns + tableShake
+- **Plan-Doc:** Phase 5 als ✅ COMPLETE markiert
+- **VBScript API Gesamtstand:** Phase 1-5 komplett (~151 Funktionen, ~125+ echte Implementierungen)
+- Verified: tsc clean, 868/868 tests, vite build ✓
+
+**Offen:** Phase 6 (Gates, Kickers, Spinners, Triggers als echte Physics-Objekte) — deferred bis benötigt.
 ### 2026-07-28 — Security: fast-uri CVE-2026-18446 + electron + brace-expansion
 
 **Commit:** `81135f67`
