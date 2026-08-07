@@ -79,4 +79,9 @@ export const cb = {
     }, intervalMs);
     _flasherBlinkIntervals.set(name, interval);
   },
+
+  // ─── Phase 4: Input + DMD + Table Info ───
+  isKeyPressed: (_keyCode: number): boolean => false,
+  setKeysDisabled: (_keyCodes: number[]): void => {},
+  setDMDPixels: (_pixels: any): void => {},
 };
