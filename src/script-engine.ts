@@ -1765,6 +1765,30 @@ function buildFPScriptAPI() {
       fpScriptLog('ResetTilt: Tilt warnings cleared');
     },
 
+    // ─── PHASE 5: Physics + Material Control ───
+    SetMaterial: (objName: string, material: string) => {
+      cb.setMaterial?.(String(objName), String(material));
+      fpScriptLog(`SetMaterial: ${objName} → ${material}`);
+    },
+
+    SetElasticity: (value: number) => {
+      const v = Math.max(0, Math.min(1, +value || 0));
+      cb.setElasticity?.(v);
+      fpScriptLog(`SetElasticity: ${v}`);
+    },
+
+    SetFriction: (value: number) => {
+      const v = Math.max(0, Math.min(1, +value || 0));
+      cb.setFriction?.(v);
+      fpScriptLog(`SetFriction: ${v}`);
+    },
+
+    ShakeTable: (force: number) => {
+      const f = Math.max(0, +force || 0.5);
+      cb.tableShake?.(f, 200);
+      fpScriptLog(`ShakeTable: force=${f}`);
+    },
+
     // ─── PHASE 1: Player System ───
     GetPlayerScore: (playerNum?: number) => {
       const p = (+(playerNum ?? 0) || state.currentPlayer) - 1;

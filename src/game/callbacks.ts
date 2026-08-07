@@ -84,4 +84,9 @@ export const cb = {
   isKeyPressed: (_keyCode: number): boolean => false,
   setKeysDisabled: (_keyCodes: number[]): void => {},
   setDMDPixels: (_pixels: any): void => {},
+
+  // ─── Phase 5: Physics + Material Control ───
+  setMaterial: (_objName: string, _material: string): void => {},
+  setElasticity: (_value: number): void => {},
+  setFriction: (_value: number): void => {},
 };
