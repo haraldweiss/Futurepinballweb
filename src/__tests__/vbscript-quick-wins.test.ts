@@ -195,3 +195,37 @@ describe('VBScript PlaySound3D', () => {
     expect(typeof api.StopSound3D).toBe('function');
   });
 });
+
+// ─── Physics Worker Material Integration ───
+describe('VBScript Physics Worker Integration', () => {
+  it('Phase 5 callbacks trigger physics bridge', async () => {
+    // Mock the physics worker bridge
+    const mockSetMaterial = vi.fn();
+    const mockSetElasticity = vi.fn();
+    const mockSetFriction = vi.fn();
+
+    const originalSetMaterial = cb.setMaterial;
+    const originalSetElasticity = cb.setElasticity;
+    const originalSetFriction = cb.setFriction;
+
+    cb.setMaterial = mockSetMaterial;
+    cb.setElasticity = mockSetElasticity;
+    cb.setFriction = mockSetFriction;
+
+    const api = buildFPScriptAPI();
+
+    api.SetMaterial('Bumper1', 'rubber');
+    expect(mockSetMaterial).toHaveBeenCalledWith('Bumper1', 'rubber');
+
+    api.SetElasticity(0.85);
+    expect(mockSetElasticity).toHaveBeenCalledWith(0.85);
+
+    api.SetFriction(0.3);
+    expect(mockSetFriction).toHaveBeenCalledWith(0.3);
+
+    // Restore
+    cb.setMaterial = originalSetMaterial;
+    cb.setElasticity = originalSetElasticity;
+    cb.setFriction = originalSetFriction;
+  });
+});
