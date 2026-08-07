@@ -89,4 +89,9 @@ export const cb = {
   setMaterial: (_objName: string, _material: string): void => {},
   setElasticity: (_value: number): void => {},
   setFriction: (_value: number): void => {},
+
+  // ─── Coil / Solenoid Control ───
+  fireCoil: (_name: string): void => {},
+  solenoidOn: (_name: string): void => {},
+  solenoidOff: (_name: string): void => {},
 };

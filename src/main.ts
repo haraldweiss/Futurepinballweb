@@ -149,7 +149,7 @@ import { loadFpwConfig } from './utils/fpw-config';
 import { initializeEventHandlers } from './event-handlers-init';
 import { setupWindowAPI, setDevFlag, toggleModelViewer } from './window-api';
 import { getDefaultPhysicsConfig, logPhysicsConfig, validatePhysicsConfig } from './physics-config-enhancer';
-import { getInputOptimizer } from './input-optimizer';
+import { getInputOptimizer, disableKeys, enableKeys } from './input-optimizer';
 import { getPerformanceDashboard } from './performance-dashboard';
 import { initScoreAnimationManager, getScoreAnimationManager } from './score-animation-manager';
 import { initTouchControlsManager } from './touch-controls-manager';
@@ -2396,7 +2396,7 @@ setTimeout(() => initializeEventHandlers(), 50);
 
 // ─── Phase 4: Input + DMD + Table Info ───
 cb.isKeyPressed = (keyCode: number) => false;
-cb.setKeysDisabled = (keyCodes: number[]) => devLog(`[Input] Disabled keys: ${keyCodes.join(', ')}`);
+cb.setKeysDisabled = (keyCodes: number[]) => { disableKeys(keyCodes); devLog(`[Input] Disabled keys: ${keyCodes.join(', ')}`); };
 cb.setDMDPixels = (pixels: any) => devLog(`[DMD] Pixels set to ${pixels}`);
 // ─── Phase 5: Physics + Material Control ───
 cb.setMaterial = (objName: string, material: string) => devLog(`[Physics] SetMaterial: ${objName} → ${material}`);
@@ -2406,7 +2406,7 @@ cb.setFriction = (value: number) => devLog(`[Physics] SetFriction: ${value}`);
 
 // ─── Phase 4: Input + DMD + Table Info ───
 cb.isKeyPressed = (keyCode: number) => false;
-cb.setKeysDisabled = (keyCodes: number[]) => devLog(`[Input] Disabled keys: ${keyCodes.join(', ')}`);
+cb.setKeysDisabled = (keyCodes: number[]) => { disableKeys(keyCodes); devLog(`[Input] Disabled keys: ${keyCodes.join(', ')}`); };
 cb.setDMDPixels = (pixels: any) => devLog(`[DMD] Pixels set to ${pixels}`);
 // ─── Phase 5: Physics + Material Control ───
 cb.setMaterial = (objName: string, material: string) => devLog(`[Physics] SetMaterial: ${objName} → ${material}`);

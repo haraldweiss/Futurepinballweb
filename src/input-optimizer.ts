@@ -32,6 +32,20 @@ export interface InputMetrics {
 /**
  * Low-latency input handler with frame skipping prevention
  */
+const _disabledKeys = new Set<number>();
+
+export function disableKeys(keyCodes: number[]): void {
+  keyCodes.forEach(k => _disabledKeys.add(k));
+}
+
+export function enableKeys(keyCodes: number[]): void {
+  keyCodes.forEach(k => _disabledKeys.delete(k));
+}
+
+export function areKeysDisabled(keyCode: number): boolean {
+  return _disabledKeys.has(keyCode);
+}
+
 export class InputOptimizer {
   private state: InputState = {
     flipperLeft: false,
@@ -207,6 +221,12 @@ export class InputOptimizer {
   private handleKeyDown(event: KeyboardEvent): void {
     const now = performance.now();
     this.metrics.lastInputTime = now;
+
+    // Skip disabled keys
+    if (_disabledKeys.has(event.keyCode)) {
+      event.preventDefault();
+      return;
+    }
 
     // Queue input for next frame
     this.inputQueue.push({

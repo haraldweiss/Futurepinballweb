@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // © 2026 Harald Weiss
 import { fptResources } from './game';
+import { calculate3DPositioning } from './audio-enhanced/spatial';
 import { initializeAudioSourcePool, getAudioSourcePool } from './audio-source-pool';
 
 // ── Audio Context ─────────────────────────────────────────────────────────────
@@ -115,6 +116,88 @@ export function playSound(type: 'bumper' | 'flipper' | 'drain' | 'coin' | string
  * PHASE 9: Play bumper sound with intensity-based pitch and volume variation
  * @param intensity - Normalized impact intensity (0.0 = soft, 1.0 = hard)
  */
+
+export function playSound3D(
+  type: 'bumper' | 'flipper' | 'drain' | 'coin' | string,
+  x: number,
+  y: number
+): void {
+  try {
+    if (audioSuppressFlipped && type !== 'bumper' && type !== 'coin') return;
+
+    const ctx = getAudioCtx();
+    const { pan, attenuation } = calculate3DPositioning(
+      { x, y },
+      { x: 0, y: 0 }  // Listener at center
+    );
+
+    // FPT-originaler Sound
+    const fptBuf = fptResources.mapped[type as 'bumper' | 'flipper' | 'drain'];
+    if (fptBuf) {
+      const pool = getAudioSourcePool();
+      const src = pool.acquireSource();
+      const gain = ctx.createGain();
+      src.buffer = fptBuf;
+      src.connect(gain);
+
+      // Apply spatial panning
+      try {
+        if (ctx.createStereoPanner) {
+          const panner = ctx.createStereoPanner();
+          panner.pan.value = pan;
+          gain.connect(panner);
+          panner.connect(ctx.destination);
+        } else {
+          gain.connect(ctx.destination);
+        }
+      } catch {
+        gain.connect(ctx.destination);
+      }
+
+      gain.gain.value = (type === 'flipper' ? 0.35 : 0.6) * attenuation;
+      src.onended = () => pool.releaseSource(src);
+      src.start();
+      return;
+    }
+
+    // Synthesizer-Fallback with spatial
+    const now = ctx.currentTime;
+    const volScale = isMobile ? 0.7 : 1.0;
+    const vol = volScale * attenuation;
+
+    if (type === 'coin') {
+      const osc1 = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(2200, now);
+      osc1.frequency.exponentialRampToValueAtTime(1800, now + 0.1);
+      gain.gain.setValueAtTime(0.3 * vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+      try {
+        if (ctx.createStereoPanner) {
+          const panner = ctx.createStereoPanner();
+          panner.pan.value = pan;
+          osc1.connect(gain);
+          gain.connect(panner);
+          panner.connect(ctx.destination);
+        } else {
+          osc1.connect(gain);
+          gain.connect(ctx.destination);
+        }
+      } catch {
+        osc1.connect(gain);
+        gain.connect(ctx.destination);
+      }
+
+      osc1.start(now);
+      osc1.stop(now + 0.15);
+    }
+  } catch (e) {
+    console.warn('[audio] playSound3D failed:', (e || 'unknown'));
+  }
+}
+
 export function playBumperSoundWithIntensity(intensity: number): void {
   try {
     // Skip audio on very low-end mobile (battery saver)

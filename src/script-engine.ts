@@ -4,7 +4,7 @@
  * script-engine.ts — VBScript → JavaScript Transpiler + FP Script API
  */
 import { state, fptResources, setFpScriptHandlers, bumpers, targets, cb, physics, globalAssetCatalog, extraBalls, currentTableConfig } from './game';
-import { getAudioCtx, playSound, playFPTMusic, startBGMusic, stopBGMusic } from './audio-system';
+import { getAudioCtx, playSound, playSound3D, playFPTMusic, startBGMusic, stopBGMusic } from './audio-system';
 import { dmdEvent } from './dmd';
 import { getBamBridge } from './bam-bridge';
 import { runSandboxed, ScriptSandboxError } from './utils/script-sandbox';
@@ -178,9 +178,9 @@ export function buildFPScriptAPI() {
     FlasherOn: (name: string) => cb.setFlasherState?.(name, 1, 255, 255, 255),
     FlasherOff: (name: string) => cb.setFlasherState?.(name, 0, 0, 0, 0),
     FlasherBlink: (name: string) => cb.setFlasherBlinkPattern?.(name, '10', 250),
-    FireCoil:    (name: string) => fpScriptLog(`FireCoil: ${  name}`),
-    SolenoidOn:  (name: string) => fpScriptLog(`Solenoid ON: ${  name}`),
-    SolenoidOff: (name: string) => fpScriptLog(`Solenoid OFF: ${  name}`),
+    FireCoil:    (name: string) => { fpScriptLog(`FireCoil: ${name}`); cb.fireCoil?.(String(name)); },
+    SolenoidOn:  (name: string) => { fpScriptLog(`Solenoid ON: ${name}`); cb.solenoidOn?.(String(name)); },
+    SolenoidOff: (name: string) => { fpScriptLog(`Solenoid OFF: ${name}`); cb.solenoidOff?.(String(name)); },
 
     AddBalls:       (n: number) => { for (let i = 0; i < Math.max(0,(+n||1)-1); i++) cb.launchMultiBall(); },
     MultiballStart: (n: number) => { for (let i = 0; i < Math.max(0,(+n||2)-1); i++) cb.launchMultiBall(); },
@@ -247,7 +247,7 @@ export function buildFPScriptAPI() {
           Index: i + 1,
           Enabled: true,
           Light: { Intensity: 0, Color: 0xffffff },
-          Fire: () => fpScriptLog(`Bumper ${i + 1} fired`),
+          Fire: () => { fpScriptLog(`Bumper ${i + 1} fired`); cb.triggerBumperFlash?.(); },
         };
       },
     }),
@@ -267,7 +267,7 @@ export function buildFPScriptAPI() {
         Name: String(name),
         Enabled: true,
         IsActive: false,
-        Fire: () => fpScriptLog(`Ramp ${String(name)} fired`),
+        Fire: () => { fpScriptLog(`Ramp ${String(name)} fired`); cb.triggerRampCompletion?.(); },
       }),
     }),
 
@@ -276,8 +276,8 @@ export function buildFPScriptAPI() {
         Name: String(name),
         Enabled: false,
         Intensity: 0,
-        TurnOn: () => fpScriptLog(`Light ${String(name)} ON`),
-        TurnOff: () => fpScriptLog(`Light ${String(name)} OFF`),
+        TurnOn: () => { fpScriptLog(`Light ${String(name)} ON`); cb.setLampState?.(String(name), 1); },
+        TurnOff: () => { fpScriptLog(`Light ${String(name)} OFF`); cb.setLampState?.(String(name), 0); },
       }),
     }),
 
@@ -1843,6 +1843,16 @@ export function buildFPScriptAPI() {
     DMDClear: () => {
       dmdEvent('');
       fpScriptLog('DMDClear');
+    },
+
+    // 3D positional audio
+    PlaySound3D: (name: string, x: number, y: number) => {
+      playSound3D(String(name), +x || 0, +y || 0);
+      fpScriptLog(`PlaySound3D: ${name} at (${x}, ${y})`);
+    },  
+    
+    StopSound3D: (name: string) => {
+      fpScriptLog(`StopSound3D: ${name} (no-op in web)`);
     },
   };
 }

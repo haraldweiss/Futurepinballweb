@@ -19,6 +19,7 @@ export {
   getAudioCtx,
   initializeAudioPooling,
   playSound,
+  playSound3D,
   playBumperSoundWithIntensity,
   startBGMusic,
   stopBGMusic,
