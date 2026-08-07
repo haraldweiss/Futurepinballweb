@@ -315,14 +315,14 @@ Dies ist ein größeres Unterfangen, das neue Meshes, Physics-Collider und Rende
 | Phase | Funktionen | Tests | Aufwand |
 |-------|-----------|-------|---------|
 | 1: Game Control + Tilt + Nudge | +12 | +15 | 2 Tage |
-| 2: LightManager-Integration | +14 | +18 | 2 Tage |
+| 2: LightManager-Integration | +34 | +18 | 2 Tage |
 | 3: Physics Object Control | +10 | +15 | 2 Tage |
-| 4: Input + DMD + Table Info | +12 | +15 | 1 Tag |
+| 4: Input + DMD + Table Info | +10 | +12 | 1 Tag |
+| **Σ Phase 1-4** | **+66** | **+60** | **~7 Tage** |
 | 5: Physics + Material | +5 | +8 | 1 Tag |
-| **Σ Phase 1-5** | **+53** | **+71** | **~8 Tage** |
 | 6: Erweiterte Objekt-Typen | +20 | +20 | 1-2 Wochen |
 
-**Nach Phase 1-5:** ~133 VBScript-Funktionen (vs. ~80 aktuell), davon ~100+ echte Implementierungen (vs. ~40 aktuell).
+**Nach Phase 1-4:** ~146 VBScript-Funktionen (vs. ~80 aktuell), davon ~120+ echte Implementierungen (vs. ~40 aktuell).
 
 ---
 

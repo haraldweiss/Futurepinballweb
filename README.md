@@ -8,7 +8,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)
 ![Modules](https://img.shields.io/badge/Modules-295-orange)
 ![Code](https://img.shields.io/badge/Code-42K%20Lines-purple)
-![Tests](https://img.shields.io/badge/Tests-775%20passing-success)
+![Tests](https://img.shields.io/badge/Tests-859%20passing-success)
 ![Vulnerabilities](https://img.shields.io/badge/Vulnerabilities-0-success)
 ![TypeScript](https://img.shields.io/badge/TS_Errors-0-success)
 
@@ -189,7 +189,7 @@ npm run build
 # Node built-ins only). Serves dist/ on PORT or 3000.
 npm run serve
 
-# Tests (775 passing, vitest)
+# Tests (859 passing, vitest)
 npm run test:run
 
 # Security checks (eslint security plugin + audit + custom XSS tests)
@@ -420,7 +420,7 @@ scripts/
 - **TypeScript Errors**: 0 ✓
 - **Code Size**: ~39K lines
 - **VBScript Functions**: 179+
-- **Tests**: 775 passing across 38 vitest files
+- **Tests**: 859 passing across 38 vitest files
 - **Git Commits**: 470+
 
 ### Performance
@@ -668,7 +668,7 @@ Lokaler HTTP-Server zum Laden von FPL/FPT/FPM-Dateien vom NAS.
 
 **Made with ❤️ by Future Pinball Contributors**
 
-Last Updated: July 28, 2026 | Version 0.24.0 | 775 tests ✅ | 248 modules ✅ | 0 vulnerabilities ✅
+Last Updated: July 28, 2026 | Version 0.24.0 | 859 tests ✅ | 248 modules ✅ | 0 vulnerabilities ✅
 
 ---
 
