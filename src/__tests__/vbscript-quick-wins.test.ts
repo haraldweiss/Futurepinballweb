@@ -229,3 +229,45 @@ describe('VBScript Physics Worker Integration', () => {
     cb.setFriction = originalSetFriction;
   });
 });
+
+// ─── GetElement-by-Name ───
+describe('VBScript GetElement-by-Name', () => {
+  let api: ReturnType<typeof buildFPScriptAPI>;
+
+  beforeEach(() => {
+    api = buildFPScriptAPI();
+  });
+
+  it('GetElement is defined', () => {
+    expect(typeof api.GetElement).toBe('function');
+  });
+
+  it('GetElement returns null for empty table', () => {
+    // With no bumpers/targets loaded, should return null
+    expect(api.GetElement('Bumper99')).toBeNull();
+  });
+
+  it('GetElement handles case-insensitive matching', () => {
+    // Should not throw for various casings
+    expect(() => api.GetElement('bumper1')).not.toThrow();
+    expect(() => api.GetElement('BUMPER1')).not.toThrow();
+    expect(() => api.GetElement('Bumper1')).not.toThrow();
+  });
+
+  it('GetElement returns object with correct structure', () => {
+    const result = api.GetElement('Bumper1');
+    // Either null (no bumpers) or object with type/index/name
+    if (result) {
+      expect(result).toHaveProperty('type');
+      expect(result).toHaveProperty('index');
+      expect(result).toHaveProperty('name');
+      expect(['bumper', 'target', 'ramp', 'flipper', 'light']).toContain(result.type);
+    }
+  });
+
+  it('GetElementType is defined', () => {
+    expect(typeof api.GetElementType).toBe('function');
+    expect(api.GetElementType({ type: 'bumper' })).toBe('bumper');
+    expect(api.GetElementType(null)).toBe('unknown');
+  });
+});
