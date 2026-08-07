@@ -2394,3 +2394,8 @@ if (document.readyState === 'loading') {
 // handlers are attached even if the earlier call raced.
 setTimeout(() => initializeEventHandlers(), 50);
 
+// ─── Phase 4: Input + DMD + Table Info ───
+cb.isKeyPressed = (keyCode: number) => false;
+cb.setKeysDisabled = (keyCodes: number[]) => devLog(`[Input] Disabled keys: ${keyCodes.join(', ')}`);
+cb.setDMDPixels = (pixels: any) => devLog(`[DMD] Pixels set to ${pixels}`);
+
