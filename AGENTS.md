@@ -964,6 +964,20 @@ Phase 6 als echte Physics-Objekte implementiert (4 Commits):
 
 **VBScript API Gesamtstand:** Phase 1-6 komplett (~165 Funktionen). Alle mittelfristigen Roadmap-Items erledigt.
 
+### 2026-08-06 (continued) — main.ts Decomposition: game-controls.ts
+
+**Commit:** `4b7e08fc`
+
+- Extract `createGameControls(deps)` factory → `src/app/game-controls.ts`
+- Move `updateFlippers`, `updatePlunger`, `nudgeTable`, `launchMultiBall`, `updateExtraBalls` out of entry-point
+- Factory-DI pattern: all captured deps injected via `GameControlsDeps` interface
+- main.ts: **2434 → 2271 lines (−163, −6.7%)**
+- `cb.launchMultiBall` wired to `gameControls.launchMultiBall`
+- src/app/ jetzt 44+ Module
+- Verified: tsc clean, vite build OK, **917/917 tests**, live deploy ✅
+
+**Verbleibend in main.ts:** animate() (~390 Z), applyQualityPreset() (~100 Z), Setup (~900 Z)
+
 ### 2026-07-28 — Security: fast-uri CVE-2026-18446 + electron + brace-expansion
 
 **Commit:** `81135f67`
