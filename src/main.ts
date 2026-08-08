@@ -47,6 +47,7 @@ import { createRotateAndRedraw } from './app/rotation';
 import { initResizeHandler } from './app/resize-handler';
 import { setupPhysicsWorker } from './app/physics-worker-setup';
 import { initPhysics, RAPIER } from './app/physics-init';
+import { createGameControls } from './app/game-controls';
 
 import {
   state, keys, fptResources, physics, currentTableConfig, plungerKnob, loadedLibrary, bamEngine,
@@ -515,6 +516,27 @@ const particleField = new ParticleField(scene, profiler, particleSystem);
 // ─── Phase 16+: Helper function to apply enhanced visuals to playfield ────────
 // applyEnhancedVisualsToTable moved to src/app/enhanced-visuals.ts
 
+// ─── Game Controls (flippers, plunger, multiball, nudge) ─────────────────────
+const gameControls = createGameControls({
+  state, physics, extraBalls, bumpers, keys,
+  scene, leftFlipperGroup, rightFlipperGroup, plungerKnob,
+  getFlippersDisabled: () => _flippersDisabled,
+  getLastLeftPressed: () => _lastLeftFlipperPressed,
+  getLastRightPressed: () => _lastRightFlipperPressed,
+  setLastLeftPressed: (v) => { _lastLeftFlipperPressed = v; },
+  setLastRightPressed: (v) => { _lastRightFlipperPressed = v; },
+  particleField, getCurrentFps: () => currentFps,
+  getPhysicsWorker, getSoundManager,
+  dmdEvent, dmdState,
+  showNotification, updateHUD, playSound,
+  onMultiballFlash: () => cb.triggerMultiballFlash(),
+  onBonusAnnouncement: (text) => cb.showBonusAnnouncement(text),
+  onMultiballSound: () => cb.playMultiballSound(),
+  onTiltVideo, onMultiballStartVideo,
+  getAnimationBindingManager, getAnimationScheduler, getBamBridge,
+  RAPIER,
+});
+
 // ─── Table Loader — moved to src/app/table-loader.ts ─────────────────────────
 const loadTableWithPhysicsWorker = createTableLoader({
   playgroundGroup,
@@ -523,192 +545,7 @@ const loadTableWithPhysicsWorker = createTableLoader({
 
 // triggerVideoEvent / onMultiballStartVideo / onTiltVideo — moved to src/app/physics-frame-handler.ts
 
-// ─── Tilt ────────────────────────────────────────────────────────────────────
-function nudgeTable(direction: number): void {
-  if (state.tiltActive || state.inLane) return;
-  state.tiltWarnings++;
-  if (state.tiltWarnings >= 3) {
-    state.tiltActive = true;
-
-    try {
-      const bridge = getPhysicsWorker();
-      bridge.updateBallPosition(state.ballPos.x, state.ballPos.y, direction*1.5, -3.0);
-    } catch { /* physics worker not ready */ }
-
-    dmdEvent('TILT!!!'); showNotification('⚠️ TILT!'); playSound('drain');
-
-    // ─── Phase 17+: Trigger tilt video ───
-    onTiltVideo();
-
-    setTimeout(() => { state.tiltActive = false; }, 100);
-  } else {
-    const force = 1.8 + state.tiltWarnings * 0.6;
-
-    try {
-      const bridge = getPhysicsWorker();
-      const newVx = state.ballVel.x + direction * force;
-      const newVy = state.ballVel.y + 0.5;
-      bridge.updateBallPosition(state.ballPos.x, state.ballPos.y, newVx, newVy);
-    } catch { /* physics worker not ready */ }
-
-    dmdEvent(state.tiltWarnings === 2 ? 'TILT WARNING!!' : 'TILT WARNING!');
-    particleField.spawn(state.ballPos.x, state.ballPos.y, 0xffaa00, 6, currentFps);
-  }
-}
-
-// ─── Multiball ────────────────────────────────────────────────────────────────
-function launchMultiBall(): void {
-  if (extraBalls.length >= 2 || state.inLane) return;
-  const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.22, 24, 24),
-    new THREE.MeshStandardMaterial({ color:0xffcc00, metalness:1.0, roughness:0.05, emissive:0xff8800, emissiveIntensity:0.4 })
-  );
-  mesh.add(new THREE.PointLight(0xffaa00, 1.8, 4));
-  mesh.castShadow = true; scene.add(mesh);
-
-  const startX = (Math.random()-0.5)*1.2, startY = 2.5+Math.random();
-  let rapierBody: any = null;
-  if (physics && RAPIER) {
-    rapierBody = physics.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(startX, startY, 0.0).setLinearDamping(0.0).setAngularDamping(0.9).setCcdEnabled(true));
-    physics.world.createCollider(RAPIER.ColliderDesc.ball(0.22).setRestitution(0.5).setFriction(0.3), rapierBody);
-    rapierBody.setLinvel({ x:-3+Math.random()*6, y:5+Math.random()*5, z: 0 }, true);
-  }
-  extraBalls.push({ pos:new THREE.Vector3(startX,startY,0.5), vel:{x:0,y:0}, mesh, rapierBody });
-
-  // ─── Phase 2: Trigger multiball flash effect ───
-  cb.triggerMultiballFlash();
-
-  // ─── Phase 9: Show Multiball Bonus Announcement ───────────────────────────────
-  cb.showBonusAnnouncement('MULTIBALL!');
-
-  // ─── Phase 9 TASK 3: Play Multiball Sound ──────────────────────────────────
-  cb.playMultiballSound();
-
-  dmdEvent('MULTIBALL!'); showNotification('🎱 MULTIBALL!'); particleField.spawn(0,2,0xffcc00,30,currentFps); playSound('bumper');
-
-  // ─── Phase 13: Trigger multiball launch animations ───
-  const animationBindingManager = getAnimationBindingManager();
-  const animationScheduler = getAnimationScheduler();
-  const bamBridge = getBamBridge();
-  if (animationBindingManager && animationScheduler && bamBridge) {
-    const bindings = animationBindingManager.getBindingsFor('multiball', 'on_launch');
-    bindings.forEach(binding => {
-      if (binding.autoPlay) {
-        bamBridge.playAnimation(binding.sequenceId);
-        animationBindingManager.markTriggered(binding.id);
-      }
-    });
-  }
-
-  // ─── Phase 17+: Trigger multiball video ───
-  onMultiballStartVideo();
-}
-
-function updateExtraBalls(dt: number): void {
-  for (let i = extraBalls.length-1; i >= 0; i--) {
-    const b = extraBalls[i];
-    if (b.rapierBody && physics) {
-      const pos = b.rapierBody.translation(), vel = b.rapierBody.linvel();
-      b.pos.x=pos.x; b.pos.y=pos.y; b.vel.x=vel.x; b.vel.y=vel.y;
-      bumpers.forEach(bu => {
-        const dx=b.pos.x-bu.x, dy=b.pos.y-bu.y, d=Math.sqrt(dx*dx+dy*dy);
-        if (d<0.55&&d>0.001){
-          const spd=Math.max(Math.hypot(vel.x,vel.y),5.5)*1.1;
-          b.rapierBody!.setLinvel({x:(dx/d)*spd,y:(dy/d)*spd,z:0},true);
-          state.score+=150*state.multiplier; particleField.spawn(bu.x,bu.y,bu.mesh.userData.color,8,currentFps); updateHUD();
-        }
-      });
-      if (b.pos.y < -7.0) {
-        physics.world.removeRigidBody(b.rapierBody); scene.remove(b.mesh); extraBalls.splice(i,1);
-        playSound('drain'); if(extraBalls.length===0) dmdEvent('SINGLE BALL'); continue;
-      }
-    } else {
-      b.vel.y -= 9.8*dt; b.pos.x+=b.vel.x*dt; b.pos.y+=b.vel.y*dt;
-      if(b.pos.x>2.82){b.pos.x=2.82;b.vel.x*=-0.82;} if(b.pos.x<-2.82){b.pos.x=-2.82;b.vel.x*=-0.82;}
-      if(b.pos.y>5.90){b.pos.y=5.90;b.vel.y*=-0.82;}
-      if(b.pos.y<-7.0){scene.remove(b.mesh);extraBalls.splice(i,1);playSound('drain');if(extraBalls.length===0)dmdEvent('SINGLE BALL');continue;}
-    }
-    b.mesh.position.set(b.pos.x,b.pos.y,0.5);
-    b.mesh.rotation.x+=b.vel.y*dt*0.6; b.mesh.rotation.z-=b.vel.x*dt*0.6;
-  }
-}
-
-// ─── Flipper Update ───────────────────────────────────────────────────────────
-function updateFlippers(): void {
-  // Phase 1: Respect flippers-disabled state (TILT, script control)
-  const effectiveLeft = _flippersDisabled ? false : keys.left;
-  const effectiveRight = _flippersDisabled ? false : keys.right;
-  // Phase 3: Enhanced flipper angles (35° active instead of 28° for better control)
-  const lAngle = effectiveLeft  ? THREE.MathUtils.degToRad(35)  : THREE.MathUtils.degToRad(-28);
-  const rAngle = effectiveRight ? THREE.MathUtils.degToRad(-35) : THREE.MathUtils.degToRad(28);
-  leftFlipperGroup.rotation.z  += (lAngle - leftFlipperGroup.rotation.z)  * 0.35;
-  rightFlipperGroup.rotation.z += (rAngle - rightFlipperGroup.rotation.z) * 0.35;
-
-  // ─── Phase 25: Play flipper sound on activation ───
-  if (effectiveLeft || effectiveRight) {
-    getSoundManager().then((soundMgr) => {
-      if (effectiveLeft && !_lastLeftFlipperPressed) {
-        soundMgr.playFlipperHit(0.8);
-      }
-      if (effectiveRight && !_lastRightFlipperPressed) {
-        soundMgr.playFlipperHit(0.8);
-      }
-    }).catch(() => {
-      devLog("[Sound] Flipper sound unavailable in animation loop"); // Sound unavailable, continue silently
-    });
-    _lastLeftFlipperPressed = effectiveLeft;
-    _lastRightFlipperPressed = effectiveRight;
-  } else {
-    _lastLeftFlipperPressed = false;
-    _lastRightFlipperPressed = false;
-  }
-
-  // Phase 15: Update physics worker with flipper rotations
-  try {
-    const bridge = getPhysicsWorker();
-    bridge.updateLeftFlipperRotation(leftFlipperGroup.rotation.z);
-    bridge.updateRightFlipperRotation(rightFlipperGroup.rotation.z);
-  } catch (e) {
-    console.warn('[main] Flipper physics worker fallback:', (e || 'unknown'));
-    // Fallback: Direct physics access (single-threaded)
-    if (physics) {
-      // Sync both position and rotation for kinematic bodies to prevent sticking
-      const lPos = leftFlipperGroup.position;
-      const rPos = rightFlipperGroup.position;
-      physics.lFlipperBody.setNextKinematicTranslation({ x: lPos.x, y: lPos.y, z: 0 });
-      physics.rFlipperBody.setNextKinematicTranslation({ x: rPos.x, y: rPos.y, z: 0 });
-      physics.lFlipperBody.setNextKinematicRotation({ x: 0, y: 0, z: Math.sin(leftFlipperGroup.rotation.z/2), w: Math.cos(leftFlipperGroup.rotation.z/2) });
-      physics.rFlipperBody.setNextKinematicRotation({ x: 0, y: 0, z: Math.sin(rightFlipperGroup.rotation.z/2), w: Math.cos(rightFlipperGroup.rotation.z/2) });
-    }
-  }
-
-  const lFL = leftFlipperGroup.userData.flipperLight;
-  const rFL = rightFlipperGroup.userData.flipperLight;
-  if (lFL) lFL.intensity = keys.left  ? 2.0 : 0.6;
-  if (rFL) rFL.intensity = keys.right ? 2.0 : 0.6;
-}
-
-// ─── Plunger Update ───────────────────────────────────────────────────────────
-function updatePlunger(dt: number): void {
-  if (!plungerKnob) return;
-  if (state.inLane && state.plungerCharging) {
-    state.plungerCharge = Math.min(1.0, state.plungerCharge + dt * 0.9);
-    // Plunger group is at y=-6.3, so local y=0.8 gives world y=-5.5 (rest position)
-    // When charging, move down relative to parent group
-    plungerKnob.position.y = 0.8 - state.plungerCharge * 0.7;
-    if (Math.floor(state.plungerCharge*10)%3===0) {
-      const bars = '█'.repeat(Math.floor(state.plungerCharge*8));
-      dmdState.eventText=`POWER ${bars}`; dmdState.eventTimer=3; dmdState.mode='event';
-    }
-  } else {
-    // Return to rest position (local y=0.8) with smooth interpolation
-    plungerKnob.position.y += (0.8 - plungerKnob.position.y) * 0.35;
-    if (state.inLane) state.plungerCharge = 0;
-  }
-}
-
-// ─── HUD ─────────────────────────────────────────────────────────────────────
-// updateHUD — moved to src/app/hud.ts
+// ─── Tilt / Multiball / Flippers / Plunger — moved to src/app/game-controls.ts ──
 
 // ─── Notification ─────────────────────────────────────────────────────────────
 // ─── Library Selector — moved to src/app/library-selector.ts ─────────────────
@@ -722,7 +559,7 @@ cb.showNotification = showNotification;
 cb.spawnParticles   = (x, y, c, n) => particleField.spawn(x, y, c, n, currentFps);
 cb.dmdEvent         = dmdEvent;
 cb.playSound        = playSound;
-cb.launchMultiBall  = launchMultiBall;
+cb.launchMultiBall  = () => gameControls.launchMultiBall();
 cb.resetBall        = resetBall;
 
 // ─── Phase 1: Flipper + Nudge Control ───
@@ -1110,8 +947,8 @@ document.addEventListener('keydown', e => {
       if (import.meta.env.DEV) console.log('[Music]', status);
     }).catch((e) => console.warn('[Music] Error:', e));
   }
-  if (e.key === 'z' || e.key === 'Z') nudgeTable(-1);
-  if (e.key === 'x' || e.key === 'X') nudgeTable( 1);
+  if (e.key === 'z' || e.key === 'Z') gameControls.nudgeTable(-1);
+  if (e.key === 'x' || e.key === 'X') gameControls.nudgeTable( 1);
   if (e.key === 'p' || e.key === 'P') {
     // ─── Phase 5: Toggle profiler display ───
     togglePerformanceMonitor();
@@ -1490,7 +1327,7 @@ function animate(): void {
   const inputOptimizer = getInputOptimizer();
   inputOptimizer.processInputQueue();
 
-  updateFlippers();
+  gameControls.updateFlippers();
 
   if (physics) {
     if (state.inLane) {
@@ -1717,8 +1554,8 @@ function animate(): void {
   // it as a small badge on the HUD or a brief one-shot announcement when
   // the count actually changes, not every frame.
 
-  updatePlunger(dt);
-  updateExtraBalls(dt);
+  gameControls.updatePlunger(dt);
+  gameControls.updateExtraBalls(dt);
   particleField.update(dt);
 
   // ─── DMD state machine ───────────────────────────────────────────────────
