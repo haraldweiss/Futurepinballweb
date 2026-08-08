@@ -210,6 +210,85 @@ export function initializePhysics(
 
     // Slingshots werden bereits im tableBodies-Loop oben aus dem `side`-Feld
     // erkannt und in state.slingshotMap eingetragen.
+
+    // Gates — thin walls (fixed, rotated box)
+    onProgress?.(`Creating ${(tc.gates || []).length} gates...`);
+    (tc.gates || []).forEach((g: any, i: number) => {
+      const angle = g.angle ?? 0;
+      const body = state.world!.createRigidBody(
+        RAPIER.RigidBodyDesc.fixed().setTranslation(g.x, g.y, 0.0).setRotation({
+          x: 0, y: 0, z: Math.sin(angle / 2), w: Math.cos(angle / 2),
+        })
+      );
+      state.tableBodies.push(body);
+      const collider = state.world!.createCollider(
+        RAPIER.ColliderDesc.cuboid(0.05, 0.35, 0.15)
+          .setRestitution(0.6).setFriction(0.1),
+        body
+      );
+      state.gateMap.set(collider.handle, { x: g.x, y: g.y, index: i });
+      state.colliderNames!.set(`Gate${i + 1}`, collider.handle);
+      state.allColliders!.push(collider.handle);
+    });
+
+    // Kickers — high-restitution ball collider (kick impulse on contact)
+    onProgress?.(`Creating ${(tc.kickers || []).length} kickers...`);
+    (tc.kickers || []).forEach((k: any, i: number) => {
+      const radius = k.radius ?? 0.25;
+      const kickForce = k.kickForce ?? 8.0;
+      const body = state.world!.createRigidBody(
+        RAPIER.RigidBodyDesc.fixed().setTranslation(k.x, k.y, 0.0)
+      );
+      state.tableBodies.push(body);
+      const collider = state.world!.createCollider(
+        RAPIER.ColliderDesc.ball(radius)
+          .setRestitution(1.2).setFriction(0.0)
+          .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
+        body
+      );
+      state.kickerMap.set(collider.handle, { x: k.x, y: k.y, index: i, kickForce });
+      state.colliderNames!.set(`Kicker${i + 1}`, collider.handle);
+      state.allColliders!.push(collider.handle);
+    });
+
+    // Spinners — fixed circle collider (visual spin on hit)
+    onProgress?.(`Creating ${(tc.spinners || []).length} spinners...`);
+    (tc.spinners || []).forEach((s: any, i: number) => {
+      const radius = s.radius ?? 0.3;
+      const body = state.world!.createRigidBody(
+        RAPIER.RigidBodyDesc.fixed().setTranslation(s.x, s.y, 0.0)
+      );
+      state.tableBodies.push(body);
+      const collider = state.world!.createCollider(
+        RAPIER.ColliderDesc.ball(radius)
+          .setRestitution(0.7).setFriction(0.05)
+          .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
+        body
+      );
+      state.spinnerMap.set(collider.handle, { x: s.x, y: s.y, index: i });
+      state.colliderNames!.set(`Spinner${i + 1}`, collider.handle);
+      state.allColliders!.push(collider.handle);
+    });
+
+    // Triggers — thin box sensor-like (event on ball overlap)
+    onProgress?.(`Creating ${(tc.triggers || []).length} triggers...`);
+    (tc.triggers || []).forEach((t: any, i: number) => {
+      const w = t.width ?? 0.5;
+      const h = t.height ?? 0.5;
+      const body = state.world!.createRigidBody(
+        RAPIER.RigidBodyDesc.fixed().setTranslation(t.x, t.y, 0.0)
+      );
+      state.tableBodies.push(body);
+      const collider = state.world!.createCollider(
+        RAPIER.ColliderDesc.cuboid(w / 2, h / 2, 0.15)
+          .setRestitution(0.5).setFriction(0.1)
+          .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS),
+        body
+      );
+      state.triggerMap.set(collider.handle, { x: t.x, y: t.y, index: i });
+      state.colliderNames!.set(`Trigger${i + 1}`, collider.handle);
+      state.allColliders!.push(collider.handle);
+    });
   }
 
   // Falls keine tableConfig, fallback zu serialisierten Maps (Legacy)
@@ -221,6 +300,18 @@ export function initializePhysics(
   }
   if (state.slingshotMap.size === 0 && config.slingshotMap) {
     state.slingshotMap = new Map(config.slingshotMap);
+  }
+  if (state.gateMap.size === 0 && config.gateMap) {
+    state.gateMap = new Map(config.gateMap);
+  }
+  if (state.kickerMap.size === 0 && config.kickerMap) {
+    state.kickerMap = new Map(config.kickerMap);
+  }
+  if (state.spinnerMap.size === 0 && config.spinnerMap) {
+    state.spinnerMap = new Map(config.spinnerMap);
+  }
+  if (state.triggerMap.size === 0 && config.triggerMap) {
+    state.triggerMap = new Map(config.triggerMap);
   }
 
   onProgress?.('Physics ready!');

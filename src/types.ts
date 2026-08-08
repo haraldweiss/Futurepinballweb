@@ -141,6 +141,10 @@ export interface TableConfig {
   bumpers:  Array<{ x: number; y: number; color: number; size?: number; light?: { intensity: number; distance: number } }>;
   targets?: Array<{ x: number; y: number; color: number; light?: { intensity: number; distance: number } }>;
   ramps?:   Array<{ x1: number; y1: number; x2: number; y2: number; color: number; light?: { intensity: number; distance: number } }>;
+  gates?:   Array<{ x: number; y: number; angle?: number; color?: number }>;
+  kickers?: Array<{ x: number; y: number; radius?: number; color?: number; kickForce?: number }>;
+  spinners?: Array<{ x: number; y: number; radius?: number; color?: number }>;
+  triggers?: Array<{ x: number; y: number; width?: number; height?: number; color?: number }>;
   lights?:  Array<{ color: number; intensity: number; dist: number; x: number; y: number; z: number }>;
   physics?: PhysicsConfig;
   elementPhysics?: ElementPhysics;

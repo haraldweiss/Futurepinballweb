@@ -74,6 +74,58 @@ export function stepPhysics(dt: number, substeps: number): PhysicsFrame {
           }
         }
       }
+
+      if (collisionType === 'unknown') {
+        for (const [key, gate] of state.gateMap) {
+          if (key === otherHandle) {
+            collisionType = 'gate';
+            collisionData = { index: gate.index, x: gate.x, y: gate.y };
+            break;
+          }
+        }
+      }
+
+      if (collisionType === 'unknown') {
+        for (const [key, kicker] of state.kickerMap) {
+          if (key === otherHandle) {
+            collisionType = 'kicker';
+            collisionData = { index: kicker.index, x: kicker.x, y: kicker.y };
+            // Apply kick impulse: push ball away from kicker center
+            if (state.ballBody) {
+              const ballPos = state.ballBody.translation();
+              const dx = ballPos.x - kicker.x;
+              const dy = ballPos.y - kicker.y;
+              const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+              const force = kicker.kickForce;
+              state.ballBody.setLinvel(
+                { x: (dx / dist) * force, y: (dy / dist) * force, z: 0 },
+                true
+              );
+            }
+            break;
+          }
+        }
+      }
+
+      if (collisionType === 'unknown') {
+        for (const [key, spinner] of state.spinnerMap) {
+          if (key === otherHandle) {
+            collisionType = 'spinner';
+            collisionData = { index: spinner.index, x: spinner.x, y: spinner.y };
+            break;
+          }
+        }
+      }
+
+      if (collisionType === 'unknown') {
+        for (const [key, trigger] of state.triggerMap) {
+          if (key === otherHandle) {
+            collisionType = 'trigger';
+            collisionData = { index: trigger.index, x: trigger.x, y: trigger.y };
+            break;
+          }
+        }
+      }
     }
 
     collisions.push({
