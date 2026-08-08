@@ -887,6 +887,77 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
   (config.ramps || []).forEach(r => buildRamp(r.x1, r.y1, r.x2, r.y2, r.color, scene, r.light, geomPool));
   devLog('[buildTable] Ramps complete');
 
+  // Gates — thin rotated wall (visual match to physics)
+  devLog('[buildTable] Building gates - count:', (config.gates || []).length);
+  (config.gates || []).forEach(g => {
+    const angle = g.angle ?? 0;
+    const color = g.color ?? config.accentColor;
+    const gateMat = new THREE.MeshStandardMaterial({
+      color, emissive: color, emissiveIntensity: 0.5, roughness: 0.4, metalness: 0.6,
+    });
+    const gateMesh = new THREE.Mesh(
+      geomPool?.getBox(0.1, 0.7, 0.3) ?? new THREE.BoxGeometry(0.1, 0.7, 0.3),
+      gateMat,
+    );
+    gateMesh.position.set(g.x, g.y, 0.3);
+    gateMesh.rotation.z = angle;
+    gateMesh.castShadow = true;
+    tg.add(gateMesh);
+  });
+  devLog('[buildTable] Gates complete');
+
+  // Kickers — triangle marker (visual indicator)
+  devLog('[buildTable] Building kickers - count:', (config.kickers || []).length);
+  (config.kickers || []).forEach(k => {
+    const color = k.color ?? 0xff4400;
+    const kickerMat = new THREE.MeshStandardMaterial({
+      color, emissive: color, emissiveIntensity: 0.8, roughness: 0.3, metalness: 0.4,
+    });
+    const kickerMesh = new THREE.Mesh(
+      new THREE.ConeGeometry(k.radius ?? 0.25, 0.4, 3),
+      kickerMat,
+    );
+    kickerMesh.position.set(k.x, k.y, 0.2);
+    kickerMesh.castShadow = true;
+    tg.add(kickerMesh);
+  });
+  devLog('[buildTable] Kickers complete');
+
+  // Spinners — disc marker
+  devLog('[buildTable] Building spinners - count:', (config.spinners || []).length);
+  (config.spinners || []).forEach(s => {
+    const color = s.color ?? 0x44ff88;
+    const spinnerMat = new THREE.MeshStandardMaterial({
+      color, emissive: color, emissiveIntensity: 0.6, roughness: 0.3, metalness: 0.5,
+    });
+    const spinnerMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(s.radius ?? 0.3, s.radius ?? 0.3, 0.05, 16),
+      spinnerMat,
+    );
+    spinnerMesh.rotation.x = Math.PI / 2;
+    spinnerMesh.position.set(s.x, s.y, 0.2);
+    spinnerMesh.castShadow = true;
+    tg.add(spinnerMesh);
+  });
+  devLog('[buildTable] Spinners complete');
+
+  // Triggers — flat rect marker
+  devLog('[buildTable] Building triggers - count:', (config.triggers || []).length);
+  (config.triggers || []).forEach(t => {
+    const color = t.color ?? 0x4488ff;
+    const triggerMat = new THREE.MeshStandardMaterial({
+      color, emissive: color, emissiveIntensity: 0.4, roughness: 0.5, metalness: 0.3,
+      transparent: true, opacity: 0.7,
+    });
+    const triggerMesh = new THREE.Mesh(
+      geomPool?.getBox(t.width ?? 0.5, t.height ?? 0.5, 0.05) ?? new THREE.BoxGeometry(t.width ?? 0.5, t.height ?? 0.5, 0.05),
+      triggerMat,
+    );
+    triggerMesh.position.set(t.x, t.y, 0.15);
+    tg.add(triggerMesh);
+  });
+  devLog('[buildTable] Triggers complete');
+
   // Lichter
   devLog('[buildTable] Adding lights - count:', (config.lights || []).length);
   (config.lights || []).forEach(l => {

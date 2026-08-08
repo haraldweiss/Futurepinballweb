@@ -281,6 +281,53 @@ export function buildFPScriptAPI() {
       }),
     }),
 
+    // ─── Phase 6: Gates, Kickers, Spinners, Triggers ───
+    Gates: new Proxy({}, {
+      get: (_, idx) => {
+        const i = parseInt(String(idx)) - 1;
+        return {
+          Index: i + 1,
+          Enabled: true,
+          Open: () => { fpScriptLog(`Gate ${i + 1} opened`); cb.triggerGateHit?.(); },
+          Close: () => { fpScriptLog(`Gate ${i + 1} closed`); },
+        };
+      },
+    }),
+
+    Kickers: new Proxy({}, {
+      get: (_, idx) => {
+        const i = parseInt(String(idx)) - 1;
+        return {
+          Index: i + 1,
+          Enabled: true,
+          Fire: () => { fpScriptLog(`Kicker ${i + 1} fired`); cb.triggerKickerFire?.(); },
+        };
+      },
+    }),
+
+    Spinners: new Proxy({}, {
+      get: (_, idx) => {
+        const i = parseInt(String(idx)) - 1;
+        return {
+          Index: i + 1,
+          Enabled: true,
+          Spin: () => { fpScriptLog(`Spinner ${i + 1} spinning`); cb.triggerSpinnerHit?.(); },
+          Stop: () => { fpScriptLog(`Spinner ${i + 1} stopped`); },
+        };
+      },
+    }),
+
+    Triggers: new Proxy({}, {
+      get: (_, idx) => {
+        const i = parseInt(String(idx)) - 1;
+        return {
+          Index: i + 1,
+          Enabled: true,
+          Fire: () => { fpScriptLog(`Trigger ${i + 1} fired`); cb.triggerTriggerHit?.(); },
+        };
+      },
+    }),
+
     // ─── Extended Math & Type Functions (Phase 4.1) ───
     IIf: (cond: boolean, trueVal: any, falseVal: any) => cond ? trueVal : falseVal,
     Val: (s: any) => parseFloat(String(s)) || 0,

@@ -94,4 +94,10 @@ export const cb = {
   fireCoil: (_name: string): void => {},
   solenoidOn: (_name: string): void => {},
   solenoidOff: (_name: string): void => {},
+
+  // ─── Phase 6: Gates, Kickers, Spinners, Triggers ───
+  triggerGateHit:     (): void => {},
+  triggerKickerFire:  (): void => {},
+  triggerSpinnerHit:  (): void => {},
+  triggerTriggerHit:  (): void => {},
 };
