@@ -14,6 +14,21 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
       { x1:-2.5, y1:0.0, x2:-1.2, y2:2.0, color:0xcc8800 },
       { x1: 2.0, y1:0.0, x2: 1.2, y2:2.0, color:0xcc8800 },
     ],
+    gates: [
+      { x:-1.5, y:-1.0, angle: 0.3, color: 0xffaa00 },
+      { x: 1.5, y:-1.0, angle: -0.3, color: 0xffaa00 },
+    ],
+    kickers: [
+      { x:-2.0, y:1.5, radius: 0.25, color: 0xff4400, kickForce: 8 },
+      { x: 2.0, y:1.5, radius: 0.25, color: 0xff4400, kickForce: 8 },
+    ],
+    spinners: [
+      { x:0.0, y:1.0, radius: 0.3, color: 0xffdd00 },
+    ],
+    triggers: [
+      { x:-0.8, y:4.5, width: 0.5, height: 0.5, color: 0xffd700 },
+      { x: 0.8, y:4.5, width: 0.5, height: 0.5, color: 0xffd700 },
+    ],
     lights: [
       { color:0xffd700, intensity:0.8, dist:9, x:0,  y:3,  z:3 },
       { color:0xcc8800, intensity:0.6, dist:8, x:-2, y:2,  z:3 },

@@ -21,7 +21,7 @@ If `user.email` is unset, empty, or fake — **stop, fix it, then proceed**.
 - **Browser-based pinball simulator** that loads Future Pinball `.fpt` tables
 - TypeScript + Vite + three.js (renderer) + Rapier2D (physics) + CodeMirror (in-app VBScript editor)
 - Optional **Electron shell** for multi-screen cabinet mode (`electron-main.cjs`, `electron-preload.cjs`)
-- 38 test files (vitest), 775 tests (38 test files) as of 2026-07-28 — **must stay green**
+- 43 test files (vitest), 917 tests as of 2026-08-06 — **must stay green**
 - Default branch: `main`, remote: `github.com:haraldweiss/Futurepinballweb`
 
 ---
@@ -941,6 +941,29 @@ GetElement("Bumper1") now correctly resolves elements by name:
 - Verified: tsc clean, 897/897 tests, vite build ✓
 
 **All mittelfortige items complete.** Next: Phase 6 (Gates/Kickers/Spinners/Triggers) or new features.
+
+### 2026-08-06 (continued) — VBScript API Phase 6: Gates, Kickers, Spinners, Triggers
+
+**Commits:** `db398125`, `0f00ce29`, `c0281d9b`
+
+Phase 6 als echte Physics-Objekte implementiert (4 Commits):
+
+- **Types:** `TableConfig` um `gates?/kickers?/spinners?/triggers?` erweitert (`src/types.ts`)
+- **Physics Worker:** `gateMap/kickerMap/spinnerMap/triggerMap` in `worker-state.ts`, Physik-Bodies in `physics-init.ts`:
+  - Gates = gedrehte dünne Wand (fixed collider)
+  - Kickers = High-Restitution Ball + Kick-Impuls bei Kontakt (konfigurierbar `kickForce`)
+  - Spinners = Fixed Circle Collider
+  - Triggers = Dünner Box-Collidere (sensor-like)
+- **Kollisionserkennung:** `physics-step.ts` erweitert — erkennt `gate/kicker/spinner/trigger` Kollisionen, Kicker gibt Ball einen Kick-Impuls
+- **3D-Geometrie:** `builder.ts` — Gate (drehender Wall), Kicker (Kegel), Spinner (Scheibe), Trigger (flaches Quadrat)
+- **VBScript API:** Proxy-Stubs `Gates[idx]/Kickers[idx]/Spinners[idx]/Triggers[idx]` mit Methoden `.Open()/.Close()/.Fire()/.Spin()/.Stop()`
+- **Callbacks:** `triggerGateHit/triggerKickerFire/triggerSpinnerHit/triggerTriggerHit`
+- **Tests:** 20 neue Tests in `src/__tests__/vbscript-phase6.test.ts`
+- **Demo-Config:** Pharaoh's Gold hat jetzt Gates, Kickers, Spinners, Triggers
+- Verified: tsc clean, **917/917 tests**, vite build ✓
+
+**VBScript API Gesamtstand:** Phase 1-6 komplett (~165 Funktionen). Alle mittelfristigen Roadmap-Items erledigt.
+
 ### 2026-07-28 — Security: fast-uri CVE-2026-18446 + electron + brace-expansion
 
 **Commit:** `81135f67`
