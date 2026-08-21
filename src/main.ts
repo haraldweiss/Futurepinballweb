@@ -30,6 +30,7 @@ import { drawBGCanvas } from './app/backglass-canvas';
 import { updateTablePathShortcuts, updateLibraryPathShortcuts } from './app/path-shortcuts';
 import { initializeFPTBrowser, loadFPTFromPath } from './app/fpt-browser';
 import { initializeBAMEngine } from './app/bam-init';
+import { createAnimationLoop, AnimationLoopDeps } from './app/animation-loop';
 import { initTouchControls } from './app/touch-controls';
 import { setupDMDWindow, setupBackglassWindow } from './app/secondary-windows';
 import { initFileBrowserUI } from './app/file-browser-ui';
@@ -1284,397 +1285,6 @@ const clock = new THREE.Clock();
 let frameCount = 0, lastFpsUpdate = 0, currentFps = 60;
 let pixelRatioTarget = Math.min(devicePixelRatio, 2);
 
-let animateCallCount = 0;
-function animate(): void {
-  animateCallCount++;
-  if (import.meta.env.DEV && (animateCallCount === 1 || animateCallCount % 300 === 0)) {
-    console.log(`🎬 Animate loop running... (call #${animateCallCount})`);
-  }
-  requestAnimationFrame(animate);
-  const dt = Math.min(clock.getDelta(), 0.05);
-
-  // Adaptive pixel ratio: downscale on low FPS (mobile/slow devices)
-  frameCount++;
-  const now = performance.now();
-  if (now - lastFpsUpdate > 500) {
-    currentFps = frameCount * (1000 / (now - lastFpsUpdate));
-    frameCount = 0;
-    lastFpsUpdate = now;
-
-    // Auto-reduce DPI if FPS < 45
-    if (currentFps < 45 && pixelRatioTarget > 1) {
-      pixelRatioTarget = Math.max(1, pixelRatioTarget - 0.25);
-      renderer.setPixelRatio(pixelRatioTarget);
-      if (import.meta.env.DEV) console.log(`⚠️ Low FPS (${currentFps.toFixed(0)}) → reducing DPI to ${pixelRatioTarget.toFixed(2)}`);
-    } else if (currentFps > 55 && pixelRatioTarget < Math.min(devicePixelRatio, 2)) {
-      pixelRatioTarget = Math.min(Math.min(devicePixelRatio, 2), pixelRatioTarget + 0.1);
-      renderer.setPixelRatio(pixelRatioTarget);
-    }
-
-    // ─── Phase 5: Update profiler metrics ───
-    profiler.updateFrame(renderer);
-
-    // ─── Phase 5: Apply quality preset if changed ───
-    applyQualityPreset();
-
-    // Log performance every 2s
-    if (now % 2000 < 500 && showProfilerRef.current) {
-      if (import.meta.env.DEV) console.log(`🎮 ${profiler.getMetricsDisplay()}`);
-    }
-  }
-
-  // ─── Phase 24: Process low-latency input ───
-  const inputOptimizer = getInputOptimizer();
-  inputOptimizer.processInputQueue();
-
-  gameControls.updateFlippers();
-
-  if (physics) {
-    if (state.inLane) {
-      try {
-        const bridge = getPhysicsWorker();
-        bridge.setBallGravityScale(0.0);
-      } catch { /* physics worker not ready */ }
-    } else {
-      try {
-        const bridge = getPhysicsWorker();
-        const substeps = currentFps > 55 ? 6 : (currentFps > 45 ? 5 : 4);
-        bridge.step(dt, substeps);
-      } catch { /* physics worker not ready — skipping frame */ }
-
-      if (bamEngine) {
-        const substeps = currentFps > 55 ? 6 : (currentFps > 45 ? 5 : 4);
-        bamEngine.step(dt, substeps);
-      }
-      if (physics) {
-        const pos = physics.ballBody.translation(), vel = physics.ballBody.linvel();
-        state.ballPos.x=pos.x; state.ballPos.y=pos.y;
-        state.ballVel.x=vel.x; state.ballVel.y=vel.y;
-
-        physics.eventQueue.drainCollisionEvents((h1, h2, started) => {
-          if (!started) return;
-          const ballH = physics!.ballCollider.handle;
-          const other = h1===ballH?h2:(h2===ballH?h1:-1);
-          if (other < 0) return;
-
-          // Phase 5: Apply flipper power variations
-          if (other === leftFlipperColliderHandle) {
-            const vel = physics!.ballBody.linvel();
-            const powerMult = lastLeftFlipperPower;  // 0.5-1.0
-            physics!.ballBody.setLinvel({
-              x: vel.x * powerMult,
-              y: Math.max(vel.y * powerMult, 3.0),  // Ensure upward momentum
-              z: 0,
-            }, true);
-            return;
-          }
-          if (other === rightFlipperColliderHandle) {
-            const vel = physics!.ballBody.linvel();
-            const powerMult = lastRightFlipperPower;  // 0.5-1.0
-            physics!.ballBody.setLinvel({
-              x: vel.x * powerMult,
-              y: Math.max(vel.y * powerMult, 3.0),  // Ensure upward momentum
-              z: 0,
-            }, true);
-            return;
-          }
-
-          const bumperData = physics!.bumperMap.get(other);
-          if (bumperData) { scoreBumperHit(bumperData); return; }
-          const targetData = physics!.targetMap.get(other);
-          if (targetData) { scoreTargetHit(targetData); return; }
-          const slingSide = physics!.slingshotMap.get(other);
-          if (slingSide !== undefined) { scoreSlingshotHit(slingSide); return; }
-        });
-
-        checkRolloverLanes();
-
-        // ─── Phase 2: Update Spinner Physics ───
-        updateSpinnerPhysics();
-
-        // ─── Phase 4: Enhanced Ball Physics (Friction Curve) ───
-        const ballVel = physics.ballBody.linvel();
-        const speed = Math.hypot(ballVel.x, ballVel.y);
-        const frictionFactor = 0.97;  // 3% loss per frame
-        if (speed > 0.1) {
-          physics.ballBody.setLinvel({
-            x: ballVel.x * frictionFactor,
-            y: ballVel.y * frictionFactor,
-            z: 0,
-          }, true);
-        } else if (speed > 0) {
-          // Stop completely below threshold
-          physics.ballBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        }
-      }
-
-      // ─── Phase 4: Drain Guide + Phase 7: Extended Ball Saves & Drain Logic ───
-      // Phase 4: Realistic drain guides - ball flows naturally through guides
-      // Plunger lane is now properly enclosed, guides ball to flippers
-      //
-      // Drain threshold: the drain-bottom wall sits at y=-6.0 (extent
-      // y∈[-6.2,-5.8]) so a ball cannot physically reach below y≈-5.58
-      // (ball-edge against wall top, ball center at -5.58). The earlier
-      // y<-6.5 check was unreachable, so a ball that settled in the drain
-      // channel just sat there forever — only the R-key reset recovered it.
-      // -5.4 catches the resting position; the low-speed guard (|v|<1.5)
-      // prevents single-frame false-positives when a fast ball briefly
-      // touches the drain wall before bouncing back into the playfield.
-      const ballSpeedSq = state.ballVel.x * state.ballVel.x + state.ballVel.y * state.ballVel.y;
-      if (state.ballPos.y < -5.4 && ballSpeedSq < 2.25) {
-        // ─── Phase 2: Trigger drain warning effect ───
-        cb.triggerDrainWarning();
-
-        if (state.ballSaveTimer > 0) {
-          // Original ball save (active timer from plunger)
-          state.ballSaveTimer = 0;
-          state.ballSaveMode = 'active';
-          dmdEvent('BALL SAVED!');
-          particleField.spawn(state.ballPos.x,-6.8,0x00ff88,18,currentFps);
-          playSound('flipper');
-          resetBall();
-        } else if (state.ballSavesRemaining > 0) {
-          // Phase 7: Use extended ball save
-          state.ballSavesRemaining--;
-          state.ballSaveTimer = 3.5;  // Reset timer
-          state.ballSaveMode = state.ballSavesRemaining > 0 ? 'active' : 'exhausted';
-          resetBall();
-          showNotification(`💾 BALL SAVED! (${state.ballSavesRemaining} left)`);
-          dmdEvent(`BALL SAVED!`);
-          particleField.spawn(state.ballPos.x,-6.8,0x00ff88,18,currentFps);
-          playSound('flipper');
-        } else {
-          // Game over / next ball
-          state.ballSaveMode = 'none';
-          const bonus = Math.floor(state.bumperHits*100*state.multiplier*0.5);
-          if (bonus > 0) { state.score+=bonus; dmdEvent(`BONUS +${bonus.toLocaleString()}`); updateHUD(); }
-          playSound('drain'); callScriptDrain();
-
-          // ─── Phase 13: Trigger ball drain animations ───
-          const drainAnimBindings = getAnimationBindingManager();
-          const drainAnimScheduler = getAnimationScheduler();
-          const drainBamBridge = getBamBridge();
-          if (drainAnimBindings && drainAnimScheduler && drainBamBridge) {
-            const drainBindings = drainAnimBindings.getBindingsFor('drain', 'on_drain');
-            drainBindings.forEach(binding => {
-              if (binding.autoPlay) {
-                drainBamBridge.playAnimation(binding.sequenceId);
-                drainAnimBindings.markTriggered(binding.id);
-              }
-            });
-          }
-
-          if (state.ballNum >= 3) {
-            const rank = recordScore(state.score);
-            state.lastRank=rank; state.lastScore=state.score;
-            state.ballNum=1; state.score=0; state.multiplier=1; state.bumperHits=0;
-            // Reset extended ball saves for next game
-            state.ballSavesRemaining = 1;
-            state.ballSaveMode = 'none';
-            dmdState.mode='gameover'; dmdState.animFrame=0; updateHUD();
-            showNotification(rank===1?'🏆 NEW HIGH SCORE!':'🎮 GAME OVER — Neues Spiel!');
-          } else {
-            state.ballNum++; state.multiplier=1; state.bumperHits=0;
-            // Grant extra ball save on new ball (every ball gets one)
-            state.ballSavesRemaining = 1;
-            state.ballSaveMode = 'none';
-            updateHUD(); dmdEvent(`BALL ${state.ballNum}`);
-          }
-          resetBall();
-        }
-      }
-    }
-  }
-
-  ball.position.set(state.ballPos.x, state.ballPos.y, state.ballPos.z);
-  ball.rotation.x += state.ballVel.y*dt*0.6;
-  ball.rotation.z -= state.ballVel.x*dt*0.6;
-
-  // ─── Phase 27: Update Ball Trail ───
-  const trailMgr = getBallTrailManager();
-  if (trailMgr && !state.inLane) {
-    trailMgr.update(ball.position);
-  } else if (trailMgr && state.inLane) {
-    // Clear trail when ball in lane
-    trailMgr.clear();
-  }
-
-  // ─── Phase 19: Update Motion Blur Velocity Buffer ───
-  // Track ball velocity for motion blur effect
-  if (motionBlurPass) {
-    motionBlurPass.updateVelocityBuffer(dt);
-    motionBlurPass.trackObject(ball);
-  }
-
-  // ─── Phase 20: Update Cascaded Shadow Maps ───
-  // Update cascade frustums based on camera position
-  if (cascadedShadowMapper) {
-    cascadedShadowMapper.updateCascades(camera as THREE.PerspectiveCamera);
-  }
-
-  // ─── Phase 21: Update Advanced Particle System ───
-  // Physics update for all active particles
-  if (particleSystem) {
-    particleSystem.update(dt);
-  }
-
-  // ─── Phase 28: Update Score Animations ───
-  const scoreAnimMgr = getScoreAnimationManager();
-  if (scoreAnimMgr) {
-    scoreAnimMgr.update(dt);
-  }
-
-  // ─── Phase 22: Update Film Effects ───
-  // Update grain animation and decay aberration/distortion
-  if (filmEffectsPass) {
-    filmEffectsPass.update(dt);
-  }
-
-  // ─── Phase 23: Update Depth of Field ───
-  // Update focus tracking on ball
-  if (dofPass) {
-    dofPass.setBallPosition(ball.position);
-  }
-
-  // ─── Phase 7: Ball Save Countdown with Extended Saves ───
-  if (state.ballSaveTimer > 0) {
-    const prev = state.ballSaveTimer; state.ballSaveTimer -= dt;
-    if (Math.ceil(state.ballSaveTimer) < Math.ceil(prev) && state.ballSaveTimer > 0) {
-      const saveText = state.ballSaveMode === 'active'
-        ? `BALL SAVE  ${Math.ceil(state.ballSaveTimer)}`
-        : `SAVES  ${Math.ceil(state.ballSaveTimer)}`;
-      dmdState.eventText = saveText; dmdState.eventTimer = 8; dmdState.mode = 'event';
-    }
-  }
-  // NOTE: previously this branch fired "SAVES READY x{n}" as an event every
-  // frame whenever ballSavesRemaining > 0. That hijacked the DMD and
-  // prevented tableinfo / attract / launch / score from ever showing —
-  // there was always a fresh event queued. The remaining-saves count is a
-  // status indicator, not an event; if we want to surface it we should add
-  // it as a small badge on the HUD or a brief one-shot announcement when
-  // the count actually changes, not every frame.
-
-  gameControls.updatePlunger(dt);
-  gameControls.updateExtraBalls(dt);
-  particleField.update(dt);
-
-  // ─── DMD state machine ───────────────────────────────────────────────────
-  // tableinfo  → attract  (auto, dmdUpdate handles bootTimer countdown)
-  // attract    → launch   (coin screen closed AND ball is in plunger lane)
-  // launch     → playing  (ball leaves the plunger lane)
-  // event      → playing  (auto, dmdUpdate handles eventTimer)
-  // tableinfo is intentionally NOT in the launch transition — the boot
-  // scroll always runs to completion before anything else takes over.
-  if (currentTableConfig) {
-    const coinVisible = isCoinScreenVisible();
-    // Ball in plunger lane and coin screen closed → show launch UI. Allow this
-    // from BOTH 'attract' (initial coin→start path) and 'playing' (return from
-    // 'event' mode after a notification preempted the attract phase, e.g. the
-    // "1-Player Game Started" toast on game start). dmd.ts:781 always sends
-    // event back to 'playing', so without this we'd never reach 'launch'.
-    const launchEligible = dmdState.mode === 'attract' || dmdState.mode === 'playing';
-    if (launchEligible && !coinVisible && state.inLane) {
-      dmdState.mode = 'launch';
-      dmdState.animFrame = 0;
-    } else if (dmdState.mode === 'launch' && !state.inLane) {
-      dmdState.mode = 'playing';
-      dmdState.animFrame = 0;
-    }
-  }
-  dmdUpdate();
-
-  // ─── Phase 2: Update Advanced Lighting ───
-  if (advancedLightingSystem) {
-    advancedLightingSystem.update();
-  }
-
-  // ─── Phase 9: Apply Table Shake Effect ───
-  applyTableShake();
-
-  // ─── Phase 9: Update Score Display ───
-  if (scoreDisplayManager) {
-    scoreDisplayManager.update();
-  }
-
-  // ─── Phase 9: Update Visual Polish System ───
-  if (visualPolishSystem) {
-    visualPolishSystem.update();
-  }
-
-  // ─── Phase 4: Update Backglass ───
-  if (backglassRenderer) {
-    backglassRenderer.update();
-    // Update parallax effect based on camera angle
-    backglassRenderer.updateParallax(camera.rotation);
-
-    // Render backglass to texture for compositing
-    backglassRenderer.render(renderer);
-  }
-
-  // ─── Phase 14: Render Frame ───
-  // Render through graphics pipeline (EffectComposer) to enable Polish Suite post-processing
-  if (renderer && scene && camera) {
-    if (import.meta.env.DEV && (animateCallCount === 1 || animateCallCount % 300 === 0)) {
-      console.log(`🎨 Rendering frame #${animateCallCount}`, {
-        rendererExists: !!renderer,
-        sceneChildren: scene?.children.length,
-        cameraPos: camera?.position
-      });
-    }
-
-    // ─── Phase 20: Update and Render Cascaded Shadows (Polish Suite) ───
-    if (cascadedShadowMapper && camera instanceof THREE.PerspectiveCamera) {
-      cascadedShadowMapper.updateCascades(camera);
-      cascadedShadowMapper.renderShadowMaps();
-    }
-
-    // Render through graphics pipeline for post-processing (SSR, Motion Blur, Shadows, Bloom, Film Effects, DoF)
-    try {
-      const pipeline = getGraphicsPipeline();
-      if (import.meta.env.DEV && animateCallCount === 1) {
-        console.log('🔄 Pipeline status:', { exists: !!pipeline, type: pipeline?.constructor.name });
-      }
-      if (pipeline) {
-        pipeline.renderFrame(dt);  // Use graphics pipeline for Polish Suite post-processing
-      } else {
-        // Fallback: direct render if pipeline unavailable
-        if (animateCallCount === 1) console.warn('⚠️ Pipeline unavailable, using fallback renderer.render()');
-        renderer.render(scene, camera);
-      }
-    } catch (error) {
-      console.warn('Pipeline render failed, falling back to direct render:', error);
-      renderer.render(scene, camera);
-    }
-  } else {
-    if (animateCallCount === 1) {
-      console.warn(`⚠️ Cannot render: renderer=${!!renderer}, scene=${!!scene}, camera=${!!camera}`);
-    }
-  }
-
-  inlineBackglass.draw();
-
-  // ─── Phase 24: Record performance metrics ───
-  const dashboard = getPerformanceDashboard();
-  const inputMetrics = inputOptimizer.getMetrics();
-  dashboard.recordFrame({
-    frameTime: dt * 1000,
-    inputLatency: inputMetrics.keyDownLatency,
-    ballVelocity: state.ballPos ? Math.hypot(state.ballVel.x, state.ballVel.y) : 0,
-    flipperResponse: 0,  // Updated by flipper handler
-  });
-
-  emitSyncFrame({
-    type:'state', score:state.score, ballNum:state.ballNum, multiplier:state.multiplier,
-    inLane:state.inLane, dmdMode:dmdState.mode, dmdEventText:dmdState.eventText,
-    dmdAnimFrame:dmdState.animFrame, dmdScrollX:dmdState.scrollX,
-    dmdEventTimer:dmdState.eventTimer, lastRank:state.lastRank, lastScore:state.lastScore,
-    bumperHits:state.bumperHits,
-    tableName:   currentTableConfig ? currentTableConfig.name : 'FUTURE PINBALL',
-    tableAccent: currentTableConfig ? currentTableConfig.accentColor : 0x00ff66,
-    tableColor:  currentTableConfig ? currentTableConfig.tableColor  : 0x1a4a15,
-    highScores: getTopScores(),
-  });
-}
 
 // ─── Inline Backglass (1-Screen) — see createInlineBackglass ────────────────
 const inlineBackglass = createInlineBackglass();
@@ -1979,7 +1589,66 @@ if (FPW_ROLE === 'dmd') {
     setDevFlag('INIT_TABLE_LOAD_OK', true);
 
     // Initialize B.A.M. Engine + animation systems + animate loop
-    initializeBAMEngine({ mainSpot, applyQualityPreset, animate, inlineBackglass });
+    const animationLoopDeps: AnimationLoopDeps = {
+      scene: scene,
+      camera: camera,
+      renderer: renderer,
+      clock: clock,
+      state: state,
+      physics: physics,
+      bamEngine: bamEngine,
+      leftFlipperColliderHandle: leftFlipperColliderHandle,
+      rightFlipperColliderHandle: rightFlipperColliderHandle,
+      gameControls: gameControls,
+      particleField: particleField,
+      ball: ball,
+      motionBlurPass: motionBlurPass,
+      cascadedShadowMapper: cascadedShadowMapper,
+      particleSystem: particleSystem,
+      getScoreAnimationManager: getScoreAnimationManager,
+      filmEffectsPass: filmEffectsPass,
+      dofPass: dofPass,
+      advancedLightingSystem: advancedLightingSystem,
+      scoreDisplayManager: scoreDisplayManager,
+      visualPolishSystem: visualPolishSystem,
+      dmdState: dmdState,
+      dmdUpdate: dmdUpdate,
+      inlineBackglass: inlineBackglass,
+      currentTableConfig: currentTableConfig,
+      TABLE_CONFIGS: TABLE_CONFIGS,
+      getInputOptimizer: getInputOptimizer,
+      getPhysicsWorker: getPhysicsWorker,
+      getAnimationBindingManager: getAnimationBindingManager,
+      getAnimationScheduler: getAnimationScheduler,
+      getBamBridge: getBamBridge,
+      getGraphicsPipeline: getGraphicsPipeline,
+      getPerformanceDashboard: getPerformanceDashboard,
+      getBallTrailManager: getBallTrailManager,
+      getTopScores: getTopScores,
+      isCoinScreenVisible: isCoinScreenVisible,
+      profiler: profiler,
+      showProfilerRef: showProfilerRef,
+      applyQualityPreset: applyQualityPreset,
+      applyTableShake: applyTableShake,
+      cb: cb,
+      backglassRenderer: backglassRenderer,
+      scoreBumperHit: scoreBumperHit,
+      scoreTargetHit: scoreTargetHit,
+      scoreSlingshotHit: scoreSlingshotHit,
+      checkRolloverLanes: checkRolloverLanes,
+      updateSpinnerPhysics: updateSpinnerPhysics,
+      resetBall: resetBall,
+      dmdEvent: dmdEvent,
+      showNotification: showNotification,
+      playSound: playSound,
+      updateHUD: updateHUD,
+      callScriptDrain: callScriptDrain,
+      recordScore: recordScore,
+      emitSyncFrame: emitSyncFrame,
+      getLastLeftFlipperPower: () => lastLeftFlipperPower,
+      getLastRightFlipperPower: () => lastRightFlipperPower,
+    };
+    initializeBAMEngine({ mainSpot, applyQualityPreset, animate: createAnimationLoop(animationLoopDeps), inlineBackglass });
     document.getElementById('multiscreen-btn')?.classList.add('active-multi');
 
     // ─── Auto-apply multi-screen layout on startup (Electron only) ───────────
