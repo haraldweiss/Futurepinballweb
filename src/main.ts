@@ -31,6 +31,7 @@ import { updateTablePathShortcuts, updateLibraryPathShortcuts } from './app/path
 import { initializeFPTBrowser, loadFPTFromPath } from './app/fpt-browser';
 import { initializeBAMEngine } from './app/bam-init';
 import { createAnimationLoop, AnimationLoopDeps } from './app/animation-loop';
+import { createQualityPresetApplier, QualityPresetApplierDeps } from './app/quality-preset-applier';
 import { initTouchControls } from './app/touch-controls';
 import { setupDMDWindow, setupBackglassWindow } from './app/secondary-windows';
 import { initFileBrowserUI } from './app/file-browser-ui';
@@ -1181,104 +1182,25 @@ document.addEventListener('keyup', e => {
 
 // ─── Phase 5: Apply Quality Preset Settings ───────────────────────────────────
 // This function applies the profiler's quality preset to actual rendering systems
-function applyQualityPreset(): void {
-  try {
-    // Check name first (string compare, no object copy). Only fetch the full
-    // preset object when a change is actually detected.
-    const presetName = profiler.getCurrentPresetName();
-    if (lastAppliedQualityPreset === presetName) return;
-    lastAppliedQualityPreset = presetName;
-
-    const currentPreset = profiler.getQualityPreset();
-    appendLogEntry(`⚙️ Applying quality preset: ${currentPreset.label}`, 'ok');
-
-    // ─── Bloom Pass ───
-    // UnrealBloomPass has no setEnabled(); toggle the inherited Pass.enabled flag.
-    if (bloomPass) {
-      bloomPass.enabled = currentPreset.bloomEnabled;
-      if (currentPreset.bloomEnabled) {
-        bloomPass.strength = currentPreset.bloomStrength;
-        bloomPass.radius = currentPreset.bloomRadius;
-        bloomPass.threshold = 0.25;
-      }
-    }
-
-    // ─── Shadow Maps ───
-    // THREE.SpotLight has no setProperty(); set castShadow directly.
-    if (currentPreset.shadowsEnabled) {
-      if (mainSpot) {
-        mainSpot.castShadow = true;
-        mainSpot.shadow.mapSize.set(currentPreset.shadowMapSize, currentPreset.shadowMapSize);
-        // Scale shadow blur quality with preset: lower presets use fewer samples
-        const blurSamplesMap: Record<string, number> = {
-          low: 4, medium: 8, high: 16, ultra: 16
-        };
-        mainSpot.shadow.blurSamples = blurSamplesMap[currentPreset.name] ?? 16;
-      }
-      renderer.shadowMap.enabled = true;
-    } else {
-      if (mainSpot) mainSpot.castShadow = false;
-      renderer.shadowMap.enabled = false;
-    }
-
-    // ─── Lighting Intensities ───
-    if (ambLight) ambLight.intensity = currentPreset.shadowsEnabled ? 0.25 : 0.35;
-    if (fillLight) fillLight.intensity = currentPreset.shadowsEnabled ? 1.2 : 1.5;
-    if (rimLight) rimLight.intensity = currentPreset.shadowsEnabled ? 0.7 : 0.5;
-
-    // ─── Ball Material Emissive ───
-    if (ballOuterMaterial) {
-      ballOuterMaterial.emissiveIntensity = currentPreset.bloomEnabled ? 0.3 : 0.1;
-    }
-    if (ballGlowMaterial) {
-      ballGlowMaterial.emissiveIntensity = currentPreset.bloomEnabled ? 0.6 : 0.2;
-      ballGlowMaterial.opacity = currentPreset.bloomEnabled ? 0.12 : 0.06;
-    }
-
-    // ─── Particle System ───
-    particleField.setMaxParts(currentPreset.particleCount);
-    appendLogEntry(`  └─ Particles: ${particleField.maxParts} max`, 'ok');
-
-    // ─── Backglass Mode ───
-    if (backglassRenderer) {
-      if (currentPreset.backglassEnabled) {
-        backglassRenderer.setEnabled(true);
-        backglassRenderer.setRenderMode(currentPreset.backglass3D);
-        appendLogEntry(`  └─ Backglass: ${currentPreset.backglass3D ? '3D' : '2D'}`, 'ok');
-      } else {
-        backglassRenderer.setEnabled(false);
-      }
-    }
-
-    // ─── Volumetric Lighting ───
-    if (volumetricPass) {
-      volumetricPass.enabled = currentPreset.volumetricEnabled;
-      if (currentPreset.volumetricEnabled) {
-        volumetricPass.setExposure(currentPreset.volumetricIntensity);
-        appendLogEntry(`  └─ Volumetric: ${(currentPreset.volumetricIntensity * 100).toFixed(0)}%`, 'ok');
-      }
-    }
-
-    // ─── Phase 16+: Playfield Visual Enhancements ───
-    const enhancement = getPlayfieldVisualEnhancement();
-    if (enhancement) {
-      enhancement.setQualityPreset(currentPreset.name as 'low' | 'medium' | 'high' | 'ultra');
-      appendLogEntry(`  └─ Visual Enhancement: ${currentPreset.name}`, 'ok');
-    }
-
-    // ─── DMD Resolution ───
-    if (currentPreset.dmdResolution) {
-      window.setDMDResolutionOption?.(currentPreset.dmdResolution);
-      window.setDMDGlow?.(currentPreset.dmdGlowEnabled, currentPreset.dmdGlowIntensity);
-      appendLogEntry(`  └─ DMD: ${currentPreset.dmdResolution} (glow: ${currentPreset.dmdGlowEnabled})`, 'ok');
-    }
-
-    // ─── Tone Mapping Exposure ───
-    renderer.toneMappingExposure = currentPreset.bloomEnabled ? 1.35 : 1.30;  // ─── Increased from 1.15/1.05 to combat SSAO/fog darkening
-  } catch (err) {
-    appendLogEntry(`❌ Error in applyQualityPreset: ${err instanceof Error ? err.message : String(err)}`, 'error');
-  }
-}
+// Quality preset applier — extracted from applyQualityPreset() into src/app/quality-preset-applier.ts
+const applyQualityPreset = createQualityPresetApplier({
+  profiler: profiler,
+  appendLogEntry: appendLogEntry,
+  bloomPass: bloomPass,
+  mainSpot: mainSpot,
+  renderer: renderer,
+  ambLight: ambLight,
+  fillLight: fillLight,
+  rimLight: rimLight,
+  ballOuterMaterial: ballOuterMaterial,
+  ballGlowMaterial: ballGlowMaterial,
+  backglassRenderer: backglassRenderer,
+  particleField: particleField,
+  volumetricPass: volumetricPass,
+  getPlayfieldVisualEnhancement: getPlayfieldVisualEnhancement,
+  getLastAppliedQualityPreset: () => lastAppliedQualityPreset,
+  setLastAppliedQualityPreset: (value: string) => { lastAppliedQualityPreset = value; },
+});
 
 // ─── Game Loop ────────────────────────────────────────────────────────────────
 const clock = new THREE.Clock();
