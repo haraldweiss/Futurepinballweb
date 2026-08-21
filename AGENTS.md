@@ -992,6 +992,12 @@ Phase 6 als echte Physics-Objekte implementiert (4 Commits):
 
 **Verbleibend in main.ts:** applyQualityPreset() (~100 Z), Setup/Init/Consts (~900 Z, nicht extrahierbar — Entry-Point-Orchestrierung)
 
+### 2026-08-07 — Next-Phase Roadmap documented
+
+- Plan-Doc `docs/superpowers/plans/2026-08-07-next-phase-roadmap.md` erstellt
+- Korrigiert Status der 3 Kandidaten: Phase 7 (Material-Callbacks) ✅ bereits verdrahtet; GetElement 🟡 partiell; applyQualityPreset 🔴 noch in main.ts
+- Empfohlene Reihenfolge: (A) applyQualityPreset extrahieren, (B) Quality-Preset-Validation, (C) Element-Registry für GetElement
+
 ### 2026-07-28 — Security: fast-uri CVE-2026-18446 + electron + brace-expansion
 
 **Commit:** `81135f67`
