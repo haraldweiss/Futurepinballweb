@@ -131,7 +131,7 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 | Asset catalog | `src/assets/` — Cabinet-PR added this layer |
 | Sample tables | `public/tables/` |
 | Extracted modules | `src/app/` (43 modules) |
-| main.ts size | 1940 lines (−58%) |
+| main.ts size | 1844 lines (−60%) |
 | TS modules | 276 total |
 | Input system | `src/input-optimizer.ts` + `src/app/touch-controls.ts` — unified keyboard/touch |
 | Table configs | `src/table/configs.ts` — demo table definitions |
@@ -990,13 +990,26 @@ Phase 6 als echte Physics-Objekte implementiert (4 Commits):
 - main.ts: **2271 → 1940 lines (−331, −15%)**; src/app/ +1 Modul (animation-loop.ts, 486 Z)
 - Verified: tsc clean, **917/917 tests**, vite build ✓, live deploy ✅
 
-**Verbleibend in main.ts:** applyQualityPreset() (~100 Z), Setup/Init/Consts (~900 Z, nicht extrahierbar — Entry-Point-Orchestrierung)
+**Verbleibend in main.ts:** Setup/Init/Consts (~900 Z, nicht extrahierbar — Entry-Point-Orchestrierung). applyQualityPreset am 2026-08-07 extrahiert (siehe unten).
 
 ### 2026-08-07 — Next-Phase Roadmap documented
 
 - Plan-Doc `docs/superpowers/plans/2026-08-07-next-phase-roadmap.md` erstellt
 - Korrigiert Status der 3 Kandidaten: Phase 7 (Material-Callbacks) ✅ bereits verdrahtet; GetElement 🟡 partiell; applyQualityPreset 🔴 noch in main.ts
 - Empfohlene Reihenfolge: (A) applyQualityPreset extrahieren, (B) Quality-Preset-Validation, (C) Element-Registry für GetElement
+
+### 2026-08-07 (continued) — main.ts Decomposition: applyQualityPreset extraction
+
+**Commit:** `7509f9c6`
+
+- Extract `createQualityPresetApplier(deps)` factory → `src/app/quality-preset-applier.ts`
+- Move ~96-zeilige `applyQualityPreset()` aus dem Entry-Point mit `QualityPresetApplierDeps` (Factory-DI)
+- Mutables `lastAppliedQualityPreset` via getter/setter mit main.ts synchronisiert (wird module-level gelesen, Zeilen 250/1447/1451)
+- Call-Sites (animate-Loop, quality-system, post-processing, bam-init) nehmen `applyQualityPreset` als `() => void` → Drop-in-Swap
+- main.ts: **1940 → 1844 lines (−96)**; src/app/ +1 Modul (quality-preset-applier.ts, 148 Z)
+- Verified: tsc clean, **917/917 tests**, vite build ✓
+
+**Verbleibend in main.ts:** Setup/Init/Consts (~900 Z, nicht extrahierbar — Entry-Point-Orchestrierung). Damit ist die main.ts-Logik-Decomposition **abgeschlossen**.
 
 ### 2026-07-28 — Security: fast-uri CVE-2026-18446 + electron + brace-expansion
 

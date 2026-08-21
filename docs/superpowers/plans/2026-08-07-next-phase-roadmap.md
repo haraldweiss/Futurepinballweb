@@ -17,11 +17,11 @@ so any main.ts-touching change also needs a browser smoke test.
 |---|---|---|
 | VBScript Phase 7 — `setMaterial`/`setElasticity`/`setFriction` | ✅ **WIRED** (`cb.* → bridge.postMessage`, commit `a3ab7467`/`5437204d`) | End-to-end test proving a scripted material change moves the Rapier collider |
 | `GetElement`-by-name registry | 🟡 **PARTIAL** (bumper/target/flipper/light name patterns, commit `011a3d02`) | Extend to gates/kickers/spinners/triggers; unify into one registry |
-| `applyQualityPreset()` extraction | 🔴 **STILL IN main.ts** (~100 lines, `src/main.ts:1184`) | Extract via factory-DI (last extractable logic block) |
+| `applyQualityPreset()` extraction | ✅ **DONE** (2026-08-07, commit `7509f9c6`) → `src/app/quality-preset-applier.ts` | main.ts 1940→1844; decomposition complete |
 
 ---
 
-## Candidate A — Extract `applyQualityPreset()` from main.ts  ⭐ highest value
+## Candidate A — Extract `applyQualityPreset()` from main.ts  ⭐ highest value  ✅ **DONE 2026-08-07**
 
 **Why:** It is the **last extractable logic block** in main.ts. After it, only the
 ~900-line setup/init/consts section remains, which is entry-point orchestration and
@@ -114,8 +114,7 @@ Don't leak meshes across tables.
 
 ## Recommended order
 
-1. **Candidate A** (`applyQualityPreset`) — finishes the main.ts decomposition, lowest risk,
-   follows a proven pattern. ~1 focused commit.
+1. ~~**Candidate A** (`applyQualityPreset`) — DONE 2026-08-07 (commit `7509f9c6`).~~ main.ts decomposition finished.
 2. **Candidate B** (preset validation) — protects the graphics rework from regressions.
 3. **Candidate C** (element registry) — completes the VBScript API element surface.
 
