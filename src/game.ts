@@ -7,5 +7,5 @@ export {
   setFpScriptHandlers, setLoadedLibrary, setBAMEngine,
   globalAssetCatalog, setGlobalAssetCatalog,
 } from './game/refs';
-export { bumpers, targets, slingshots, ramps, extraBalls, partData } from './game/elements';
+export { bumpers, targets, slingshots, ramps, extraBalls, partData, gates, kickers, spinners, triggers } from './game/elements';
 export { cb } from './game/callbacks';
