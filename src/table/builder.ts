@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import type { TableConfig, BumperUserData, TargetUserData } from '../types';
 import {
   fptResources, physics, tableGroup, extraBalls,
-  bumpers, targets, slingshots, ramps,
+  bumpers, targets, slingshots, ramps, gates, kickers, spinners, triggers,
   setCurrentTableConfig, setTableGroup, setPlungerKnob,
   globalAssetCatalog,
 } from '../game';
@@ -716,6 +716,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
     });
   }
   bumpers.length = 0; targets.length = 0;
+  gates.length = 0; kickers.length = 0; spinners.length = 0; triggers.length = 0;
   const tg = new THREE.Group();
   setTableGroup(tg);
   // Add tableGroup to playgroundGroup if provided (for rotation support), otherwise to scene
@@ -889,7 +890,7 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
 
   // Gates — thin rotated wall (visual match to physics)
   devLog('[buildTable] Building gates - count:', (config.gates || []).length);
-  (config.gates || []).forEach(g => {
+  (config.gates || []).forEach((g, i) => {
     const angle = g.angle ?? 0;
     const color = g.color ?? config.accentColor;
     const gateMat = new THREE.MeshStandardMaterial({
@@ -902,13 +903,15 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
     gateMesh.position.set(g.x, g.y, 0.3);
     gateMesh.rotation.z = angle;
     gateMesh.castShadow = true;
+    gateMesh.userData.name = `Gate${i}`;
     tg.add(gateMesh);
+    gates.push({ x: g.x, y: g.y, mesh: gateMesh });
   });
   devLog('[buildTable] Gates complete');
 
   // Kickers — triangle marker (visual indicator)
   devLog('[buildTable] Building kickers - count:', (config.kickers || []).length);
-  (config.kickers || []).forEach(k => {
+  (config.kickers || []).forEach((k, i) => {
     const color = k.color ?? 0xff4400;
     const kickerMat = new THREE.MeshStandardMaterial({
       color, emissive: color, emissiveIntensity: 0.8, roughness: 0.3, metalness: 0.4,
@@ -919,13 +922,15 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
     );
     kickerMesh.position.set(k.x, k.y, 0.2);
     kickerMesh.castShadow = true;
+    kickerMesh.userData.name = `Kicker${i}`;
     tg.add(kickerMesh);
+    kickers.push({ x: k.x, y: k.y, mesh: kickerMesh });
   });
   devLog('[buildTable] Kickers complete');
 
   // Spinners — disc marker
   devLog('[buildTable] Building spinners - count:', (config.spinners || []).length);
-  (config.spinners || []).forEach(s => {
+  (config.spinners || []).forEach((s, i) => {
     const color = s.color ?? 0x44ff88;
     const spinnerMat = new THREE.MeshStandardMaterial({
       color, emissive: color, emissiveIntensity: 0.6, roughness: 0.3, metalness: 0.5,
@@ -937,13 +942,15 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
     spinnerMesh.rotation.x = Math.PI / 2;
     spinnerMesh.position.set(s.x, s.y, 0.2);
     spinnerMesh.castShadow = true;
+    spinnerMesh.userData.name = `Spinner${i}`;
     tg.add(spinnerMesh);
+    spinners.push({ x: s.x, y: s.y, mesh: spinnerMesh });
   });
   devLog('[buildTable] Spinners complete');
 
   // Triggers — flat rect marker
   devLog('[buildTable] Building triggers - count:', (config.triggers || []).length);
-  (config.triggers || []).forEach(t => {
+  (config.triggers || []).forEach((t, i) => {
     const color = t.color ?? 0x4488ff;
     const triggerMat = new THREE.MeshStandardMaterial({
       color, emissive: color, emissiveIntensity: 0.4, roughness: 0.5, metalness: 0.3,
@@ -954,7 +961,9 @@ export function buildTable(config: TableConfig, scene: THREE.Scene, library?: an
       triggerMat,
     );
     triggerMesh.position.set(t.x, t.y, 0.15);
+    triggerMesh.userData.name = `Trigger${i}`;
     tg.add(triggerMesh);
+    triggers.push({ x: t.x, y: t.y, mesh: triggerMesh });
   });
   devLog('[buildTable] Triggers complete');
 
