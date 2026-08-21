@@ -55,7 +55,7 @@ so any main.ts-touching change also needs a browser smoke test.
 
 ---
 
-## Candidate B — Quality Preset System: validation
+## Candidate B — Quality Preset System: validation  ✅ **DONE 2026-08-07** (commit `b25eaaa6`)
 
 **Why:** The graphics pipeline was heavily reworked (2026-06-17/06-20). The presets
 *declare* toggles but there is no automated proof they actually engage.
@@ -115,7 +115,7 @@ Don't leak meshes across tables.
 ## Recommended order
 
 1. ~~**Candidate A** (`applyQualityPreset`) — DONE 2026-08-07 (commit `7509f9c6`).~~ main.ts decomposition finished.
-2. **Candidate B** (preset validation) — protects the graphics rework from regressions.
+2. ~~**Candidate B** (preset validation) — DONE 2026-08-07 (commit `b25eaaa6`, +6 tests).~~
 3. **Candidate C** (element registry) — completes the VBScript API element surface.
 
 Each is independently shippable and keeps `917/917` green.

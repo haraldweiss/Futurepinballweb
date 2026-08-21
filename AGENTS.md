@@ -1011,6 +1011,21 @@ Phase 6 als echte Physics-Objekte implementiert (4 Commits):
 
 **Verbleibend in main.ts:** Setup/Init/Consts (~900 Z, nicht extrahierbar — Entry-Point-Orchestrierung). Damit ist die main.ts-Logik-Decomposition **abgeschlossen**.
 
+### 2026-08-07 (continued) — Quality Preset validation (Candidate B)
+
+**Commit:** `b25eaaa6`
+
+- Neue `src/__tests__/quality-preset.test.ts` (6 Tests) treibt `createQualityPresetApplier`
+  mit Mock-Passes/Lights für jeden `QUALITY_PRESETS`-Eintrag und assertet den
+  resultierenden Render-State je deklariertem Flag:
+  bloomPass.enabled/strength/radius/threshold, mainSpot.castShadow + renderer.shadowMap.enabled
+  + blurSamples, amb/fill/rim-Intensitäten (shadowsEnabled), Ball-Emissive/Opacity (bloomEnabled),
+  particleField.maxParts, volumetricPass.enabled/exposure, Playfield-Enhancement, toneMappingExposure,
+  Backglass-Mode, lastAppliedQualityPreset-Sync, Early-Return bei unverändertem Preset, low↔ultra-Divergenz
+- Schützt die Graphics-Rework (2026-06-17/06-20) vor Regression / stillen No-Ops
+  (Historie: bloomPass.setEnabled / mainSpot.setProperty existierten nicht → optional-chain no-ops)
+- Tests: **917 → 923** (+6)
+
 ### 2026-07-28 — Security: fast-uri CVE-2026-18446 + electron + brace-expansion
 
 **Commit:** `81135f67`
