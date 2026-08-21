@@ -3,7 +3,7 @@
 /**
  * script-engine.ts — VBScript → JavaScript Transpiler + FP Script API
  */
-import { state, fptResources, setFpScriptHandlers, bumpers, targets, cb, physics, globalAssetCatalog, extraBalls, currentTableConfig } from './game';
+import { state, fptResources, setFpScriptHandlers, bumpers, targets, gates, kickers, spinners, triggers, cb, physics, globalAssetCatalog, extraBalls, currentTableConfig } from './game';
 import { getAudioCtx, playSound, playSound3D, playFPTMusic, startBGMusic, stopBGMusic } from './audio-system';
 import { dmdEvent } from './dmd';
 import { getBamBridge } from './bam-bridge';
@@ -492,6 +492,66 @@ export function buildFPScriptAPI() {
         }
       }
 
+      // Search gates
+      for (let i = 0; i < gates.length; i++) {
+        if (gates[i].mesh?.userData?.name?.toLowerCase() === nameStr ||
+            String(i).includes(nameStr)) {
+          return {
+            type: 'gate',
+            index: i,
+            name: `Gate${i}`,
+            mesh: gates[i].mesh,
+            x: gates[i].x,
+            y: gates[i].y,
+          };
+        }
+      }
+
+      // Search kickers
+      for (let i = 0; i < kickers.length; i++) {
+        if (kickers[i].mesh?.userData?.name?.toLowerCase() === nameStr ||
+            String(i).includes(nameStr)) {
+          return {
+            type: 'kicker',
+            index: i,
+            name: `Kicker${i}`,
+            mesh: kickers[i].mesh,
+            x: kickers[i].x,
+            y: kickers[i].y,
+          };
+        }
+      }
+
+      // Search spinners
+      for (let i = 0; i < spinners.length; i++) {
+        if (spinners[i].mesh?.userData?.name?.toLowerCase() === nameStr ||
+            String(i).includes(nameStr)) {
+          return {
+            type: 'spinner',
+            index: i,
+            name: `Spinner${i}`,
+            mesh: spinners[i].mesh,
+            x: spinners[i].x,
+            y: spinners[i].y,
+          };
+        }
+      }
+
+      // Search triggers
+      for (let i = 0; i < triggers.length; i++) {
+        if (triggers[i].mesh?.userData?.name?.toLowerCase() === nameStr ||
+            String(i).includes(nameStr)) {
+          return {
+            type: 'trigger',
+            index: i,
+            name: `Trigger${i}`,
+            mesh: triggers[i].mesh,
+            x: triggers[i].x,
+            y: triggers[i].y,
+          };
+        }
+      }
+
       return null;
     },
 
@@ -551,7 +611,11 @@ export function buildFPScriptAPI() {
       const t = String(type || 'all').toLowerCase();
       if (t === 'bumper') return bumpers.length;
       if (t === 'target') return targets.length;
-      return bumpers.length + targets.length;
+      if (t === 'gate') return gates.length;
+      if (t === 'kicker') return kickers.length;
+      if (t === 'spinner') return spinners.length;
+      if (t === 'trigger') return triggers.length;
+      return bumpers.length + targets.length + gates.length + kickers.length + spinners.length + triggers.length;
     },
 
     GetElementName: (obj: any) => {
@@ -571,6 +635,30 @@ export function buildFPScriptAPI() {
       if (t === 'target' || t === 'all') {
         targets.forEach((tg, i) => {
           elements.push({ type: 'target', index: i, name: `Target${i}` });
+        });
+      }
+
+      if (t === 'gate' || t === 'all') {
+        gates.forEach((g, i) => {
+          elements.push({ type: 'gate', index: i, name: `Gate${i}` });
+        });
+      }
+
+      if (t === 'kicker' || t === 'all') {
+        kickers.forEach((k, i) => {
+          elements.push({ type: 'kicker', index: i, name: `Kicker${i}` });
+        });
+      }
+
+      if (t === 'spinner' || t === 'all') {
+        spinners.forEach((s, i) => {
+          elements.push({ type: 'spinner', index: i, name: `Spinner${i}` });
+        });
+      }
+
+      if (t === 'trigger' || t === 'all') {
+        triggers.forEach((tr, i) => {
+          elements.push({ type: 'trigger', index: i, name: `Trigger${i}` });
         });
       }
 
