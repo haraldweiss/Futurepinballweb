@@ -131,7 +131,7 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 | Asset catalog | `src/assets/` — Cabinet-PR added this layer |
 | Sample tables | `public/tables/` |
 | Extracted modules | `src/app/` (43 modules) |
-| main.ts size | 2335 lines (−31%) |
+| main.ts size | 1940 lines (−58%) |
 | TS modules | 276 total |
 | Input system | `src/input-optimizer.ts` + `src/app/touch-controls.ts` — unified keyboard/touch |
 | Table configs | `src/table/configs.ts` — demo table definitions |
@@ -977,6 +977,20 @@ Phase 6 als echte Physics-Objekte implementiert (4 Commits):
 - Verified: tsc clean, vite build OK, **917/917 tests**, live deploy ✅
 
 **Verbleibend in main.ts:** animate() (~390 Z), applyQualityPreset() (~100 Z), Setup (~900 Z)
+
+### 2026-08-06 (continued) — main.ts Decomposition: animate() extraction
+
+**Commit:** `212485b1`
+
+- Extract `createAnimationLoop(deps)` factory → `src/app/animation-loop.ts`
+- Move ~390-zeilige `animate()` Game-Loop aus dem Entry-Point mit `AnimationLoopDeps` (Factory-DI)
+- Alle modul-level state/getter die die Loop nutzt (scene, renderer, profiler, physics, inputOptimizer, particleField, DMD, Post-Processing-Pässe, Performance-Getter, Score/Physics-Callbacks) werden injiziert
+- Mutierbare Flipper-Power-Level via Getter (`getLastLeftFlipperPower`) → frische Werte pro Frame
+- Zurückgegebene Closure wird an `initializeBAMEngine({ ..., animate })` gereicht (startet RAF-Loop unverändert)
+- main.ts: **2271 → 1940 lines (−331, −15%)**; src/app/ +1 Modul (animation-loop.ts, 486 Z)
+- Verified: tsc clean, **917/917 tests**, vite build ✓, live deploy ✅
+
+**Verbleibend in main.ts:** applyQualityPreset() (~100 Z), Setup/Init/Consts (~900 Z, nicht extrahierbar — Entry-Point-Orchestrierung)
 
 ### 2026-07-28 — Security: fast-uri CVE-2026-18446 + electron + brace-expansion
 
