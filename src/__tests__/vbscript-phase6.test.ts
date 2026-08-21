@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // © 2026 Harald Weiss
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 
 // Mock dmd module to prevent canvas access in jsdom
 vi.mock('../dmd', () => ({
@@ -11,6 +11,7 @@ vi.mock('../dmd', () => ({
 
 import { buildFPScriptAPI } from '../script-engine';
 import { cb } from '../game/callbacks';
+import { gates, kickers, spinners, triggers } from '../game';
 
 /**
  * Tests for VBScript API Phase 6: Gates, Kickers, Spinners, Triggers
@@ -164,5 +165,75 @@ describe('VBScript Phase 6: VBScript API integration', () => {
     const api = buildFPScriptAPI();
     triggerAt(api, '1').Fire();
     expect(cb.triggerTriggerHit).toHaveBeenCalled();
+  });
+});
+describe('VBScript Phase 6: GetElement by name', () => {
+  afterEach(() => {
+    gates.length = 0;
+    kickers.length = 0;
+    spinners.length = 0;
+    triggers.length = 0;
+  });
+
+  const fakeMesh = (name: string) => ({ userData: { name }, position: { x: 0, y: 0, z: 0 }, visible: true } as any);
+
+  it('GetElement("Gate0") resolves a gate descriptor', () => {
+    const m = fakeMesh('Gate0');
+    gates.push({ x: 1, y: 2, mesh: m });
+    const el = buildFPScriptAPI().GetElement('Gate0');
+    expect(el).not.toBeNull();
+    expect(el).toMatchObject({ type: 'gate', index: 0, name: 'Gate0', x: 1, y: 2 });
+    expect(el?.mesh).toBe(m);
+  });
+
+  it('GetElement("Kicker1") resolves the second kicker by name', () => {
+    const m0 = fakeMesh('Kicker0');
+    const m1 = fakeMesh('Kicker1');
+    kickers.push({ x: 3, y: 4, mesh: m0 });
+    kickers.push({ x: 9, y: 9, mesh: m1 });
+    const el = buildFPScriptAPI().GetElement('Kicker1');
+    expect(el).not.toBeNull();
+    expect(el).toMatchObject({ type: 'kicker', index: 1, name: 'Kicker1', x: 9, y: 9 });
+    expect(el?.mesh).toBe(m1);
+  });
+
+  it('GetElement("Spinner0") resolves a spinner descriptor', () => {
+    const m = fakeMesh('Spinner0');
+    spinners.push({ x: 5, y: 6, mesh: m });
+    const el = buildFPScriptAPI().GetElement('Spinner0');
+    expect(el).not.toBeNull();
+    expect(el).toMatchObject({ type: 'spinner', index: 0, name: 'Spinner0', x: 5, y: 6 });
+    expect(el?.mesh).toBe(m);
+  });
+
+  it('GetElement("Trigger0") resolves a trigger descriptor', () => {
+    const m = fakeMesh('Trigger0');
+    triggers.push({ x: 7, y: 8, mesh: m });
+    const el = buildFPScriptAPI().GetElement('Trigger0');
+    expect(el).not.toBeNull();
+    expect(el).toMatchObject({ type: 'trigger', index: 0, name: 'Trigger0', x: 7, y: 8 });
+    expect(el?.mesh).toBe(m);
+  });
+
+  it('GetElement returns null for an unknown element', () => {
+    expect(buildFPScriptAPI().GetElement('NoSuchElement')).toBeNull();
+  });
+
+  it('GetElementCount returns per-type and total counts including Phase 6', () => {
+    gates.push({ x: 0, y: 0, mesh: {} as any });
+    kickers.push({ x: 0, y: 0, mesh: {} as any });
+    const api = buildFPScriptAPI();
+    expect(api.GetElementCount('gate')).toBe(1);
+    expect(api.GetElementCount('kicker')).toBe(1);
+    expect(api.GetElementCount('spinner')).toBe(0);
+    expect(api.GetElementCount('trigger')).toBe(0);
+    expect(api.GetElementCount('all')).toBe(2);
+  });
+
+  it('ListElements("all") includes Phase 6 elements', () => {
+    gates.push({ x: 0, y: 0, mesh: {} as any });
+    const api = buildFPScriptAPI();
+    const list = api.ListElements('all');
+    expect(list.some((e: any) => e.type === 'gate' && e.name === 'Gate0')).toBe(true);
   });
 });
