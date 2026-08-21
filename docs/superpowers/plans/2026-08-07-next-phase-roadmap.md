@@ -80,7 +80,7 @@ so any main.ts-touching change also needs a browser smoke test.
 
 ---
 
-## Candidate C — Element registry extension for `GetElement`-by-name
+## Candidate C — Element registry extension for `GetElement`-by-name  ✅ **DONE 2026-08-07** (commits `28df9b32` `f6b1ef7f` `7c810a66` `446e1e99`)
 
 **Why:** `GetElement(name)` (script-engine.ts:462) only resolves bumper/target meshes by
 `mesh.userData.name` + index fallback; flipper/light patterns were added later (`011a3d02`)
@@ -116,6 +116,6 @@ Don't leak meshes across tables.
 
 1. ~~**Candidate A** (`applyQualityPreset`) — DONE 2026-08-07 (commit `7509f9c6`).~~ main.ts decomposition finished.
 2. ~~**Candidate B** (preset validation) — DONE 2026-08-07 (commit `b25eaaa6`, +6 tests).~~
-3. **Candidate C** (element registry) — completes the VBScript API element surface.
+3. ~~**Candidate C** (element registry) — DONE 2026-08-07 (GetElement/GetElementCount/ListElements now resolve gates/kickers/spinners/triggers).~~
 
 Each is independently shippable and keeps `917/917` green.

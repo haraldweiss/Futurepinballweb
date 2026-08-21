@@ -1026,6 +1026,24 @@ Phase 6 als echte Physics-Objekte implementiert (4 Commits):
   (Historie: bloomPass.setEnabled / mainSpot.setProperty existierten nicht → optional-chain no-ops)
 - Tests: **917 → 923** (+6)
 
+### 2026-08-07 (continued) — VBScript element registry (Candidate C)
+
+**Commits:** `28df9b32` (arrays) · `f6b1ef7f` (builder wiring) · `7c810a66` (script-engine) · `446e1e99` (tests)
+
+`GetElement(name)` (script-engine.ts:465) resolve jetzt **alle** Tabellenelemente —
+bisher nur Bumper/Targets. Phase-6-Elemente (Gates/Kickers/Spinners/Triggers) waren als
+Meshes in `builder.ts` gebaut, aber nie als benannte Arrays exponiert.
+
+- `src/game/elements.ts`: neue `gates/kickers/spinners/triggers` Arrays (`ElementMesh { x, y, mesh }`),
+  via `src/game.ts`-Barrel re-exported (Spiegelung der Bumper/Target-Convention)
+- `src/table/builder.ts`: Phase-6-Meshes bekommen `userData.name = Gate{i}/Kicker{i}/Spinner{i}/Trigger{i}`
+  und werden in die Arrays gepusht; **Clear der 4 Arrays bei jedem Rebuild** (Leak-Pitfall aus Roadmap behoben)
+- `src/script-engine.ts`: `GetElement`/`GetElementCount`/`ListElements` durchsuchen die 4 neuen Typen
+- `src/__tests__/vbscript-phase6.test.ts`: +7 Tests für `GetElement('Gate0')`/`('Kicker1')`/`('Spinner0')`/`('Trigger0')`,
+  Count + ListElements, null bei Unbekanntem
+- Tests: **923 → 930** (+7)
+- Verified: tsc clean, 930/930 tests, vite build ✓
+
 ### 2026-07-28 — Security: fast-uri CVE-2026-18446 + electron + brace-expansion
 
 **Commit:** `81135f67`
