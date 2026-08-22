@@ -318,10 +318,8 @@ export function initializeGraphicsPipeline(
 
 /**
  * Get the graphics pipeline singleton
+ * Returns null if not initialized (allows optional chaining at call sites)
  */
-export function getGraphicsPipeline(): GraphicsPipeline {
-  if (!graphicsPipelineInstance) {
-    throw new Error('GraphicsPipeline not initialized. Call initializeGraphicsPipeline() first.');
-  }
+export function getGraphicsPipeline(): GraphicsPipeline | null {
   return graphicsPipelineInstance;
 }
