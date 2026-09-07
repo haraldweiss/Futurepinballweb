@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
+- `@xmldom/xmldom` 0.8.13 → 0.8.15 — Dependabot PR #17 (dev dependency)
+  - GHSA-965w-775f-mr7g: DoS via quadratic memory consumption in namespace map
+  - GHSA-8344-3jmq-59r6: DoS via quadratic attribute de-duplication
+  - GHSA-x4fp-j954-r2f4: ReDoS via end-tag whitespace trim
+  - GHSA-93r5-fhx6-vmg9: Quadratic malformed-tag recovery
+  - GHSA-6gmq-8vp8-gcm6: XML injection via EntityReference name
+  - GHSA-6h8r-xr42-gp59: Silent acceptance of not-well-formed end tags
+  - CI passed: build (ubuntu/windows/macos) + all security checks
 - Resolved 3 high-severity npm audit vulnerabilities:
   - `fast-uri` 3.1.4 → 3.1.5 — CVE-2026-18446 (host confusion via backslash authority introducer)
   - `electron` 41.3.0 → 41.10.4 — 3 GHSA advisories (protocol/session-cache/sandbox bypass)
