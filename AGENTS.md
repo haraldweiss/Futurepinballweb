@@ -1217,3 +1217,30 @@ browser smoke (Pharaoh boot, ball, flippers, bumpers) → then commit + deploy.*
 - **npm audit: 0 vulnerabilities** ✅
 - Verified: tsc clean, 775/775 tests, vite build ✓
 
+
+### 2026-09-11 — opencode: Dependency removal Phase 1 (mini-rapier) COMPLETE + Phase 2 (cfb-io) IN PROGRESS
+
+**Commits:** `5abd0a71`, `29ef58d6`, `f00922ab`, `7607d3bc`
+
+**Phase 1 — mini-rapier: Rapier3D → dependency-free 2.5D physics ✅ COMPLETE**
+- `src/physics/mini-rapier.ts` (~510 LOC): 2D-in-3D engine with Rapier3D-facade API
+- 6 new tests in `src/__tests__/mini-rapier.test.ts`
+- Removed: `@dimforge/rapier3d`, `vite-plugin-wasm`, `vite-plugin-top-level-await`
+- Physics worker chunk: 18.66 kB plain JS (no WASM)
+
+**Phase 2 — cfb-io: `cfb` package → own MS-CFB reader+writer 🟡 IN PROGRESS**
+- `src/fpt/cfb-io.ts` (~530 LOC): read() / write() / cfb_new() / cfb_add()
+- Reader works correctly (tested against real FPT/FPL files)
+- Writer has bugs: 7 fpt-writer tests fail (cfb oracle round-trip)
+- Issues: FAT chain indexing, DIFAT header entries, sector layout mismatch with cfb library
+
+**Current state:**
+- tsc clean ✓
+- 929/936 tests pass (7 failures = fpt-writer round-trip via cfb oracle)
+- vite build ✓
+- NOT browser-smoke-tested
+- NOT deployed
+
+**Next agent:** Debug cfb-io writer to match cfb library's sector layout exactly.
+Key issues: FAT chain should use absolute sector numbers, DIFAT entries should use
+sector numbers (not 0), directory entries need correct name length and type offsets.
