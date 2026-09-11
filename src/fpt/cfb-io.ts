@@ -149,7 +149,7 @@ export function read(input: Uint8Array, _opts?: { type?: string }): CFBContainer
     }
     dirs.push({
       name,
-      type: dirView.getUint8(base + 65),
+      type: dirView.getUint8(base + 66),
       start: dirView.getUint32(base + 116, true),
       size: dirView.getUint32(base + 120, true),
       left: dirView.getUint32(base + 68, true),
@@ -370,100 +370,100 @@ export function write(c: WriteContainer, _opts?: { type?: string }): Uint8Array 
   }
   const miniSectorCount = miniStreamLen / MINI_SECTOR;
 
-  const perDir = SECTOR / 128;      // directory entries per sector
   const dirSecs = numSectors(nodes.length * 128, SECTOR);
   const miniStreamSecs = numSectors(miniStreamLen, SECTOR);
   const fatSecsOfStreams = fatStreams.reduce((a, s) => a + numSectors(s.data.length, SECTOR), 0);
-  const miniFATSecs = numSectors(miniSectorCount * 4, SECTOR);
+  const miniFATSecs = miniSectorCount > 0 ? numSectors(miniSectorCount * 4, SECTOR) : 0;
   const perFAT = SECTOR >>> 2;      // fat entries per sector
 
-  // Iteratively determine FAT + DIFAT sector counts.
-  let baseData = dirSecs + miniStreamSecs + fatSecsOfStreams + miniFATSecs;
-  let fatSecs = Math.max(1, Math.ceil(baseData / (perFAT - 1)));
-  let difatSecs = fatSecs > 109 ? Math.ceil((fatSecs - 109) / (perFAT - 1)) : 0;
-  baseData = dirSecs + miniStreamSecs + fatSecsOfStreams + miniFATSecs + difatSecs;
-  fatSecs = Math.max(1, Math.ceil(baseData / (perFAT - 1)));
-  difatSecs = fatSecs > 109 ? Math.ceil((fatSecs - 109) / (perFAT - 1)) : 0;
+  // === Sector layout in CFB "format" numbering (header-excluded) ===
+  // Format sector s lives at physical byte offset (s+1)*SECTOR. The cfb library
+  // and the MS-CFB spec both store sector numbers in this header-excluded form.
+  // Layout order: FAT, miniFAT, directory, mini stream, large streams.
+  const secOff = (s: number): number => (s + 1) * SECTOR;
 
-  // Compute L array (same convention as cfb library):
-  // Sector layout: [0]=header, [1]=FAT, [2]=directory, [3+]=mini stream/large streams
-  const fatStart = 1;
-  const dirStart = 2;
+  // Determine FAT sector count iteratively (FAT must cover all sectors incl. itself).
+  let fatSecs = Math.max(1, Math.ceil((miniFATSecs + dirSecs + miniStreamSecs + fatSecsOfStreams + 1) / perFAT));
+  fatSecs = Math.max(1, Math.ceil((fatSecs + miniFATSecs + dirSecs + miniStreamSecs + fatSecsOfStreams) / perFAT));
+  const difatSecs = fatSecs > 109 ? Math.ceil((fatSecs - 109) / (perFAT - 1)) : 0;
+
+  const fatStart = difatSecs;                 // DIFAT sectors (if any) come first
+  const miniFATStart = fatStart + fatSecs;
+  const dirStart = miniFATStart + miniFATSecs;
   const miniStreamStart = dirStart + dirSecs;
-  
-  // Large streams: assign sequential FAT chains
+  const difatStart = 0;                       // unused when difatSecs === 0
+
+  // Large streams: assign sequential FAT chains after the mini stream.
   const streamStart = new Map<number, number>();
   const streamSectors = new Map<number, number>();
-  let streamCursor = miniStreamStart;
+  let streamCursor = miniStreamStart + miniStreamSecs;
   for (const s of fatStreams) {
     const n = numSectors(s.data.length, SECTOR);
     streamStart.set(s.idx, streamCursor);
     streamSectors.set(s.idx, n);
     streamCursor += n;
   }
-  
-  const miniFATStart = streamCursor;
-  const totalSectors = miniFATStart + miniFATSecs;
 
-  // Assemble the file buffer and fill FAT chains + directory entries.
-  const out = new Uint8Array(totalSectors * SECTOR);
+  const totalSectors = streamCursor;          // total format sectors
+
+  // Assemble the file buffer (+1 sector for the 512-byte header).
+  const out = new Uint8Array((totalSectors + 1) * SECTOR);
   const view = new DataView(out.buffer);
 
-  // FAT array indexed by absolute sector number.
+  // FAT array indexed by FORMAT sector number; values are FORMAT sector numbers.
   const fat = new Int32Array(totalSectors);
-  fat.fill(-1); // FREESECT
+  fat.fill(FREESECT | 0); // 0xFFFFFFFF as int32 = -1
   function setChain(start: number, count: number) {
     for (let i = 0; i < count; i++) {
       const s = start + i;
       fat[s] = i === count - 1 ? ENDOFCHAIN : (s + 1);
     }
   }
+  setChain(dirStart, dirSecs);
   setChain(miniStreamStart, miniStreamSecs);
   for (const s of fatStreams) setChain(streamStart.get(s.idx)!, streamSectors.get(s.idx)!);
-  setChain(dirStart, dirSecs);
-  setChain(miniFATStart, miniFATSecs);
-  // mark specialized sectors
-  for (let i = 0; i < difatSecs; i++) fat[miniFATStart + i] = DIFSECT;
-  fat[fatStart] = FATSECT; // FAT sector
+  if (miniFATSecs > 0) setChain(miniFATStart, miniFATSecs);
+  for (let i = 0; i < difatSecs; i++) fat[difatStart + i] = DIFSECT;
+  for (let i = 0; i < fatSecs; i++) fat[fatStart + i] = FATSECT;
 
-  // Write FAT sector
-  for (let i = 0; i < perFAT; i++) {
-    const fatIndex = fatStart + i;
-    if (fatIndex < fat.length) {
-      view.setUint32(fatStart * SECTOR + i * 4, fat[fatIndex] >>> 0, true);
+  // Write FAT sectors at secOff(fatStart + fs).
+  for (let fs = 0; fs < fatSecs; fs++) {
+    for (let i = 0; i < perFAT; i++) {
+      const idx = fs * perFAT + i;
+      const val = idx < fat.length ? fat[idx] : FREESECT;
+      view.setUint32(secOff(fatStart + fs) + i * 4, val >>> 0, true);
     }
   }
 
-  // Write DIFAT: header block + optional DIFAT sectors.
+  // Write DIFAT: header block (109 entries) + optional extra DIFAT sectors.
   const fatIds = Array.from({ length: fatSecs }, (_, i) => fatStart + i);
-  for (let i = 0; i < 109; i++) view.setUint32(76 + i * 4, i < fatSecs ? fatIds[i] : FREESECT, true);
+  for (let i = 0; i < 109; i++) view.setUint32(76 + i * 4, (i < fatSecs ? fatIds[i] : FREESECT) >>> 0, true);
   for (let i = 0; i < difatSecs; i++) {
-    const base = (miniFATStart + i) * SECTOR;
+    const base = secOff(difatStart + i);
     const begin = 109 + i * (perFAT - 1);
     for (let j = 0; j < perFAT - 1; j++) {
       const idx = begin + j;
-      view.setUint32(base + j * 4, idx < fatIds.length ? fatIds[idx] : FREESECT, true);
+      view.setUint32(base + j * 4, (idx < fatIds.length ? fatIds[idx] : FREESECT) >>> 0, true);
     }
-    view.setUint32(base + (perFAT - 1) * 4, i === difatSecs - 1 ? ENDOFCHAIN : miniFATStart + i + 1, true);
+    view.setUint32(base + (perFAT - 1) * 4, (i === difatSecs - 1 ? ENDOFCHAIN : difatStart + i + 1) >>> 0, true);
   }
 
-  // Write miniFAT: map mini stream sectors.
-  {
-    const mfView = new DataView(out.buffer);
+  // Write miniFAT: maps mini-sector index -> next mini-sector index.
+  if (miniFATSecs > 0) {
     for (let i = 0; i < miniSectorCount; i++) {
-      mfView.setUint32(miniFATStart * SECTOR + i * 4, i === miniSectorCount - 1 ? ENDOFCHAIN : i + 1, true);
+      view.setUint32(secOff(miniFATStart) + i * 4, (i === miniSectorCount - 1 ? ENDOFCHAIN : i + 1) >>> 0, true);
     }
     for (let i = miniSectorCount; i < perFAT * miniFATSecs; i++) {
-      mfView.setUint32(miniFATStart * SECTOR + i * 4, FREESECT, true);
+      view.setUint32(secOff(miniFATStart) + i * 4, FREESECT >>> 0, true);
     }
   }
 
   // Write mini stream.
-  out.set(miniStream, miniStreamStart * SECTOR);
+  out.set(miniStream, secOff(miniStreamStart));
 
   // Write large stream bytes.
   for (const s of fatStreams) {
-    out.set(s.data, streamStart.get(s.idx)! * SECTOR);
+    out.set(s.data, secOff(streamStart.get(s.idx)!));
   }
 
   // Write header.
@@ -476,18 +476,16 @@ export function write(c: WriteContainer, _opts?: { type?: string }): Uint8Array 
   h.setUint16(30, 9, true);        // sector shift
   h.setUint16(32, 6, true);        // mini sector shift
   h.setUint32(40, 0, true);        // total sectors (v3 = 0)
-  h.setUint32(44, fatSecs, true); // FAT sectors
+  h.setUint32(44, fatSecs, true);  // number of FAT sectors
   h.setUint32(48, dirStart, true);
-  h.setUint32(52, 0, true); // transaction identifier
+  h.setUint32(52, 0, true);        // transaction identifier
   h.setUint32(56, WRITER_CUTOFF, true);
-  h.setUint32(60, miniFATStart, true);
+  h.setUint32(60, miniFATSecs > 0 ? miniFATStart : ENDOFCHAIN, true);
   h.setUint32(64, miniFATSecs, true);
-  h.setUint32(68, difatSecs > 0 ? difatSecs : ENDOFCHAIN, true);
+  h.setUint32(68, difatSecs > 0 ? difatStart : ENDOFCHAIN, true);
   h.setUint32(72, difatSecs, true);
 
   // Write directory entries.
-  const perDirSec = SECTOR / 128;
-  const entries = new Array(nodes.length);
   const nameBuf = (s: string): Uint8Array => {
     const trim = s.length > 31 ? s.slice(0, 31) : s;
     const u = new Uint8Array((trim.length + 1) * 2);
@@ -495,26 +493,32 @@ export function write(c: WriteContainer, _opts?: { type?: string }): Uint8Array 
     return u;
   };
 
-  // Child pointers (right-sibling chain).
-  const childIdx = new Array<number>(nodes.length).fill(ENDOFCHAIN);
-  const rightIdx = new Array<number>(nodes.length).fill(ENDOFCHAIN);
-  const parentSizes = new Map<number, number>();
-  // node index lookup
+  // Directory sibling/child pointers use NOSTREAM (0xFFFFFFFF) for "absent",
+  // matching the cfb library and the MS-CFB spec (NOT ENDOFCHAIN).
+  const NOSTREAM = 0xffffffff;
+  const childIdx = new Array<number>(nodes.length).fill(NOSTREAM);
+  const rightIdx = new Array<number>(nodes.length).fill(NOSTREAM);
   const lnIndex = new Map<LNode, number>();
   nodes.forEach((n, i) => lnIndex.set(n, i));
   nodes.forEach((n, i) => {
     if (n.children.length > 0) {
       childIdx[i] = lnIndex.get(n.children[0])!;
-      for (let j = 0; j < n.children.length; j++) rightIdx[lnIndex.get(n.children[j])!] = j === n.children.length - 1 ? ENDOFCHAIN : lnIndex.get(n.children[j + 1])!;
+      for (let j = 0; j < n.children.length; j++) {
+        rightIdx[lnIndex.get(n.children[j])!] = j === n.children.length - 1 ? NOSTREAM : lnIndex.get(n.children[j + 1])!;
+      }
     }
   });
 
-  // start/size per node
+  // start/size per node (sector numbers in format numbering; mini entries use mini-sector index)
   let miniListIdx = 0;
-  const startOf = new Array<number>(nodes.length).fill(ENDOFCHAIN);
+  const startOf = new Array<number>(nodes.length).fill(NOSTREAM);
   const sizeOf = new Array<number>(nodes.length).fill(0);
   nodes.forEach((n, i) => {
-    if (n.type === 5) { startOf[i] = miniStreamStart; sizeOf[i] = miniStreamLen; return; }
+    if (n.type === 5) {
+      // Root entry points at the mini stream container.
+      if (miniStreamLen > 0) { startOf[i] = miniStreamStart; sizeOf[i] = miniStreamLen; }
+      return;
+    }
     if (n.type === 2 && n.data) {
       if (n.data.length >= WRITER_CUTOFF) { startOf[i] = streamStart.get(i)!; sizeOf[i] = n.data.length; }
       else { startOf[i] = miniStart[miniListIdx]; sizeOf[i] = n.data.length; miniListIdx++; }
@@ -523,17 +527,17 @@ export function write(c: WriteContainer, _opts?: { type?: string }): Uint8Array 
 
   for (let i = 0; i < nodes.length; i++) {
     const n = nodes[i];
-    const disp = dirStart * SECTOR + i * 128;
+    const disp = secOff(dirStart) + i * 128;
     const nm = n.type === 5 ? 'Root Entry' : (n.name || '');
     const nb = nameBuf(nm);
     out.set(nb, disp);
     view.setUint16(disp + 64, nb.length, true);
     view.setUint8(disp + 66, n.type);
     view.setUint8(disp + 67, 1); // black
-    view.setUint32(disp + 68, ENDOFCHAIN, true);
-    view.setUint32(disp + 72, rightIdx[i], true);
-    view.setUint32(disp + 76, childIdx[i], true);
-    view.setUint32(disp + 116, startOf[i], true);
+    view.setUint32(disp + 68, NOSTREAM, true);          // left sibling
+    view.setUint32(disp + 72, rightIdx[i] >>> 0, true); // right sibling
+    view.setUint32(disp + 76, childIdx[i] >>> 0, true); // child
+    view.setUint32(disp + 116, startOf[i] >>> 0, true);
     view.setUint32(disp + 120, sizeOf[i], true);
   }
 
