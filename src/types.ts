@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // © 2026 Harald Weiss
 import type * as THREE from 'three';
-import type RAPIER from '@dimforge/rapier3d';
+import type { World as RAPIERWorld, RigidBody as RAPIERRigidBody, Collider as RAPIERCollider, EventQueue as RAPIEREventQueue } from './physics/mini-rapier';
 
 export interface GameState {
   ballPos: THREE.Vector3;
@@ -222,20 +222,20 @@ export interface ExtraBall {
   pos:        THREE.Vector3;
   vel:        { x: number; y: number };
   mesh:       THREE.Mesh;
-  rapierBody: RAPIER.RigidBody | null;
+  rapierBody: RAPIERRigidBody | null;
 }
 
 export interface PhysicsContext {
-  world:        RAPIER.World;
-  ballBody:     RAPIER.RigidBody;
-  ballCollider: RAPIER.Collider;
-  eventQueue:   RAPIER.EventQueue;
-  lFlipperBody: RAPIER.RigidBody;
-  rFlipperBody: RAPIER.RigidBody;
+  world:        RAPIERWorld;
+  ballBody:     RAPIERRigidBody;
+  ballCollider: RAPIERCollider;
+  eventQueue:   RAPIEREventQueue;
+  lFlipperBody: RAPIERRigidBody;
+  rFlipperBody: RAPIERRigidBody;
   bumperMap:    Map<number, { x: number; y: number; mesh: any; index: number }>;
   targetMap:    Map<number, { x: number; y: number; mesh: any; index: number }>;
   slingshotMap: Map<number, string>;
-  tableBodies:  RAPIER.RigidBody[];
+  tableBodies:  RAPIERRigidBody[];
 }
 
 // ─── B.A.M. (Better Arcade Mode) Types (Session 20.3) ───

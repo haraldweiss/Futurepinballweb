@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // © 2026 Harald Weiss
 
-import RAPIER from '@dimforge/rapier3d';
+import RAPIER from '../physics/mini-rapier';
+import type { ColliderDesc as ColliderDescType } from '../physics/mini-rapier';
 import { state } from './worker-state';
 
 /**
@@ -84,7 +85,7 @@ export function initializePhysics(
 
       const body = state.world.createRigidBody(desc);
 
-      let colliderDesc: RAPIER.ColliderDesc;
+      let colliderDesc: ColliderDescType;
       if (bodyConfig.type === 'box') {
         colliderDesc = RAPIER.ColliderDesc.cuboid(
           bodyConfig.width ?? 1,

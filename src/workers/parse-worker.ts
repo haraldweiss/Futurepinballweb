@@ -12,8 +12,8 @@
  *   Worker → Main: { type: 'progress' | 'log' | 'result' | 'error' }
  */
 
-import * as CFB from 'cfb';
-import type { CFB$Container } from 'cfb';
+import * as CFB from '../fpt/cfb-io';
+import type { CFB$Container } from '../fpt/cfb-io';
 import { lzo1xDecompress } from '../fpt/lzo';
 
 // ─── Types ──────────────────────────────────────────────────────────────────

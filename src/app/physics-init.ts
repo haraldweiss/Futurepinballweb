@@ -1,5 +1,5 @@
 /**
- * physics-init.ts — Rapier3D physics world initialization.
+ * physics-init.ts — Physics world initialization (mini-rapier engine).
  *
  * Creates the physics world, ball, flippers, walls, slingshots, and guides.
  * Returns the handles needed by the collision event handler.
@@ -11,18 +11,20 @@ export interface PhysicsInitResult {
   rightFlipperColliderHandle: number;
 }
 
-/** Shared Rapier3D module reference (initialized once by initPhysics). */
-export let RAPIER: any = null;
+import miniRAPIER from '../physics/mini-rapier';
+
+/** Shared mini-rapier module reference. */
+export let RAPIER: any = miniRAPIER;
 
 /**
- * Initialize the Rapier3D physics world.
+ * Initialize the physics world (main-thread mirror for rendering sync).
  * @param setPhysics - Function to store the created physics state.
  * @returns The flipper collider handles needed by the collision handler.
  */
 export async function initPhysics(
   setPhysics: (state: any) => void,
 ): Promise<PhysicsInitResult> {
-  if (!RAPIER) RAPIER = await import('@dimforge/rapier3d').then(m => m.default);
+  if (!RAPIER) RAPIER = miniRAPIER;
   const world = new RAPIER.World({ x: 0.0, y: -9.8, z: 0.0 });
   const eventQueue = new RAPIER.EventQueue(true);
 

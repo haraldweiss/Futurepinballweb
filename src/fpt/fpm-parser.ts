@@ -10,9 +10,10 @@
  */
 
 import * as THREE from 'three';
-import * as CFB from 'cfb';
-import type { CFB$Container } from 'cfb';
+import * as CFB from './cfb-io';
+import type { CFB$Container } from './cfb-io';
 import { lzo1xDecompress } from './lzo';
+import { findBMPInLZORegions, extractTextureName } from './fpm-textures';
 
 export interface FPMModel {
   name: string;
@@ -282,6 +283,13 @@ export function parseFPM(bytes: Uint8Array): FPMModel | null {
     }
   }
 
+  // Fallback: shared BMP scanner (handles additional zLZO header offsets)
+  if (!textureData) {
+    const bmp = findBMPInLZORegions(compressedData);
+    if (bmp) textureData = bmp.data;
+  }
+  const textureName = extractTextureName(compressedData);
+
   if (!meshData) return null;
   const parsed = parseMS3DVariant(meshData);
   if (!parsed || parsed.vertices.length === 0) return null;
@@ -295,8 +303,24 @@ export function parseFPM(bytes: Uint8Array): FPMModel | null {
     materials: [],
     hasTexture: textureData !== null,
     textureData,
-    textureName: '',
+    textureName,
   };
+}
+
+/**
+ * Create a THREE.Texture from embedded BMP bytes.
+ * Returns null when the bytes are not usable (texture stays optional).
+ */
+export function textureFromBMP(bytes: Uint8Array): THREE.Texture | null {
+  try {
+    const blob = new Blob([bytes as BlobPart], { type: 'image/bmp' });
+    const url = URL.createObjectURL(blob);
+    const tex = new THREE.TextureLoader().load(url);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  } catch {
+    return null;
+  }
 }
 
 /**

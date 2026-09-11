@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import * as CFB from 'cfb';
-import type { CFB$Container } from 'cfb';
+import * as CFB from './cfb-io';
+import type { CFB$Container } from './cfb-io';
 import { logMsg } from './log';
 
 export function extractMS3DModelsFromCFB(arrayBuffer: ArrayBuffer): Map<string, Uint8Array> {

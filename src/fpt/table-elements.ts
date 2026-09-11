@@ -11,8 +11,8 @@
  * rail, gate, spinner, slingshot, hole, trigger, kickback, magnet, etc.
  */
 
-import * as CFB from 'cfb';
-import type { CFB$Container } from 'cfb';
+import * as CFB from './cfb-io';
+import type { CFB$Container } from './cfb-io';
 
 // ─── TLV Tags (LE u32 from byte sequences, verified against real FP files) ──
 const NAME_TAG = 0xbab2beb2;

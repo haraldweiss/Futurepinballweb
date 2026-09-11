@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import * as CFB from 'cfb';
-import type { CFB$Container } from 'cfb';
+import * as CFB from './cfb-io';
+import type { CFB$Container } from './cfb-io';
 import { fptResources, fptRawBytes, resetFPTRawBytes } from '../game';
 import { lzo1xDecompress } from './lzo';
 import { extractImageFromBytes, extractSoundFromBytes } from './media';

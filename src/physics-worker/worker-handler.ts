@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // © 2026 Harald Weiss
 
-import RAPIER from '@dimforge/rapier3d';
+import RAPIER from '../physics/mini-rapier';
 import { state } from './worker-state';
 import type { WorkerMessage } from './worker-types';
 import { initializePhysics } from './physics-init';

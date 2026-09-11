@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // © 2026 Harald Weiss
 
-import * as CFB from 'cfb';
+import * as CFB from './fpt/cfb-io';
 
 export interface FPTSerializeInput {
   script: string;
