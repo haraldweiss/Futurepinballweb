@@ -1044,6 +1044,165 @@ Meshes in `builder.ts` gebaut, aber nie als benannte Arrays exponiert.
 - Tests: **923 → 930** (+7)
 - Verified: tsc clean, 930/930 tests, vite build ✓
 
+### 2026-08-07 (continued) — Dependency removal Phase 1 (custom physics) COMPLETE + Phase 2 (own CFB) IN PROGRESS
+
+**Session goal** (user decision): remove external runtime dependencies step by step
+(„build the app native webgl" — measured coupling first: three 74/286 files, rapier
+5 files/744 LOC, cfb 8 files, CodeMirror 1 file). User approved Phases 1+2, Phase 3
+(CodeMirror) later. Conclusion: keep three.js (3–6 months alone for visual parity),
+replace Rapier + cfb now.
+
+**⚠ NOTHING COMMITTED YET** — 16 modified + 4 new files in tree (git status 2026-08-07).
+Commit in granular fashion (see „Commit plan" at the end).
+
+---
+
+#### Phase 1 — mini-rapier: Rapier3D → dependency-free 2.5D physics ✅ COMPLETE
+
+**New `src/physics/mini-rapier.ts` (~510 LOC, zero deps):** 2D-in-3D engine with a
+**Rapier3D-facade API**, so call sites keep their exact syntax. Surface replicated
+(the repo's actual subset, evidence-grepped):
+
+- `World(gravity)`: `.step(eq)`, `.createRigidBody`, `.createCollider`, `.getCollider(handle)`,
+  `.removeRigidBody`, `.free`; also carries `world.gravity` (worker `setWorldGravity` mutates it)
+- `RigidBodyDesc`: `.dynamic()/.fixed()/.kinematicPositionBased()` + `setTranslation/setLinvel/
+  setGravityScale/setCanSleep/setLinearDamping/setAngularDamping/setCcdEnabled/setRotation`
+- `ColliderDesc`: `.ball(r)/.cuboid(hx,hy,hz)` + `setRestitution/setFriction/setDensity/
+  setTranslation/setActiveEvents(ActiveEvents.COLLISION_EVENTS)`
+- `RigidBody`: `translation/setTranslation/linvel/setLinvel/angvel/setAngvel/setGravityScale/
+  rotation/setRotation/setNextKinematicTranslation/setNextKinematicRotation/applyImpulse/collider(i)`
+- `EventQueue(true)`: `.drainCollisionEvents((h1,h2,started)=>…)` + `.free`
+- Default export `RAPIER = { World, RigidBodyDesc, ColliderDesc, EventQueue, ActiveEvents }`
+  (namespace facade, mirrors `@dimforge/rapier3d` default import)
+
+**Semantics faithfully replicated:**
+- `step()` advances FIXED 1/60 s per call (Rapier default; old worker never overrode it —
+  game tuning depends on it; bridge caps dt at 0.05 and sends 4–8 "substeps" that were
+  always 1/60-s steps each under Rapier)
+- Restitution/friction combine = average of both colliders (Rapier default rule)
+- Events fire when ≥1 collider of the pair opted into ActiveEvents; start AND stop events
+- Kinematic bodies derive velocity from pending `setNextKinematic*` pose each step
+  (this is what gives flipper strikes their power)
+- CCD: dynamic bodies sub-integrate (≤16 slices) so fast balls don't tunnel thin walls
+- Damping: `v *= 1/(1+dt*d)` (Rapier's exact formula)
+- Mass/inertia from collider density (ball r=0.22, density 0.15 — June tuning preserved)
+
+**Gotchas hit (don't repeat):**
+1. Class field `linvel` **shadowed** method `linvel()` at runtime (JS class fields are own
+   properties) → backing fields renamed `vel`/`angV`. Method surface unchanged.
+2. Default-import facade object can't be used as TS type namespace (`RAPIER.World` in type
+   position) → named type imports. `src/types.ts` aliases them (`RAPIERWorld`/
+   `RAPIERRigidBody`/`RAPIERCollider`/`RAPIEREventQueue`).
+
+**Files swapped to mini-rapier:**
+- `src/physics-worker/worker-state.ts` (type imports), `physics-init.ts`, `worker-handler.ts` (default import)
+- `src/app/physics-init.ts`: `RAPIER` export now = mini-rapier (was dynamic `import('@dimforge/rapier3d')`);
+  main.ts/game-controls.ts inject it via deps unchanged
+- `src/types.ts` (type aliases)
+
+**Deps/config removed:** `@dimforge/rapier3d`, `vite-plugin-wasm`, `vite-plugin-top-level-await`
+(package.json); vite.config.ts: `wasm()`+`topLevelAwait()` plugins, `worker.plugins`, `vendor-rapier`
+manualChunk, rapier optimizeDeps entries all deleted. npm install run. **No WASM asset anymore.**
+
+**New tests `src/__tests__/mini-rapier.test.ts` (6, all green):** gravity free-fall, wall reflect,
+collision start+stop events, kinematic pusher (translation-driven), bumper bounce, ball-position
+API. The original contrived rotation-sweep flipper test was replaced by the translation-driven
+pusher test (sweep geometry too fragile for assertions).
+
+**Verified Phase 1:** tsc clean, **936/936 tests** at Phase-1 completion, `npm run build` ✓
+(physics-worker chunk 18.66 kB plain JS — no wasm asset). **NOT yet browser-smoke-tested**
+(AGENTS §3.3: physics changes deserve Care review + manual Pharaoh smoke — ball flight/
+flipper feel must be confirmed in dev browser before deploy).
+
+**Existing behavior preserved (not a regression):** main-thread `physics.world` is never
+`.step()`-ed anywhere (only the worker steps); extra balls' main-thread bodies read
+`translation()` — same as under Rapier. If extra balls don't move, that predates this session.
+
+---
+
+#### Phase 2 — cfb-io: `cfb` package → own MS-CFB reader+writer 🟡 IN PROGRESS
+
+**New `src/fpt/cfb-io.ts` (~530 LOC):** MS-CFB read+write per spec, facade mirrors the
+`cfb` subset this repo uses: `read(bytes, opts?)` → `{FileIndex, FullPaths}` (entries:
+`{name,size,type,content,sid}`), `write(container, opts?)`, `utils.cfb_new()`,
+`utils.cfb_add(container, path, data)`, type `CFB$Container` re-exported.
+
+**All 7 consumers swapped** (import paths only — API identical):
+`src/fpt-writer.ts`, `src/fpt/cfb-parser.ts`, `src/fpt/table-elements.ts`, `src/fpt/fpm-parser.ts`,
+`src/fpt/file-parser.ts`, `src/fpt/models.ts`, `src/workers/parse-worker.ts`.
+`cfb` remains ONLY in `src/__tests__/fpt-writer.test.ts` (as round-trip oracle) and in
+package.json dependencies (⚠ move to devDependencies after steps below).
+
+**Critical convention discovered (the reason the first reader attempt failed):** the `cfb`
+library numbers sectors **with the 512-byte header excluded** — data for sector `s` lives at
+file offset `(s+1)*512`. Reader now uses `secOff(s) = (s+1)*SZ` everywhere (chains, DIFAT,
+FAT sectors, directory). Sector shifts read at header offset 30 (sector) / 32 (mini) —
+verified against hexdump of a cfb-written file (`30..33 = 09 00 06 00`, byte order at 28,
+`num directory sectors = 0` for v3 at offset 40).
+
+**Reader status:** signature+header+DIFAT+FAT ✓, directory tree ✓ — probe reading a
+cfb-written file yields correct names `['Root Entry','Script','\x01Sh33tJ5','Textures','t1.png']`
+(the `\x01Sh33tJ5` stream is a cfb-internal artifact, harmless — consumers filter by name).
+**REMAINING BUG: stream `content` extraction returns empty** (probe: `Script` found but
+content `""`). Debugging steps for the next agent:
+1. Verify the FAT **map keys** in `read()`: currently `fat.set(baseSec + i, …)` with
+   `baseSec = fs*perSec` — the key must be the **FAT-array global index**, i.e.
+   `(position of that FAT sector within the fatSectors list) * perSec + i`, NOT derived
+   from the FAT sector's own data-sector number. For multi-FAT-sector files the entry for
+   sector `s` is at FAT-array index `s` regardless of which physical FAT sector holds it.
+2. Same for miniFAT (`miniChain`/`readMini`) and the root-entry mini-stream start/size.
+3. Probe recipe (put file in project root so `cfb` resolves):
+   generate with real lib (`cfb.utils.cfb_new` + `cfb.utils.cfb_add('/Script', …)` +
+   `cfb.write`), read back with my `read()`, assert `Script.content === 'Sub Test\nEnd Sub'`.
+
+**Writer status:** header layout fixed and verified (directory entries at `dirStart*512` —
+earlier bug wrote them at offset 0 and clobbered the signature; shifts at 30/32). Directory
+tree uses simple leftmost-child (`C` = children[0]) + right-sibling (`R`) chains —
+**simpler than red-black, spec-legal, but untested against the cfb oracle**. 8
+`fpt-writer.test.ts` tests currently fail on round-trip via the cfb oracle. Next:
+1. Fix reader content bug first — then reader-vs-cfb cross-validation doubles as a free
+   oracle for my writer.
+2. Drive `fpt-writer.test.ts` green (10 tests, `cfb.read` as oracle — do NOT weaken the
+   tests; they prove spec-conformance).
+3. Then `cfb` → devDependencies (keep it as an independent oracle rather than removing it
+   entirely; the app runtime no longer imports it).
+4. Real-file validation: run `read()` on actual FPT/FPL/FPM files from the NAS
+   (public/tables is EMPTY in the repo — sample tables live on NAS via §3.8,
+   `scripts/nas-file-server.cjs`, 2.146 FPTs scanned 2026-06-25).
+
+---
+
+#### Also in tree (uncommitted, earlier this session): FPM texture extraction
+
+- **New `src/fpt/fpm-textures.ts`** (pure byte-level, no THREE): `isBMP()` (magic + header
+  sanity), `extractTextureName()` (ASCII `*.bmp` scan in TLV header), `findBMPInLZORegions()`
+  (zLZO scan → decompress with offsets [8,4,12,0] → inner ZO6l/LZO unwrap → BMP identify).
+- **`src/fpt/fpm-parser.ts` partially updated:** imports fpm-textures; `parseFPM()` now has
+  fallback `findBMPInLZORegions` + extracts `textureName` (was hardcoded `''`);
+  **new export `textureFromBMP(bytes)`** (Blob → objectURL → TextureLoader, sRGB).
+- **PENDING (one edit):** `fpmToTHREE()` still has its own inline Blob loader — swap it to
+  `textureFromBMP()` (3-line change; attempted repeatedly this session, never applied).
+- Larger FPM-texture display work (main-thread rebuild in `file-parser.ts` L193–210 ignores
+  `workerResult.models[].textureData`, CachedModelResult already carries it) — NOT started;
+  part of roadmap item „FPM-Modelle im Spiel anzeigen".
+
+---
+
+#### Commit plan (granular, per AGENTS §5 — all still uncommitted!)
+
+1. `src/physics/mini-rapier.ts` + `src/__tests__/mini-rapier.test.ts` — engine + 6 tests
+2. Physics swap: 4 physics-worker/app files + types.ts + package.json + vite.config.ts + lock
+   — `@dimforge/rapier3d removed (WASM, 1.57MB), physics in plain TS`
+3. `src/fpt/cfb-io.ts` + 7 consumer import swaps (split reader/writer commits when the
+   writer is oracle-green)
+4. `src/fpt/fpm-textures.ts` + fpm-parser.ts + pending fpmToTHREE edit
+5. Phase-2 completion commit when fpt-writer tests green + cfb → devDeps
+
+**Verified (honest, AGENTS §4):** tsc clean; 928/936 tests (8 failures = Phase-2 cfb
+round-trip via cfb oracle — Phase 1 was 936/936 before Phase 2 began); `npm run build` ✓;
+NOT browser-smoke-tested; NOT deployed. **Next agent: finish Phase 2 → full suite green →
+browser smoke (Pharaoh boot, ball, flippers, bumpers) → then commit + deploy.**
+
 ### 2026-07-28 — Security: fast-uri CVE-2026-18446 + electron + brace-expansion
 
 **Commit:** `81135f67`
