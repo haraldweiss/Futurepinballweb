@@ -1244,3 +1244,34 @@ browser smoke (Pharaoh boot, ball, flippers, bumpers) → then commit + deploy.*
 **Next agent:** Debug cfb-io writer to match cfb library's sector layout exactly.
 Key issues: FAT chain should use absolute sector numbers, DIFAT entries should use
 sector numbers (not 0), directory entries need correct name length and type offsets.
+
+### 2026-09-11 (continued) — opencode: Phase 2 (cfb-io) COMPLETE ✅
+
+Writer gegen `cfb`-Oracle grün gedebuggt. **Drei echte Bugs** gefunden (keine Kosmetik):
+
+1. **Off-by-one Sektor-Nummerierung (der Durchbruch):** Die `cfb`-Bibliothek nummeriert
+   Sektoren **ohne Header** — Header-Wert `s` = physischer Offset `(s+1)*512`.
+   Unser Writer rechnete physisch (Sektor 0 = Header) und schrieb das direkt in den Header.
+   Folge: cfb las unser `dirStart=3` als Offset 2048 = Mini-Stream = Müll.
+   Fix: komplettes Layout auf Format-Nummerierung umgestellt (`secOff(s) = (s+1)*512`);
+   alle gespeicherten Sektor-Nummern (Header, FAT-Inhalte, Dir-Entry-Starts) in
+   Format-Nummerierung. Verifiziert: unser `dirStart=2` → phys 1536 = Directory ✓
+2. **ENDOFCHAIN vs NOSTREAM:** cfb nutzt `0xFFFFFFFF` (NOSTREAM) für fehlende
+   L/R/C-Tree-Pointer, wir nutzten `0xFFFFFFFE` (ENDOFCHAIN). Fix: `NOSTREAM`-Konstante
+   für alle Sibling/Child-Defaults + Storage-Starts.
+3. **Reader-Typ-Offset:** eigener Reader las Dir-Entry-Typ bei Offset 65 (High-Byte von
+   nameLen) statt 66 → immer 0. Fix: `base+66`. Betraf alle Dateien, fiel nie auf,
+   weil Consumer nach Namen filtern.
+4. **Test-Oracle-Robustheit:** cfb liefert Mini-Stream-Content als plain `Array`,
+   nicht `Uint8Array`/`Buffer` (eigener Round-Trip → Buffer). Bytes identisch verifiziert.
+   Fix: 1 Zeile im Test (`new Uint8Array(...)`-Wrap), kein Abschwächen der Assertion.
+
+Layout jetzt exakt wie cfb: FAT(0), miniFAT(1), Directory(2), Mini-Stream(3).
+Entfernt: ungenutzte `entries`/`parentSizes`/`perDirSec` (noUnusedLocals).
+
+**Phase 2 damit COMPLETE.** `cfb` bleibt nur noch in `fpt-writer.test.ts` (Oracle) +
+package.json (→ als Nächstes in devDependencies verschieben, App-Runtime nutzt es nirgends mehr).
+
+Verified: tsc clean, **936/936 tests** (fpt-writer 10/10), vite build ✓
+NOT browser-smoke-tested, NOT deployed.
+Nächste Schritte: cfb → devDeps, Browser-Smoke (Pharaoh boot/Ball/Flipper/Bumper), dann commit + deploy.
