@@ -154,7 +154,9 @@ describe('serializeFPT', () => {
     const scriptStream = cfb.FileIndex.find((s: any) => s.name && /Script/i.test(s.name));
     expect(scriptStream).toBeDefined();
     if (scriptStream) {
-      const scriptText = new TextDecoder().decode(scriptStream.content as Uint8Array);
+      // cfb oracle may return content as plain Array (mini-stream path) or Buffer;
+      // normalize before decoding. Byte content is what the test asserts.
+      const scriptText = new TextDecoder().decode(new Uint8Array(scriptStream.content as unknown as ArrayLike<number>));
       expect(scriptText).toContain('AddScore 999');
     }
   });
