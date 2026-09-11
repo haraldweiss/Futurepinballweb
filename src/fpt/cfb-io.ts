@@ -386,12 +386,11 @@ export function write(c: WriteContainer, _opts?: { type?: string }): Uint8Array 
   difatSecs = fatSecs > 109 ? Math.ceil((fatSecs - 109) / (perFAT - 1)) : 0;
 
   // Compute L array (same convention as cfb library):
-  // Sector layout matching cfb library exactly: [0]=header, [1]=FAT, [2]=FAT, [3]=directory, [4]=mini stream
+  // Sector layout: [0]=header, [1]=FAT, [2]=directory, [3+]=mini stream/large streams
   const fatStart = 1;
-  const miniFATStart = 1; // cfb library uses sector 1 for miniFAT (overlaps with FAT)
-  const dirStart = 2; // cfb library uses dirStart = 2
-  const miniStreamStart = 3; // cfb library uses sector 3 for directory, sector 4 for mini stream
-
+  const dirStart = 2;
+  const miniStreamStart = dirStart + dirSecs;
+  
   // Large streams: assign sequential FAT chains
   const streamStart = new Map<number, number>();
   const streamSectors = new Map<number, number>();
@@ -402,8 +401,9 @@ export function write(c: WriteContainer, _opts?: { type?: string }): Uint8Array 
     streamSectors.set(s.idx, n);
     streamCursor += n;
   }
-
-  const totalSectors = streamCursor + miniStreamSecs;
+  
+  const miniFATStart = streamCursor;
+  const totalSectors = miniFATStart + miniFATSecs;
 
   // Assemble the file buffer and fill FAT chains + directory entries.
   const out = new Uint8Array(totalSectors * SECTOR);
@@ -421,25 +421,21 @@ export function write(c: WriteContainer, _opts?: { type?: string }): Uint8Array 
   setChain(miniStreamStart, miniStreamSecs);
   for (const s of fatStreams) setChain(streamStart.get(s.idx)!, streamSectors.get(s.idx)!);
   setChain(dirStart, dirSecs);
-  // Don't call setChain for miniFAT - cfb library stores miniFAT within FAT sector
-  // mark specialized sectors - cfb library uses 2 FAT sectors
+  setChain(miniFATStart, miniFATSecs);
+  // mark specialized sectors
   for (let i = 0; i < difatSecs; i++) fat[miniFATStart + i] = DIFSECT;
-  fat[fatStart] = FATSECT; // First FAT sector
-  if (fatStart + 1 < totalSectors) fat[fatStart + 1] = FATSECT; // Second FAT sector
+  fat[fatStart] = FATSECT; // FAT sector
 
-  // Write FAT sectors - cfb library uses 2 FAT sectors
-  // The FAT sector stores the FAT chain starting from fatStart
-  for (let sector = 0; sector < 2; sector++) {
-    for (let i = 0; i < perFAT; i++) {
-      const fatIndex = fatStart + sector * perFAT + i;
-      if (fatIndex < fat.length) {
-        view.setUint32((fatStart + sector) * SECTOR + i * 4, fat[fatIndex] >>> 0, true);
-      }
+  // Write FAT sector
+  for (let i = 0; i < perFAT; i++) {
+    const fatIndex = fatStart + i;
+    if (fatIndex < fat.length) {
+      view.setUint32(fatStart * SECTOR + i * 4, fat[fatIndex] >>> 0, true);
     }
   }
 
   // Write DIFAT: header block + optional DIFAT sectors.
-  const fatIds = Array.from({ length: fatSecs }, (_, i) => 0); // cfb library uses 0 for DIFAT entry 0
+  const fatIds = Array.from({ length: fatSecs }, (_, i) => fatStart + i);
   for (let i = 0; i < 109; i++) view.setUint32(76 + i * 4, i < fatSecs ? fatIds[i] : FREESECT, true);
   for (let i = 0; i < difatSecs; i++) {
     const base = (miniFATStart + i) * SECTOR;
@@ -480,7 +476,7 @@ export function write(c: WriteContainer, _opts?: { type?: string }): Uint8Array 
   h.setUint16(30, 9, true);        // sector shift
   h.setUint16(32, 6, true);        // mini sector shift
   h.setUint32(40, 0, true);        // total sectors (v3 = 0)
-  h.setUint32(44, 1, true); // 1 FAT sector (cfb library uses 1)
+  h.setUint32(44, fatSecs, true); // FAT sectors
   h.setUint32(48, dirStart, true);
   h.setUint32(52, 0, true); // transaction identifier
   h.setUint32(56, WRITER_CUTOFF, true);
