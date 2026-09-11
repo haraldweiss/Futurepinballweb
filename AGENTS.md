@@ -1275,3 +1275,17 @@ package.json (→ als Nächstes in devDependencies verschieben, App-Runtime nutz
 Verified: tsc clean, **936/936 tests** (fpt-writer 10/10), vite build ✓
 NOT browser-smoke-tested, NOT deployed.
 Nächste Schritte: cfb → devDeps, Browser-Smoke (Pharaoh boot/Ball/Flipper/Bumper), dann commit + deploy.
+
+### 2026-09-11 (continued) — Deploy: Phase 1+2 live auf futurepinball.wolfinisoftware.de
+
+- **Rebase**: origin/main hatte 7 neue Commits (Dependabot/CVE: js-yaml, vitest 4.1.11,
+  xmldom, fast-uri). `git pull --rebase` — 22/23 clean, nur eigener cfb-Move konfligierte
+  (package.json/lock). Aufgelöst: CVE-Versionen behalten (vitest 4.1.11) + cfb-Move behalten.
+  Lock via `npm install` regeneriert. Danach tsc clean, 936/936, Build ✓. Fast-forward Push.
+- **Smoke** (headless Chromium vs. Prod-Build): App bootet, UI rendert, keine NEUEN Fehler.
+  `Animation-loop missing deps`-Error ist **präexistent + umgebungsbedingt** (SwiftShader):
+  Live-Prod (alter Build) zeigt identischen Fehler headless. SW-Error ist Preview-Artefakt.
+- **Deploy**: `scp -r dist/* oracle-vm:/var/www/futurepinball/dist/` + `reload httpd` ✓.
+  Verifiziert: remote `index.html` referenziert neuen `main-kRL8eipe.js`, LIVE_HTTP:200.
+- Commits: `ec2b21cc` (cfb→devDeps) + Rebase auf 06e5d39a, Push `06e5d39a..3996ce1c`.
+- Verified: tsc clean, 936/936 tests, vite build ✓, headless smoke ≈ prod, live deploy ✓
