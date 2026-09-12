@@ -1518,7 +1518,7 @@ if (FPW_ROLE === 'dmd') {
       clock: clock,
       state: state,
       physics: physics,
-      bamEngine: bamEngine,
+      getBamEngine: () => bamEngine,
       leftFlipperColliderHandle: leftFlipperColliderHandle,
       rightFlipperColliderHandle: rightFlipperColliderHandle,
       gameControls: gameControls,

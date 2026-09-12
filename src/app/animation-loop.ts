@@ -30,7 +30,12 @@ export interface AnimationLoopDeps {
   // Game state & physics
   state: any;
   physics: any;
-  bamEngine: any;
+  /**
+   * Late-bound getter: the BAMEngine instance is created by
+   * initializeBAMEngine() AFTER createAnimationLoop() runs, so a plain value
+   * would be (and was) undefined forever. Read fresh each frame instead.
+   */
+  getBamEngine: () => any;
   leftFlipperColliderHandle: number;
   rightFlipperColliderHandle: number;
 
@@ -111,8 +116,13 @@ export interface AnimationLoopDeps {
  */
 export function createAnimationLoop(deps: AnimationLoopDeps): () => void {
   // Validate required dependencies at construction time.
+  // dofPass is legitimately null (initializeGraphicsPass returns null when DoF
+  // is disabled or the device doesn't support it) and is null-guarded in the
+  // loop body — it must NOT be treated as missing.
+  const OPTIONAL_KEYS: (keyof AnimationLoopDeps)[] = ['dofPass'];
   const missing: string[] = [];
   (Object.keys(deps) as (keyof AnimationLoopDeps)[]).forEach((key) => {
+    if (OPTIONAL_KEYS.includes(key)) return;
     if (deps[key] === undefined || deps[key] === null) missing.push(key);
   });
   if (missing.length > 0) {
@@ -186,9 +196,10 @@ export function createAnimationLoop(deps: AnimationLoopDeps): () => void {
           bridge.step(dt, substeps);
         } catch { /* physics worker not ready — skipping frame */ }
 
-        if (deps.bamEngine) {
+        const bamEngine = deps.getBamEngine();
+        if (bamEngine) {
           const substeps = currentFps > 55 ? 6 : (currentFps > 45 ? 5 : 4);
-          deps.bamEngine.step(dt, substeps);
+          bamEngine.step(dt, substeps);
         }
         if (deps.physics) {
           const pos = deps.physics.ballBody.translation(), vel = deps.physics.ballBody.linvel();
