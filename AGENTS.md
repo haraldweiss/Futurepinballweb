@@ -1289,3 +1289,18 @@ Nächste Schritte: cfb → devDeps, Browser-Smoke (Pharaoh boot/Ball/Flipper/Bum
   Verifiziert: remote `index.html` referenziert neuen `main-kRL8eipe.js`, LIVE_HTTP:200.
 - Commits: `ec2b21cc` (cfb→devDeps) + Rebase auf 06e5d39a, Push `06e5d39a..3996ce1c`.
 - Verified: tsc clean, 936/936 tests, vite build ✓, headless smoke ≈ prod, live deploy ✓
+
+### 2026-09-12 — Bugfix: Animation loop never started (table black screen)
+
+- **Bug**: Table built + physics worker (mini-rapier) OK, aber nichts gerendert —
+  `createAnimationLoop` warf bei Konstruktion
+  `Animation loop missing required dependencies: bamEngine, dofPass` → RAF-Loop startete nie.
+- **Root cause**: `bamEngine` wird erst in `initializeBAMEngine()` via `setBAMEngine()`
+  gesetzt — NACHDEM der deps-Object-Literal in main.ts gebaut wurde (Value-Snapshot →
+  für immer undefined). `dofPass` ist legitime `null` (DoF disabled/unsupported).
+  Die Annahme im 09-11-Handoff „präexistent + umgebungsbedingt" war falsch.
+- **Fix**: `deps.bamEngine` → `deps.getBamEngine()` Getter (frisch pro Frame, wie
+  `getLast*FlipperPower`); `dofPass` aus Required-Validation ausgeschlossen (loop-body
+  ist bereits null-guarded).
+- Commit: `34b20340`, deployed live ✅
+- Verified: tsc clean, 936/936 tests, headless-Smoke (Loop läuft, Frame #1 gerendert), live deploy ✓
