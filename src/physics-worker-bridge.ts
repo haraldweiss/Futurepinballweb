@@ -188,7 +188,11 @@ export class PhysicsWorkerBridge {
     this.worker.postMessage({
       type: 'step',
       dt: Math.min(dt, 0.05),  // Cap dt to prevent instability
-      substeps: Math.min(Math.max(substeps, 1), 8),  // Clamp 1-8
+      // Clamp 1-18: the caller derives the count from wall-clock time
+      // (SIM_TIME_SCALE × dt / fixedDt), so a 30 FPS frame legitimately needs
+      // 12 steps to stay at the tuned simulation rate. The old cap of 8 put
+      // slow devices into permanent slow motion.
+      substeps: Math.min(Math.max(substeps, 1), 18),
     });
 
     this.frameCount++;

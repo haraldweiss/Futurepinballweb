@@ -16,6 +16,51 @@ import * as THREE from 'three';
 import { devLog } from '../utils/dev-log';
 import { ParticleField } from './particle-field';
 
+// ─── Physics pacing ─────────────────────────────────────────────────────────
+/** mini-rapier advances exactly this much per world.step() (dt is ignored). */
+const PHYSICS_FIXED_DT = 1 / 60;
+/**
+ * Simulation-time scale. The game is tuned for 6 fixed steps per 1/60 s of
+ * wall time — the historical behaviour on a 60 Hz display — so keep that rate
+ * and only change *how* the step count is derived.
+ */
+const SIM_TIME_SCALE = 6;
+/** Catch-up cap per frame; guards against a spiral of death on slow devices. */
+const MAX_PHYSICS_STEPS = 18;
+
+/**
+ * Advance the fixed-timestep accumulator by `dt` seconds of wall time and
+ * report how many fixed physics steps this frame owes the simulation.
+ *
+ * Pure function (exported for tests): the caller owns the accumulator and
+ * feeds the returned value back in on the next frame, so leftover sub-step
+ * time is carried instead of discarded — that is what makes the simulation
+ * rate identical on 30/60/120 Hz displays.
+ */
+export function advanceFixedTimestep(
+  accumulator: number,
+  dt: number,
+): { steps: number; accumulator: number } {
+  const next = Math.min(
+    accumulator + dt * SIM_TIME_SCALE,
+    MAX_PHYSICS_STEPS * PHYSICS_FIXED_DT,
+  );
+  const steps = Math.floor(next / PHYSICS_FIXED_DT);
+  return { steps, accumulator: next - steps * PHYSICS_FIXED_DT };
+}
+
+// ─── Plunger-lane re-arm geometry ───────────────────────────────────────────
+// The shooter lane's left wall ends at y = -2.6 and the ball must be at
+// x < ~2.27 to enter the playfield (see the launch tuning notes in main.ts),
+// so the lane interior is x > 2.27 && y < -2.6.
+const PLUNGER_LANE_MIN_X = 2.27;
+const PLUNGER_LANE_MAX_Y = -2.6;
+/** Below this speed a ball inside the lane box counts as "back in the lane". */
+const LANE_REARM_MAX_SPEED = 1.5;
+/** Motionless for this long anywhere else → stuck, recover to the lane. */
+const STUCK_WATCHDOG_SECONDS = 8;
+const STUCK_WATCHDOG_SPEED = 0.5;
+
 /**
  * Dependencies for the animation loop. Extends the previous in-file closure:
  * every module-level variable / getter the loop touched is now injected.
@@ -155,6 +200,10 @@ export function createAnimationLoop(deps: AnimationLoopDeps): () => void {
   let lastFpsUpdate = performance.now();
   let frameCount = 0;
   let currentFps = 60;
+  /** Leftover simulation time carried between frames (fixed-timestep pacing). */
+  let physicsAccumulator = 0;
+  /** Seconds the ball has been motionless outside the lane (stuck watchdog). */
+  let stuckSeconds = 0;
 
   return function animateLoop(): void {
     animateCallCount++;
@@ -210,21 +259,71 @@ export function createAnimationLoop(deps: AnimationLoopDeps): () => void {
           bridge.setBallGravityScale(0.0);
         } catch { /* physics worker not ready */ }
       } else {
-        try {
-          const bridge = deps.getPhysicsWorker();
-          const substeps = currentFps > 55 ? 6 : (currentFps > 45 ? 5 : 4);
-          bridge.step(dt, substeps);
-        } catch { /* physics worker not ready — skipping frame */ }
+        // ─── Fixed-timestep pacing driven by wall-clock time ───
+        // world.step() advances a FIXED 1/60 s and ignores the `dt` we send, so
+        // the *step count* per rendered frame is what sets game speed. It used
+        // to be an FPS bucket (4/5/6), which made speed depend on the display
+        // refresh rate (6 steps × 120 Hz = 12× realtime vs 6× on a 60 Hz panel)
+        // and flip abruptly every time FPS crossed 45/55 — a visible speed
+        // stutter — while any frame hitch silently discarded simulated time.
+        // Deriving the count from elapsed wall time keeps the tuned 60 Hz feel
+        // exactly (6 steps per 1/60 s frame) and makes it refresh-rate
+        // independent: 3 steps at 120 Hz, 12 at 30 Hz — always 360 steps/s.
+        const paced = advanceFixedTimestep(physicsAccumulator, dt);
+        physicsAccumulator = paced.accumulator;
+        const steps = paced.steps;
 
-        const bamEngine = deps.getBamEngine();
-        if (bamEngine) {
-          const substeps = currentFps > 55 ? 6 : (currentFps > 45 ? 5 : 4);
-          bamEngine.step(dt, substeps);
+        if (steps > 0) {
+          try {
+            const bridge = deps.getPhysicsWorker();
+            bridge.step(dt, steps);
+          } catch { /* physics worker not ready — skipping frame */ }
+
+          const bamEngine = deps.getBamEngine();
+          if (bamEngine) {
+            bamEngine.step(dt, steps);
+          }
         }
+
         if (deps.physics) {
           const pos = deps.physics.ballBody.translation(), vel = deps.physics.ballBody.linvel();
           deps.state.ballPos.x = pos.x; deps.state.ballPos.y = pos.y;
           deps.state.ballVel.x = vel.x; deps.state.ballVel.y = vel.y;
+
+          // ─── Plunger-lane re-arm (fixes "ball gets stuck") ───
+          // Every launch path is gated on state.inLane, but only
+          // resetBall()/resetGameState() ever set it back to true. A launched
+          // ball that fails to clear the lane wall rolls back down into the
+          // shooter lane — the launch-tuning notes in main.ts describe exactly
+          // that happening on light taps — and from there it could never be
+          // launched again: a permanently stuck ball. Detect a slow ball inside
+          // the lane box and re-arm it. The speed guard means a ball flying up
+          // through the lane at launch speed (13–16) never triggers this.
+          const ballSpeed = Math.hypot(vel.x, vel.y);
+          if (
+            pos.x > PLUNGER_LANE_MIN_X &&
+            pos.y < PLUNGER_LANE_MAX_Y &&
+            ballSpeed < LANE_REARM_MAX_SPEED
+          ) {
+            deps.resetBall();
+            deps.showNotification('🎯 Ball back in the shooter lane — hold ENTER to charge, release to launch');
+          } else {
+            // ─── Stuck watchdog ───
+            // Catch-all for a ball wedged anywhere else on the playfield
+            // (between rubbers, on a gate lip, …). A live ball is essentially
+            // never motionless for this long outside the lane, so recover by
+            // returning it to the shooter lane rather than ending the ball.
+            if (ballSpeed < STUCK_WATCHDOG_SPEED) {
+              stuckSeconds += dt;
+              if (stuckSeconds >= STUCK_WATCHDOG_SECONDS) {
+                stuckSeconds = 0;
+                deps.resetBall();
+                deps.showNotification('🎯 Ball was stuck — returned to the shooter lane');
+              }
+            } else {
+              stuckSeconds = 0;
+            }
+          }
 
           deps.physics.eventQueue.drainCollisionEvents((h1: number, h2: number, started: boolean) => {
             if (!started) return;
