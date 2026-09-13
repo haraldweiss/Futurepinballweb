@@ -105,4 +105,107 @@ describe('mini-rapier physics engine (facade)', () => {
     expect(ball.translation()).toMatchObject({ x: 2, y: 3, z: 0 });
     expect(ball.linvel()).toMatchObject({ x: 1, y: 2 });
   });
+
+  /**
+   * Regression: without a restitution velocity threshold the ball re-entered
+   * contact on every step (gravity adds ~0.163 units/s per step) and rebounded
+   * at ~0.43× that increment forever — it never came to rest. That is the
+   * micro-jitter / "ball never settles" symptom.
+   */
+  it('a ball resting on a floor settles instead of bouncing forever', () => {
+    const world = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
+    // Ball at rest exactly touching the floor top surface (y = -0.5).
+    const ball = world.createRigidBody(
+      RAPIER.RigidBodyDesc.dynamic().setTranslation(0, -0.28, 0).setCanSleep(false),
+    );
+    world.createCollider(
+      RAPIER.ColliderDesc.ball(0.22).setRestitution(0.85).setFriction(0.25).setDensity(0.15),
+      ball,
+    );
+    const floor = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -1, 0));
+    world.createCollider(RAPIER.ColliderDesc.cuboid(5, 0.5, 0.5), floor);
+
+    for (let i = 0; i < 300; i++) world.step();
+
+    const vel = ball.linvel();
+    const pos = ball.translation();
+    // Settled: no residual bounce velocity, still resting on the surface.
+    expect(Math.hypot(vel.x, vel.y)).toBeLessThan(0.05);
+    expect(pos.y).toBeGreaterThan(-0.35);
+    expect(pos.y).toBeLessThan(-0.2);
+  });
+
+  /** Guard: real impacts stay elastic — the threshold must not soften them. */
+  it('a fast impact keeps full restitution (threshold only affects slow contacts)', () => {
+    const world = new RAPIER.World({ x: 0, y: 0, z: 0 });
+    const ball = world.createRigidBody(
+      RAPIER.RigidBodyDesc.dynamic().setTranslation(0, 0, 0).setLinvel(8, 0),
+    );
+    world.createCollider(RAPIER.ColliderDesc.ball(0.22).setRestitution(0.9).setFriction(0.0), ball);
+    const wall = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(1.0, 0, 0));
+    world.createCollider(RAPIER.ColliderDesc.cuboid(0.1, 2.0, 0.1).setRestitution(0.9), wall);
+
+    // Capture the speed just before and just after the bounce.
+    let beforeImpact = 8;
+    let afterImpact = 0;
+    for (let i = 0; i < 60; i++) {
+      const vx = ball.linvel().x;
+      if (vx > 0) beforeImpact = vx;
+      else { afterImpact = vx; break; }
+      world.step();
+    }
+    // Combined restitution 0.9 → rebounds with ~90% of the approach speed.
+    expect(afterImpact).toBeLessThan(0);
+    expect(Math.abs(afterImpact)).toBeGreaterThan(beforeImpact * 0.75);
+  });
+
+  /**
+   * Regression: unclamped positional correction resolved a deep overlap in a
+   * single step — measured, a ball 0.37 units inside a wall snapped 0.354
+   * units (≈1.6 ball radii) in one 1/60 s step, a visible teleport. The cap
+   * spreads the resolution over several steps.
+   */
+  it('resolves a deep overlap over several steps instead of teleporting', () => {
+    const world = new RAPIER.World({ x: 0, y: 0, z: 0 });
+    // Ball centre 0.85 with a wall spanning x ∈ [-1, 1] → penetration 0.37.
+    const ball = world.createRigidBody(
+      RAPIER.RigidBodyDesc.dynamic().setTranslation(0.85, 0, 0),
+    );
+    world.createCollider(
+      RAPIER.ColliderDesc.ball(0.22).setRestitution(0.5).setDensity(0.15), ball,
+    );
+    const wall = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, 0, 0));
+    world.createCollider(RAPIER.ColliderDesc.cuboid(1.0, 2.0, 0.5), wall);
+
+    let maxStepJump = 0;
+    let prev = ball.translation().x;
+    for (let i = 0; i < 8; i++) {
+      world.step();
+      const x = ball.translation().x;
+      maxStepJump = Math.max(maxStepJump, Math.abs(x - prev));
+      prev = x;
+    }
+    // No single step may move the ball more than the correction cap (+ slop).
+    expect(maxStepJump).toBeLessThanOrEqual(0.25);
+    // …and it must still end up fully outside the wall (surface at x = 1.22).
+    expect(ball.translation().x).toBeGreaterThan(1.15);
+  });
+
+  it('a ball resting on the floor stays settled for many seconds', () => {
+    const world = new RAPIER.World({ x: 0, y: -9.8, z: 0 });
+    const ball = world.createRigidBody(
+      RAPIER.RigidBodyDesc.dynamic().setTranslation(0, -0.28, 0),
+    );
+    world.createCollider(
+      RAPIER.ColliderDesc.ball(0.22).setRestitution(0.85).setFriction(0.25).setDensity(0.15),
+      ball,
+    );
+    const floor = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -1, 0));
+    world.createCollider(RAPIER.ColliderDesc.cuboid(5, 0.5, 0.5), floor);
+
+    for (let i = 0; i < 600; i++) world.step(); // 10 s of simulation
+    // Measured: y stays at exactly -0.28111 with v = 0 — no drift, no jitter.
+    expect(Math.abs(ball.translation().y - -0.28111)).toBeLessThan(0.001);
+    expect(Math.hypot(ball.linvel().x, ball.linvel().y)).toBeLessThan(0.001);
+  });
 });

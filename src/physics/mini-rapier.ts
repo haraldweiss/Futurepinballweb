@@ -27,6 +27,31 @@ export const ActiveEvents = { COLLISION_EVENTS: 1 } as const;
 const FIXED_DT = 1 / 60;
 const SLOP = 0.001;             // allowed penetration before correction
 const CORRECTION_PERCENT = 0.8; // positional correction strength
+/**
+ * Impact speed below which a contact is solved as perfectly inelastic.
+ *
+ * Gravity adds ~0.163 units/s per step (9.8 / 60), so a body resting on a
+ * surface re-enters contact every single step. With restitution applied to
+ * *any* approaching velocity the body rebounds at ~0.68 × that increment and
+ * never comes to rest — it micro-bounces forever (visible jitter, and a ball
+ * that never settles in a lane/saucer). Every production solver drops
+ * restitution below a threshold (Box2D `b2_velocityThreshold`, Rapier
+ * `restitution_threshold`); 1.0 matches our units — gravity is 9.8 and the
+ * plunger launches at 13–16, so real impacts are far above it.
+ */
+const RESTITUTION_THRESHOLD = 1.0;
+/**
+ * Max positional correction applied to one body per step (Box2D
+ * `b2_maxLinearCorrection`).
+ *
+ * Without a cap, a deep overlap is resolved in ONE step: measured, a ball
+ * resting 0.37 units inside a wall snapped 0.354 units (≈1.6 ball radii) in a
+ * single 1/60 s step. That is a visible teleport — it happens whenever the
+ * ball is repositioned into an overlap (stuck recovery, reset into a rubber,
+ * a tunneling event). Capping spreads the same resolution over a few steps,
+ * so the ball slides out smoothly instead of jumping.
+ */
+const MAX_CORRECTION = 0.2;
 
 function quatToAngle(r: Quat | number): number {
   if (typeof r === 'number') return r; // radians about z (lenient extension)
@@ -320,6 +345,15 @@ export class World {
   private worldColliders: Collider[] = [];
   private nextHandle = 1;
   private prevPairs = new Set<string>();
+  /**
+   * Positional correction already applied to each body during the current
+   * step. A single pair can generate several contact points (and CCD
+   * sub-slices / solver iterations re-solve them), so capping per *contact*
+   * does not bound how far a body moves — measured, a deep overlap still
+   * snapped 0.335 units in one step. The budget is per body per step and is
+   * reset in step().
+   */
+  private correctionUsed = new Map<RigidBody, { x: number; y: number }>();
 
   constructor(gravity: Vec3) { this.gravity = { ...gravity }; }
 
@@ -357,6 +391,7 @@ export class World {
     this.bodies = [];
     this.worldColliders = [];
     this.prevPairs.clear();
+    this.correctionUsed.clear();
   }
 
   /** Velocity of a body at a world contact point (v + ω × r). */
@@ -370,7 +405,6 @@ export class World {
     const body = c.a.body;
     if (body.invMass === 0) return;
 
-    const e = (c.a.restitution + c.b.restitution) / 2;
     const mu = (c.a.friction + c.b.friction) / 2;
 
     // vector from ball center to contact point
@@ -385,6 +419,12 @@ export class World {
     const vn = rvx * c.nx + rvy * c.ny;
 
     if (vn < 0) {
+      // Slow contacts are inelastic so resting bodies can settle (see
+      // RESTITUTION_THRESHOLD). Fast impacts keep the full combined
+      // restitution, so bumper/flipper/wall bounce behaviour is unchanged.
+      const e = (-vn < RESTITUTION_THRESHOLD)
+        ? 0
+        : (c.a.restitution + c.b.restitution) / 2;
       const rnCross = rx * c.ny - ry * c.nx;
       const denom = body.invMass + rnCross * rnCross * body.invInertia;
       const j = (-(1 + e) * vn) / denom;
@@ -406,11 +446,22 @@ export class World {
       body.angV += rtCross * jt * body.invInertia;
     }
 
-    // Positional correction — push the dynamic body out of penetration
-    const corr = Math.max(c.penetration - SLOP, 0) * CORRECTION_PERCENT;
-    if (corr > 0) {
-      body.pos.x += c.nx * corr;
-      body.pos.y += c.ny * corr;
+    // Positional correction — push the dynamic body out of penetration.
+    // Budgeted per body per step (see MAX_CORRECTION / correctionUsed) so a
+    // deep overlap — or several contact points from one pair — slides out over
+    // a few steps instead of teleporting the body in one.
+    const corrMag = Math.max(c.penetration - SLOP, 0) * CORRECTION_PERCENT;
+    if (corrMag > 0) {
+      const used = this.correctionUsed.get(body) ?? { x: 0, y: 0 };
+      const remaining = MAX_CORRECTION - Math.hypot(used.x, used.y);
+      if (remaining > 0) {
+        const applied = Math.min(corrMag, remaining);
+        const dx = c.nx * applied, dy = c.ny * applied;
+        body.pos.x += dx;
+        body.pos.y += dy;
+        used.x += dx; used.y += dy;
+        this.correctionUsed.set(body, used);
+      }
     }
   }
 
@@ -420,6 +471,7 @@ export class World {
 
   step(eventQueue?: EventQueue): void {
     const dt = this.timestep;
+    this.correctionUsed.clear();
 
     // 1. Kinematic bodies: derive velocity from pending next pose
     for (const b of this.bodies) b._advanceKinematic(dt);
