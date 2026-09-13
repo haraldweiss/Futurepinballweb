@@ -1326,3 +1326,21 @@ Nächste Schritte: cfb → devDeps, Browser-Smoke (Pharaoh boot/Ball/Flipper/Bum
 - Verified: tsc clean, 936/936 tests, headless-Chrome-Smoke gegen lokalen Prod-Build
   (Loop läuft, Screenshots animieren sich frame-zu-frame, keine Exceptions),
   live deploy ✓ (`main-B9DI9oZf.js` remote bestätigt, LIVE_HTTP:200)
+
+
+### 2026-09-12 (continued) — Service-Worker 404 fix (publicDir-Falle)
+
+- **Bug**: `pwa-install.ts` registriert `/sw.js`, aber Live lieferte 404 →
+  SW-Registration scheiterte bei jedem Laden (non-blocking, aber kaputt).
+- **Root cause**: `vite.config.ts` hat `root: 'src'` → publicDir ist **`src/public/`**,
+  NICHT das Root-`public/`. Root-`public/` (sw.js, pwa.js, manifest.json,
+  browserconfig.xml) wird von Vite **nie** nach dist kopiert. Root-`public/` wird
+  nur von electron-builder genutzt (`files: public/**/*`) — nicht löschen!
+- **Zweitfehler**: `ASSETS_TO_CACHE` in sw.js listete `/manifest.json` + `/favicon.ico`
+  — beide existieren nicht in dist (dist hat `manifest.webmanifest`, kein favicon).
+  `cache.addAll()` ist all-or-nothing → SW-Install wäre selbst mit ausgeliefertem
+  sw.js fehlgeschlagen.
+- **Fix**: `public/sw.js` → `src/public/sw.js` kopiert (echter Vite-publicDir) +
+  `ASSETS_TO_CACHE` auf `/manifest.webmanifest` korrigiert (beide Kopien synchron).
+- Verified: tsc clean, build ✓ (`dist/sw.js` 4349 bytes), live deploy ✓,
+  `sw.js HTTP:200`, `manifest.webmanifest HTTP:200`
