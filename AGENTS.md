@@ -1304,3 +1304,25 @@ Nächste Schritte: cfb → devDeps, Browser-Smoke (Pharaoh boot/Ball/Flipper/Bum
   ist bereits null-guarded).
 - Commit: `34b20340`, deployed live ✅
 - Verified: tsc clean, 936/936 tests, headless-Smoke (Loop läuft, Frame #1 gerendert), live deploy ✓
+
+
+### 2026-09-12 (continued) — Bugfix Teil 2: visualPolishSystem rAF-Race (prod-only black screen)
+
+- **Bug blieb nach `34b20340`**: Live-Site weiterhin schwarz. Live-CDP-Probe zeigte
+  `Uncaught Error: Animation loop missing required dependencies: visualPolishSystem`.
+- **Root cause (Race, prod-only)**: `visualPolishSystem` wird in main.ts L345 in einem
+  `requestAnimationFrame`-Callback initialisiert — der deps-Object-Literal (L1535)
+  snapshotte den Wert. Dev: langsames Modul-Loading → rAF gewinnt → OK. Prod: alles
+  gebundelt/schnell → Snapshot VOR erstem rAF → `null` → Validation warf → Loop startete
+  nie → schwarzer Screen (HUD ist DOM, lief weiter). Der Teil-1-Smoke lief nur gegen
+  den Dev-Server — deshalb dort grün.
+- **Fix (`d9f13b61`)**:
+  - `visualPolishSystem` → `getVisualPolishSystem()` Late-Bound-Getter (wie `getBamEngine`)
+  - Validation umgebaut: nur CORE-Keys (scene/camera/renderer/clock/state) sind fatal;
+    alles andere ist im Loop-Body null-guarded und wird nur per `console.warn` gemeldet.
+    Ein fehlendes optionales System darf NIE den ganzen Render-Loop killen.
+- **Lehre**: Smoke-Tests immer gegen den PROD-Build (`npx vite preview`), nicht nur
+  Dev-Server — Timing-Races (rAF vs. Modul-Init) reproduzieren nur in prod.
+- Verified: tsc clean, 936/936 tests, headless-Chrome-Smoke gegen lokalen Prod-Build
+  (Loop läuft, Screenshots animieren sich frame-zu-frame, keine Exceptions),
+  live deploy ✓ (`main-B9DI9oZf.js` remote bestätigt, LIVE_HTTP:200)
