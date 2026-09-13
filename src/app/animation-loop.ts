@@ -54,7 +54,15 @@ export interface AnimationLoopDeps {
   // Systems
   advancedLightingSystem: any;
   scoreDisplayManager: any;
-  visualPolishSystem: any;
+  /**
+   * Late-bound getter: main.ts initializes visualPolishSystem inside a
+   * requestAnimationFrame callback, which can fire AFTER the deps object is
+   * built (production builds reach the deps snapshot faster than the first
+   * rAF — a plain value snapshot was null forever in prod and the
+   * construction-time validation threw, killing the whole render loop).
+   * Read fresh each frame instead.
+   */
+  getVisualPolishSystem: () => any;
 
   // DMD
   dmdState: any;
@@ -115,19 +123,31 @@ export interface AnimationLoopDeps {
  *          requestAnimationFrame on every tick (initializeBAMEngine does this).
  */
 export function createAnimationLoop(deps: AnimationLoopDeps): () => void {
-  // Validate required dependencies at construction time.
-  // dofPass is legitimately null (initializeGraphicsPass returns null when DoF
-  // is disabled or the device doesn't support it) and is null-guarded in the
-  // loop body — it must NOT be treated as missing.
-  const OPTIONAL_KEYS: (keyof AnimationLoopDeps)[] = ['dofPass'];
-  const missing: string[] = [];
+  // Validate dependencies at construction time.
+  //
+  // Only the CORE deps (without which no frame can be rendered at all) are
+  // fatal. Everything else is null-guarded inside the loop body: a missing
+  // optional system degrades visuals/gameplay but must NEVER kill the render
+  // loop — a thrown Error here means a permanent black screen (this happened
+  // in production with visualPolishSystem, which is rAF-initialized and was
+  // still null at snapshot time in fast prod builds while dev builds won the
+  // race). Missing non-core deps are reported loudly instead.
+  const CORE_KEYS: (keyof AnimationLoopDeps)[] = ['scene', 'camera', 'renderer', 'clock', 'state'];
+  const missingCore: string[] = [];
+  const missingOptional: string[] = [];
   (Object.keys(deps) as (keyof AnimationLoopDeps)[]).forEach((key) => {
-    if (OPTIONAL_KEYS.includes(key)) return;
-    if (deps[key] === undefined || deps[key] === null) missing.push(key);
+    if (deps[key] === undefined || deps[key] === null) {
+      if (CORE_KEYS.includes(key)) missingCore.push(key);
+      else missingOptional.push(key);
+    }
   });
-  if (missing.length > 0) {
-    devLog(`❌ Animation loop missing deps: ${missing.join(', ')}`);
-    throw new Error(`Animation loop missing required dependencies: ${missing.join(', ')}`);
+  if (missingOptional.length > 0) {
+    devLog(`⚠️ Animation loop: optional deps missing at construction (null-guarded in loop): ${missingOptional.join(', ')}`);
+    console.warn(`[fpw] Animation loop: optional deps missing at construction (null-guarded in loop): ${missingOptional.join(', ')}`);
+  }
+  if (missingCore.length > 0) {
+    devLog(`❌ Animation loop missing core deps: ${missingCore.join(', ')}`);
+    throw new Error(`Animation loop missing required dependencies: ${missingCore.join(', ')}`);
   }
 
   let animateCallCount = 0;
@@ -417,8 +437,9 @@ export function createAnimationLoop(deps: AnimationLoopDeps): () => void {
     }
 
     // ─── Phase 9: Update Visual Polish System ───
-    if (deps.visualPolishSystem) {
-      deps.visualPolishSystem.update();
+    const visualPolishSystem = deps.getVisualPolishSystem();
+    if (visualPolishSystem) {
+      visualPolishSystem.update();
     }
 
     // ─── Phase 4: Update Backglass ───

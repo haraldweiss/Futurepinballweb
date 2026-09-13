@@ -1532,7 +1532,7 @@ if (FPW_ROLE === 'dmd') {
       dofPass: dofPass,
       advancedLightingSystem: advancedLightingSystem,
       scoreDisplayManager: scoreDisplayManager,
-      visualPolishSystem: visualPolishSystem,
+      getVisualPolishSystem: () => visualPolishSystem,
       dmdState: dmdState,
       dmdUpdate: dmdUpdate,
       inlineBackglass: inlineBackglass,
