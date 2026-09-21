@@ -1344,3 +1344,19 @@ Nächste Schritte: cfb → devDeps, Browser-Smoke (Pharaoh boot/Ball/Flipper/Bum
   `ASSETS_TO_CACHE` auf `/manifest.webmanifest` korrigiert (beide Kopien synchron).
 - Verified: tsc clean, build ✓ (`dist/sw.js` 4349 bytes), live deploy ✓,
   `sw.js HTTP:200`, `manifest.webmanifest HTTP:200`
+
+### 2026-09-21 — Dependabot-Sweep: fflate 0.8.2 → 0.8.3 (GHSA-px8p-9vwx-vf98)
+
+- **Anlass**: Repo-weiter Security-/PR-Sweep. Dependabot zeigte 0 offene Alerts,
+  aber `package-lock.json` führte **fflate 0.8.2** (>= 0.8.0, < 0.8.3 verwundbar:
+  `unzipSync` Endlosschleife bei malformed ZIP64-Archiven, GHSA-px8p-9vwx-vf98, medium).
+- **Warum kein Alert**: fflate kommt nur als **dev-only**-Transitive über
+  `@vitest/ui` rein → GitHub hat den Alert automatisch als Dev-Dependency
+  dismissiert (`auto_dismissed`, 1 Alert repo-weit). Zur Konsistenz mit dem
+  vorherigen Sweep trotzdem gepatcht.
+- **Fix**: `overrides: { "fflate": ">=0.8.3" }` in `package.json` + Lockfile-Refresh.
+- **Verified**:
+  - `npm audit` → **found 0 vulnerabilities**
+  - `npm run test:run` → **46 Test-Files / 947 Tests passed** (vitest 4.1.11)
+  - `npm run build` → vite build OK (155ms)
+- **Git**: `Fix:` `a3db8ff8` auf `fix/fflate-dev-dep-20260921` → `Merge` --no-ff → `main` (`951cf299`) → push.
