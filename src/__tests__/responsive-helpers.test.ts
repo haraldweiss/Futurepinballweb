@@ -40,8 +40,8 @@ describe('calcSafeFlipperLength', () => {
   it('returns shorter lengths for closer flippers', () => {
     expect(calcSafeFlipperLength(0.95)).toBeLessThan(calcSafeFlipperLength(1.3));
   });
-  it('clamps between 1.2 and 2.1', () => {
-    expect(calcSafeFlipperLength(0.5)).toBeGreaterThanOrEqual(1.2);
+  it('keeps lengths positive and caps their maximum without forcing the drain shut', () => {
+    expect(calcSafeFlipperLength(0.5)).toBeGreaterThan(0);
     expect(calcSafeFlipperLength(2.0)).toBeLessThanOrEqual(2.1);
   });
 });

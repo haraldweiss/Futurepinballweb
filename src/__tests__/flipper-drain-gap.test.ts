@@ -21,6 +21,10 @@ describe('resting flippers leave a real drain gap', () => {
     await setupPhysicsWorker();
     const config = bridge.initializePhysicsWorld.mock.calls[0][0];
     expect(config.flipperLength).toBeCloseTo(calcSafeFlipperLength(getResponsiveFlipperX(ratio)));
+    const restAngle = 28 * Math.PI / 180;
+    const innerEdge = config.flipperLength * Math.cos(restAngle) + 0.13 * Math.sin(restAngle);
+    const opening = 2 * (config.rightFlipperPos.x - innerEdge);
+    expect(opening).toBeGreaterThanOrEqual(0.52 - 1e-6); // Ball diameter plus clearance.
     // Exercise the actual worker geometry and engine, without surrounding
     // table walls, visual effects or a mocked collision implementation.
     initializePhysics({ ...config, ballInitialPos: { x: 0, y: -3.7 }, tableBodies: [] });
