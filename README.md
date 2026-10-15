@@ -2,7 +2,7 @@
 
 **Browser pinball simulator with 3D rendering, experimental Future Pinball table import, and desktop/cabinet support.**
 
-![Version](https://img.shields.io/badge/Version-0.24.0-blue)
+![Version](https://img.shields.io/badge/Version-0.24.1-blue)
 ![License](https://img.shields.io/badge/License-AGPLv3-green)
 ![Build Status](https://github.com/haraldweiss/Futurepinballweb/actions/workflows/webpack.yml/badge.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)

@@ -18,9 +18,12 @@ let _installPrompt: BeforeInstallPromptEvent | null = null;
 
 /** Initialize PWA install prompt handling. Call once on app startup. */
 export function initPWAInstall(): void {
-  if ('serviceWorker' in navigator && !import.meta.env.DEV) {
+  const isWebOrigin = location.protocol === 'https:' || location.protocol === 'http:';
+  if (isWebOrigin && 'serviceWorker' in navigator && !import.meta.env.DEV) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js');
+      navigator.serviceWorker.register('/sw.js').catch(error => {
+        console.warn('[PWA] Service worker registration failed', error);
+      });
     });
   }
 
