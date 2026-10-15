@@ -20,6 +20,17 @@ name: Build & Release
 # mismatch. See README "Releases" for details.
 
 on:
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: Existing version tag to rebuild
+        required: true
+        type: string
+      platform:
+        description: Platforms to rebuild
+        type: choice
+        default: all
+        options: [all, macos]
   push:
     tags:
       - 'v*'
@@ -33,10 +44,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: ${{ fromJSON(inputs.platform == 'macos' && '["macos-latest"]' || '["ubuntu-latest", "windows-latest", "macos-latest"]') }}
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_ref || github.ref }}
+
+      - name: Verify release tag
+        shell: bash
+        env:
+          RELEASE_REF: ${{ inputs.release_ref || github.ref_name }}
+        run: |
+          [[ "$RELEASE_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$RELEASE_REF^{commit}")"
+          test "$RELEASE_REF" = "v$(node -p 'require("./package.json").version')"
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -69,6 +91,22 @@ jobs:
         # uniformly on Linux/macOS/Windows runners.
         run: |
           if [ -n "$CSC_LINK" ]; then
+            # Builder 26.15.3 passes the certificate password when unlocking
+            # its randomly passworded keychain. Import explicitly to preserve
+            # signing/notarization without modifying the installed dependency.
+            export CSC_KEYCHAIN="$RUNNER_TEMP/fpw-signing.keychain-db"
+            task_certificate="$RUNNER_TEMP/fpw-signing.p12"
+            task_keychain_password="$(openssl rand -hex 32)"
+            echo "::add-mask::$task_keychain_password"
+            trap 'rm -f "$task_certificate"; security delete-keychain "$CSC_KEYCHAIN" || true' EXIT
+            printf '%s' "$CSC_LINK" | base64 --decode > "$task_certificate"
+            chmod 600 "$task_certificate"
+            security create-keychain -p "$task_keychain_password" "$CSC_KEYCHAIN"
+            security set-keychain-settings -lut 21600 "$CSC_KEYCHAIN"
+            security unlock-keychain -p "$task_keychain_password" "$CSC_KEYCHAIN"
+            security import "$task_certificate" -k "$CSC_KEYCHAIN" -P "$CSC_KEY_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productbuild
+            security set-key-partition-list -S apple-tool:,apple: -s -k "$task_keychain_password" "$CSC_KEYCHAIN" >/dev/null
+            unset CSC_LINK CSC_KEY_PASSWORD
             if [ -n "$APPLE_ID" ]; then
               echo "→ Code-signed + notarized build (CSC_LINK + APPLE_ID set)"
               npx electron-builder --publish always
