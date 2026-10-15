@@ -19,41 +19,41 @@ import { dmdState } from '../dmd';
 import { devLog } from '../utils/dev-log';
 import { getInputOptimizer } from '../input-optimizer';
 
+// Keep one numeric animation per element so an old score cannot overwrite a reset.
+const numberAnimations = new WeakMap<HTMLElement, number>();
+const scoreTargets = new WeakMap<HTMLElement, number>();
+const displayedNumber = (element: HTMLElement): number =>
+  Number.parseInt((element.textContent || '0').replace(/[^0-9-]/g, ''), 10) || 0;
+
 // Animation utilities for smooth HUD updates
 const animationUtils = {
-  // Smooth numeric counter animation
-  animateNumber: (element: HTMLElement, newValue: number, oldValue?: number) => {
-    if (oldValue === undefined) oldValue = parseInt(element.textContent || '0', 10);
+  animateNumber: (element: HTMLElement, newValue: number) => {
+    const pending = numberAnimations.get(element);
+    if (pending !== undefined) cancelAnimationFrame(pending);
+    numberAnimations.delete(element);
+    const oldValue = displayedNumber(element);
     if (oldValue === newValue) return;
-    
-    const duration = 400; // 0.4s smooth transition
-    const steps = 20;
-    const increment = (newValue - oldValue) / steps;
-    const stepDuration = duration / steps;
-    
-    let currentStep = 0;
+
+    const duration = 400;
     const startTime = performance.now();
-    
     const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const currentValue = Math.round(oldValue + (newValue - oldValue) * progress);
-      element.textContent = currentValue.toLocaleString();
-      
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+      element.textContent = Math.round(oldValue + (newValue - oldValue) * progress).toLocaleString();
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        numberAnimations.set(element, requestAnimationFrame(animate));
+      } else {
+        numberAnimations.delete(element);
       }
     };
-    
-    requestAnimationFrame(animate);
+    numberAnimations.set(element, requestAnimationFrame(animate));
   },
-  
+
   // Score milestone effect
   triggerScoreMilestone: (score: number, oldScore?: number) => {
     if (oldScore === undefined) oldScore = score - 1;
     const milestone = Math.floor(score / 1000) * 1000;
     
-    if (score >= milestone && score > oldScore) {
+    if (milestone > oldScore && score >= milestone) {
       // Flash effect for milestone scores
       const scoreElement = document.getElementById('score');
       if (scoreElement) {
@@ -126,27 +126,26 @@ function createMilestoneParticles(rect: DOMRect): void {
  * Update the HUD display elements with smooth animations and visual effects.
  */
 export function updateHUD(): void {
-  const oldScore = state.score;
-  const oldBallNum = state.ballNum;
-  const oldMultiplier = state.multiplier;
   
   // Smooth score update
   const scoreElement = document.getElementById('score') as HTMLElement;
   if (scoreElement) {
-    animationUtils.animateNumber(scoreElement, state.score, oldScore);
+    const oldScore = scoreTargets.get(scoreElement) ?? displayedNumber(scoreElement);
+    scoreTargets.set(scoreElement, state.score);
+    animationUtils.animateNumber(scoreElement, state.score);
     animationUtils.triggerScoreMilestone(state.score, oldScore);
   }
   
   // Smooth ball number update
   const ballnumElement = document.getElementById('ballnum') as HTMLElement;
   if (ballnumElement) {
-    animationUtils.animateNumber(ballnumElement, state.ballNum, oldBallNum);
+    animationUtils.animateNumber(ballnumElement, state.ballNum);
   }
   
   // Smooth multiplier update
   const multiElement = document.getElementById('multi') as HTMLElement;
   if (multiElement) {
-    animationUtils.animateNumber(multiElement, state.multiplier, oldMultiplier);
+    animationUtils.animateNumber(multiElement, state.multiplier);
   }
   
   // Update sequence display
