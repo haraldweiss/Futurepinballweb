@@ -286,7 +286,7 @@ export async function parseFPTFile(
         ) as ArrayBuffer;
       }
       await setCachedTable(cacheKey, {
-        meta: { tableName, fileSize: file.size, version: 1, config, coords: workerResult.coords, elements: workerResult.elements, script: workerResult.script, playfieldTextureName: texEntries[0]?.[0] ?? null },
+        meta: { tableName, fileSize: file.size, config, coords: workerResult.coords, elements: workerResult.elements, script: workerResult.script, playfieldTextureName: texEntries[0]?.[0] ?? null },
         textures: cacheTextures, sounds: cacheSounds, musicTrack: musicTrackBytes, models: [], animations: [], scriptOriginal: workerResult.script,
       });
     } catch { /* cache save best-effort */ }
@@ -600,7 +600,6 @@ export async function parseFPTFile(
           meta: {
             tableName,
             fileSize: file.size,
-            version: 1,
             config,
             coords,
             elements,
