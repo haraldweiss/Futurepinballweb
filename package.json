@@ -1,19 +1,19 @@
 {
   "name": "futurepinball-web",
   "version": "0.24.0",
-  "description": "Modern cross-platform browser-based 3D pinball game with VPX-competitive graphics and physics",
+  "description": "Browser pinball simulator with 3D rendering, experimental Future Pinball import and cabinet support",
   "author": {
     "name": "Future Pinball Contributors",
     "email": "noreply@futurepinball.invalid"
   },
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "type": "module",
   "main": "electron-main.cjs",
   "homepage": "./",
   "scripts": {
     "dev": "vite src",
     "build": "vite build",
-    "preview": "vite preview --outDir dist",
+    "preview": "vite preview",
     "serve": "node server.js",
     "start": "node start-game.js",
     "start:1": "node start-game.js 1",
@@ -36,9 +36,12 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "lint:security": "eslint src --config .eslintrc.security.json --fix",
-    "audit:dependencies": "npm audit --audit-level=moderate",
-    "security:check": "npm run lint:security && npm run test:security && npm run audit:dependencies"
+    "lint:security": "eslint src --config eslint.security.config.mjs",
+    "audit:dependencies": "npm audit --omit=dev --audit-level=moderate && npm audit --audit-level=high",
+    "security:check": "npm run lint:security && npm run test:security && npm run audit:dependencies",
+    "typecheck": "tsc --noEmit",
+    "test:lint-security": "node --test scripts/security-lint.test.mjs",
+    "test:e2e": "npm run build && playwright test"
   },
   "overrides": {
     "uuid": "^11.1.1",
@@ -60,6 +63,7 @@
     "three": "0.162.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",
     "@vitest/ui": "^4.1.11",
@@ -68,7 +72,7 @@
     "electron-builder": "^26.15.3",
     "eslint": "^10.8.0",
     "eslint-plugin-no-unsanitized": "^4.1.5",
-    "eslint-plugin-security": "^2.1.0",
+    "eslint-plugin-security": "^4.2.0",
     "fake-indexeddb": "^6.2.5",
     "happy-dom": "^20.8.9",
     "rollup": "^4.62.3",
@@ -149,5 +153,8 @@
     "deb": {
       "artifactName": "${productName}-${version}.${ext}"
     }
+  },
+  "engines": {
+    "node": "^22.13.0 || >=24.0.0"
   }
 }
