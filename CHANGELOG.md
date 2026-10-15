@@ -9,7 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-10-15
+
+### Fixed
+- Skip web service-worker registration in the file-based desktop app and handle registration failures on the website.
+- Restore signed, notarized macOS releases with an explicitly managed signing keychain.
+
+### Validation
+- Desktop registration regression tests; production browser checks and platform builds run in CI.
+
+## [0.24.0] - 2026-10-15
+
+### Fixed
+- Recover complete FPT container streams, imported-table configuration and cached imports.
+- Preserve credits and correct flipper drainage, launch ball saves and score/ball displays.
+
 ### Security
+- Patch high-severity transitive dependencies and enforce security/build/browser checks in CI.
 - `@xmldom/xmldom` 0.8.13 → 0.8.15 — Dependabot PR #17 (dev dependency)
   - GHSA-965w-775f-mr7g: DoS via quadratic memory consumption in namespace map
   - GHSA-8344-3jmq-59r6: DoS via quadratic attribute de-duplication

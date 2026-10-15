@@ -1,6 +1,6 @@
 {
   "name": "futurepinball-web",
-  "version": "0.24.0",
+  "version": "0.24.1",
   "description": "Browser pinball simulator with 3D rendering, experimental Future Pinball import and cabinet support",
   "author": {
     "name": "Future Pinball Contributors",
