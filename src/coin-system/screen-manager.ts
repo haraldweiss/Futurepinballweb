@@ -7,8 +7,8 @@ export function showCoinScreen(): void {
   if (coinSystemState.gameStarted) return;
 
   coinSystemState.coinScreenVisible = true;
-  coinSystemState.coinsInserted = 0;
-  coinSystemState.currentPlayers = 0;
+  // Displaying the screen must not erase coins inserted during async table
+  // loading. resetCoinSystem() owns clearing credits for a new table/game.
   coinSystemState.lastCoinTime = Date.now();
 
   if (coinSystemState.insertCoinTimeout) {

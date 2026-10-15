@@ -10,7 +10,7 @@
 import { physics, currentTableConfig } from '../game';
 import { initializePhysicsWorker } from '../physics-worker-bridge';
 import { getDefaultPhysicsConfig, validatePhysicsConfig, logPhysicsConfig } from '../physics-config-enhancer';
-import { getResponsiveFlipperX } from './responsive-helpers';
+import { getResponsiveFlipperX, calcSafeFlipperLength } from './responsive-helpers';
 import { handlePhysicsFrame } from './physics-frame-handler';
 import { setDevFlag } from '../window-api';
 import { setLoadPhase, setWorkerDetail } from './loader-ui';
@@ -83,7 +83,7 @@ export async function setupPhysicsWorker(): Promise<void> {
         ballFriction: physicsConfig.ball.friction,
         leftFlipperPos: { x: -getResponsiveFlipperX(innerWidth / innerHeight), y: -4.6, z: 0 },
         rightFlipperPos: { x: getResponsiveFlipperX(innerWidth / innerHeight), y: -4.6, z: 0 },
-        flipperLength: physicsConfig.flipper.length,
+        flipperLength: calcSafeFlipperLength(getResponsiveFlipperX(innerWidth / innerHeight)),
         flipperRestitution: physicsConfig.flipper.restitution,
         flipperFriction: physicsConfig.flipper.friction,
         tableBodies,
