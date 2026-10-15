@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import * as CFB from './cfb-io';
 import type { CFB$Container } from './cfb-io';
+import type { TableConfig } from '../types';
 import { fptResources, fptRawBytes, globalAssetCatalog } from '../game';
 import { runFPScript } from '../script-engine';
 import { extractImageFromBytes, extractSoundFromBytes } from './media';
@@ -29,7 +30,7 @@ import { generateCacheKeyFromBuffer, getCachedTable, setCachedTable } from '../s
 
 export async function parseFPTFile(
   file: File,
-  buildTableFn?: (cfg: any) => void,
+  buildTableFn?: (cfg: TableConfig) => void,
   closeLoaderFn?: () => void,
   switchTabFn?: (t: string) => void,
   callbacks?: ResourceLoadingCallbacks,
@@ -234,7 +235,9 @@ export async function parseFPTFile(
       const color = bumperColors[(i + 3) % bumperColors.length];
       return { ...ramp, color, light: getLightConfigFromColor(color) };
     });
-    const tableName = workerResult.tableName || file.name.replace(/\.(fpt|fpl)$/i, '');
+    const tableName = workerResult.tableName && workerResult.tableName !== 'Unknown Table'
+      ? workerResult.tableName
+      : file.name.replace(/\.(fpt|fpl)$/i, '');
     const physicsMap = workerResult.coordBytes
       ? extractFPTPhysics(workerResult.coordBytes, tableCoords)
       : new Map<string, { restitution: number; friction: number; maxVelocity?: number; gravityScale?: number }>();
@@ -254,6 +257,7 @@ export async function parseFPTFile(
     const config = {
       name: tableName, bumpers, targets, ramps,
       tableColor: 0x1a1a2e,
+      accentColor: 0xff8800,
       lights: [{ color: 0xff8800, intensity: 0.6, dist: 8, x: 0, y: 3, z: 3 }],
       elementPhysics: physicsMap.size > 0 ? elementPhysics : undefined,
       tableElements: elemMeta, confidence: workerResult.confidence,
@@ -282,7 +286,7 @@ export async function parseFPTFile(
         ) as ArrayBuffer;
       }
       await setCachedTable(cacheKey, {
-        meta: { tableName, fileSize: file.size, version: 1, config, coords: workerResult.coords, elements: workerResult.elements, script: workerResult.script, playfieldTextureName: texEntries[0]?.[0] ?? null },
+        meta: { tableName, fileSize: file.size, config, coords: workerResult.coords, elements: workerResult.elements, script: workerResult.script, playfieldTextureName: texEntries[0]?.[0] ?? null },
         textures: cacheTextures, sounds: cacheSounds, musicTrack: musicTrackBytes, models: [], animations: [], scriptOriginal: workerResult.script,
       });
     } catch { /* cache save best-effort */ }
@@ -596,7 +600,6 @@ export async function parseFPTFile(
           meta: {
             tableName,
             fileSize: file.size,
-            version: 1,
             config,
             coords,
             elements,

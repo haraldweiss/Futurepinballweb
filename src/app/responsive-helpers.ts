@@ -51,10 +51,16 @@ export function getOptimalPixelRatio(): number {
 }
 
 export function calcSafeFlipperLength(flipperX: number): number {
-  const cos35 = Math.cos(35 * Math.PI / 180);
+  // Keep an actual ball-width opening at the -/+28 degree resting angles.
+  // Include the collider's half-thickness; a hard 1.2 minimum previously
+  // closed the gap on narrow layouts even after matching worker geometry.
+  const restAngle = 28 * Math.PI / 180;
   const ballRadius = 0.22;
-  const maxLen = (flipperX - ballRadius) / cos35;
-  return Math.min(2.1, Math.max(1.2, maxLen));
+  const halfThickness = 0.13;
+  const clearance = 0.04;
+  const maxLen = (flipperX - ballRadius - halfThickness * Math.sin(restAngle) - clearance)
+    / Math.cos(restAngle);
+  return Math.min(2.1, Math.max(0.1, maxLen));
 }
 
 export function getAutoQualityPreset(): string {

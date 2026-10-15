@@ -22,3 +22,7 @@ scripts/capture-console.cjs
 scripts/devlog-convert.mjs
 =
 scripts/opencode-models-report.json
+
+# Browser verification artifacts and private real-table corpus
+playwright-report/
+test-results/

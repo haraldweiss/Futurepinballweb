@@ -1,16 +1,13 @@
 # 🎮 Future Pinball Web
 
-**Modern cross-platform 3D pinball game in your browser — with VPX-competitive graphics, advanced physics, multi-screen arcade cabinet support, and comprehensive video editing**
+**Browser pinball simulator with 3D rendering, experimental Future Pinball table import, and desktop/cabinet support.**
 
-![Version](https://img.shields.io/badge/Version-0.25.0-blue)
+![Version](https://img.shields.io/badge/Version-0.24.0-blue)
 ![License](https://img.shields.io/badge/License-AGPLv3-green)
-![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)
+![Build Status](https://github.com/haraldweiss/Futurepinballweb/actions/workflows/webpack.yml/badge.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)
-![Modules](https://img.shields.io/badge/Modules-295-orange)
-![Code](https://img.shields.io/badge/Code-42K%20Lines-purple)
-![Tests](https://img.shields.io/badge/Tests-859%20passing-success)
-![Vulnerabilities](https://img.shields.io/badge/Vulnerabilities-0-success)
-![TypeScript](https://img.shields.io/badge/TS_Errors-0-success)
+
+See [verification and compatibility](docs/guides/VERIFICATION.md) for required checks, the script trust boundary, and the real-table milestone.
 
 ---
 
@@ -87,10 +84,10 @@ Click "📥 Install App" to add to your home screen, then play offline!
   - ACES tone mapping
 
 - **Advanced Physics**
-  - Rapier2D 2D physics engine
+  - Dependency-free mini-rapier engine with 2D simulation and a 3D facade
   - Continuous Collision Detection (CCD)
-  - Adaptive substeps (3-5 based on FPS)
-  - ~95% Newton-compatible
+  - Fixed simulation pacing independent of display refresh rate
+  - Real-table and Newton compatibility remain under validation
 
 ### Game Mechanics
 - **Scoring System**
@@ -261,7 +258,7 @@ All documentation is organised in `docs/`:
 | Component | Technology | Version |
 |-----------|-----------|---------|
 | Rendering | Three.js | 0.162 |
-| Physics | Rapier2D | 0.12 |
+| Physics | mini-rapier (2D simulation) | internal |
 | Build Tool | Vite | 8.1 |
 | Language | TypeScript | 5.4 |
 | Desktop | Electron | ^41.0.0 |

@@ -16,7 +16,9 @@ import { getLibraryCache } from '../library-cache';
 
 const DB_NAME = 'fpt-table-cache';
 const STORE_NAME = 'parsed-tables';
-const CACHE_VERSION = 1;
+const DB_VERSION = 1;
+// Content parsed before the FAT/miniFAT and required-config fixes is stale.
+const CACHE_VERSION = 2;
 const MAX_CACHE_BYTES = 100 * 1024 * 1024; // 100 MB
 
 interface CacheMeta {
@@ -74,7 +76,7 @@ export interface CachedFptEntry {
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, CACHE_VERSION);
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
@@ -164,7 +166,7 @@ export async function getCachedTable(key: string): Promise<CachedFptEntry | null
  */
 export async function setCachedTable(
   key: string,
-  data: Omit<CachedFptEntry, 'meta'> & { meta: Omit<CacheMeta, 'key' | 'createdAt' | 'lastAccessed' | 'storageSize'> },
+  data: Omit<CachedFptEntry, 'meta'> & { meta: Omit<CacheMeta, 'key' | 'createdAt' | 'lastAccessed' | 'storageSize' | 'version'> },
 ): Promise<void> {
   try {
     const db = await openDB();
@@ -179,7 +181,8 @@ export async function setCachedTable(
 
     const entry: CachedFptEntry = {
       meta: {
-        ...data.meta as any,
+        ...data.meta,
+        version: CACHE_VERSION,
         key,
         createdAt: now,
         lastAccessed: now,

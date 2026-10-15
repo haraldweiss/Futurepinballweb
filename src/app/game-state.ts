@@ -42,6 +42,7 @@ export function resetGameState(): void {
   state.plungerCharging = false;
   state.ballSavesRemaining = 1;
   state.ballSaveMode = 'none';
+  state.ballSaveTimer = 0;
   state.lastRank = 0;
 
   // Arcade Mode: Initialize player/coin system

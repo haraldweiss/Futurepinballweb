@@ -1360,3 +1360,16 @@ Nächste Schritte: cfb → devDeps, Browser-Smoke (Pharaoh boot/Ball/Flipper/Bum
   - `npm run test:run` → **46 Test-Files / 947 Tests passed** (vitest 4.1.11)
   - `npm run build` → vite build OK (155ms)
 - **Git**: `Fix:` `a3db8ff8` auf `fix/fflate-dev-dep-20260921` → `Merge` --no-ff → `main` (`951cf299`) → push.
+
+### 2026-10-15 — Real-FPT baseline and enforceable verification
+
+- CI now uses locked installs and blocks TypeScript/security failures; ESLint 10 flat config and compatible security plugin execute successfully. Five lint probes verify blocking rules. Existing warning-level debt remains visible.
+- Patched source-map-js, http-cache-semantics and fast-uri in the lockfile. Production audit clean; one moderate sprintf-js build-chain advisory remains (eight propagated entries), documented with explicit audit thresholds in `docs/guides/VERIFICATION.md`.
+- Real mounted FPT corpus exposed two CFB reader defects: FAT logical-page indexing used physical sector IDs, and miniFAT reads omitted the header offset. Generated regression fixtures reproduce both; all stream bytes now match the independent cfb oracle for NewTable, LightSequencerDemo and Ramp-VUK-Demo (563/505/463 streams).
+- Worker-produced TableConfig was missing accentColor, causing recurring inline-backglass exceptions. Typed the build callback and supplied the required value; unknown worker titles now fall back to the filename.
+- Quick-menu import/browser/info actions close the overlay. Showing the delayed coin screen preserves coins inserted during table loading; explicit reset still clears credits.
+- Production browser and optional private-corpus checks live in `tests/e2e/`. `FPT_TEST_FILES` is a JSON array of trusted absolute paths, not committed copyrighted assets. Browser/stream checks are not proof of script fidelity or complete real-table gameplay.
+- Do not revive the old README claims of Rapier2D, adaptive FPS substeps or a measured Newton compatibility percentage. Current simulation is 2D mini-rapier; true 3D/multilevel scope and stronger script isolation remain future design work.
+- Additional lifecycle regressions: responsive drain clearance now accounts for resting collider thickness; launch save grace arms once per ball; HUD counters now update/cancel stale animations and track logical milestone targets. Parsed content cache version 2 rejects old incomplete/broken results without changing DB schema version 1.
+- Local verification with all three private references: **970/970 tests, 54 files**, tsc clean. Full production browser game-over checks are part of `tests/e2e/gameplay.spec.ts`; absence of private corpus paths explicitly skips those cases. Live resize, cabinet hardware feel and native table-rule fidelity still require separate validation.
+- Final local browser verification: **4/4 production checks passed**, including complete three-ball demo and imported-reference games, positive scoring and persisted game-over highscores. This validates the reconstructed game lifecycle, not original FPT fidelity or physical cabinet feel.

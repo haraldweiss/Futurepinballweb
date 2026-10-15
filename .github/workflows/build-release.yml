@@ -45,10 +45,13 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run tests
-        run: npm test
+        run: npm run test:run
+
+      - name: Type check
+        run: npm run typecheck
 
       - name: Build web app
         run: npm run build

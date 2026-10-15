@@ -120,6 +120,7 @@ function initializeQuickMenuHandlers(): void {
   
   if (importBtn) {
     importBtn.addEventListener('click', () => {
+      closeQuickMenu();
       if (typeof window.switchTab === 'function') {
         window.switchTab('import');
       }
@@ -130,6 +131,7 @@ function initializeQuickMenuHandlers(): void {
   
   if (browserBtn) {
     browserBtn.addEventListener('click', () => {
+      closeQuickMenu();
       if (typeof window.switchTab === 'function') {
         window.switchTab('browser');
       }
@@ -140,6 +142,7 @@ function initializeQuickMenuHandlers(): void {
   
   if (infoBtn) {
     infoBtn.addEventListener('click', () => {
+      closeQuickMenu();
       if (typeof window.switchTab === 'function') {
         window.switchTab('info');
       }
