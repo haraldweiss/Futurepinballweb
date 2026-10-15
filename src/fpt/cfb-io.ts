@@ -91,9 +91,11 @@ export function read(input: Uint8Array, _opts?: { type?: string }): CFBContainer
 
   // ---- FAT map: sector id -> next sector id ----
   const fat = new Map<number, number>();
-  for (const fs of fatSectors) {
+  for (const [fatIndex, fs] of fatSectors.entries()) {
     const base = secOff(fs);
-    const baseSec = fs * perSec;
+    // FAT entries address sectors by their position in the DIFAT list,
+    // not by the physical location of the FAT sector itself.
+    const baseSec = fatIndex * perSec;
     for (let i = 0; i < perSec; i++) {
       fat.set(baseSec + i, v.getUint32(base + i * 4, true));
     }
@@ -174,7 +176,7 @@ export function read(input: Uint8Array, _opts?: { type?: string }): CFBContainer
     const mfSects = chainSectors(miniFATStart);
     let mOff = 0;
     for (const s of mfSects) {
-      const base = s * SZ;
+      const base = secOff(s);
       for (let i = 0; i < perSec; i++) {
         miniFat.set(mOff, v.getUint32(base + i * 4, true));
         mOff++;
