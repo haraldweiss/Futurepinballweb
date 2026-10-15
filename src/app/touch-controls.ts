@@ -12,6 +12,7 @@
  * - Touch-friendly sizing and positioning
  * Extracted from main.ts IIFE (Phase 8).
  */
+import { armLaunchBallSave } from './ball-save';
 import { keys, state, physics } from '../game';
 import { getAudioCtx, playSound, startBGMusic } from '../audio-system';
 import { devLog } from '../utils/dev-log';
@@ -269,7 +270,7 @@ export function initTouchControls(): void {
         
         state.inLane = false;
         state.plungerCharge = chargeLevel;
-        state.ballSaveTimer = 3.5;
+        armLaunchBallSave(state);
 
         console.log(`🎮 Plunger launched with power: ${chargeLevel.toFixed(2)} (${(chargeLevel * 100).toFixed(0)}%)`);
 

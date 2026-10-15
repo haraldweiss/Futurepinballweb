@@ -39,6 +39,7 @@ import { createLibrarySelector } from './app/library-selector';
 import { handlePhysicsFrame, triggerVideoEvent, onMultiballStartVideo, onTiltVideo } from './app/physics-frame-handler';
 import { applyPhysicsGravityForRotation } from './app/game-helpers';
 import { resetBall, resetGameState } from './app/game-state';
+import { armLaunchBallSave } from './app/ball-save';
 import { initPWAInstall, installPWA } from './app/pwa-install';
 import { updateHUD } from './app/hud';
 import { setupBackglassForTable } from './app/backglass-setup';
@@ -1135,7 +1136,7 @@ document.addEventListener('keyup', e => {
     }
 
     state.inLane = false;
-    state.plungerCharge = 0; state.ballSaveTimer = 3.5;
+    state.plungerCharge = 0; armLaunchBallSave(state);
 
     // Phase 15: Launch ball via physics worker
     // The plunger lane's left wall (in main.ts initPhysics + worker tableBodies)
