@@ -145,6 +145,12 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 
 ## 7. Handoff zone (free-form, append-only)
 
+### 2026-10-19 — Remove unpatched development dependency
+
+- Override `global-agent` to upstream ^4.1.3: removes `roarr`/`sprintf-js` from Electron download tooling and resolves Dependabot alert #53 (GHSA-hp3w-g68c-fv3c). No advisory dismissal or vendored patch.
+- Verified clean install, TypeScript, 972 passing tests (one existing skip), production build, zero npm audit vulnerabilities, and a real local HTTP proxy request through `global-agent.bootstrap()`.
+- Keep the override until the upstream `@electron/get` requirement removes the affected chain. No desktop release or cabinet deployment needed for this development-only change.
+
 ### 2026-05-30 — INIT_* flags consolidated
 - Created `DebugWindow` interface in `src/window-api.ts` with all 22 typed INIT_* flags
 - Added `setDevFlag()` helper that gates behind `import.meta.env.DEV`

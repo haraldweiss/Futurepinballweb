@@ -490,6 +490,11 @@ See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for detailed troubleshooting.
 
 ## 🔒 Security
 
+The development dependency override for `global-agent` uses upstream 4.1.3 or later
+to remove the unpatched `sprintf-js` dependency (GHSA-hp3w-g68c-fv3c) from
+Electron's download tooling. Keep this override until `@electron/get` no longer
+requires the vulnerable proxy dependency chain.
+
 User-supplied `.fpt` table files contain VBScript that the engine
 transpiles to JS and evaluates. To keep that surface safe:
 
