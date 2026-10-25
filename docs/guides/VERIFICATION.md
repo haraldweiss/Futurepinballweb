@@ -21,11 +21,16 @@ Security lint is a focused security configuration, not a general TypeScript styl
 
 The audit policy blocks moderate-or-higher production advisories and high-or-higher advisories across the entire dependency tree. Audit endpoint/network errors fail the command too. Moderate build-time advisories are still printed; this is a deliberate threshold, not an assertion of zero vulnerabilities.
 
-### Remaining build-time advisory (15 October 2026)
+### Dependency security refresh — 25 October 2026
 
-The Electron builder 26.15.3 chain `@electron/get@3.1.0 → global-agent@3.0.0 → roarr@2.15.4 → sprintf-js@1.1.3` carries [GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c), a moderate denial of service involving precision specifiers. Eight affected package entries propagate this one advisory. The production-only audit is clean. The registry currently offers no patched sprintf-js release; npm suggests an Electron builder downgrade. Keep build inputs trusted and revisit on the next builder update; do not use `npm audit fix --force` to hide the finding. Electron builder and electron-updater versions have intentionally not changed.
+The locked development tree had six affected package entries (two high and four moderate). The patched tree has zero findings in both full and production-only npm audits. The audit thresholds above remain unchanged.
 
-Compatible lockfile updates patched source-map-js to 1.2.2, http-cache-semantics to 4.3.0 and fast-uri to 3.1.8, removing the two high findings and the additional URI advisory.
+- Updated happy-dom from 20.8.9 to 21.0.4 for the [import-alias host-code-execution fix](https://github.com/advisories/GHSA-834v-8h66-3h79). This major update requires Node 20+, within this project's Node 22/24 support, and is checked by the full unit suite.
+- Updated Vitest, its UI, and the matching internal packages from 4.1.11 to 4.1.12 for the [manual/redirect mock hardening release](https://github.com/vitest-dev/vitest/releases/tag/v4.1.12).
+- Updated fast-uri from 3.1.8 to 3.1.9 within the existing ajv dependency range for the [URI parsing and normalization fixes](https://github.com/fastify/fast-uri/releases/tag/v3.1.9).
+- Updated undici within both existing major-version ranges: node-gyp uses [6.29.1](https://github.com/nodejs/undici/releases/tag/v6.29.1), and @electron/get uses [7.30.1](https://github.com/nodejs/undici/releases/tag/v7.30.1). No major-version override is needed.
+
+The earlier sprintf-js advisory was resolved on 19 October by the existing global-agent override to ^4.1.3, removing roarr/sprintf-js from the Electron download-tooling chain. Electron remains at 43.8.3; electron-builder and electron-updater are unchanged by this refresh. Unrelated transitive versions are preserved. No advisory suppressions were added.
 
 ## Private real-table corpus
 
