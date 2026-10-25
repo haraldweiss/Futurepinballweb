@@ -99,7 +99,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: >-
           npx electron-builder --dir --publish never --$(node -p process.arch)
-          --config.mac.identity=null --config.mac.notarize=false --config.publish=null
+          --config build/electron-smoke.cjs
       - name: Check packaged runtime, preload, gameplay and child IPC
         shell: bash
         run: |

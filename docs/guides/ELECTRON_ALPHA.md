@@ -52,7 +52,7 @@ To reproduce on a native 64-bit host:
 ```sh
 npm ci
 npm run build
-npx electron-builder --dir --publish never --config.publish=null --config.mac.identity=null --config.mac.notarize=false
+npx electron-builder --dir --publish never --config build/electron-smoke.cjs
 npm run test:electron
 ```
 

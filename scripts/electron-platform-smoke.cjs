@@ -55,6 +55,9 @@ async function main() {
     assert.equal(versions.electron, pkg.devDependencies.electron);
     assert.equal(versions.node, '24.22.1');
     assert.equal(versions.arch, process.arch);
+    const resources = await app.evaluate(() => process.resourcesPath);
+    assert.equal(fs.existsSync(path.join(resources, 'app-update.yml')), false,
+      'Test package must not contain a release updater feed');
     await page.waitForFunction(() => !!window.electronAPI);
     await page.evaluate(() => {
       localStorage.setItem('fpw_quality_preset', 'low');
@@ -96,15 +99,21 @@ async function main() {
     await child.waitForFunction(() => !!window.electronAPI);
     assert.equal(await child.evaluate(() => window.electronAPI.getVersion()), pkg.version);
     await child.evaluate(() => {
-      window.electronAPI.onStateBroadcast(data => { window.smokeState = data; });
+      // Gameplay broadcasts every frame; retain the marker when later game
+      // frames arrive between the IPC event and Playwright's next poll.
+      window.electronAPI.onStateBroadcast(data => {
+        if (data?.smoke) window.smokeState = data.smoke;
+      });
     });
     await page.evaluate(() => window.electronAPI.broadcastState({ smoke: 'outbound' }));
-    await child.waitForFunction(() => window.smokeState?.smoke === 'outbound');
+    await child.waitForFunction(() => window.smokeState === 'outbound');
     await page.evaluate(() => {
-      window.electronAPI.onStateBroadcast(data => { window.smokeState = data; });
+      window.electronAPI.onStateBroadcast(data => {
+        if (data?.smoke) window.smokeState = data.smoke;
+      });
     });
     await child.evaluate(() => window.electronAPI.broadcastState({ smoke: 'return' }));
-    await page.waitForFunction(() => window.smokeState?.smoke === 'return');
+    await page.waitForFunction(() => window.smokeState === 'return');
     const closed = child.waitForEvent('close');
     await page.evaluate(id => window.electronAPI.closeWindow(id), childId);
     await closed;
