@@ -31,6 +31,12 @@ Click "📥 Install App" to add to your home screen, then play offline!
 
 ### 🖥️ Desktop Applications
 
+> **Experimental Electron 46 alpha branch:** this branch tests Electron
+> `46.0.0-alpha.1` with embedded Node `24.22.1`. It has not been released.
+> Windows packaging is x64 only; macOS requires 13+. Windows ia32 and macOS 12
+> support are dropped. See the [alpha test plan](docs/guides/ELECTRON_ALPHA.md)
+> before using an unsigned test artifact. Stable main remains on Electron 43.8.3.
+
 **Windows**
 - **[Download Installer](https://github.com/haraldweiss/Futurepinballweb/releases)** (180 MB)
   - Recommended: Auto-updates, Start menu shortcuts
@@ -261,7 +267,7 @@ All documentation is organised in `docs/`:
 | Physics | mini-rapier (2D simulation) | internal |
 | Build Tool | Vite | 8.1 |
 | Language | TypeScript | 5.4 |
-| Desktop | Electron | ^41.0.0 |
+| Desktop | Electron | 46.0.0-alpha.1 (experimental branch) |
 | Audio | Web Audio API | Native |
 | PWA | Service Worker | Native |
 
@@ -275,9 +281,9 @@ All documentation is organised in `docs/`:
 - **Internet**: First load ~10 MB, then offline
 
 ### Desktop Apps
-- **Windows**: Windows 10+, 180-200 MB RAM (Electron 41 dropped Win 7/8)
-- **macOS**: macOS 11+ (Big Sur), 200-250 MB RAM (M1/M2 native)
-- **Linux**: 170-250 MB RAM, glibc 2.31+
+- **Windows alpha**: Windows 10+, x64 only; native/cabinet validation required
+- **macOS alpha**: macOS 13+, 64-bit; local arm64 validation completed
+- **Linux alpha**: 64-bit; native platform smoke runs in CI
 
 ### Build From Source
 - **Node.js**: 20.19+ or 22.12+ (Vite 7 requirement; `npm run install:setup` checks this)

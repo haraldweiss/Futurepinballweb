@@ -1379,3 +1379,20 @@ Nächste Schritte: cfb → devDeps, Browser-Smoke (Pharaoh boot/Ball/Flipper/Bum
 - Additional lifecycle regressions: responsive drain clearance now accounts for resting collider thickness; launch save grace arms once per ball; HUD counters now update/cancel stale animations and track logical milestone targets. Parsed content cache version 2 rejects old incomplete/broken results without changing DB schema version 1.
 - Local verification with all three private references: **970/970 tests, 54 files**, tsc clean. Full production browser game-over checks are part of `tests/e2e/gameplay.spec.ts`; absence of private corpus paths explicitly skips those cases. Live resize, cabinet hardware feel and native table-rule fidelity still require separate validation.
 - Final local browser verification: **4/4 production checks passed**, including complete three-ball demo and imported-reference games, positive scoring and persisted game-over highscores. This validates the reconstructed game lifecycle, not original FPT fidelity or physical cabinet feel.
+
+### 2026-10-25 — Separate 64-bit Electron 46 alpha evaluation PR
+
+- User requested a separate alpha PR for further platform testing after local
+  evaluation. Electron pin is 46.0.0-alpha.1 / Node24.22.1; Windows NSIS ia32
+  removed, x64 retained. Stable main stays Electron43.8.3 until a later decision.
+- Local unsigned arm64 ASAR check passed preload/display IPC, scoring, three
+  balls/game-over with a fresh profile, reload, child-window state relay and no
+  renderer errors. Typecheck/build/972 tests (one existing skip)/npm audits pass.
+- `test:electron` and the PR CI platform matrix check native packaged runtimes,
+  isolation, demo scoring and child IPC on Linux/Windows/macOS. CI archives
+  unsigned test apps for seven days; no release publishing/updater feed/secrets.
+- Windows/cabinet hardware, physical multi-display, private FPT fidelity,
+  Linux packages, signing/notarization and signed updates remain acceptance work.
+  Windows ia32, Linux armv7l and macOS12 are unsupported by Electron44+.
+- See `docs/guides/ELECTRON_ALPHA.md`. Do not merge/publish/deploy this branch
+  merely because hosted CI passes; user requested a testing PR.
