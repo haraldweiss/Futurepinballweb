@@ -41,7 +41,8 @@
     "security:check": "npm run lint:security && npm run test:security && npm run audit:dependencies",
     "typecheck": "tsc --noEmit",
     "test:lint-security": "node --test scripts/security-lint.test.mjs",
-    "test:e2e": "npm run build && playwright test"
+    "test:e2e": "npm run build && playwright test",
+    "test:electron": "node scripts/electron-platform-smoke.cjs"
   },
   "overrides": {
     "uuid": "^11.1.1",

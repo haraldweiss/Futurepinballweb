@@ -74,3 +74,52 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  electron-smoke:
+    name: Packaged Electron (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Package native 64-bit app without publishing
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: >-
+          npx electron-builder --dir --publish never --$(node -p process.arch)
+          --config.mac.identity=null --config.mac.notarize=false --config.publish=null
+      - name: Check packaged runtime, preload, gameplay and child IPC
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            xvfb-run --auto-servernum npm run test:electron
+          else
+            npm run test:electron
+          fi
+      - name: Archive unsigned test app
+        shell: bash
+        run: tar -czf "electron-test-${RUNNER_OS}-$(node -p process.arch).tar.gz" -C release .
+      - uses: actions/upload-artifact@v7
+        with:
+          name: electron-test-${{ runner.os }}-${{ runner.arch }}
+          path: electron-test-*.tar.gz
+          retention-days: 7
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: electron-smoke-failure-${{ runner.os }}-${{ runner.arch }}
+          path: test-results/electron-smoke-failure.png
+          if-no-files-found: ignore
+          retention-days: 7
