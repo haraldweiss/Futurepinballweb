@@ -145,6 +145,12 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 
 ## 7. Handoff zone (free-form, append-only)
 
+### 2026-10-26 — Repository maintenance files
+
+- Imported the supplied security/community policies where applicable and added Dependabot configuration against the actual manifest paths. See README community links.
+- Validation: Dependabot JSON schema and manifest paths, actionlint for new workflows, and execution of each new workflow run step. No production deployment.
+
+
 ### 2026-10-19 — Remove unpatched development dependency
 
 - Override `global-agent` to upstream ^4.1.3: removes `roarr`/`sprintf-js` from Electron download tooling and resolves Dependabot alert #53 (GHSA-hp3w-g68c-fv3c). No advisory dismissal or vendored patch.
