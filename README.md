@@ -693,3 +693,8 @@ Veröffentlicht unter der [GNU AGPL v3.0](LICENSE) — © 2026 Harald Weiss.
 Die AGPL stellt sicher, dass auch netzbasierte Bereitstellungen den Quellcode
 ihrer Modifikationen weitergeben müssen. Ideen und Konzepte sind durch keine
 Lizenz schützbar.
+
+
+## Community and maintenance
+
+[Security policy](SECURITY.md) · [Dependency updates](.github/dependabot.yml).
