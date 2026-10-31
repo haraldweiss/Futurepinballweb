@@ -41,3 +41,15 @@ describe('native external references', () => {
   });
   it.each(['.fpl/member','a.fpl/','prefix.fpl.txt/member','words a.fpl member'])('requires library and member boundaries: %s',path=>{ expect(readExternalReferences(container(record(newer,path))).references).toEqual([]); });
 });
+
+it('reports an empty external library stem as incomplete', () => {
+  expect(readExternalReferences(container(record(newer, '.fpl/member')))).toEqual({
+    references: [], coverage: 'partial',
+    issues: [{ streamPath: 'Root/Resources/PinModel 12', offset: 0, code: 'incomplete-reference' }],
+  });
+});
+it('keeps legitimate embedded source paths complete', () => {
+  expect(readExternalReferences(container(record(newer, 'embedded.bmp')))).toEqual({
+    references: [], issues: [], coverage: 'complete-recognized-records',
+  });
+});

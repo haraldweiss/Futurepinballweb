@@ -64,8 +64,10 @@ export function readExternalReferences(container: CFBContainer): ExternalReferen
           if (!invalid && name && path) {
             // Split only at a complete .fpl path component. Preserve source spelling.
             const components = path.split(/[\\/]/);
-            const libraryIndex = components.findIndex(component => component.length > 4 && component.toLowerCase().endsWith('.fpl'));
-            if (libraryIndex >= 0) {
+            const libraryIndex = components.findIndex(component => component.toLowerCase().endsWith('.fpl'));
+            if (libraryIndex >= 0 && components[libraryIndex].length === 4) {
+              issue(start, 'incomplete-reference');
+            } else if (libraryIndex >= 0) {
               const boundary = components.slice(0, libraryIndex + 1).reduce((sum, component) => sum + component.length + 1, -1);
               const memberPath = path.slice(boundary + 1);
               if (memberPath && components.slice(libraryIndex + 1).every(Boolean)) {
