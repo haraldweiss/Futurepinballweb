@@ -172,6 +172,14 @@ transpiler gaps (array-access ambiguity and complex string escaping).
 from the nudge path. Key codes currently use `KeyboardEvent.keyCode`; native VK
 parity and full event ordering are not verified.
 
+⚠ Production CSP now includes `'unsafe-eval'` because table scripts are compiled
+at runtime with `new Function`. The sandbox remains best-effort same-realm
+filtering, not a hard boundary; only trusted tables should be loaded. This is an
+explicit security tradeoff required to execute VBScript. A production NewTable
+import registers 35 handlers, but `BeginPlay` reaches a missing native element
+binding (`Player1Reel.SetValue`) and logs a handler error. Native element objects
+(displays, reels, named lights/flippers) are not yet bound.
+
 Preflight display limits are 160 UTF-16 code units per library/member/issue stream
 path and 2,400 total native-preflight diagnostic code units per import, including
 truncation ellipses. These limits affect log text only; pure decoder reports retain

@@ -57,7 +57,7 @@ const ASSET_EXTS = new Set(Object.keys(MIME_TYPES));
 // ─── CSP / security headers (Phase 25) ───────────────────────────────────────
 const CSP = [
   "default-src 'self'",                          // Only allow same-origin by default
-  "script-src 'self' 'wasm-unsafe-eval'",        // Scripts: self + WASM (required for Rapier)
+  "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'",        // Scripts: self + WASM (required for Rapier)
   "style-src 'self'",                            // Styles: self only
   "img-src 'self' data:",                        // Images: self + data URIs
   "font-src 'self' data:",                       // Fonts: self + data URIs

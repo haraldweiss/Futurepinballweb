@@ -2043,7 +2043,9 @@ export function runFPScript(vbsCode: string): void {
   let m: RegExpExecArray | null;
   while ((m = fnRe.exec(jsCode)) !== null) fnNames.push(m[1]);
 
-  const bindings  = Object.keys(api).map(k => `var ${k} = __api__['${k}'];`).join('\n');
+  const scriptNames = new Set(fnNames.map(name => name.toLowerCase()));
+  const bindings  = Object.keys(api).filter(key => !scriptNames.has(key.toLowerCase()))
+    .map(k => `var ${k} = __api__['${k}'];`).join('\n');
   const collect   = fnNames.map(n => `if (typeof ${n} === 'function') __h__['${n}'] = ${n};`).join('\n');
 
   try {

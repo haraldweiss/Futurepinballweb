@@ -18,3 +18,15 @@ it('dispatches begin, key and end events', () => {
   expect(callScriptFn('FuturePinball_KeyPressed', 13)).toBe(true);
   expect(callScriptFn('FuturePinball_EndPlay')).toBe(true);
 });
+
+it('lets a script-defined function override the same-named API binding', () => {
+  runFPScript([
+    'Sub AddScore(points)',
+    '  AddDebugText "custom"',
+    'End Sub',
+    'Sub FuturePinball_BeginPlay()',
+    '  AddScore 5',
+    'End Sub',
+  ].join('\n'));
+  expect(callScriptFn('FuturePinball_BeginPlay')).toBe(true);
+});
