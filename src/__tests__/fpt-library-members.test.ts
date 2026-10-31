@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as CFB from '../fpt/cfb-io';
-import { readLibraryMembers, resolveLibraryMembers, type LibraryMemberInventory } from '../fpt/library-members';
+import { groupLibraryMembers, readLibraryMembers, resolveLibraryMembers, type LibraryMemberInventory } from '../fpt/library-members';
 import type { ExternalReference } from '../fpt/external-references';
 
 const u32 = (value: number) => {
@@ -137,6 +137,20 @@ describe('readLibraryMembers', () => {
   it('preserves an empty source path as null', () => {
     const report = inventoryOf([{ name: 'empty', type: 1, sourcePath: '' }]);
     expect(report.members[0].sourcePath).toBeNull();
+  });
+
+  it('groups members by FTYP kind in inventory order', () => {
+    const report = inventoryOf([
+      { name: 'm1', type: 4 }, { name: 't1', type: 1 }, { name: 's1', type: 2 },
+      { name: 'f1', type: 5 }, { name: 'x1', type: 6 }, { name: 'u1', type: 99 },
+    ]);
+    const groups = groupLibraryMembers(report);
+    expect(groups.image.map(member => member.name)).toEqual(['t1']);
+    expect(groups.sound.map(member => member.name)).toEqual(['s1']);
+    expect(groups.model.map(member => member.name)).toEqual(['m1']);
+    expect(groups.font.map(member => member.name)).toEqual(['f1']);
+    expect(groups.script.map(member => member.name)).toEqual(['x1']);
+    expect(groups.unknown.map(member => member.name)).toEqual(['u1']);
   });
 });
 

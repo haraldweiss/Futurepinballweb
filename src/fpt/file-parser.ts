@@ -9,6 +9,7 @@ import { extractTableCoordsFromCFB, extractTableElementsFromCFB, ELEM_TYPE } fro
 import type { ParsedTableElement } from './table-elements';
 import { logMsg } from './log';
 import { readExternalReferences } from './external-references';
+import { readLibraryMembers } from './library-members';
 import type { ResourceLoadingCallbacks } from './log';
 import { extractFPCoords, assignBumperSizes, extractRampCoords, extractFPTPhysics } from './coords';
 import { detectFPSignature, calcConfidence } from './validation';
@@ -839,17 +840,94 @@ export async function parseFPLFile(
       voiceLibrary: {},
     };
 
-    const entries = (cfb.FileIndex || [])
-      .filter((e) => e.size > 0 && e.name && e.name !== 'Root Entry');
+    const inventory = readLibraryMembers(cfb);
+    const rootEntries = (cfb.FileIndex || [])
+      .map((entry, index) => ({ entry, path: cfb.FullPaths[index] ?? '' }))
+      .filter(({ entry, path }) => entry.size > 0 && entry.name && entry.name !== 'Root Entry'
+        && path.split('/').length === 2);
 
-    logMsg(`📚 FPL Parser: Found ${entries.length} streams in "${libName}"`);
+    logMsg(`📚 FPL Parser: ${inventory.members.length} Member, ${rootEntries.length} Root-Streams in "${libName}"`);
+    if (inventory.coverage === 'partial') {
+      logMsg(`⚠ FPL-Member-Inventar unvollständig: ${inventory.issues.length} Problem(e) (${[...new Set(inventory.issues.map(issue => issue.code))].join(', ')}); betroffene Assets werden nicht geladen.`, 'warn');
+    }
 
     const categories = {
       textures: 0, sounds: 0, music: 0, models: 0, fonts: 0, scripts: 0,
       voices: 0, bamAnim: 0, bamLight: 0, bamPhysics: 0, physics: 0, other: 0
     };
+    const undecoded = { images: 0, sounds: 0, scripts: 0, unknown: 0 };
+    let modelDecodeFailures = 0;
+    const seenMembers = new Set<string>();
 
-    for (const entry of entries) {
+    // FTYP is authoritative when the FPL uses the native member-storage layout.
+    for (const member of inventory.members) {
+      const key = member.name.toLowerCase();
+      if (seenMembers.has(key)) {
+        logMsg(`⚠ Doppelter FPL-Member ignoriert: "${member.name}"`, 'warn');
+        continue;
+      }
+      seenMembers.add(key);
+      const bytes = member.data;
+      switch (member.kind) {
+        case 'image': {
+          const texture = await extractImageFromBytes(bytes);
+          if (texture) {
+            library.textureLibrary[member.name] = texture;
+            categories.textures++;
+            logMsg(`  🖼️ Textur-Member: "${member.name}" (${(bytes.length / 1024).toFixed(0)} KB)`, 'ok');
+          } else undecoded.images++;
+          break;
+        }
+        case 'sound': {
+          const sound = await extractSoundFromBytes(bytes);
+          if (sound && typeof sound !== 'string') {
+            library.soundLibrary[member.name] = sound;
+            categories.sounds++;
+            logMsg(`  🔊 Sound-Member: "${member.name}" (${sound.duration.toFixed(2)}s)`, 'ok');
+          } else undecoded.sounds++;
+          break;
+        }
+        case 'model': {
+          library.modelLibrary[member.name] = bytes;
+          categories.models++;
+          logMsg(`  🎲 Model-Member: "${member.name}" (${(bytes.length / 1024).toFixed(0)} KB)`, 'ok');
+          try {
+            const fpmModel = parseFPM(bytes);
+            if (fpmModel && fpmModel.vertices.length > 0) {
+              const mesh = fpmToTHREE(fpmModel);
+              const cat = globalAssetCatalog();
+              if (cat && mesh) cat.registerModel(fpmModel.name, mesh);
+              logMsg(`    → "${fpmModel.name}" ${fpmModel.vertices.length / 3}v / ${fpmModel.indices.length / 3}tri`, 'ok');
+            } else modelDecodeFailures++;
+          } catch { modelDecodeFailures++; }
+          break;
+        }
+        case 'font': {
+          library.fontLibrary[member.name] = bytes;
+          categories.fonts++;
+          logMsg(`  🔤 Font-Member: "${member.name}" (${(bytes.length / 1024).toFixed(0)} KB)`, 'ok');
+          break;
+        }
+        case 'script': {
+          try {
+            const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+            if (text.trim().length > 0) {
+              library.scriptLibrary[member.name] = text;
+              categories.scripts++;
+              logMsg(`  📝 Script-Member: "${member.name}" (${text.split('\n').length} Zeilen)`, 'ok');
+            } else undecoded.scripts++;
+          } catch { undecoded.scripts++; }
+          break;
+        }
+        default: undecoded.unknown++;
+      }
+    }
+    if (modelDecodeFailures > 0) {
+      logMsg(`⚠ ${modelDecodeFailures} Modell-Member nicht als Mesh dekodiert; Rohbytes bleiben in der Bibliothek.`, 'warn');
+    }
+
+    // Root streams remain the legacy/BAM path; member children are not re-scanned.
+    for (const { entry } of rootEntries) {
       const name: string = entry.name || '';
       const rawContent = entry.content;
       const bytes: Uint8Array = rawContent instanceof Uint8Array ? rawContent : new Uint8Array(rawContent);
@@ -964,6 +1042,11 @@ export async function parseFPLFile(
       else {
         categories.other++;
       }
+    }
+
+    const undecodedCount = undecoded.images + undecoded.sounds + undecoded.scripts + undecoded.unknown;
+    if (undecodedCount > 0) {
+      logMsg(`⚠ ${undecodedCount} FPL-Member nicht dekodiert (Bild ${undecoded.images}, Ton ${undecoded.sounds}, Skript ${undecoded.scripts}, unbekannt ${undecoded.unknown}); keine Assets registriert.`, 'warn');
     }
 
     if (Object.keys(library.textureLibrary).length > 0) {

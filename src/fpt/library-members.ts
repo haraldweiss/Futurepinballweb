@@ -31,6 +31,22 @@ export interface LibraryInventory {
   inventory: LibraryMemberInventory;
 }
 
+export interface LibraryMemberGroups {
+  image: LibraryMember[];
+  sound: LibraryMember[];
+  model: LibraryMember[];
+  font: LibraryMember[];
+  script: LibraryMember[];
+  unknown: LibraryMember[];
+}
+
+/** Group members by FTYP kind, preserving inventory order within each group. */
+export function groupLibraryMembers(inventory: LibraryMemberInventory): LibraryMemberGroups {
+  const groups: LibraryMemberGroups = { image: [], sound: [], model: [], font: [], script: [], unknown: [] };
+  for (const member of inventory.members) groups[member.kind].push(member);
+  return groups;
+}
+
 export type MemberResolutionStatus =
   | 'resolved-member'
   | 'missing-member'
