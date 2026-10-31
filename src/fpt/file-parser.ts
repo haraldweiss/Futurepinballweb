@@ -8,6 +8,7 @@ import { extractImageFromBytes, extractSoundFromBytes } from './media';
 import { extractTableCoordsFromCFB, extractTableElementsFromCFB, ELEM_TYPE } from './table-elements';
 import type { ParsedTableElement } from './table-elements';
 import { logMsg } from './log';
+import { readExternalReferences } from './external-references';
 import type { ResourceLoadingCallbacks } from './log';
 import { extractFPCoords, assignBumperSizes, extractRampCoords, extractFPTPhysics } from './coords';
 import { detectFPSignature, calcConfidence } from './validation';
@@ -54,6 +55,33 @@ export async function parseFPTFile(
   const buffer = await file.arrayBuffer();
   const bytes  = new Uint8Array(buffer);
   logMsg('Analysiere Binärformat...', 'info');
+
+  // Inspect original bytes before cache lookup or worker transfer detaches buffer.
+  // This reports native declarations only; it does not load external members.
+  try {
+    const report = readExternalReferences(CFB.read(bytes.slice(), { type: 'array' }));
+    if (report.references.length > 0) {
+      const libraries = new Map<string, string[]>();
+      for (const ref of report.references) {
+        const members = libraries.get(ref.libraryPath) ?? [];
+        members.push(ref.memberPath);
+        libraries.set(ref.libraryPath, members);
+      }
+      logMsg(`⚠ Native Referenzen: ${report.references.length} in ${libraries.size} Bibliothek(en); Bibliotheksauflösung erforderlich, Mitglieder nicht geladen und nicht verifiziert.`, 'warn');
+      for (const [library, members] of [...libraries].slice(0, 5)) {
+        const examples = [...new Set(members)].slice(0, 3);
+        logMsg(`  ${library}: ${members.length} Referenz(en), z. B. ${examples.join(', ')}${new Set(members).size > examples.length ? ', …' : ''}`, 'warn');
+      }
+      if (libraries.size > 5) logMsg(`  … ${libraries.size - 5} weitere Bibliothek(en)`, 'warn');
+    }
+    if (report.issues.length > 0) {
+      const codes = [...new Set(report.issues.map(issue => issue.code))].join(', ');
+      const first = report.issues[0];
+      logMsg(`⚠ Native Referenzprüfung unvollständig: ${report.issues.length} Problem(e) (${codes}); z. B. ${first.streamPath} @ ${first.offset}. Abhängigkeiten nicht verifiziert.`, 'warn');
+    }
+  } catch {
+    logMsg('⚠ Native Referenzprüfung nicht möglich; Abhängigkeiten nicht verifiziert.', 'warn');
+  }
 
   // ─── Phase 1.2: IndexedDB-Cache-Check ───
   const cacheKey = generateCacheKeyFromBuffer(buffer, file.name, file.size);

@@ -93,3 +93,22 @@ Exit 0 means complete recognized-record coverage and every discovered reference 
 The additive `inventoryCoverage` field reports `complete` or `partial`. A partial inventory gives non-invalid resolutions the audit-only `inventory-incomplete` status, preserving observed candidates without claiming presence or absence conclusively. Symlinks, read failures and unsupported inventory names make inventory partial. The pure resolver API remains unchanged.
 
 `resolved-file` verifies only a filename, never a library member or playability. `memberVerification` and `gameplayVerification` remain `not-performed`. Zero references is not proof of no dependencies outside recognized native resource records. Unsupported and malformed records remain explicit partial coverage; the audit neither executes scripts nor synthesizes missing assets.
+
+### Native dependency import preflight
+
+Binary imports inspect recognized native image, sound, model, font and script
+resource records before cache reconstruction and before worker buffer transfer.
+The parse log summarizes external library/member declarations (up to five
+libraries and three member examples each), and warns about malformed or
+unsupported records. This is declaration discovery: external members are not
+loaded or verified. A cache hit has the same preflight; JSON imports retain their
+existing path. Unknown records and script-only dynamic paths remain outside this
+coverage, so absence of diagnostics is not proof of dependency completeness.
+
+Run `npx vitest run src/__tests__/fpt-import-dependencies.test.ts` for synthetic
+CFB import ordering, transfer, partial-record, summary and JSON regressions.
+Private production UI import smoke uses `FPT_TEST_FILES` with local trusted paths;
+no private table bytes belong in the repository. Demo boot and native import
+lifecycle checks do not establish native table-rule parity. Member hydration,
+unsupported encodings, faithful 3D geometry/collisions, script rules and BAM
+support remain separate verification work.

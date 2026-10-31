@@ -19,3 +19,6 @@ export { parseFPTFile, parseFPLFile } from './fpt/file-parser';
 export { extractMS3DModelsFromCFB, extractAnimationSequencesFromCFB } from './fpt/models';
 export { parseTableElement, extractTableElementsFromCFB, extractTableCoordsFromCFB, ELEM_TYPE } from './fpt/table-elements';
 export type { ParsedTableElement, BulkExtractOptions } from './fpt/table-elements';
+
+export { readExternalReferences } from './fpt/external-references';
+export type { ExternalReference, ExternalReferenceReport } from './fpt/external-references';
