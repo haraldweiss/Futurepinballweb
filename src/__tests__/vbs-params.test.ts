@@ -60,3 +60,14 @@ it('handles nested builtins, no-space Then and trailing semicolons', () => {
   expect(js).toContain("TrackedBalls(i) === null");
   expect(js).toContain('if ((x)) {');
 });
+
+it('uses a local return variable for Function assignments', () => {
+  const js = vbsToJS([
+    'Function Double(x)',
+    '  Double = x * 2',
+    'End Function',
+  ].join('\n'));
+  expect(js).toContain('let __ret_Double;');
+  expect(js).toContain('__ret_Double = x * 2;');
+  expect(js).toContain('return __ret_Double;');
+});

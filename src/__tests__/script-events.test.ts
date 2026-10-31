@@ -41,3 +41,27 @@ it('binds unknown native table elements to placeholder objects', () => {
   ].join('\n'));
   expect(callScriptFn('FuturePinball_BeginPlay')).toBe(true);
 });
+
+it('allows top-level calls to functions declared later', () => {
+  runFPScript([
+    'Check()',
+    'Sub Check()',
+    '  AddDebugText "called"',
+    'End Sub',
+  ].join('\n'));
+  expect(callScriptFn('Check')).toBe(true);
+});
+
+it('resolves a function called from another function', () => {
+  runFPScript([
+    'Sub A()',
+    '  B()',
+    'End Sub',
+    'Sub B()',
+    '  AddDebugText "b"',
+    'End Sub',
+    'A()',
+  ].join('\n'));
+  expect(callScriptFn('A')).toBe(true);
+  expect(callScriptFn('B')).toBe(true);
+});

@@ -86,6 +86,15 @@ function _replaceSimpleCalls(text: string, handlers: Record<string, (arg: string
   return out;
 }
 
+let _vbsArrayNames = new Set<string>();
+function _replaceArrayAccess(text: string): string {
+  let result = text;
+  for (const name of _vbsArrayNames) {
+    result = result.replace(new RegExp(`\\b${name}\\s*\\(([^()]*)\\)`, 'g'), `${name}[$1]`);
+  }
+  return result;
+}
+
 function _vbsXpr(e: string): string {
   let result = _replaceSimpleCalls(e, {
     len: arg => `(${_vbsXpr(arg)}).length`,
@@ -247,7 +256,7 @@ function _vbsStmt(s: string, withContext?: string): string {
   const t = s.trim();
 
   // Handle With context: .Property becomes __with__.Property
-  let target = t.replace(/^[:\s]+/, '').replace(/:\s*$/, '');
+  let target = _replaceArrayAccess(t.replace(/^[:\s]+/, '').replace(/:\s*$/, ''));
   if (withContext && t.startsWith('.')) {
     target = `__with__${t}`;
   }
@@ -297,7 +306,43 @@ function _vbsParams(raw: string): string {
 }
 
 
+
+function braceDelta(line: string): number {
+  let delta = 0, quote = '';
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quote) { if (ch === quote) quote = ''; continue; }
+    if (ch === '"' || ch === "'") { quote = ch; continue; }
+    if (ch === '/' && line[i + 1] === '/') break;
+    if (ch === '{') delta++;
+    else if (ch === '}') delta--;
+  }
+  return delta;
+}
+
+function hoistFunctions(js: string): string {
+  const lines = js.split('\n');
+  const functions: string[] = [];
+  const rest: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*function\s+\w+/.test(lines[i])) {
+      const block = [lines[i]];
+      let depth = braceDelta(lines[i]);
+      while (depth > 0 && i + 1 < lines.length) {
+        i++;
+        block.push(lines[i]);
+        depth += braceDelta(lines[i]);
+      }
+      functions.push(block.join('\n'));
+    } else {
+      rest.push(lines[i]);
+    }
+  }
+  return [...functions, ...rest].join('\n');
+}
+
 export function vbsToJS(src: string): string {
+  _vbsArrayNames = new Set<string>();
   // Phase 1.1: Preprocess line continuation
   const preprocessed = preprocessLineContinuation(src);
   const rawLines = preprocessed.replace(/\r\n?/g, '\n').split('\n');
@@ -310,6 +355,7 @@ export function vbsToJS(src: string): string {
   const out: string[] = [];
   let depth = 0;
   let errorDepth = 0;
+  let currentFunction: string | null = null;
   const withStack: string[] = [];  // Track With context for property access
   const pad = () => '  '.repeat(Math.max(0, depth));
 
@@ -329,18 +375,23 @@ export function vbsToJS(src: string): string {
     let m: RegExpMatchArray | null;
 
     if (/^Option\s+(?:Explicit|Compare\b.*)$/i.test(code)) { out.push(`${pad()}// ${code}`); continue; }
+    if (currentFunction) {
+      const ret = code.match(new RegExp(`^${currentFunction}\\s*=\\s*(.*)$`, 'i'));
+      if (ret) { out.push(`${pad()}__ret_${currentFunction} = ${_vbsXpr(ret[1])};`); continue; }
+    }
 
     // eslint-disable-next-line security/detect-unsafe-regex
-    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Sub\s+(\w+)\s*;?$/i)))          { while (depth > 0) { out.push('}'); depth--; } errorDepth = 0; out.push(`function ${m[1]}() {`); depth = 1; continue; }
+    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Sub\s+(\w+)\s*;?$/i)))          { while (depth > 0) { out.push('}'); depth--; } errorDepth = 0; out.push(`function ${m[1]}() {`); currentFunction = null; depth = 1; continue; }
     // eslint-disable-next-line security/detect-unsafe-regex
-    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Function\s+(\w+)\s*;?$/i)))     { while (depth > 0) { out.push('}'); depth--; } errorDepth = 0; out.push(`function ${m[1]}() {`); depth = 1; continue; }
+    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Function\s+(\w+)\s*;?$/i)))     { while (depth > 0) { out.push('}'); depth--; } errorDepth = 0; out.push(`function ${m[1]}() {`); out.push(`  let __ret_${m[1]};`); currentFunction = m[1]; depth = 1; continue; }
     // eslint-disable-next-line security/detect-unsafe-regex
-    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Sub\s+(\w+)\s*\((.*?)\)/i)))     { while (depth > 0) { out.push('}'); depth--; } errorDepth = 0; out.push(`function ${m[1]}(${_vbsParams(m[2])}) {`); depth = 1; continue; }
+    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Sub\s+(\w+)\s*\((.*?)\)/i)))     { while (depth > 0) { out.push('}'); depth--; } errorDepth = 0; out.push(`function ${m[1]}(${_vbsParams(m[2])}) {`); currentFunction = null; depth = 1; continue; }
     // eslint-disable-next-line security/detect-unsafe-regex
-    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Function\s+(\w+)\s*\((.*?)\)/i))) { while (depth > 0) { out.push('}'); depth--; } errorDepth = 0; out.push(`function ${m[1]}(${_vbsParams(m[2])}) {`); depth = 1; continue; }
-    if (/^End\s+(Sub|Function)$/i.test(code))  {
+    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Function\s+(\w+)\s*\((.*?)\)/i))) { while (depth > 0) { out.push('}'); depth--; } errorDepth = 0; out.push(`function ${m[1]}(${_vbsParams(m[2])}) {`); out.push(`  let __ret_${m[1]};`); currentFunction = m[1]; depth = 1; continue; }
+    if (/^End\s+(Sub|Function)\s*$/i.test(code))  {
       while (errorDepth > 0) { depth = Math.max(0, depth - 1); out.push(`${pad()}} catch (e) { /* ignored */ }`); errorDepth--; }
-      depth = Math.max(0,depth-1); out.push(`${pad()}}`); continue;
+      if (currentFunction) out.push(`${pad()}return __ret_${currentFunction};`);
+      depth = Math.max(0,depth-1); out.push(`${pad()}}`); currentFunction = null; continue;
     }
 
     if ((m = code.match(/^If\s+(.*?)\s*Then\s*$/i)))         { out.push(`${pad()}if (${_vbsXpr(m[1])}) {`); depth++; continue; }
@@ -395,17 +446,24 @@ export function vbsToJS(src: string): string {
     if (/^End\s+Select$/i.test(code)) { depth=Math.max(0,depth-1); out.push(`${pad()}}`); continue; }
 
     if ((m = code.match(/^ReDim\s+(Preserve\s+)?([A-Za-z_]\w*)\s*\((.*)\)/i))) {
+      _vbsArrayNames.add(m[2]);
       const size = _vbsXpr(m[3]);
       out.push(m[1] ? `${pad()}${m[2]}.length = ${size} + 1;` : `${pad()}${m[2]} = new Array(${size} + 1);`);
       continue;
     }
     if ((m = code.match(/^Dim\s+(.*)/i))) {
-      const vars = _splitArgs(m[1]).map(v=>v.trim().replace(/\s+As\s+\w+/i,'').replace(/\(.*?\)/,'').trim()).filter(Boolean);
+      const vars = _splitArgs(m[1]).map(v => {
+        const raw = v.trim();
+        const isArray = raw.includes('(');
+        const name = raw.replace(/\s+As\s+\w+/i, '').replace(/\(.*?\)/, '').trim();
+        if (isArray && name) _vbsArrayNames.add(name);
+        return name;
+      }).filter(Boolean);
       out.push(`${pad()}var ${vars.join(', ')};`); continue;
     }
     if ((m = code.match(/^Const\s+(\w+)\s*=\s*(.*)/i))) { out.push(`${pad()}const ${m[1]} = ${_vbsXpr(m[2])};`); continue; }
 
-    if (/^Exit\s+(Sub|Function)$/i.test(code)) { out.push(`${pad()}return;`); continue; }
+    if (/^Exit\s+(Sub|Function)$/i.test(code)) { out.push(`${pad()}${currentFunction ? `return __ret_${currentFunction};` : 'return;'}`); continue; }
     if (/^Exit\s+For$/i.test(code))            { out.push(`${pad()}break;`);  continue; }
 
     if (/^On\s+Error\s+Resume\s+Next$/i.test(code)) {
@@ -441,5 +499,5 @@ export function vbsToJS(src: string): string {
 
     out.push(`${pad()}${_vbsStmt(code, withStack[withStack.length-1])};`);
   }
-  return out.join('\n');
+  return hoistFunctions(out.join('\n'));
 }

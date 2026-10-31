@@ -115,7 +115,10 @@ const UNSCOPABLES_OBJ: Record<string, boolean> = Object.freeze(
   UNSCOPABLE_NAMES.reduce((acc, n) => { acc[n] = true; return acc; }, {} as Record<string, boolean>)
 );
 
-function buildSandboxScope(): object {
+function buildSandboxScope(passthrough: ReadonlySet<string> = new Set()): object {
+  const unscopables = passthrough.size > 0
+    ? { ...UNSCOPABLES_OBJ, ...Object.fromEntries([...passthrough].map(name => [name, true])) }
+    : UNSCOPABLES_OBJ;
   const scopeStore: Record<string | symbol, unknown> = Object.create(null);
   return new Proxy(scopeStore, {
     has() {
@@ -128,7 +131,7 @@ function buildSandboxScope(): object {
       // `with` consults Symbol.unscopables and skips properties whose value
       // is truthy in the returned object. We use it to expose the engine's
       // reserved parameter names (__api__, __h__, __sandbox__).
-      if (key === Symbol.unscopables) return UNSCOPABLES_OBJ;
+      if (key === Symbol.unscopables) return unscopables;
       if (key in target) return target[key];
       if (typeof key === 'string' && ALLOWED_GLOBALS.has(key)) {
         return (globalThis as Record<string, unknown>)[key];
@@ -152,22 +155,64 @@ function buildSandboxScope(): object {
  * Throws `ScriptSandboxError` for forbidden references. Other errors from
  * the script body propagate unchanged.
  */
+
+function splitLeadingFunctions(code: string): { prelude: string; body: string } {
+  const lines = code.split('\n');
+  const prelude: string[] = [];
+  const body: string[] = [];
+  let depth = 0, i = 0;
+  const delta = (line: string) => {
+    let value = 0, quote = '';
+    for (let j = 0; j < line.length; j++) {
+      const ch = line[j];
+      if (quote) { if (ch === quote) quote = ''; continue; }
+      if (ch === '"' || ch === "'") { quote = ch; continue; }
+      if (ch === '/' && line[j + 1] === '/') break;
+      if (ch === '{') value++;
+      else if (ch === '}') value--;
+    }
+    return value;
+  };
+  while (i < lines.length) {
+    if (/^\s*function\s+\w+/.test(lines[i])) {
+      const block: string[] = [lines[i]];
+      let blockDepth = delta(lines[i]);
+      while (blockDepth > 0 && i + 1 < lines.length) {
+        i++;
+        block.push(lines[i]);
+        blockDepth += delta(lines[i]);
+      }
+      prelude.push(block.join('\n'));
+      depth = 0;
+      i++;
+      continue;
+    }
+    body.push(lines[i]);
+    depth += delta(lines[i]);
+    i++;
+  }
+  return { prelude: prelude.join('\n'), body: body.join('\n') };
+}
+
 export function runSandboxed(
   jsCode: string,
   bindings: string,
   collect: string,
   api: Record<string, unknown>,
   handlers: Record<string, (...args: any[]) => any>,
+  passthrough: ReadonlySet<string> = new Set(),
 ): void {
   validateTranspiledJs(jsCode);
-  const sandbox = buildSandboxScope();
-  // The `with` block makes every bare identifier look up via the Proxy first.
-  // `bindings` (var declarations) still create function-scope locals because
-  // `var` hoists past `with` blocks — so the api injection keeps working.
+  const bindingNames = new Set([...bindings.matchAll(/var\s+(\w+)/g)].map(match => match[1]));
+  const { prelude, body } = splitLeadingFunctions(jsCode);
+  const functionNames = new Set([...prelude.matchAll(/^function\s+(\w+)/gm)].map(match => match[1]));
+  const sandbox = buildSandboxScope(new Set([...passthrough, ...bindingNames, ...functionNames]));
+  // Function declarations and API bindings live outside `with`; the proxy only
+  // traps unknown identifiers. Passthrough names resolve to the outer scope.
   // eslint-disable-next-line no-new-func -- Dynamic code is necessary for VBScript sandbox (input pre-validated)
   const fn = new Function(
     '__api__', '__h__', '__sandbox__',
-    `with (__sandbox__) {\n${bindings}\n${jsCode}\n${collect}\n}`
+    `${bindings}\n${prelude}\nwith (__sandbox__) {\n${body}\n${collect}\n}`
   );
   fn(api, handlers, sandbox);
 }

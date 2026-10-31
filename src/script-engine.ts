@@ -2216,14 +2216,14 @@ export function runFPScript(vbsCode: string): void {
     if (name in api || declared.has(name) || jsGlobals.has(name)) continue;
     elementNames.add(name);
   }
-  const bindings  = Object.keys(api).filter(key => !key.startsWith('__') && !scriptNames.has(key.toLowerCase()))
+  const bindings  = Object.keys(api).filter(key => !key.startsWith('__') && !scriptNames.has(key.toLowerCase()) && !jsGlobals.has(key))
     .map(k => `var ${k} = __api__['${k}'];`).join('\n')
     + [...elementNames].map(name => `var ${name} = __api__.__element('${name}');`).join('\n');
   if (elementNames.size > 0) fpScriptLog(`${elementNames.size} native element bindings active`, 'debug');
   const collect   = fnNames.map(n => `if (typeof ${n} === 'function') __h__['${n}'] = ${n};`).join('\n');
 
   try {
-    runSandboxed(jsCode, bindings, collect, api, handlers);
+    runSandboxed(jsCode, bindings, collect, api, handlers, new Set(fnNames));
   } catch(e: any) {
     if (e instanceof ScriptSandboxError) {
       fpScriptLog(`Script blocked by sandbox: ${  e.message}`, 'error');
