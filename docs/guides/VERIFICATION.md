@@ -177,8 +177,10 @@ at runtime with `new Function`. The sandbox remains best-effort same-realm
 filtering, not a hard boundary; only trusted tables should be loaded. This is an
 explicit security tradeoff required to execute VBScript. A production NewTable
 import registers 35 handlers, but `BeginPlay` reaches a missing native element
-binding (`Player1Reel.SetValue`) and logs a handler error. Native element objects
-(displays, reels, named lights/flippers) are not yet bound.
+binding (`Player1Reel.SetValue`). Unknown capitalized element names are now bound
+to explicit placeholder objects, so a production NewTable `BeginPlay` completes
+with 193 placeholders, 35 handlers and no handler error. Placeholder methods and
+values only log; reel/display/light/flipper semantics are not implemented.
 
 Preflight display limits are 160 UTF-16 code units per library/member/issue stream
 path and 2,400 total native-preflight diagnostic code units per import, including
