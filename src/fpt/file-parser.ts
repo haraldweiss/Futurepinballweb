@@ -58,12 +58,18 @@ export async function parseFPTFile(
 
   // Display-only limits: 160 UTF-16 code units per path field, 2400 total
   // diagnostic code units per import. Keep the pure report's data intact.
-  const displayPath = (value: string) => value.length > 160 ? `${value.slice(0, 159)}…` : value;
+  const truncate = (value: string, limit: number) => {
+    if (value.length <= limit) return value;
+    let cut = Math.max(0, limit - 1);
+    const code = value.charCodeAt(cut - 1);
+    if (code >= 0xd800 && code <= 0xdbff) cut -= 1; // keep surrogate pairs intact
+    return `${value.slice(0, cut)}…`;
+  };
+  const displayPath = (value: string) => truncate(value, 160);
   let diagnosticBudget = 2400;
   const warnNative = (message: string) => {
     if (diagnosticBudget === 0) return;
-    const shown = message.length > diagnosticBudget
-      ? `${message.slice(0, diagnosticBudget - 1)}…` : message;
+    const shown = truncate(message, diagnosticBudget);
     diagnosticBudget -= shown.length;
     logMsg(shown, 'warn');
   };
@@ -72,6 +78,14 @@ export async function parseFPTFile(
   // This reports native declarations only; it does not load external members.
   try {
     const report = readExternalReferences(CFB.read(bytes.slice(), { type: 'array' }));
+    // Partial-coverage warning goes before example lines so budget exhaustion
+    // cannot hide it.
+    const warnIssues = () => {
+      if (report.issues.length === 0) return;
+      const codes = [...new Set(report.issues.map(issue => issue.code))].join(', ');
+      const first = report.issues[0];
+      warnNative(`⚠ Native Referenzprüfung unvollständig: ${report.issues.length} Problem(e) (${codes}); z. B. ${displayPath(first.streamPath)} @ ${first.offset}. Abhängigkeiten nicht verifiziert.`);
+    };
     if (report.references.length > 0) {
       const libraries = new Map<string, string[]>();
       for (const ref of report.references) {
@@ -80,16 +94,14 @@ export async function parseFPTFile(
         libraries.set(ref.libraryPath, members);
       }
       warnNative(`⚠ Native Referenzen: ${report.references.length} in ${libraries.size} Bibliothek(en); Bibliotheksauflösung erforderlich, Mitglieder nicht geladen und nicht verifiziert.`);
+      warnIssues();
       for (const [library, members] of [...libraries].slice(0, 5)) {
         const examples = [...new Set(members)].slice(0, 3);
         warnNative(`  ${displayPath(library)}: ${members.length} Referenz(en), z. B. ${examples.map(displayPath).join(', ')}${new Set(members).size > examples.length ? ', …' : ''}`);
       }
       if (libraries.size > 5) warnNative(`  … ${libraries.size - 5} weitere Bibliothek(en)`);
-    }
-    if (report.issues.length > 0) {
-      const codes = [...new Set(report.issues.map(issue => issue.code))].join(', ');
-      const first = report.issues[0];
-      warnNative(`⚠ Native Referenzprüfung unvollständig: ${report.issues.length} Problem(e) (${codes}); z. B. ${displayPath(first.streamPath)} @ ${first.offset}. Abhängigkeiten nicht verifiziert.`);
+    } else {
+      warnIssues();
     }
   } catch {
     warnNative('⚠ Native Referenzprüfung nicht möglich; Abhängigkeiten nicht verifiziert.');
