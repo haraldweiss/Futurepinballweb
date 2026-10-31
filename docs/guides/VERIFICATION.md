@@ -179,8 +179,11 @@ explicit security tradeoff required to execute VBScript. A production NewTable
 import registers 35 handlers, but `BeginPlay` reaches a missing native element
 binding (`Player1Reel.SetValue`). Unknown capitalized element names are now bound
 to explicit placeholder objects, so a production NewTable `BeginPlay` completes
-with 193 placeholders, 35 handlers and no handler error. Placeholder methods and
-values only log; reel/display/light/flipper semantics are not implemented.
+with 193 element bindings, 35 handlers and no handler error. Reels retain
+`SetValue`/`Value`, lights call `setLampState`, flashers call `setFlasherState`,
+and flippers expose `SolenoidOn`/`SolenoidOff`/`SolenoidPulse` plus strength state.
+Unknown objects remain inert placeholders. Script-driven flipper physics and
+rendered reel/display output are not implemented.
 
 All six corpus scripts now compile. Added a restricted `Eval` that answers
 `IsObject`/`IsEmpty`/`IsNull` without arbitrary code, and an inert `xBAM` proxy for
