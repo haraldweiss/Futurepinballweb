@@ -80,13 +80,20 @@ it('keeps worker import available when native preflight cannot decode the contai
 });
 
 it('bounds long native library/member fields and the total diagnostic text', async () => {
-  await parseFPTFile(file(join(...Array.from({ length: 8 }, (_, i) => record(`${i}${'L'.repeat(4000)}.fpl/${'M'.repeat(4000)}`)))));
-  const warnings = mocks.log.mock.calls.filter(c => c[1] === 'warn').map(c => c[0] as string);
-  expect(warnings.join('').length).toBeLessThanOrEqual(2400);
-  expect(warnings.join('')).toContain('…');
-  expect(warnings.join('')).not.toContain('L'.repeat(160));
-  expect(warnings.join('')).not.toContain('M'.repeat(160));
-  expect(warnings.join('')).toContain('nicht verifiziert');
+  // 6 libraries x 3 long members exhaust the 2,400-unit budget; the trailing
+  // malformed record adds a partial-coverage warning that must survive. The
+  // fifth library line is cut and the "weitere" line is suppressed, so removing
+  // the budget guard would push the total past the ceiling.
+  const refs = Array.from({ length: 6 }, (_library, i) =>
+    join(...Array.from({ length: 3 }, (_member, j) => record(`Lib${i}.fpl/${'M'.repeat(4000)}${j}`))));
+  await parseFPTFile(file(join(...refs, u32(100), u32(0xbab2beb2))));
+  const text = mocks.log.mock.calls.filter(c => c[1] === 'warn').map(c => c[0] as string).join('');
+  expect(text.length).toBeLessThanOrEqual(2400);
+  expect(text).toContain('18 in 6');
+  expect(text).toContain('…');
+  expect(text).toContain('Referenzprüfung unvollständig');
+  expect(text).toContain('nicht verifiziert');
+  expect(text).not.toContain('M'.repeat(160));
 });
 it('bounds the displayed stream path of a malformed recognized record', async () => {
   await parseFPTFile(file(join(u32(100), u32(0xbab2beb2)), `${'Folder/'.repeat(80)}Image 1`));
