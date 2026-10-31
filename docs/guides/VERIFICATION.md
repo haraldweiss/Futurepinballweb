@@ -187,9 +187,12 @@ rendered reel/display output are not implemented.
 
 All six corpus scripts now compile. Added a restricted `Eval` that answers
 `IsObject`/`IsEmpty`/`IsNull` without arbitrary code, and an inert `xBAM` proxy for
-unknown optional BAM methods. AI1 registers 883 element placeholders but still
-stops at `checkIfExist` runtime behavior, so BAM-heavy script execution is not yet
-verified.
+unknown optional BAM methods. Function-name assignments now use local return
+variables, `Dim`/`ReDim` arrays use JS indexing, functions are hoisted outside the
+sandbox proxy, and API bindings no longer shadow JS globals. AI1 registers 883
+element bindings and executes deep into `BeginPlay`, including FizX flipper setup,
+before stopping at an undefined object's `SetMaterial` call. BAM-heavy script
+execution is not yet verified.
 
 Preflight display limits are 160 UTF-16 code units per library/member/issue stream
 path and 2,400 total native-preflight diagnostic code units per import, including
