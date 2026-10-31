@@ -39,7 +39,7 @@ it('handles native script patterns: operators, arrays, cases and comments', () =
   ].join('\n'));
   expect(js).toContain('//  comment with : colon');
   expect(js).toContain('// Option Explicit');
-  expect(js).toContain('let arr;');
+  expect(js).toContain('var arr;');
   expect(js).toContain('Position !== 0');
   expect(js).toContain('x <= 0');
   expect(js).toContain('case 1:');

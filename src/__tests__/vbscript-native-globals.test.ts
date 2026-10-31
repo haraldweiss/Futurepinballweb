@@ -34,3 +34,10 @@ it('maps BeginGame to game start and records a high score', () => {
   expect(api.EnterHighScore()).toBeGreaterThan(0);
   expect(api.SortHighScores()).toContain(5000);
 });
+
+it('provides a restricted Eval for object-existence checks', () => {
+  const api = buildFPScriptAPI();
+  expect(api.Eval('IsObject("FizXDMD")')).toBe(true);
+  expect(api.Eval('IsEmpty("x")')).toBe(false);
+  expect(api.Eval('1 + 1')).toBeUndefined();
+});

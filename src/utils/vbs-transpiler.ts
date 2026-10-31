@@ -331,13 +331,13 @@ export function vbsToJS(src: string): string {
     if (/^Option\s+(?:Explicit|Compare\b.*)$/i.test(code)) { out.push(`${pad()}// ${code}`); continue; }
 
     // eslint-disable-next-line security/detect-unsafe-regex
-    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Sub\s+(\w+)\s*;?$/i)))          { out.push(`${pad()}function ${m[1]}() {`); depth++; continue; }
+    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Sub\s+(\w+)\s*;?$/i)))          { while (depth > 0) { out.push('}'); depth--; } errorDepth = 0; out.push(`function ${m[1]}() {`); depth = 1; continue; }
     // eslint-disable-next-line security/detect-unsafe-regex
-    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Function\s+(\w+)\s*;?$/i)))     { out.push(`${pad()}function ${m[1]}() {`); depth++; continue; }
+    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Function\s+(\w+)\s*;?$/i)))     { while (depth > 0) { out.push('}'); depth--; } errorDepth = 0; out.push(`function ${m[1]}() {`); depth = 1; continue; }
     // eslint-disable-next-line security/detect-unsafe-regex
-    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Sub\s+(\w+)\s*\((.*?)\)/i)))     { out.push(`${pad()}function ${m[1]}(${_vbsParams(m[2])}) {`); depth++; continue; }
+    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Sub\s+(\w+)\s*\((.*?)\)/i)))     { while (depth > 0) { out.push('}'); depth--; } errorDepth = 0; out.push(`function ${m[1]}(${_vbsParams(m[2])}) {`); depth = 1; continue; }
     // eslint-disable-next-line security/detect-unsafe-regex
-    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Function\s+(\w+)\s*\((.*?)\)/i))) { out.push(`${pad()}function ${m[1]}(${_vbsParams(m[2])}) {`); depth++; continue; }
+    if ((m = code.match(/^(?:(?:Private|Public)\s+)?Function\s+(\w+)\s*\((.*?)\)/i))) { while (depth > 0) { out.push('}'); depth--; } errorDepth = 0; out.push(`function ${m[1]}(${_vbsParams(m[2])}) {`); depth = 1; continue; }
     if (/^End\s+(Sub|Function)$/i.test(code))  {
       while (errorDepth > 0) { depth = Math.max(0, depth - 1); out.push(`${pad()}} catch (e) { /* ignored */ }`); errorDepth--; }
       depth = Math.max(0,depth-1); out.push(`${pad()}}`); continue;
@@ -401,7 +401,7 @@ export function vbsToJS(src: string): string {
     }
     if ((m = code.match(/^Dim\s+(.*)/i))) {
       const vars = _splitArgs(m[1]).map(v=>v.trim().replace(/\s+As\s+\w+/i,'').replace(/\(.*?\)/,'').trim()).filter(Boolean);
-      out.push(`${pad()}let ${vars.join(', ')};`); continue;
+      out.push(`${pad()}var ${vars.join(', ')};`); continue;
     }
     if ((m = code.match(/^Const\s+(\w+)\s*=\s*(.*)/i))) { out.push(`${pad()}const ${m[1]} = ${_vbsXpr(m[2])};`); continue; }
 

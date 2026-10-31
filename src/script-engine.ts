@@ -143,6 +143,14 @@ export function buildFPScriptAPI() {
     LookAtPlayfield: () => fpScriptLog('LookAtPlayfield: camera target not implemented'),
     LookAtBackbox: () => fpScriptLog('LookAtBackbox: camera target not implemented'),
     SortHighScores: () => getTopScores(),
+    Eval: (expression: unknown) => {
+      const text = String(expression).trim();
+      if (/^IsObject\s*\(.*\)$/i.test(text)) return true;
+      if (/^IsEmpty\s*\(.*\)$/i.test(text)) return false;
+      if (/^IsNull\s*\(.*\)$/i.test(text)) return false;
+      fpScriptLog(`Eval unsupported: ${text}`, 'warn');
+      return undefined;
+    },
     LoadExternalScript: (name: unknown) => { fpScriptLog(`LoadExternalScript unsupported: ${String(name)}`); return false; },
     EnterHighScore: () => {
       const rank = recordScore(state.score);
@@ -1792,7 +1800,13 @@ export function buildFPScriptAPI() {
         },
       };
 
-      return bamAPI;
+      const placeholder: any = new Proxy(function () { return 0; }, {
+        get: (_target, prop) => prop === Symbol.toPrimitive ? (() => 0) : placeholder,
+        apply: () => 0,
+      });
+      return new Proxy(bamAPI, {
+        get: (target, prop) => prop in target ? target[prop] : placeholder,
+      });
     })(),
 
     _makeTimer: makeTimer,
