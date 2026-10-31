@@ -112,3 +112,8 @@ no private table bytes belong in the repository. Demo boot and native import
 lifecycle checks do not establish native table-rule parity. Member hydration,
 unsupported encodings, faithful 3D geometry/collisions, script rules and BAM
 support remain separate verification work.
+
+Preflight display limits are 160 UTF-16 code units per library/member/issue stream
+path and 2,400 total native-preflight diagnostic code units per import, including
+truncation ellipses. These limits affect log text only; pure decoder reports retain
+full data.

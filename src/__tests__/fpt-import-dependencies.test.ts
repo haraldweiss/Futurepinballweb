@@ -14,9 +14,9 @@ function u32(n: number) { const b = new Uint8Array(4); new DataView(b.buffer).se
 const str = (s: string) => join(u32(s.length), new TextEncoder().encode(s));
 const tlv = (tag: number, value = new Uint8Array()) => join(u32(4 + value.length), u32(tag), value);
 const record = (path = 'Libraries\\Native.FPL\\Playfield') => join(tlv(0xbab2beb2, str('Image')), tlv(0xb7abbeb0, str(path)), tlv(0xbdbbb1bb));
-function file(bytes = record()) {
+function file(bytes = record(), streamPath = 'Resources/Image 1') {
   const container = CFB.utils.cfb_new();
-  CFB.utils.cfb_add(container, 'Resources/Image 1', bytes);
+  CFB.utils.cfb_add(container, streamPath, bytes);
   const data = CFB.write(container, { type: 'array' });
   return { name: 'native.fpt', size: data.length, arrayBuffer: async () => data.slice().buffer } as File;
 }
@@ -77,4 +77,20 @@ it('keeps worker import available when native preflight cannot decode the contai
   await parseFPTFile({ name: 'unknown.fpt', size: 8, arrayBuffer: async () => new ArrayBuffer(8) } as File, build);
   expect(logs()).toContain('Referenzprüfung nicht möglich');
   expect(build).toHaveBeenCalledOnce();
+});
+
+it('bounds long native library/member fields and the total diagnostic text', async () => {
+  await parseFPTFile(file(join(...Array.from({ length: 8 }, (_, i) => record(`${i}${'L'.repeat(4000)}.fpl/${'M'.repeat(4000)}`)))));
+  const warnings = mocks.log.mock.calls.filter(c => c[1] === 'warn').map(c => c[0] as string);
+  expect(warnings.join('').length).toBeLessThanOrEqual(2400);
+  expect(warnings.join('')).toContain('…');
+  expect(warnings.join('')).not.toContain('L'.repeat(160));
+  expect(warnings.join('')).not.toContain('M'.repeat(160));
+  expect(warnings.join('')).toContain('nicht verifiziert');
+});
+it('bounds the displayed stream path of a malformed recognized record', async () => {
+  await parseFPTFile(file(join(u32(100), u32(0xbab2beb2)), `${'Folder/'.repeat(80)}Image 1`));
+  const warning = mocks.log.mock.calls.find(c => (c[0] as string).includes('malformed-record'))?.[0] as string;
+  expect(warning).toContain('…');
+  expect(warning.length).toBeLessThan(400);
 });
