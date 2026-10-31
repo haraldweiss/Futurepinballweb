@@ -5,8 +5,43 @@ import { lstat, readdir, readFile, realpath } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { dirname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
 import { read } from '../src/fpt/cfb-io';
-import { readExternalReferences } from '../src/fpt/external-references';
+import { readExternalReferences, type ExternalReference } from '../src/fpt/external-references';
 import { resolveLibraryFiles, type DependencyFile } from '../src/fpt/dependency-resolver';
+import { readLibraryMembers, resolveLibraryMembers, type LibraryInventory, type LibraryMemberInventory, type MemberResolution } from '../src/fpt/library-members';
+
+interface LibraryRead { path: string; sha256: string; inventory: LibraryMemberInventory }
+interface LibraryReadError { path: string; error: string }
+type MemberOutput = {
+  reference: ExternalReference;
+  status: MemberResolution['status'] | 'library-unreadable';
+  candidates: Array<{ name: string; kind: string; type: number; sourcePath: string | null }>;
+};
+const libraryCache = new Map<string, LibraryRead | LibraryReadError>();
+
+function candidatePath(rootId: string, relativePath: string): string | undefined {
+  const path = join(rootId, ...relativePath.split('/'));
+  const within = relative(rootId, path);
+  return within.startsWith('..') || isAbsolute(within) ? undefined : path;
+}
+
+async function loadLibrary(path: string): Promise<LibraryRead | LibraryReadError> {
+  const cached = libraryCache.get(path);
+  if (cached) return cached;
+  try {
+    const bytes = await readFile(path);
+    const result: LibraryRead = {
+      path,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+      inventory: readLibraryMembers(read(bytes)),
+    };
+    libraryCache.set(path, result);
+    return result;
+  } catch (error) {
+    const result: LibraryReadError = { path, error: String(error) };
+    libraryCache.set(path, result);
+    return result;
+  }
+}
 
 function argumentsFor(argv: string[]) {
   const tables: string[] = []; const roots: string[] = [];
@@ -82,12 +117,58 @@ async function main() {
       const resolutions = resolveLibraryFiles(report.references, rootIds.map((id, priority) => ({ id, priority })), files)
         .map(result => partial && result.status !== 'invalid-path'
           ? { ...result, status: 'inventory-incomplete' as const } : result);
-      if (partial || report.coverage !== 'complete-recognized-records' || resolutions.some(r => r.status !== 'resolved-file')) incomplete = true;
+
+      // Member verification only for files that resolved against a complete inventory.
+      const unreadable = new Set<ExternalReference>();
+      const inventoryByLibrary = new Map<string, LibraryInventory>();
+      const libraryReads = new Map<string, LibraryRead>();
+      for (const resolution of resolutions) {
+        if (resolution.status !== 'resolved-file') continue;
+        const candidate = resolution.candidates[0];
+        const absolute = candidate && candidatePath(candidate.rootId, candidate.relativePath);
+        if (!absolute) { unreadable.add(resolution.reference); continue; }
+        const loaded = await loadLibrary(absolute);
+        if ('error' in loaded) {
+          unreadable.add(resolution.reference);
+          console.error(`member verification skipped: ${loaded.error}`);
+          continue;
+        }
+        libraryReads.set(absolute, loaded);
+        const key = resolution.reference.libraryPath.replace(/\\/g, '/').replace(/[A-Z]/g, char => char.toLowerCase());
+        const existing = inventoryByLibrary.get(key);
+        if (existing && existing.inventory !== loaded.inventory) throw new Error(`Conflicting library inventory: ${resolution.reference.libraryPath}`);
+        if (!existing) inventoryByLibrary.set(key, { libraryPath: resolution.reference.libraryPath, inventory: loaded.inventory });
+      }
+      const inspectable = resolutions.filter(result => result.status === 'resolved-file'
+        && !unreadable.has(result.reference)).map(result => result.reference);
+      const memberByReference = new Map(resolveLibraryMembers(inspectable, [...inventoryByLibrary.values()])
+        .map(result => [result.reference, result]));
+      const memberResolutions: MemberOutput[] = resolutions
+        .filter(result => result.status === 'resolved-file')
+        .map(result => {
+          const member = memberByReference.get(result.reference);
+          return member
+            ? { reference: member.reference, status: member.status,
+              candidates: member.candidates.map(({ name, kind, type, sourcePath }) => ({ name, kind, type, sourcePath })) }
+            : { reference: result.reference, status: 'library-unreadable' as const, candidates: [] };
+        });
+      const unresolvedFiles = resolutions.some(result => result.status !== 'resolved-file');
+      const memberPartial = unreadable.size > 0
+        || [...libraryReads.values()].some(read => read.inventory.coverage !== 'complete-recognized-members')
+        || memberResolutions.some(result => result.status !== 'resolved-member');
+      const memberVerification = report.references.length === 0 ? 'not-performed'
+        : unresolvedFiles || memberPartial ? 'partial' : 'performed';
+      if (partial || report.coverage !== 'complete-recognized-records' || unresolvedFiles || memberVerification === 'partial') incomplete = true;
+      const libraryMembers = [...libraryReads.values()].map(read => ({
+        path: read.path, sha256: read.sha256, memberCount: read.inventory.members.length,
+        coverage: read.inventory.coverage, issues: read.inventory.issues,
+      }));
       tables.push({ path, sha256: createHash('sha256').update(bytes).digest('hex'), streamCount: container.FileIndex.filter(entry => entry.type === 2).length,
-        inventoryCoverage: partial ? 'partial' : 'complete', referenceCoverage: report.coverage, issues: report.issues, resolutions, memberVerification: 'not-performed', gameplayVerification: 'not-performed' });
+        inventoryCoverage: partial ? 'partial' : 'complete', referenceCoverage: report.coverage, issues: report.issues, resolutions,
+        memberVerification, memberResolutions, libraryMembers, gameplayVerification: 'not-performed' });
     } catch (error) { incomplete = true; console.error(`Table audit failed: ${suppliedTable}: ${String(error)}`); }
   }
-  console.log(JSON.stringify({ schemaVersion: 1, tables }, null, 2));
+  console.log(JSON.stringify({ schemaVersion: 2, tables }, null, 2));
   process.exitCode = incomplete ? 1 : 0;
 }
 await main();
