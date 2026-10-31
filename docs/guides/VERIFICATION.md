@@ -160,6 +160,18 @@ All 21 native `IScriptGlobal` names are now exposed. The previously absent
 or external-script operations log and return rather than throwing. This is global
 API availability, not COM object, event-ordering or call-signature parity.
 
+The transpiler now handles real-table syntax: `ByVal`/`ByRef`/`Optional`
+parameters, `Option Explicit`, command-style dotted calls, `Dim` arrays,
+colon-separated statements, single-line `If`/`Case`, `Exit`, `On Error`,
+`<>`/`=<`/`=>`, empty arguments and doubled quotes. Five of the six extracted
+corpus scripts produce syntactically valid JavaScript; All In One still hits
+transpiler gaps (array-access ambiguity and complex string escaping).
+
+`FuturePinball_BeginPlay` runs on script load, `EndPlay` on table reset, and
+`KeyPressed`/`KeyReleased` from browser key events, with `TiltWarning`/`Tilted`
+from the nudge path. Key codes currently use `KeyboardEvent.keyCode`; native VK
+parity and full event ordering are not verified.
+
 Preflight display limits are 160 UTF-16 code units per library/member/issue stream
 path and 2,400 total native-preflight diagnostic code units per import, including
 truncation ellipses. These limits affect log text only; pure decoder reports retain
