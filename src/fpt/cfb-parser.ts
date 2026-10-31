@@ -7,6 +7,7 @@ import { extractImageFromBytes, extractSoundFromBytes } from './media';
 import { logMsg } from './log';
 import type { ResourceLoadingCallbacks } from './log';
 import { tryExtractVBScriptFromData } from './strings';
+import { extractNativeScript } from './script-extract';
 
 function extractNullStrings(bytes: Uint8Array, minLen = 4): string[] {
   const out: string[] = []; let cur = '';
@@ -198,6 +199,15 @@ export async function parseCFBResources(
 
   const audioTime = performance.now() - imageTime - startTime;
   callbacks?.onPhaseComplete?.('audio', audioTime);
+
+  if (!fptResources.script) {
+    const nativeScript = extractNativeScript(cfb);
+    if (nativeScript) {
+      fptResources.script = nativeScript.text;
+      fptRawBytes.scriptOriginal = nativeScript.text;
+      logMsg(`  Script: "${nativeScript.streamPath}" zLZO @ ${nativeScript.blockOffset} (${nativeScript.text.split('\n').length} Zeilen VBScript)`, 'ok');
+    }
+  }
 
   if (!fptResources.script) {
     for (const { name, bytes } of scriptEntries) {

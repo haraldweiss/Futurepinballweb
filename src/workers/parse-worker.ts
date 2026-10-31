@@ -14,7 +14,8 @@
 
 import * as CFB from '../fpt/cfb-io';
 import type { CFB$Container } from '../fpt/cfb-io';
-import { lzo1xDecompress } from '../fpt/lzo';
+import { lzo1xDecompress, tryLZOExtract } from '../fpt/lzo';
+import { extractNativeScript } from '../fpt/script-extract';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -97,19 +98,6 @@ function toOwnedBytes(bytes: Uint8Array): Uint8Array {
   return bytes.slice();
 }
 
-function tryLZOExtract(bytes: Uint8Array): Uint8Array | null {
-  for (const [dataOff] of [[12, 8], [8, 0], [16, 12]]) {
-    if (bytes.length <= dataOff) continue;
-    const view = new DataView(bytes.buffer, bytes.byteOffset);
-    let hint = 0;
-    try { hint = view.getUint32(dataOff - 4, true); } catch { /* ignore */ }
-    if (hint > 64 * 1024 * 1024 || hint < 0) hint = 0;
-    const result = lzo1xDecompress(bytes.slice(dataOff), hint || undefined);
-    if (result && result.length > 4) return result;
-  }
-  return null;
-}
-
 // ─── CFB resource extraction (worker-safe, no DOM) ──────────────────────────
 
 function extractTexturesFromCFB(cfb: CFB$Container): CachedTextureResult[] {
@@ -184,6 +172,11 @@ function extractSoundsFromCFB(cfb: CFB$Container): CachedSoundResult[] {
 }
 
 function extractScriptFromCFB(cfb: CFB$Container): { script: string | null; scriptBytes: Uint8Array | null } {
+  const nativeScript = extractNativeScript(cfb);
+  if (nativeScript) {
+    const match = (cfb.FileIndex || []).find(entry => cfb.FullPaths[cfb.FileIndex.indexOf(entry)] === nativeScript.streamPath);
+    return { script: nativeScript.text, scriptBytes: match ? toOwnedBytes(match.content) : null };
+  }
   const entries = (cfb.FileIndex || []).filter(
     (e) => e.size > 0 && e.name && e.name !== 'Root Entry',
   );

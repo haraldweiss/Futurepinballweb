@@ -139,6 +139,19 @@ vertices, 70-byte triangles, per-corner UVs) now parses 260/260 `fpModels` and
 fidelity. The checks did not assert every rendered mesh, the remaining
 `fpPlayfields` JPEG, font rendering or gameplay.
 
+### Native table script extraction
+
+Table scripts are stored as a `zLZO` block inside the `Table Data` stream, not as
+plain text. The previous heuristics treated compressed bytes as text and produced a
+corrupted script. A shared extractor now scans direct text streams and native
+`zLZO` blocks, requires a high-confidence VBScript shape and selects the largest
+candidate. Main-thread and worker parsing both use it.
+
+Corpus extraction (2026-10-31): NewTable 26,624 chars; All In One Example Table
+208,140; DmdDisplayDemo 10,667; LightSequencerDemo 9,651; Ramp-VUK-Demo 27,301;
+SegmentDisplayDemo 5,966. samples.fpt and Empty Table have no extracted script.
+This proves script bytes are recovered, not that every VBScript call is supported.
+
 Preflight display limits are 160 UTF-16 code units per library/member/issue stream
 path and 2,400 total native-preflight diagnostic code units per import, including
 truncation ellipses. These limits affect log text only; pure decoder reports retain
