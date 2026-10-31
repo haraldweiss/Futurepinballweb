@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import * as CFB from './cfb-io';
 import type { CFB$Container } from './cfb-io';
-import { lzo1xDecompress } from './lzo';
+import { lzo1xDecompress, tryLZOExtract } from './lzo';
 import { findBMPInLZORegions, extractTextureName } from './fpm-textures';
 
 export interface FPMModel {
@@ -72,7 +72,7 @@ function findZLZORegions(bytes: Uint8Array): Uint8Array[] {
     if (bytes[pos] === 0x7a && bytes[pos+1] === 0x4c &&
         bytes[pos+2] === 0x5a && bytes[pos+3] === 0x4f) {
       try {
-        const d = lzo1xDecompress(bytes.slice(pos));
+        const d = tryLZOExtract(bytes.slice(pos));
         if (d && d.length > 4) regions.push(d);
       } catch { /* skip */ }
       pos += 4;
@@ -278,7 +278,7 @@ export function parseFPM(bytes: Uint8Array): FPMModel | null {
     const effective = inner || region;
     if (effective[0] === 0x42 && effective[1] === 0x4d) {
       textureData = effective;
-    } else if (effective.length > 500) {
+    } else if (effective.length > 500 && (!meshData || effective.length > meshData.length)) {
       meshData = effective;
     }
   }
