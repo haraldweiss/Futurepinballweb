@@ -71,7 +71,131 @@ export function fpScriptLog(msg: string, type = 'info'): void {
 }
 
 // ─── FP Script API ────────────────────────────────────────────────────────────
+function createReelProxy(name: string): Record<string, any> {
+  let value = 0, brightness = 1, digits = 7;
+  return new Proxy({}, {
+    get: (_target, prop) => {
+      const key = String(prop);
+      if (key === 'Name' || key === 'name') return name;
+      if (key === 'Value' || key === 'Score' || key === 'State') return value;
+      if (key === 'Digits') return digits;
+      if (key === 'Brightness') return brightness;
+      if (key === 'SetValue' || key === 'SetScore') return (next: unknown) => { value = Number(next) || 0; };
+      if (key === 'SetBrightness') return (next: unknown) => { brightness = Math.max(0, Math.min(1, Number(next) || 0)); };
+      if (key === 'Reset') return () => { value = 0; };
+      if (key === 'toString' || prop === Symbol.toPrimitive) return () => value;
+      return (...args: unknown[]) => { fpScriptLog(`[Reel] ${name}.${key}(${args.join(', ')})`, 'debug'); };
+    },
+    set: (_target, prop, next) => {
+      if (prop === 'Value' || prop === 'Score' || prop === 'State') value = Number(next) || 0;
+      else if (prop === 'Brightness') brightness = Math.max(0, Math.min(1, Number(next) || 0));
+      else if (prop === 'Digits') digits = Number(next) || 0;
+      return true;
+    },
+  });
+}
+
+function createLightProxy(name: string): Record<string, any> {
+  let state = 0, intensity = 0;
+  const apply = (next: number) => { intensity = Math.max(0, Math.min(1, next)); cb.setLampState?.(name, intensity); };
+  return new Proxy({}, {
+    get: (_target, prop) => {
+      const key = String(prop);
+      if (key === 'Name' || key === 'name') return name;
+      if (key === 'State') return state;
+      if (key === 'Intensity') return intensity;
+      if (key === 'Enabled') return state !== 0;
+      if (key === 'TurnOn') return () => { state = 1; apply(1); };
+      if (key === 'TurnOff') return () => { state = 0; apply(0); };
+      if (key === 'SetState' || key === 'SetIntensity') return (next: unknown) => {
+        const value = Number(next) || 0;
+        state = value > 0 ? 1 : 0;
+        apply(value > 1 ? value / 100 : value);
+      };
+      if (key === 'Blink' || key === 'BlinkPattern') return (interval = 250, count = 1) => {
+        let toggles = Math.max(1, Number(count) || 1);
+        const timer = setInterval(() => {
+          state = state ? 0 : 1; apply(state);
+          if (--toggles <= 0) { clearInterval(timer); state = 0; apply(0); }
+        }, Math.max(50, Number(interval) || 250));
+      };
+      if (prop === Symbol.toPrimitive) return () => state;
+      return (...args: unknown[]) => { fpScriptLog(`[Light] ${name}.${key}(${args.join(', ')})`, 'debug'); };
+    },
+    set: (_target, prop, next) => {
+      if (prop === 'State') { state = Number(next) ? 1 : 0; apply(state); }
+      else if (prop === 'Intensity') { const value = Number(next) || 0; state = value > 0 ? 1 : 0; apply(value > 1 ? value / 100 : value); }
+      return true;
+    },
+  });
+}
+
+function createFlasherProxy(name: string): Record<string, any> {
+  let intensity = 0;
+  const apply = (next: number) => { intensity = Math.max(0, Math.min(1, next)); cb.setFlasherState?.(name, intensity); };
+  return new Proxy({}, {
+    get: (_target, prop) => {
+      const key = String(prop);
+      if (key === 'Name' || key === 'name') return name;
+      if (key === 'Intensity' || key === 'State') return intensity;
+      if (key === 'On') return () => apply(1);
+      if (key === 'Off') return () => apply(0);
+      if (key === 'Flash') return (value = 1, duration = 0) => {
+        apply(Number(value) || 0);
+        if (Number(duration) > 0) setTimeout(() => apply(0), Number(duration));
+      };
+      if (key === 'FlashForMs') return (ms = 100, value = 1) => {
+        apply(Number(value) || 0);
+        setTimeout(() => apply(0), Math.max(0, Number(ms) || 0));
+      };
+      if (key === 'Blink') return (interval = 250, count = 1) => {
+        let toggles = Math.max(1, Number(count) || 1);
+        const timer = setInterval(() => {
+          apply(intensity ? 0 : 1);
+          if (--toggles <= 0) { clearInterval(timer); apply(0); }
+        }, Math.max(50, Number(interval) || 250));
+      };
+      if (prop === Symbol.toPrimitive) return () => intensity;
+      return (...args: unknown[]) => { fpScriptLog(`[Flasher] ${name}.${key}(${args.join(', ')})`, 'debug'); };
+    },
+    set: (_target, prop, next) => { if (prop === 'Intensity' || prop === 'State') apply(Number(next) || 0); return true; },
+  });
+}
+
+function createFlipperProxy(name: string): Record<string, any> {
+  let enabled = false, strength = 100, angleSwing = 50;
+  return new Proxy({}, {
+    get: (_target, prop) => {
+      const key = String(prop);
+      if (key === 'Name' || key === 'name') return name;
+      if (key === 'Enabled') return enabled;
+      if (key === 'Strength') return strength;
+      if (key === 'AngleSwing') return angleSwing;
+      if (key === 'SolenoidOn') return () => { enabled = true; fpScriptLog(`[Flipper] ${name}.SolenoidOn`, 'debug'); };
+      if (key === 'SolenoidOff') return () => { enabled = false; fpScriptLog(`[Flipper] ${name}.SolenoidOff`, 'debug'); };
+      if (key === 'SolenoidPulse') return () => {
+        enabled = true;
+        setTimeout(() => { enabled = false; }, 120);
+      };
+      if (key === 'Enable') return () => { enabled = true; };
+      if (key === 'Disable') return () => { enabled = false; };
+      if (prop === Symbol.toPrimitive) return () => enabled ? 1 : 0;
+      return (...args: unknown[]) => { fpScriptLog(`[Flipper] ${name}.${key}(${args.join(', ')})`, 'debug'); };
+    },
+    set: (_target, prop, next) => {
+      if (prop === 'Enabled') enabled = Boolean(next);
+      else if (prop === 'Strength') strength = Number(next) || 0;
+      else if (prop === 'AngleSwing') angleSwing = Number(next) || 0;
+      return true;
+    },
+  });
+}
+
 function createElementProxy(name: string): Record<string, any> {
+  if (/reel|score/i.test(name)) return createReelProxy(name);
+  if (/flasher|flash/i.test(name)) return createFlasherProxy(name);
+  if (/light|lamp|gi/i.test(name)) return createLightProxy(name);
+  if (/flipper/i.test(name)) return createFlipperProxy(name);
   const values: Record<string, any> = {};
   return new Proxy({}, {
     get: (_target, prop) => {
@@ -2095,7 +2219,7 @@ export function runFPScript(vbsCode: string): void {
   const bindings  = Object.keys(api).filter(key => !key.startsWith('__') && !scriptNames.has(key.toLowerCase()))
     .map(k => `var ${k} = __api__['${k}'];`).join('\n')
     + [...elementNames].map(name => `var ${name} = __api__.__element('${name}');`).join('\n');
-  if (elementNames.size > 0) fpScriptLog(`${elementNames.size} native element placeholders bound`, 'debug');
+  if (elementNames.size > 0) fpScriptLog(`${elementNames.size} native element bindings active`, 'debug');
   const collect   = fnNames.map(n => `if (typeof ${n} === 'function') __h__['${n}'] = ${n};`).join('\n');
 
   try {
