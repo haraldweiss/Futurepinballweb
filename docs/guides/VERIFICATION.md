@@ -128,9 +128,10 @@ Supplied-library probe (2026-10-31): `fpSounds` 20/20 OggS, `fpScripts` 1/1 UTF-
 script, `fpDmdFonts` 6/6 FDAT retained, `fpModels` 195/260 and `fpRamps` 75/82
 parsed by the existing FPM decoder. All 104 image members (`fpTextures`,
 `fpPlayfields`, `fpSphereMaps`) use the custom `zLZO6l`/`BM6l` container that the
-current image helpers do not consume, so they remain undecoded. Model parse counts
-are extraction coverage, not geometry fidelity; font rendering, texture decode and
-gameplay remain unverified.
+current image helpers do not consume, so they remain undecoded. Production-browser smoke (2026-10-31) loaded `fpSounds`, `fpScripts` and
+`fpModels` from the private install through the file input: sound, script and model
+member messages appeared and no page errors were captured. The check did not assert
+every model mesh, texture decode, font rendering or gameplay.
 
 Preflight display limits are 160 UTF-16 code units per library/member/issue stream
 path and 2,400 total native-preflight diagnostic code units per import, including
