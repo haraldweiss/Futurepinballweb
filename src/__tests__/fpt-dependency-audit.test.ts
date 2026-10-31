@@ -63,3 +63,14 @@ it('reports unavailable roots and rejects explicit symlink roots and tables with
   const result = run(['--table', tableAlias]); expect(result.status).toBe(1); expect(JSON.parse(result.stdout).tables).toEqual([]);
   expect(run(['--table', `${f.dir}/../forbidden.fpt`]).status).toBe(2);
 });
+it.skipIf(process.platform === 'win32')('rejects unsupported ancestor names without inventing candidate paths', () => {
+  const f = fixture('nested/foo/Mixed.fpl/Member');
+  mkdirSync(join(f.dir, 'nested\\foo'));
+  writeFileSync(join(f.dir, 'nested\\foo/Mixed.fpl'), 'x');
+  const result = run(['--table', f.table]);
+  expect(result.status).toBe(1);
+  expect(result.stderr).toMatch(/partial inventory/);
+  expect(JSON.parse(result.stdout).tables[0]).toMatchObject({
+    inventoryCoverage: 'partial', resolutions: [{ status: 'inventory-incomplete', candidates: [] }],
+  });
+});

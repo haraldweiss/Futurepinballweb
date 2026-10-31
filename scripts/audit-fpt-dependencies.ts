@@ -3,7 +3,7 @@
 // Trusted-user host CLI only. Never import into table scripts or the browser runtime.
 import { lstat, readdir, readFile, realpath } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { dirname, isAbsolute, join, parse, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
 import { read } from '../src/fpt/cfb-io';
 import { readExternalReferences } from '../src/fpt/external-references';
 import { resolveLibraryFiles, type DependencyFile } from '../src/fpt/dependency-resolver';
@@ -38,15 +38,16 @@ async function inventory(rootId: string): Promise<{ files: DependencyFile[]; par
     try {
       const names = (await readdir(directory)).sort();
       for (const name of names) {
+        // Validate every entry before recursion: literal POSIX backslashes must
+        // never become invented path separators in descendant candidates.
+        if (/[\x00-\x1f\x7f-\x9f:]/.test(name) || name.includes('\\')) { partial = true; continue; }
         const path = join(directory, name);
         try {
           const stat = await lstat(path);
           if (stat.isSymbolicLink()) { partial = true; continue; }
           if (stat.isDirectory()) await walk(path);
           else if (stat.isFile()) {
-            const relativePath = relative(rootId, path).split('\\').join('/');
-            // Inventory names must obey the pure resolver's contract too.
-            if (/[\x00-\x1f\x7f-\x9f:]/.test(relativePath) || name.includes('\\')) { partial = true; continue; }
+            const relativePath = relative(rootId, path).split(sep).join('/');
             files.push({ rootId, relativePath });
           } else partial = true;
         } catch { partial = true; }
