@@ -83,11 +83,66 @@ function findZLZORegions(bytes: Uint8Array): Uint8Array[] {
 
 // ─── MS3D variant parser ─────────────────────────────────────────────────
 
-interface MS3DParsedResult {
+export interface MS3DParsedResult {
   vertices: number[];
   normals: number[];
   uvs: number[];
   indices: number[];
+}
+
+/**
+ * Parse the observed MS3D binary layout used by FP models:
+ * "MS3D000000", version, uint16 vertex count, 15-byte vertices,
+ * uint16 triangle count, 70-byte triangles. UVs/normals are per triangle
+ * corner, so triangles are de-indexed into a render-ready vertex stream.
+ */
+export function parseMS3DBinary(data: Uint8Array): MS3DParsedResult | null {
+  if (data.length < 18) return null;
+  const signature = new TextDecoder('latin1').decode(data.subarray(0, 10));
+  if (signature !== 'MS3D000000') return null;
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const vertexCount = view.getUint16(14, true);
+  const verticesStart = 16;
+  const trianglesCountOffset = verticesStart + vertexCount * 15;
+  if (vertexCount < 1 || trianglesCountOffset + 2 > data.length) return null;
+  const triangleCount = view.getUint16(trianglesCountOffset, true);
+  const trianglesStart = trianglesCountOffset + 2;
+  if (triangleCount < 1 || trianglesStart + triangleCount * 70 > data.length) return null;
+
+  const sourceVertices = new Float32Array(vertexCount * 3);
+  for (let i = 0; i < vertexCount; i++) {
+    const offset = verticesStart + i * 15 + 1;
+    const x = view.getFloat32(offset, true);
+    const y = view.getFloat32(offset + 4, true);
+    const z = view.getFloat32(offset + 8, true);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return null;
+    sourceVertices[i * 3] = x;
+    sourceVertices[i * 3 + 1] = y;
+    sourceVertices[i * 3 + 2] = z;
+  }
+
+  const result: MS3DParsedResult = { vertices: [], normals: [], uvs: [], indices: [] };
+  for (let triangle = 0; triangle < triangleCount; triangle++) {
+    const offset = trianglesStart + triangle * 70;
+    const i0 = view.getUint16(offset + 2, true);
+    const i1 = view.getUint16(offset + 4, true);
+    const i2 = view.getUint16(offset + 6, true);
+    if (i0 >= vertexCount || i1 >= vertexCount || i2 >= vertexCount) return null;
+    const indices = [i0, i1, i2];
+    const uvs = [0, 1, 2].map(index => [view.getFloat32(offset + 44 + index * 4, true), view.getFloat32(offset + 56 + index * 4, true)]);
+    for (let corner = 0; corner < 3; corner++) {
+      const vertex = indices[corner];
+      result.vertices.push(sourceVertices[vertex * 3], sourceVertices[vertex * 3 + 1], sourceVertices[vertex * 3 + 2]);
+      result.normals.push(
+        view.getFloat32(offset + 8 + corner * 12, true),
+        view.getFloat32(offset + 12 + corner * 12, true),
+        view.getFloat32(offset + 16 + corner * 12, true),
+      );
+      result.uvs.push(uvs[corner][0], uvs[corner][1]);
+      result.indices.push(result.indices.length);
+    }
+  }
+  return result;
 }
 
 /**
@@ -291,7 +346,7 @@ export function parseFPM(bytes: Uint8Array): FPMModel | null {
   const textureName = extractTextureName(compressedData);
 
   if (!meshData) return null;
-  const parsed = parseMS3DVariant(meshData);
+  const parsed = parseMS3DBinary(meshData) ?? parseMS3DVariant(meshData);
   if (!parsed || parsed.vertices.length === 0) return null;
 
   return {
@@ -340,7 +395,9 @@ export function fpmToTHREE(fpm: FPMModel): THREE.Mesh {
   }
 
   if (fpm.indices.length > 0) {
-    geometry.setIndex(new THREE.Uint16BufferAttribute(fpm.indices, 1));
+    geometry.setIndex(fpm.indices.length > 65535
+      ? new THREE.Uint32BufferAttribute(fpm.indices, 1)
+      : new THREE.Uint16BufferAttribute(fpm.indices, 1));
   }
 
   if (fpm.normals.length === 0) {

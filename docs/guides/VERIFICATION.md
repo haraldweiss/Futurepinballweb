@@ -133,10 +133,11 @@ three TGA decals with a placeholder 1x1 header and inferred square dimensions),
 browser; one JPEG member fails browser decode. Production-browser smoke (2026-10-31) loaded `fpSounds`, `fpScripts` and
 `fpModels` from the private install through the file input: sound, script and model
 member messages appeared and no page errors were captured. A later
-`fpTextures` run loaded 90 textures. The checks did not assert every model mesh,
-the remaining `fpPlayfields` JPEG, font rendering or gameplay. The corrected
-decoder also invalidated earlier heuristic model admissions, so model geometry
-still needs a dedicated pass.
+`fpTextures` run loaded 90 textures. The observed MS3D binary layout (15-byte
+vertices, 70-byte triangles, per-corner UVs) now parses 260/260 `fpModels` and
+82/82 `fpRamps` members; this is structural parsing, not visual or collision
+fidelity. The checks did not assert every rendered mesh, the remaining
+`fpPlayfields` JPEG, font rendering or gameplay.
 
 Preflight display limits are 160 UTF-16 code units per library/member/issue stream
 path and 2,400 total native-preflight diagnostic code units per import, including

@@ -31,9 +31,11 @@ test('real FPL model libraries retain and decode members', async ({ page }) => {
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
   await page.waitForTimeout(2000);
+  await page.evaluate(() => document.getElementById('quick-menu')?.classList.remove('open'));
   for (const library of modelLibraries) {
+    await page.locator('#open-loader').click();
     await page.setInputFiles('#file-input', library);
-    await page.waitForTimeout(5000);
+    await page.waitForFunction(() => document.getElementById('parse-log')?.innerText.includes('Library loaded'), undefined, { timeout: 120000 });
   }
   const log = await page.locator('#parse-log').innerText();
   expect(log).toContain('Model-Member');
