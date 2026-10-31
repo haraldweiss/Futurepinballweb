@@ -182,6 +182,12 @@ to explicit placeholder objects, so a production NewTable `BeginPlay` completes
 with 193 placeholders, 35 handlers and no handler error. Placeholder methods and
 values only log; reel/display/light/flipper semantics are not implemented.
 
+All six corpus scripts now compile. Added a restricted `Eval` that answers
+`IsObject`/`IsEmpty`/`IsNull` without arbitrary code, and an inert `xBAM` proxy for
+unknown optional BAM methods. AI1 registers 883 element placeholders but still
+stops at `checkIfExist` runtime behavior, so BAM-heavy script execution is not yet
+verified.
+
 Preflight display limits are 160 UTF-16 code units per library/member/issue stream
 path and 2,400 total native-preflight diagnostic code units per import, including
 truncation ellipses. These limits affect log text only; pure decoder reports retain
