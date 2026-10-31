@@ -115,6 +115,23 @@ lifecycle checks do not establish native table-rule parity. Member hydration,
 unsupported encodings, faithful 3D geometry/collisions, script rules and BAM
 support remain separate verification work.
 
+### FPL library asset extraction
+
+`parseFPLFile` reads root FPL member storages and dispatches by `FTYP` rather than
+guessing from stream names. Sounds (`OggS` FDAT) use the existing audio decoder;
+models retain FDAT bytes and attempt the existing FPM parser; fonts and scripts
+retain FDAT content; images use the existing image decoder. Unknown, malformed or
+undecoded members produce one bounded warning per import. Legacy FPLs without member
+storages keep the filename-regex path, and root-level BAM/physics streams still load.
+
+Supplied-library probe (2026-10-31): `fpSounds` 20/20 OggS, `fpScripts` 1/1 UTF-8
+script, `fpDmdFonts` 6/6 FDAT retained, `fpModels` 195/260 and `fpRamps` 75/82
+parsed by the existing FPM decoder. All 104 image members (`fpTextures`,
+`fpPlayfields`, `fpSphereMaps`) use the custom `zLZO6l`/`BM6l` container that the
+current image helpers do not consume, so they remain undecoded. Model parse counts
+are extraction coverage, not geometry fidelity; font rendering, texture decode and
+gameplay remain unverified.
+
 Preflight display limits are 160 UTF-16 code units per library/member/issue stream
 path and 2,400 total native-preflight diagnostic code units per import, including
 truncation ellipses. These limits affect log text only; pure decoder reports retain
