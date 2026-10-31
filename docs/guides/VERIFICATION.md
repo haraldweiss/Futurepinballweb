@@ -129,8 +129,8 @@ script, `fpDmdFonts` 6/6 FDAT retained. The native `zLZO` container is decoded w
 the recovered token rules (size at offset 4, LZO data at offset 8, M1/M2/M3/M4
 matches and trailing literals). 90/90 `fpTextures` members decode (87 BMP plus
 three TGA decals with a placeholder 1x1 header and inferred square dimensions),
-11/11 `fpSphereMaps` decode, and 2/3 `fpPlayfields` JPEG/BMP members hydrate in the
-browser; one JPEG member fails browser decode. Production-browser smoke (2026-10-31) loaded `fpSounds`, `fpScripts` and
+11/11 `fpSphereMaps` and 3/3 `fpPlayfields` JPEG/BMP members decode in the
+browser. Production-browser smoke (2026-10-31) loaded `fpSounds`, `fpScripts` and
 `fpModels` from the private install through the file input: sound, script and model
 member messages appeared and no page errors were captured. A later
 `fpTextures` run loaded 90 textures. The observed MS3D binary layout (15-byte

@@ -4,6 +4,7 @@ import { getAudioCtx } from '../audio-system';
 import { tryLZOExtract } from './lzo';
 import { extractEmbeddedPayload } from './legacy-container';
 import { tgaToTexture } from './tga';
+import { trimJpegToEoi } from './jpeg';
 
 export function detectImageMime(buf: Uint8Array, off = 0): string | null {
   if (buf.length < off + 4) return null;
@@ -24,29 +25,6 @@ export function detectAudioMime(buf: Uint8Array, off = 0): string | null {
   if (a===0x49&&b===0x44&&c===0x33)           return 'audio/mpeg';
   if ((a===0xFF)&&(b&0xE0)===0xE0)            return 'audio/mpeg';
   return null;
-}
-
-export function findJpegEoiOffset(bytes: Uint8Array): number {
-  if (bytes.length < 4 || bytes[0] !== 0xFF || bytes[1] !== 0xD8) return -1;
-  let sosPos = -1;
-  for (let i = 2; i < bytes.length - 1; i++) {
-    if (bytes[i] === 0xFF && bytes[i + 1] === 0xDA) { sosPos = i; break; }
-  }
-  if (sosPos < 0) return -1;
-  if (sosPos + 4 > bytes.length) return -1;
-  const sosLen = (bytes[sosPos + 2] << 8) | bytes[sosPos + 3];
-  if (sosLen < 2) return -1;
-  let pos = sosPos + 2 + sosLen;
-  while (pos < bytes.length - 1) {
-    if (bytes[pos] === 0xFF && bytes[pos + 1] === 0xD9) return pos + 2;
-    pos++;
-  }
-  return -1;
-}
-
-export function trimJpegToEoi(bytes: Uint8Array): Uint8Array {
-  const eoi = findJpegEoiOffset(bytes);
-  return eoi > 0 ? bytes.subarray(0, eoi) : bytes;
 }
 
 export async function bytesToTexture(slice: Uint8Array, mime: string): Promise<THREE.Texture> {
