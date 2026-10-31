@@ -1,13 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// ─── Nuke any stale service worker from a previous session ───
-// Must run before any other code because an old SW (cached from a prior
-// visit) blocks Vite's HMR /@vite/client and /main.ts with TLS errors.
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(r => r.unregister());
-  }).catch(() => {}); // SW registration may fail in some environments
-}
 // © 2026 Harald Weiss
 /**
  * main.ts — Einstiegspunkt: Scene, Physik, Game-Loop, Input, UI, Multiscreen
@@ -73,7 +65,7 @@ import {
 } from './dmd';
 import { getTopScores, recordScore } from './highscore';
 import { TABLE_CONFIGS, buildTable, buildRealisticFlipper, scoreBumperHit, scoreTargetHit, scoreSlingshotHit, checkRolloverLanes, updateSpinnerPhysics, getAdvancedLighting } from './table';
-import { callScriptFlipper, callScriptDrain } from './script-engine';
+import { callScriptFlipper, callScriptDrain, callScriptFn } from './script-engine';
 import { parseFPTFile, parseFPLFile, getBackglassArtwork } from './fpt-parser';
 import { getBackglassRenderer } from './backglass';
 import { getProfiler, QUALITY_PRESETS } from './profiler';
@@ -918,6 +910,7 @@ const getCurrentPlayfieldRotation = () => {
 // ─── Input ────────────────────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
   getAudioCtx();
+  callScriptFn('FuturePinball_KeyPressed', e.keyCode) || callScriptFn('_KeyPressed', e.keyCode) || callScriptFn('KeyPressed', e.keyCode);
   if (e.key === 'Shift' && e.location === 1) {
     keys.left = true;
     leftFlipperChargeStart = Date.now();  // Phase 5: Track charge time
@@ -1074,6 +1067,7 @@ document.addEventListener('keydown', e => {
   }
 });
 document.addEventListener('keyup', e => {
+  callScriptFn('FuturePinball_KeyReleased', e.keyCode) || callScriptFn('_KeyReleased', e.keyCode) || callScriptFn('KeyReleased', e.keyCode);
   if (e.key === 'Shift' && e.location === 1) {
     // ─── Phase 6: Calculate flipper power with skill-based curve ───
     if (leftFlipperChargeStart !== null) {

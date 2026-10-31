@@ -2070,7 +2070,8 @@ export function runFPScript(vbsCode: string): void {
     (statEl as HTMLElement).style.color = count > 0 ? '#00cc66' : '#ffaa00';
   }
 
-  callScriptFn('Table1_Init') || callScriptFn('Init') || callScriptFn('Initialize');
+  callScriptFn('FuturePinball_BeginPlay') || callScriptFn('_BeginPlay')
+    || callScriptFn('Table1_Init') || callScriptFn('Init') || callScriptFn('Initialize');
 }
 
 // ─── Event Dispatch ───────────────────────────────────────────────────────────

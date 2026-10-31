@@ -8,6 +8,7 @@
  */
 import { state, cb } from '../game';
 import { getPhysicsWorker } from '../physics-worker-bridge';
+import { callScriptFn } from '../script-engine';
 
 /**
  * Reset ball position to the plunger lane.
@@ -31,6 +32,7 @@ export function resetBall(): void {
  * Reset full game state on table load.
  */
 export function resetGameState(): void {
+  callScriptFn('FuturePinball_EndPlay') || callScriptFn('_EndPlay');
   state.score = 0;
   state.ballNum = 1;
   state.multiplier = 1;

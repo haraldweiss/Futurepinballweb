@@ -3,6 +3,7 @@
 
 import * as THREE from 'three';
 import type { ParticleField } from './particle-field';
+import { callScriptFn } from '../script-engine';
 
 /**
  * Dependencies for game controls (flippers, plunger, multiball, nudge).
@@ -80,8 +81,10 @@ export function createGameControls(deps: GameControlsDeps): GameControls {
   function nudgeTable(direction: number): void {
     if (state.tiltActive || state.inLane) return;
     state.tiltWarnings++;
+    callScriptFn('FuturePinball_TiltWarning', state.tiltWarnings) || callScriptFn('_TiltWarning', state.tiltWarnings);
     if (state.tiltWarnings >= 3) {
       state.tiltActive = true;
+      callScriptFn('FuturePinball_Tilted') || callScriptFn('_Tilted');
 
       try {
         const bridge = getPhysicsWorker();
