@@ -10,6 +10,7 @@ import { getBamBridge } from './bam-bridge';
 import { runSandboxed, ScriptSandboxError } from './utils/script-sandbox';
 import { magnetSystem } from './mechanics/magnet-system';
 import { vbsToJS } from './utils/vbs-transpiler';
+import { getTopScores, recordScore } from './highscore';
 
 // ─── Phase 2: Catalog-first sound resolution ──────────────────────────────────
 
@@ -84,6 +85,22 @@ export function buildFPScriptAPI() {
     set Interval(ms: number) { timers[`${name  }_ms`] = ms; },
   });
 
+  const startGame = () => {
+    state.ballNum = 1;
+    state.score = 0;
+    state.numPlayers = Math.max(1, state.numPlayers);
+    state.currentPlayer = 1;
+    state.playerScores = [0, 0, 0, 0];
+    state.tiltWarnings = 0;
+    state.tiltActive = false;
+    state.bumperHits = 0;
+    state.multiplier = 1;
+    cb.updateHUD();
+    cb.showNotification('🎮 GAME STARTED');
+    cb.dmdEvent('GAME STARTED');
+    fpScriptLog('StartGame: New game started');
+  };
+
   return {
     AddScore:  (n: number) => { state.score += Math.floor(+n || 0); cb.updateHUD(); },
     AddBonus:  (n: number) => { state.score += Math.floor((+n || 0) * 0.5); cb.updateHUD(); },
@@ -91,6 +108,25 @@ export function buildFPScriptAPI() {
     GetScore:  () => state.score,
     GetBall:   () => state.ballNum,
     get BallInPlay() { return state.ballNum; },
+    get fpGameInPlay() { return state.numPlayers > 0; },
+    get fpTilted() { return state.tiltActive; },
+    get fpTiltWarnings() { return state.tiltWarnings; },
+    get fpBallID() { return state.ballNum; },
+    fpEventID: 0,
+    fpInitialJackpot: 0,
+    GetKeyCode: () => 0,
+    AddDebugText: (text: unknown) => fpScriptLog(`[Debug] ${String(text)}`),
+    LogDebugTextToDisk: (text: unknown) => fpScriptLog(`[DebugFile] ${String(text)}`),
+    EffectMusic: (name: unknown, effect?: unknown) => fpScriptLog(`EffectMusic: ${String(name)} ${effect === undefined ? '' : String(effect)}`),
+    LookAtPlayfield: () => fpScriptLog('LookAtPlayfield: camera target not implemented'),
+    LookAtBackbox: () => fpScriptLog('LookAtBackbox: camera target not implemented'),
+    SortHighScores: () => getTopScores(),
+    LoadExternalScript: (name: unknown) => { fpScriptLog(`LoadExternalScript unsupported: ${String(name)}`); return false; },
+    EnterHighScore: () => {
+      const rank = recordScore(state.score);
+      cb.showNotification(rank > 0 ? `🏆 HIGHSCORE #${rank}` : 'Kein Highscore');
+      return rank;
+    },
 
     PlaySound: (name: string, loop = 0, vol = 100) => {
       // Phase 2: Catalog-first lookup
@@ -1740,21 +1776,8 @@ export function buildFPScriptAPI() {
     _makeTimer: makeTimer,
 
     // ─── PHASE 1: Game Control ───
-    StartGame: () => {
-      state.ballNum = 1;
-      state.score = 0;
-      state.numPlayers = Math.max(1, state.numPlayers);
-      state.currentPlayer = 1;
-      state.playerScores = [0, 0, 0, 0];
-      state.tiltWarnings = 0;
-      state.tiltActive = false;
-      state.bumperHits = 0;
-      state.multiplier = 1;
-      cb.updateHUD();
-      cb.showNotification('🎮 GAME STARTED');
-      cb.dmdEvent('GAME STARTED');
-      fpScriptLog('StartGame: New game started');
-    },
+    StartGame: startGame,
+    BeginGame: startGame,
 
     EndGame: () => {
       cb.showNotification('🕹️ GAME OVER');

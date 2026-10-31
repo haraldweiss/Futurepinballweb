@@ -152,6 +152,14 @@ Corpus extraction (2026-10-31): NewTable 26,624 chars; All In One Example Table
 SegmentDisplayDemo 5,966. samples.fpt and Empty Table have no extracted script.
 This proves script bytes are recovered, not that every VBScript call is supported.
 
+All 21 native `IScriptGlobal` names are now exposed. The previously absent
+`AddDebugText`, `LogDebugTextToDisk`, `GetKeyCode`, `EffectMusic`, `BeginGame`,
+`EnterHighScore`, `SortHighScores`, `LookAtPlayfield`, `LookAtBackbox`,
+`LoadExternalScript` and `fpGameInPlay`/`fpTilted`/`fpTiltWarnings`/`fpBallID`/
+`fpEventID`/`fpInitialJackpot` names have explicit web behavior; unsupported camera
+or external-script operations log and return rather than throwing. This is global
+API availability, not COM object, event-ordering or call-signature parity.
+
 Preflight display limits are 160 UTF-16 code units per library/member/issue stream
 path and 2,400 total native-preflight diagnostic code units per import, including
 truncation ellipses. These limits affect log text only; pure decoder reports retain
