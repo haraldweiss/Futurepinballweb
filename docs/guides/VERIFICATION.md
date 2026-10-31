@@ -127,15 +127,16 @@ storages keep the filename-regex path, and root-level BAM/physics streams still 
 Supplied-library probe (2026-10-31): `fpSounds` 20/20 OggS, `fpScripts` 1/1 UTF-8
 script, `fpDmdFonts` 6/6 FDAT retained. The native `zLZO` container is decoded with
 the recovered token rules (size at offset 4, LZO data at offset 8, M1/M2/M3/M4
-matches and trailing literals): 87/90 `fpTextures`, 11/11 `fpSphereMaps` and 3/3
-`fpPlayfields` image members decode to BMP/JPEG. The three
-`bumper-base-t5-decal` members use a different container and remain undecoded. Production-browser smoke (2026-10-31) loaded `fpSounds`, `fpScripts` and
+matches and trailing literals). 90/90 `fpTextures` members decode (87 BMP plus
+three TGA decals with a placeholder 1x1 header and inferred square dimensions),
+11/11 `fpSphereMaps` decode, and 2/3 `fpPlayfields` JPEG/BMP members hydrate in the
+browser; one JPEG member fails browser decode. Production-browser smoke (2026-10-31) loaded `fpSounds`, `fpScripts` and
 `fpModels` from the private install through the file input: sound, script and model
 member messages appeared and no page errors were captured. A later
-`fpTextures` run loaded 87 textures and logged three undecoded members. The checks
-did not assert every model mesh, the three remaining image containers, font
-rendering or gameplay. The corrected decoder also invalidated earlier heuristic
-model admissions, so model geometry still needs a dedicated pass.
+`fpTextures` run loaded 90 textures. The checks did not assert every model mesh,
+the remaining `fpPlayfields` JPEG, font rendering or gameplay. The corrected
+decoder also invalidated earlier heuristic model admissions, so model geometry
+still needs a dedicated pass.
 
 Preflight display limits are 160 UTF-16 code units per library/member/issue stream
 path and 2,400 total native-preflight diagnostic code units per import, including

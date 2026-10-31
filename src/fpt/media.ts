@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { getAudioCtx } from '../audio-system';
 import { tryLZOExtract } from './lzo';
 import { extractEmbeddedPayload } from './legacy-container';
+import { tgaToTexture } from './tga';
 
 export function detectImageMime(buf: Uint8Array, off = 0): string | null {
   if (buf.length < off + 4) return null;
@@ -127,8 +128,10 @@ export async function extractImageFromBytes(bytes: Uint8Array): Promise<THREE.Te
     if (found2) {
       try { return await bytesToTexture(decompressed.slice(found2.off), found2.mime); } catch (e) { console.debug('[fpt] Image decode retry:', (e || 'unknown')); }
     }
+    const tga = tgaToTexture(decompressed);
+    if (tga) return tga;
   }
-  return null;
+  return tgaToTexture(bytes);
 }
 
 function estimateAudioSize(compressedBytes: Uint8Array): number {
