@@ -40,6 +40,7 @@
     "audit:dependencies": "npm audit --omit=dev --audit-level=moderate && npm audit --audit-level=high",
     "security:check": "npm run lint:security && npm run test:security && npm run audit:dependencies",
     "typecheck": "tsc --noEmit",
+    "audit:fpt-dependencies": "tsx scripts/audit-fpt-dependencies.ts",
     "test:lint-security": "node --test scripts/security-lint.test.mjs",
     "test:e2e": "npm run build && playwright test"
   },

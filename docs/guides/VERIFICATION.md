@@ -82,3 +82,14 @@ Run the stream integrity check with the same `FPT_TEST_FILES` JSON array and `np
 Full-game browser checks observe natural ball transitions, positive scoring and a persisted game-over highscore. A repeated plunger input may immediately start the next game, so idle zero-score assertions are reserved for explicit table reset. The imported reference runs through the application's reconstructed approximation: completing its game does not prove that its original layout or VBScript rules have been reproduced faithfully.
 
 Final local baseline (15 October 2026): 970 tests pass across 54 files with the three reference paths supplied; all four production-browser checks pass, including complete three-ball demo and imported-reference games with scoring and persisted game-over results. Browser validation used installed Chrome with software rendering. Hardware and original-table fidelity limits above still apply.
+
+## Read-only native dependency audit
+
+Run `npm run audit:fpt-dependencies -- --table /absolute/table.fpt --library-root /absolute/Libraries`.
+Repeat `--table` for more tables and `--library-root` for ordered search roots. The table's parent directory is searched first; explicit roots follow in argument order. Only these roots are recursively inventoried. No default installation or home search occurs. This trusted-user Node CLI is never exposed to table scripts and does not write files; redirect stdout to save its JSON outside the repository when auditing private tables.
+
+Exit 0 means complete recognized-record coverage and every discovered reference has a unique library file match. Exit 1 means unresolved, ambiguous, partial or unreadable input; exit 2 means invalid flags/path configuration. JSON goes to stdout and diagnostics to stderr. Paths must be absolute and contain no traversal components. Symlinks in supplied path components and inventory entries are rejected; use canonical paths (for example, resolve platform directory aliases before invocation). Reported root IDs are canonical absolute paths; candidates are relative to those roots.
+
+The additive `inventoryCoverage` field reports `complete` or `partial`. A partial inventory gives non-invalid resolutions the audit-only `inventory-incomplete` status, preserving observed candidates without claiming presence or absence conclusively. Symlinks, read failures and unsupported inventory names make inventory partial. The pure resolver API remains unchanged.
+
+`resolved-file` verifies only a filename, never a library member or playability. `memberVerification` and `gameplayVerification` remain `not-performed`. Zero references is not proof of no dependencies outside recognized native resource records. Unsupported and malformed records remain explicit partial coverage; the audit neither executes scripts nor synthesizes missing assets.
