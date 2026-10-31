@@ -48,3 +48,15 @@ it('handles native script patterns: operators, arrays, cases and comments', () =
   expect(js).toContain('} catch (e) { /* ignored */ }');
   expect(js).toContain('Foo("a", undefined, 3);');
 });
+
+it('handles nested builtins, no-space Then and trailing semicolons', () => {
+  const js = vbsToJS([
+    'If IsEmpty(TrackedBalls(i)) Then',
+    'End If',
+    'If (x)Then;',
+    '  y = 1',
+    'End If',
+  ].join('\n'));
+  expect(js).toContain("TrackedBalls(i) === null");
+  expect(js).toContain('if ((x)) {');
+});

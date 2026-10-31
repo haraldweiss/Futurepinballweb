@@ -57,8 +57,52 @@ function escapeVbsStrings(text: string): string {
   return out;
 }
 
+
+function _replaceSimpleCalls(text: string, handlers: Record<string, (arg: string) => string>): string {
+  let out = '', i = 0;
+  while (i < text.length) {
+    const match = /^[A-Za-z_]\w*/.exec(text.slice(i));
+    if (!match) { out += text[i++]; continue; }
+    const name = match[0];
+    const open = i + name.length;
+    if (text[open] === '(' && handlers[name.toLowerCase()] && (i === 0 || text[i - 1] !== '.')) {
+      let depth = 0, close = -1, quote = '';
+      for (let j = open; j < text.length; j++) {
+        const ch = text[j];
+        if (quote) { if (ch === quote) quote = ''; continue; }
+        if (ch === '"' || ch === "'") { quote = ch; continue; }
+        if (ch === '(') depth++;
+        else if (ch === ')' && --depth === 0) { close = j; break; }
+      }
+      if (close > 0) {
+        out += handlers[name.toLowerCase()](text.slice(open + 1, close));
+        i = close + 1;
+        continue;
+      }
+    }
+    out += name;
+    i = open;
+  }
+  return out;
+}
+
 function _vbsXpr(e: string): string {
-  let result = e;
+  let result = _replaceSimpleCalls(e, {
+    len: arg => `(${_vbsXpr(arg)}).length`,
+    ucase: arg => `(${_vbsXpr(arg)}).toUpperCase()`,
+    lcase: arg => `(${_vbsXpr(arg)}).toLowerCase()`,
+    trim: arg => `(${_vbsXpr(arg)}).trim()`,
+    int: arg => `Math.floor(${_vbsXpr(arg)})`,
+    fix: arg => `Math.trunc(${_vbsXpr(arg)})`,
+    cint: arg => `parseInt(${_vbsXpr(arg)})`,
+    cdbl: arg => `parseFloat(${_vbsXpr(arg)})`,
+    cstr: arg => `String(${_vbsXpr(arg)})`,
+    abs: arg => `Math.abs(${_vbsXpr(arg)})`,
+    sgn: arg => `Math.sign(${_vbsXpr(arg)})`,
+    sqr: arg => `Math.sqrt(${_vbsXpr(arg)})`,
+    isnull: arg => `(${_vbsXpr(arg)} === null || ${_vbsXpr(arg)} === undefined)`,
+    isempty: arg => `(${_vbsXpr(arg)} === null || ${_vbsXpr(arg)} === undefined || ${_vbsXpr(arg)} === '')`,
+  });
 
   // String-safe replacement for & (concatenation operator)
   result = replaceOutsideStrings(result, '\\s*&\\s*', ' + ');
@@ -77,19 +121,7 @@ function _vbsXpr(e: string): string {
     .replace(/=<\s*/g, '<= ').replace(/=>\s*/g, '>= ').replace(/<>/g, '!==')
     .replace(/(?<![<>!=])=(?!=)/g, '===')
     // String functions with improved nested paren handling
-    .replace(/\bLen\(([^)]*)\)/gi, (m, arg) => `(${_vbsXpr(arg)}).length`)
-    .replace(/\bUCase\(([^)]*)\)/gi, (m, arg) => `(${_vbsXpr(arg)}).toUpperCase()`)
-    .replace(/\bLCase\(([^)]*)\)/gi, (m, arg) => `(${_vbsXpr(arg)}).toLowerCase()`)
-    .replace(/\bTrim\(([^)]*)\)/gi, (m, arg) => `(${_vbsXpr(arg)}).trim()`)
-    .replace(/\bInt\(([^)]*)\)/gi, (m, arg) => `Math.floor(${_vbsXpr(arg)})`)
-    .replace(/\bFix\(([^)]*)\)/gi, (m, arg) => `Math.trunc(${_vbsXpr(arg)})`)
-    .replace(/\bCInt\(([^)]*)\)/gi, (m, arg) => `parseInt(${_vbsXpr(arg)})`)
-    .replace(/\bCDbl\(([^)]*)\)/gi, (m, arg) => `parseFloat(${_vbsXpr(arg)})`)
-    .replace(/\bCStr\(([^)]*)\)/gi, (m, arg) => `String(${_vbsXpr(arg)})`)
     .replace(/\bRnd\b/gi, 'Math.random()')
-    .replace(/\bAbs\(([^)]*)\)/gi, (m, arg) => `Math.abs(${_vbsXpr(arg)})`)
-    .replace(/\bSgn\(([^)]*)\)/gi, (m, arg) => `Math.sign(${_vbsXpr(arg)})`)
-    .replace(/\bSqr\(([^)]*)\)/gi, (m, arg) => `Math.sqrt(${_vbsXpr(arg)})`)
     .replace(/,\s*(?=[,)])/g, ', undefined')
     .replace(/\bChr\((\d+)\)/gi, 'String.fromCharCode($1)')
 
@@ -151,8 +183,6 @@ function _vbsXpr(e: string): string {
     .replace(/\bPow\(([^,]+),\s*([^)]+)\)/gi, (m, base, exp) => `Math.pow(${_vbsXpr(base)}, ${_vbsXpr(exp)})`)
 
     // ─── Type Checking Functions ──────────────────────────────────────────
-    .replace(/\bIsNull\(([^)]+)\)/gi, (m, x) => `(${_vbsXpr(x)} === null || ${_vbsXpr(x)} === undefined)`)
-    .replace(/\bIsEmpty\(([^)]+)\)/gi, (m, x) => `(${_vbsXpr(x)} === null || ${_vbsXpr(x)} === undefined || ${_vbsXpr(x)} === '')`)
     .replace(/\bIsNumeric\(([^)]+)\)/gi, (m, x) => `(!isNaN(Number(${_vbsXpr(x)})))`)
     .replace(/\bIsArray\(([^)]+)\)/gi, (m, x) => `Array.isArray(${_vbsXpr(x)})`)
     .replace(/\bTypeName\(([^)]+)\)/gi, (m, x) => {
@@ -225,8 +255,8 @@ function _vbsStmt(s: string, withContext?: string): string {
   const statements = _splitStatements(target);
   if (statements.length > 1) return statements.map(part => _vbsStmt(part)).join('; ');
 
-  if (/^End\s+If$/i.test(target)) return '';
-  let inlineIf = target.match(/^If\s+(.*?)\s+Then\s+(.+)$/i);
+  if (/^End\s+If\s*;?$/i.test(target)) return '';
+  let inlineIf = target.match(/^If\s+(.*?)\s*Then\s+(.+)$/i);
   if (inlineIf) {
     const split = _splitElse(inlineIf[2].replace(/\s+end\s+if\s*$/i, ''));
     return split.elsePart === null
@@ -243,7 +273,7 @@ function _vbsStmt(s: string, withContext?: string): string {
   }
   const noParens = target.match(/^([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s+(?![=<>])(.+)$/);
   const keyword = /^(Set|Let|Call|If|Then|Else|ElseIf|End|For|Each|Next|Do|Loop|While|Wend|Select|Case|Exit|On|Dim|ReDim|Const|Private|Public|Function|Sub|With|Erase|Randomize|Option|Rem)$/i;
-  if (noParens && !keyword.test(noParens[1].split('.').pop() ?? '')) {
+  if (noParens && (noParens[1].includes('.') || !keyword.test(noParens[1]))) {
     const args = _splitArgs(noParens[2]).map(a => a.trim() ? _vbsXpr(a) : 'undefined').join(', ');
     return `${noParens[1]}(${args})`;
   }
@@ -294,7 +324,7 @@ export function vbsToJS(src: string): string {
     if (sqIdx > 0 && (t.slice(0, sqIdx).match(/"/g) || []).length % 2 === 0)
       code = t.slice(0, sqIdx).trim();
     if (!code) continue;
-    code = escapeVbsStrings(code);
+    code = escapeVbsStrings(code).replace(/;\s*$/, '');
 
     let m: RegExpMatchArray | null;
 
@@ -313,17 +343,17 @@ export function vbsToJS(src: string): string {
       depth = Math.max(0,depth-1); out.push(`${pad()}}`); continue;
     }
 
-    if ((m = code.match(/^If\s+(.*?)\s+Then$/i)))         { out.push(`${pad()}if (${_vbsXpr(m[1])}) {`); depth++; continue; }
-    if ((m = code.match(/^If\s+(.*?)\s+Then\s+(.+)$/i))) {
+    if ((m = code.match(/^If\s+(.*?)\s*Then\s*$/i)))         { out.push(`${pad()}if (${_vbsXpr(m[1])}) {`); depth++; continue; }
+    if ((m = code.match(/^If\s+(.*?)\s*Then\s+(.+)$/i))) {
       const split = _splitElse(m[2].replace(/\s+end\s+if\s*$/i, ''));
       out.push(split.elsePart === null
         ? `${pad()}if (${_vbsXpr(m[1])}) { ${_vbsStmt(split.thenPart)}; }`
         : `${pad()}if (${_vbsXpr(m[1])}) { ${_vbsStmt(split.thenPart)}; } else { ${_vbsStmt(split.elsePart)}; }`);
       continue;
     }
-    if ((m = code.match(/^ElseIf\s+(.*?)\s+Then$/i)))     { depth=Math.max(0,depth-1); out.push(`${pad()}} else if (${_vbsXpr(m[1])}) {`); depth++; continue; }
+    if ((m = code.match(/^ElseIf\s+(.*?)\s*Then\s*$/i)))     { depth=Math.max(0,depth-1); out.push(`${pad()}} else if (${_vbsXpr(m[1])}) {`); depth++; continue; }
     if (/^Else$/i.test(code))   { depth=Math.max(0,depth-1); out.push(`${pad()}} else {`); depth++; continue; }
-    if (/^End\s+If$/i.test(code)) { depth=Math.max(0,depth-1); out.push(`${pad()}}`); continue; }
+    if (/^End\s+If\s*;?$/i.test(code)) { depth=Math.max(0,depth-1); out.push(`${pad()}}`); continue; }
 
     // Phase 1.2: For...To...Next and For Each...In loops
     if ((m = code.match(/^For\s+(\w+)\s*=\s*(.+?)\s+To\s+(.+?)(?:\s+Step\s+(.+))?$/i))) {
