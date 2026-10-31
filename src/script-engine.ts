@@ -71,6 +71,28 @@ export function fpScriptLog(msg: string, type = 'info'): void {
 }
 
 // ─── FP Script API ────────────────────────────────────────────────────────────
+function createElementProxy(name: string): Record<string, any> {
+  const values: Record<string, any> = {};
+  return new Proxy({}, {
+    get: (_target, prop) => {
+      const key = String(prop);
+      if (key === 'Name' || key === 'name') return name;
+      if (key === 'Index') return 0;
+      if (key === 'Exist') return true;
+      if (key === 'Enabled') return values.Enabled ?? false;
+      if (key === 'Value' || key === 'State' || key === 'Intensity' || key === 'Brightness'
+          || key === 'X' || key === 'Y' || key === 'Z' || key === 'Angle') return values[key] ?? 0;
+      if (key === 'toString' || prop === Symbol.toPrimitive) return () => 0;
+      return (...args: any[]) => {
+        if (key === 'SetValue') values.Value = args[0];
+        else if (args.length > 0) values[key] = args[0];
+        fpScriptLog(`[Element] ${name}.${key}(${args.join(', ')})`, 'debug');
+      };
+    },
+    set: (_target, prop, value) => { values[String(prop)] = value; return true; },
+  });
+}
+
 export function buildFPScriptAPI() {
   const sounds = fptResources.sounds;
   const timers: Record<string, any> = {};
@@ -1774,6 +1796,7 @@ export function buildFPScriptAPI() {
     })(),
 
     _makeTimer: makeTimer,
+    __element: (name: string) => createElementProxy(String(name)),
 
     // ─── PHASE 1: Game Control ───
     StartGame: startGame,
@@ -2044,8 +2067,21 @@ export function runFPScript(vbsCode: string): void {
   while ((m = fnRe.exec(jsCode)) !== null) fnNames.push(m[1]);
 
   const scriptNames = new Set(fnNames.map(name => name.toLowerCase()));
-  const bindings  = Object.keys(api).filter(key => !scriptNames.has(key.toLowerCase()))
-    .map(k => `var ${k} = __api__['${k}'];`).join('\n');
+  const declared = new Set<string>(fnNames);
+  for (const match of jsCode.matchAll(/\b(?:let|const|var)\s+([A-Za-z_]\w*)/g)) declared.add(match[1]);
+  const jsGlobals = new Set(['Math', 'Date', 'JSON', 'String', 'Number', 'Boolean', 'Array', 'Object',
+    'Symbol', 'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'Error', 'TypeError', 'RangeError',
+    'SyntaxError', 'RegExp', 'Map', 'Set', 'WeakMap', 'WeakSet', 'Promise', 'undefined', 'NaN', 'Infinity']);
+  const elementNames = new Set<string>();
+  for (const match of jsCode.matchAll(/\b([A-Z][A-Za-z0-9_]*)\b/g)) {
+    const name = match[1];
+    if (name in api || declared.has(name) || jsGlobals.has(name)) continue;
+    elementNames.add(name);
+  }
+  const bindings  = Object.keys(api).filter(key => !key.startsWith('__') && !scriptNames.has(key.toLowerCase()))
+    .map(k => `var ${k} = __api__['${k}'];`).join('\n')
+    + [...elementNames].map(name => `var ${name} = __api__.__element('${name}');`).join('\n');
+  if (elementNames.size > 0) fpScriptLog(`${elementNames.size} native element placeholders bound`, 'debug');
   const collect   = fnNames.map(n => `if (typeof ${n} === 'function') __h__['${n}'] = ${n};`).join('\n');
 
   try {

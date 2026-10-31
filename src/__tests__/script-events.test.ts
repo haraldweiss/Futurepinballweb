@@ -30,3 +30,14 @@ it('lets a script-defined function override the same-named API binding', () => {
   ].join('\n'));
   expect(callScriptFn('FuturePinball_BeginPlay')).toBe(true);
 });
+
+it('binds unknown native table elements to placeholder objects', () => {
+  runFPScript([
+    'Sub FuturePinball_BeginPlay()',
+    '  Player1Reel.SetValue 5',
+    '  DummyTrigger.Enabled = True',
+    '  LeftFlipper.SolenoidOn()',
+    'End Sub',
+  ].join('\n'));
+  expect(callScriptFn('FuturePinball_BeginPlay')).toBe(true);
+});
