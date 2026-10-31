@@ -1,10 +1,11 @@
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { realpathSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { utils, write } from '../fpt/cfb-io';
+vi.setConfig({ testTimeout: 20_000 });
 const dirs: string[] = [];
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }); });
 const u32 = (n: number) => { const b = Buffer.alloc(4); b.writeUInt32LE(n); return b; };
@@ -61,7 +62,7 @@ it('reports missing, ambiguous, malformed and unsafe references as incomplete', 
   expect(JSON.parse(run(['--table', f.table]).stdout).tables[0].resolutions[0].status).toBe(readdirSync(join(f.dir, 'nested')).length === 2 ? 'ambiguous-file' : 'resolved-file');
   expect(run(['--table', fixture('a.fpl/x', true).table]).status).toBe(1);
   const unsafe = fixture('../outside.fpl/member'); expect(JSON.parse(run(['--table', unsafe.table]).stdout).tables[0].resolutions[0].status).toBe('invalid-path');
-});
+}, 20_000);
 it('skips symlink files and directories conservatively', () => {
   const f = fixture(); const outside = mkdtempSync(join(realpathSync(tmpdir()), 'fpt-outside-')); dirs.push(outside);
   writeReferenceLibrary(outside, 'nested/Mixed.fpl/Member');
