@@ -82,3 +82,10 @@ Run the stream integrity check with the same `FPT_TEST_FILES` JSON array and `np
 Full-game browser checks observe natural ball transitions, positive scoring and a persisted game-over highscore. A repeated plunger input may immediately start the next game, so idle zero-score assertions are reserved for explicit table reset. The imported reference runs through the application's reconstructed approximation: completing its game does not prove that its original layout or VBScript rules have been reproduced faithfully.
 
 Final local baseline (15 October 2026): 970 tests pass across 54 files with the three reference paths supplied; all four production-browser checks pass, including complete three-ball demo and imported-reference games with scoring and persisted game-over results. Browser validation used installed Chrome with software rendering. Hardware and original-table fidelity limits above still apply.
+
+
+### Dependency refresh — 3 November 2026
+
+The compatible portion of Dependabot group #40 updates CodeMirror, build/test tooling and pairs Vitest/UI 5.1.0. Renderer three0.162.0, Electron43.8.3, TypeScript5.9.3 and electron-updater6.8.9 remain pending their independent compatibility checks. Electron45 removes the configured Windows ia32 target; updater changes require a macOS arm64 build.
+
+The new minimatch advisory GHSA-g3hv-75wg-m249 leaves 15 propagated moderate development-only entries in legacy Electron packaging tools. Scoped >=9 consumers use patched minimatch11; callable minimatch3 consumers remain because forcing the object-only replacement breaks their API. Production-only audit is clean and the established full-tree high threshold passes. The earlier zero-audit result is historical; no advisory suppressions were added.
