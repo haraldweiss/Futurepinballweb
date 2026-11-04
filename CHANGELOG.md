@@ -1,5 +1,12 @@
 # Changelog
 
+### 2026-11-04 — Stable Electron 43 security patch and modern FileList
+
+- Pin Electron **43.8.7**, released 3 November, with embedded **Node 24.22.1**. This closes the October embedded-Node version gap in the source/build runtime while retaining the existing Windows ia32 target; no major/platform migration or updater/preload changes.
+- Override transitive FileList to **^2.0.2**, preserving its CommonJS/Jake API and using the existing modern minimatch override. Twelve propagated moderate development findings remain from legacy minimatch 3 in Electron packaging dependencies; production audit is clean. No audit suppressions.
+- Verified clean install, npm 10.9.4 lock validation, strict TypeScript, **972 tests** plus the existing private-corpus skip, production build, canonical security gate, and independent dependency/FileList review. Built an unsigned macOS arm64 app with the normal packaging configuration; actual app reports Electron 43.8.7 / Node 24.22.1, sandbox/contextIsolation/webSecurity enabled and renderer require/process unavailable. Demo scored **50** after repeated normal coin/plunger/flipper inputs, with zero renderer errors. A single-launch probe initially scored zero; do not use one launch as a deterministic scoring test.
+- Local validation package only: no release published or cabinet deployment. Existing installations retain their previous embedded runtime until rebuilt packages are distributed. Runtime evidence and remaining platform/release checks: `docs/security/ELECTRON_RUNTIME_2026-10-25.md`.
+
 All notable changes to Future Pinball Web are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
