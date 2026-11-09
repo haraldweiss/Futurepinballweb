@@ -1401,3 +1401,14 @@ Nächste Schritte: cfb → devDeps, Browser-Smoke (Pharaoh boot/Ball/Flipper/Bum
 - Retained three0.162.0 (renderer migration requires dedicated visual/gameplay comparison), Electron43.8.3 (45 removes the existing Windows ia32 build target), TypeScript5.9.3 (7 is a separate strict compiler migration), and electron-updater6.8.9 (requires the macOS arm64 update-build verification in §3.5). Existing experimental Electron46 PR #34 is untouched. Do not merge the remaining group blindly.
 - GitHub open security alerts were zero. The npm registry reports a new minimatch denial-of-service advisory GHSA-g3hv-75wg-m249 in legacy Electron packaging tools: 15 propagated moderate development entries remain. @electron/asar and dir-compare call minimatch as a function; minimatch11 exports an object and cannot be forced into them. Production audit is clean; established full-audit high threshold passes. No audit suppressions or unsafe overrides.
 - Verified 972 unit tests plus one existing corpus skip, strict TypeScript, build, security lint/probes and 20 security regression checks. Production-build browser checks passed boot/reload and a complete three-ball demo game (2 passed); 2 private-corpus cases skipped because trusted reference paths were not supplied. No cabinet release or production deployment was produced.
+
+### Coding-agent credential safety (2026-11-09)
+
+Local Claude permission rules and saved agent transcripts may contain literal
+credentials. Keep them outside Git; shared `.claude/settings.json` must use
+variable references rather than secrets. `Secret safety` CI rejects tracked local
+agent state and scans introduced commits with Gitleaks, including documentation,
+example files, and password-bearing commands. Existing history was audited
+separately; this CI job is not a claim that historical credentials are safe.
+If a credential was committed, revoke or rotate it before considering the leak
+resolved. Do not print secret values in scan logs, reviews, or handoffs.
