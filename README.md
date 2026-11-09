@@ -702,3 +702,14 @@ Lizenz schützbar.
 ### Stable Electron security follow-up (2026-11-04)
 
 Electron is pinned to **43.8.7**, whose actual packaged runtime embeds patched Node **24.22.1**, retaining the configured Windows ia32 target. FileList 2.0.2 removes its legacy minimatch dependency without changing the Jake API. Production audit is clean; legacy minimatch 3 findings remain in other packaging dependencies. See [runtime evidence and release limits](docs/security/ELECTRON_RUNTIME_2026-10-25.md). Local unit/type/build/security checks and a packaged macOS demo smoke pass. Existing desktop/cabinet installations need rebuilt distributed packages to receive the runtime patch; no release or cabinet deployment was performed by this change.
+
+### Coding-agent credential safety (2026-11-09)
+
+Local Claude permission rules and saved agent transcripts may contain literal
+credentials. Keep them outside Git; shared `.claude/settings.json` must use
+variable references rather than secrets. `Secret safety` CI rejects tracked local
+agent state and scans introduced commits with Gitleaks, including documentation,
+example files, and password-bearing commands. Existing history was audited
+separately; this CI job is not a claim that historical credentials are safe.
+If a credential was committed, revoke or rotate it before considering the leak
+resolved. Do not print secret values in scan logs, reviews, or handoffs.
