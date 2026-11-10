@@ -699,6 +699,17 @@ Lizenz schützbar.
 
 [Security policy](SECURITY.md) · [Dependency updates](.github/dependabot.yml).
 
+### Compatible dependency refresh (2026-11-10)
+
+Playwright 1.65.0, Rollup 4.68.2 and Vite 8.3.7 update the development and build
+tools. Electron remains 43.8.7, Three.js 0.162.0 and TypeScript 5.9.3. The grouped
+TypeScript 7 update conflicts with typescript-eslint's supported range below
+6.1; the Electron 45 and Three.js 0.187 changes require separate migrations.
+Dependabot now groups only minor/patch updates, with Three.js and
+electron-updater reviewed individually. Updater changes still require a macOS
+arm64 app build before merging. Existing desktop installations need a separately
+validated rebuild and distribution to receive application changes.
+
 ### Stable Electron security follow-up (2026-11-04)
 
 Electron is pinned to **43.8.7**, whose actual packaged runtime embeds patched Node **24.22.1**, retaining the configured Windows ia32 target. FileList 2.0.2 removes its legacy minimatch dependency without changing the Jake API. Production audit is clean; legacy minimatch 3 findings remain in other packaging dependencies. See [runtime evidence and release limits](docs/security/ELECTRON_RUNTIME_2026-10-25.md). Local unit/type/build/security checks and a packaged macOS demo smoke pass. Existing desktop/cabinet installations need rebuilt distributed packages to receive the runtime patch; no release or cabinet deployment was performed by this change.

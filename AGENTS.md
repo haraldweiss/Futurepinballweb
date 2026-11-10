@@ -1412,3 +1412,18 @@ example files, and password-bearing commands. Existing history was audited
 separately; this CI job is not a claim that historical credentials are safe.
 If a credential was committed, revoke or rotate it before considering the leak
 resolved. Do not print secret values in scan logs, reviews, or handoffs.
+
+
+### 2026-11-10 — Compatible dependency group repaired without major migrations
+
+- PR #46 bundled Electron 43→45, Three.js 0.162→0.187 and TypeScript 5→7 with
+  ordinary tooling updates. npm ci fails because typescript-eslint 8.72.1 requires
+  TypeScript <6.1. Keep Electron 43.8.7, Three.js 0.162.0 and TypeScript 5.9.3.
+- Integrated Playwright 1.65.0, Vite 8.3.7 and Rollup 4.68.2. Minor/patch grouping
+  now excludes Three.js and electron-updater, which remain individual PRs. Majors
+  remain separate. Updater changes still require a macOS arm64 application build.
+- Verified clean npm ci, strict TypeScript, 972 unit tests (one existing private-
+  corpus skip), build, 5 security-lint regression checks, 20 security checks and
+  canonical security gate (672 existing lint warnings, no errors). Production
+  browser smoke: 2 gameplay cases pass, 2 private-corpus cases skip. npm production
+  and full audits report zero findings today. No release or deployment.
