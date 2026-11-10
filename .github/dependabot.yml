@@ -13,6 +13,9 @@ updates:
       typescript-dependencies:
         patterns:
           - "*"
+        # Three.js 0.x minors and desktop updater changes need separate validation.
+        exclude-patterns: ["three", "electron-updater"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
