@@ -9,6 +9,7 @@ vi.mock('../library-cache', () => ({ getLibraryCache: vi.fn() }));
 vi.mock('../storage/fpt-cache', () => ({ generateCacheKeyFromBuffer: () => 'key', getCachedTable: mocks.cached, setCachedTable: vi.fn() }));
 vi.mock('../workers/parse-worker-bridge', () => ({ parseFileInWorker: mocks.worker }));
 import { parseFPTFile } from '../fpt/file-parser';
+import { fptResources } from '../game';
 const join = (...parts: Uint8Array[]) => new Uint8Array(parts.flatMap(p => [...p]));
 function u32(n: number) { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, n, true); return b; }
 const str = (s: string) => join(u32(s.length), new TextEncoder().encode(s));
@@ -21,6 +22,37 @@ function file(bytes = record(), streamPath = 'Resources/Image 1') {
   return { name: 'native.fpt', size: data.length, arrayBuffer: async () => data.slice().buffer } as File;
 }
 const logs = () => mocks.log.mock.calls.map(c => c[0]).join('\n');
+
+function nativeElementFile() {
+  const name = new Uint8Array([...('LeftFlipper1')].flatMap(c => [c.charCodeAt(0), 0]));
+  const coords = new Uint8Array(8);
+  const view = new DataView(coords.buffer);
+  view.setFloat32(0, 144.5, true); view.setFloat32(4, 917.5, true);
+  return file(join(u32(7), tlv(0xbab2beb2, join(u32(name.length), name)), tlv(0xb1babcaa, coords)), 'Table Element 1');
+}
+
+it.each(['worker', 'cache'])('makes original native metadata available before %s execution', async route => {
+  const check = () => expect(fptResources.nativeElements).toEqual([
+    { name: 'LeftFlipper1', type: 7, kind: 'flipper', x: 144.5, y: 917.5 },
+  ]);
+  if (route === 'cache') mocks.cached.mockImplementation(async () => {
+    check();
+    return { meta: { tableName: 'Native', storageSize: 0, script: null, config: {} }, textures: [], sounds: [], models: [] };
+  });
+  else mocks.worker.mockImplementation(async () => {
+    check();
+    return { textures: [], sounds: [], models: [], coords: [], elements: [], script: null, tableName: 'Native', confidence: 0 };
+  });
+  await parseFPTFile(nativeElementFile(), check);
+  check();
+});
+
+it('clears old native declarations before a JSON import', async () => {
+  fptResources.nativeElements = [{ name: 'Old', type: 7, kind: 'flipper', x: 1, y: 2 }];
+  await parseFPTFile({ name: 'new.json', size: 1, text: async () => '{"name":"New","bumpers":[],"tableColor":0}' } as File,
+    () => expect(fptResources.nativeElements).toEqual([]));
+  expect(fptResources.nativeElements).toEqual([]);
+});
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.cached.mockResolvedValue(null);

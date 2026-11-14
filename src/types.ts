@@ -86,6 +86,8 @@ export interface GameState {
 }
 
 export interface FPTResources {
+  /** Decoded native declarations for script lookup; not proof of render/physics support. */
+  nativeElements?: import('./fpt/table-elements').ParsedTableElement[];
   textures: Record<string, THREE.Texture>;
   // Phase 3: Support both AudioBuffer (full decode) and string (Blob URL for streaming)
   sounds:   Record<string, AudioBuffer | string>;

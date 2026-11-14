@@ -11,6 +11,7 @@ import { runSandboxed, ScriptSandboxError } from './utils/script-sandbox';
 import { magnetSystem } from './mechanics/magnet-system';
 import { vbsToJS } from './utils/vbs-transpiler';
 import { getTopScores, recordScore } from './highscore';
+import { NativeScriptObjects } from './script/native-objects';
 
 // ─── Phase 2: Catalog-first sound resolution ──────────────────────────────────
 
@@ -191,11 +192,12 @@ function createFlipperProxy(name: string): Record<string, any> {
   });
 }
 
-function createElementProxy(name: string): Record<string, any> {
-  if (/reel|score/i.test(name)) return createReelProxy(name);
-  if (/flasher|flash/i.test(name)) return createFlasherProxy(name);
-  if (/light|lamp|gi/i.test(name)) return createLightProxy(name);
-  if (/flipper/i.test(name)) return createFlipperProxy(name);
+function createElementProxy(name: string, kind?: string): Record<string, any> {
+  const classification = kind ?? name;
+  if (/reel|score/i.test(classification)) return createReelProxy(name);
+  if (/flasher|flash/i.test(classification)) return createFlasherProxy(name);
+  if (/light|lamp|gi/i.test(classification)) return createLightProxy(name);
+  if (/flipper/i.test(classification)) return createFlipperProxy(name);
   const values: Record<string, any> = {};
   return new Proxy({}, {
     get: (_target, prop) => {
@@ -219,6 +221,8 @@ function createElementProxy(name: string): Record<string, any> {
 
 export function buildFPScriptAPI() {
   const sounds = fptResources.sounds;
+  const nativeObjects = new NativeScriptObjects(fptResources.nativeElements ?? [], createElementProxy,
+    message => fpScriptLog(message, 'warn'));
   const timers: Record<string, any> = {};
 
   const makeTimer = (name: string) => ({
@@ -1750,6 +1754,8 @@ export function buildFPScriptAPI() {
     // ─── B.A.M. (Better Arcade Mode) API (Session 20.2) ───
     xBAM: (() => {
       const bamAPI: any = {
+        FindObject: (...args: unknown[]) => nativeObjects.findObject(...args),
+        CreateAllExt: () => nativeObjects.createAllExt(),
         // Camera control
         setViewMode: (mode: string) => {
           const validModes = ['desktop', 'cabinet', 'vr'];
@@ -1934,7 +1940,7 @@ export function buildFPScriptAPI() {
     })(),
 
     _makeTimer: makeTimer,
-    __element: (name: string) => createElementProxy(String(name)),
+    __element: (name: string): ReturnType<typeof createElementProxy> => nativeObjects.element(String(name)),
 
     // ─── PHASE 1: Game Control ───
     StartGame: startGame,

@@ -4,6 +4,7 @@ import type { CFB$Container } from './cfb-io';
 import type { TableConfig } from '../types';
 import { fptResources, fptRawBytes, globalAssetCatalog } from '../game';
 import { runFPScript } from '../script-engine';
+import { nativeScriptKind } from '../script/native-objects';
 import { extractImageFromBytes, extractSoundFromBytes } from './media';
 import { extractTableCoordsFromCFB, extractTableElementsFromCFB, ELEM_TYPE } from './table-elements';
 import type { ParsedTableElement } from './table-elements';
@@ -41,6 +42,8 @@ export async function parseFPTFile(
   if (parseLog) parseLog.innerHTML = '';
   logMsg(`Datei: ${file.name}`, 'info');
   logMsg(`Größe: ${(file.size/1024).toFixed(1)} KB`, 'info');
+  // Reset before any route so JSON and failed imports cannot inherit old identities.
+  fptResources.nativeElements = [];
 
   if (file.name.toLowerCase().endsWith('.json')) {
     try {
@@ -55,6 +58,9 @@ export async function parseFPTFile(
 
   const buffer = await file.arrayBuffer();
   const bytes  = new Uint8Array(buffer);
+  // Read before a worker can detach the input; cache and fallback share this inventory.
+  fptResources.nativeElements = extractTableElementsFromCFB(buffer)
+    .map(element => ({ ...element, kind: nativeScriptKind(element) }));
   logMsg('Analysiere Binärformat...', 'info');
 
   // Display-only limits: 160 UTF-16 code units per path field, 2400 total
