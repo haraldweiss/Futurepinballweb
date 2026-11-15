@@ -1385,3 +1385,83 @@ Nächste Schritte: cfb → devDeps, Browser-Smoke (Pharaoh boot/Ball/Flipper/Bum
 - Additional lifecycle regressions: responsive drain clearance now accounts for resting collider thickness; launch save grace arms once per ball; HUD counters now update/cancel stale animations and track logical milestone targets. Parsed content cache version 2 rejects old incomplete/broken results without changing DB schema version 1.
 - Local verification with all three private references: **970/970 tests, 54 files**, tsc clean. Full production browser game-over checks are part of `tests/e2e/gameplay.spec.ts`; absence of private corpus paths explicitly skips those cases. Live resize, cabinet hardware feel and native table-rule fidelity still require separate validation.
 - Final local browser verification: **4/4 production checks passed**, including complete three-ball demo and imported-reference games, positive scoring and persisted game-over highscores. This validates the reconstructed game lifecycle, not original FPT fidelity or physical cabinet feel.
+
+### 2026-11-15 — Native script ownership: settings, element bridge, drain/ball count
+
+Four commits pushed to `codex/fp-native-compatibility` (branch in sync):
+`e26b9a91` runtime settings + fixed 1D arrays, `c44a504a` docs,
+`687d3af4` native element bridge, `bd69499b` native drain/ball ownership.
+Only task-owned files were staged; inherited dirty files remain uncommitted.
+For `tests/e2e/gameplay.spec.ts` the helper change was staged hunk-wise because
+the working tree also contains inherited appended tests — do not stage the whole
+file.
+
+**Working now (NewTable reference, production build):**
+- Runtime settings: `nvBallsPerGame` (default 3), `nvTotalGamesPlayed`,
+  `nvJackpot`, `nvSpecialScore1..4` + `nvSpecialScore(player)`. Shared per loaded
+  script, reset on reload, BeginGame clears only special scores. No NVRAM claim.
+  Bare assignment to `nvScore`/`nvSpecialScore` throws instead of replacing the
+  callable proxy.
+- Fixed 1D `Dim` arrays allocate through the inclusive bound. Array references
+  are case-insensitive (rewritten to declared casing); accesses use a
+  literal-masked balanced scanner and assignments use quote/depth-aware target
+  parsing, so quoted text, nested/quoted indexes and call-style writes work.
+- Transpiled function preludes live inside the sandbox `with`, so deferred
+  handlers share table scope. Allowlists/passthrough unchanged.
+- Element bridge: `Flipper.SolenoidOn/Off/Pulse` -> `cb.setFlipperSolenoid`;
+  `Kicker.CreateBall` -> `cb.createBall`. Bumper/target/slingshot collisions
+  dispatch all matching handler names (prefix/suffix tolerant), e.g.
+  `PinMechSound_Bumper1_Hit`, `LeftSlingshotRubber_Hit`.
+- Drain ownership: for script-owned tables `callScriptDrain` matches
+  `Drain_Hit`/prefixed names; the host parks the ball (`nativeBallParked`,
+  y=-20) and skips demo saves/three-ball/game-over. `CreateBall` re-arms the
+  parked ball and advances the HUD ball number; `EndGame` resets it.
+  `EnterHighScore` invokes `FuturePinball_NameEntryComplete` synchronously.
+- Script-owned tables no longer get reconstructed demo points (bumper, target,
+  slingshot, spinner, ramp, demo rollovers); visuals/sounds plus handler
+  dispatch remain. Demo tables are unchanged.
+
+**Verification (2026-11-15):**
+- `npm run test:run` 1,177 passed / 3 skipped (working tree); 1,170 / 3 in an
+  isolated staged tree (`git checkout-index -a` into a temp dir).
+- `npm run typecheck`, `npm run build` clean; `npm run lint:security` 0 errors,
+  714 warnings.
+- Production Chrome (channel chrome, built `dist`):
+  - demo boot/reload and demo three-ball/game-over pass;
+  - private NewTable start passes;
+  - `FPT_TEST_FILES='["<NewTable.fpt>"]' --grep 'imported reference'` passes
+    twice: HUD ball history 1->2->3->1, script score, persisted high score.
+- Evidence and logs: `analysis/future-pinball/2026-11-15-native-game-settings/`
+  and `analysis/future-pinball/2026-11-15-native-element-bridge/` (outside Git).
+
+**Private reproduction (never commit fixtures):**
+- NewTable: `/Volumes/Pinball/Future Pinball and BAM Essentials AIO - 2.9/FuturePinball/NewTable.fpt`,
+  SHA-256 `a807c191f754d292a7ed5e34f7d6a1552eb5676db06b551127948cd96336e749`.
+- `PLAYWRIGHT_CHANNEL=chrome FPT_NATIVE_START_FILE="<...>/NewTable.fpt" npx playwright test tests/e2e/native-script-objects.spec.ts --grep 'delayed ball-creation'`
+- `PLAYWRIGHT_CHANNEL=chrome FPT_TEST_FILES='["<...>/NewTable.fpt"]' npx playwright test tests/e2e/gameplay.spec.ts --grep 'imported reference'`
+- Playwright config starts `vite preview` on 4173; free the port first or the
+  run fails with `already used`.
+
+**Local desktop packages (unsigned, `release/`, ignored by Git):**
+- macOS arm64 + x64 dmg/zip; Windows NSIS x64+ia32 + portable x64; Linux
+  AppImage + deb. Rebuild commands:
+  `CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac --arm64|--x64 --publish never -c.mac.notarize=false -c.mac.identity=null`,
+  `npx electron-builder --win --x64 --publish never`,
+  `npx electron-builder --linux --x64 --publish never`.
+- macOS arm64 and x64 packages were launched (x64 under Rosetta) and loaded
+  Pharaoh's Gold over CDP. Windows/Linux were only structurally verified.
+- Caveats: unsigned/not notarized, default Electron icon, Windows metadata not
+  applied (`signAndEditExecutable: false`), no ARM64 Windows/Linux, nothing
+  published (`--publish never`).
+
+**Boundaries / next (details in workspace AGENTS.md §7):**
+- Native ball saver/shoot-again is inert: `PlungerLaneTrigger_Hit`,
+  `PlungerLaneGate_Hit`, `PlungerKicker_Hit` are not routed. Extra-ball awards,
+  multiball HUD parity and multi-player are unverified.
+- AI1 still stops at the BAM object/material path (`FindObject`/coordinate
+  overload/`SetMaterial`).
+- Parsed element coordinates are unused for ball placement; triggers/gates/
+  rollovers are not routed; physics is reconstructed 2D mini-rapier; reels/DMD
+  fonts and lamp sequencing are incomplete.
+- A working `CreateBall` and a completed three-ball game prove control flow and
+  ball lifecycle, not native physics, rendering fidelity or original playability.
