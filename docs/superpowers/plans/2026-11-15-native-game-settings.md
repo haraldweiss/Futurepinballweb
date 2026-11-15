@@ -33,8 +33,8 @@ arrays when starting. Do not increment counters automatically in BeginGame.
       bare-accessor clobber, call-style index write and stale-settings findings
       with regressions in this change.
 - [x] Document evidence, defaults and remaining game/physics/display gaps.
-- [ ] Push task-owned commits; local commit lands first and push waits for
-      explicit approval per the workspace rules of engagement.
+- [x] Push task-owned commits (`e26b9a91` to
+      `origin/codex/fp-native-compatibility`).
 
 A successful ball-creation request to a placeholder is not physical ball
 creation, rendered fidelity, native physics or playability.
