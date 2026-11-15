@@ -12,6 +12,9 @@ import { magnetSystem } from './mechanics/magnet-system';
 import { vbsToJS } from './utils/vbs-transpiler';
 import { getTopScores, recordScore } from './highscore';
 import { NativeScriptObjects } from './script/native-objects';
+import { createRuntimeGlobals, bindLiveApiProperties } from './script/runtime-globals';
+import { renderReelDisplay, clearReelDisplays } from './script/reel-display';
+import { scriptTimeout, scriptInterval, cancelScriptTimeout, cancelScriptInterval, disposeScriptTimers, isScriptIntervalActive } from './script/timers';
 
 // ─── Phase 2: Catalog-first sound resolution ──────────────────────────────────
 
@@ -72,25 +75,32 @@ export function fpScriptLog(msg: string, type = 'info'): void {
 }
 
 // ─── FP Script API ────────────────────────────────────────────────────────────
-function createReelProxy(name: string): Record<string, any> {
-  let value = 0, brightness = 1, digits = 7;
+function createReelProxy(name: string, visible = false): Record<string, any> {
+  let value = 0, brightness = 1, digits = 7, bulb = 1;
+  const publish = () => { if (visible) renderReelDisplay(name, { value, brightness, digits, bulb }); };
+  const setValue = (next: unknown) => { const number = Number(next); value = Number.isFinite(number) ? Math.trunc(number) : 0; publish(); };
   return new Proxy({}, {
     get: (_target, prop) => {
-      const key = String(prop);
-      if (key === 'Name' || key === 'name') return name;
-      if (key === 'Value' || key === 'Score' || key === 'State') return value;
-      if (key === 'Digits') return digits;
-      if (key === 'Brightness') return brightness;
-      if (key === 'SetValue' || key === 'SetScore') return (next: unknown) => { value = Number(next) || 0; };
-      if (key === 'SetBrightness') return (next: unknown) => { brightness = Math.max(0, Math.min(1, Number(next) || 0)); };
-      if (key === 'Reset') return () => { value = 0; };
-      if (key === 'toString' || prop === Symbol.toPrimitive) return () => value;
+      const key = String(prop).toLowerCase();
+      if (key === 'name') return name;
+      if (key === 'value' || key === 'score') return value;
+      if (key === 'state') return bulb;
+      if (key === 'digits' || key === 'count') return digits;
+      if (key === 'brightness') return brightness;
+      if (key === 'setvalue' || key === 'setscore') return setValue;
+      if (key === 'addvalue') return (next: unknown) => setValue(value + (Number(next) || 0));
+      if (key === 'setbrightness') return (next: unknown) => { brightness = Math.max(0, Math.min(1, Number(next) || 0)); publish(); };
+      if (key === 'reset' || key === 'resettozero') return () => setValue(0);
+      if (key === 'tostring' || prop === Symbol.toPrimitive) return () => value;
       return (...args: unknown[]) => { fpScriptLog(`[Reel] ${name}.${key}(${args.join(', ')})`, 'debug'); };
     },
     set: (_target, prop, next) => {
-      if (prop === 'Value' || prop === 'Score' || prop === 'State') value = Number(next) || 0;
-      else if (prop === 'Brightness') brightness = Math.max(0, Math.min(1, Number(next) || 0));
-      else if (prop === 'Digits') digits = Number(next) || 0;
+      const key = String(prop).toLowerCase();
+      if (key === 'value' || key === 'score') setValue(next);
+      else if (key === 'state') bulb = Number(next) || 0;
+      else if (key === 'brightness') brightness = Math.max(0, Math.min(1, Number(next) || 0));
+      else if (key === 'digits' || key === 'count') digits = Math.max(1, Math.min(12, Math.trunc(Number(next) || 1)));
+      publish();
       return true;
     },
   });
@@ -115,9 +125,9 @@ function createLightProxy(name: string): Record<string, any> {
       };
       if (key === 'Blink' || key === 'BlinkPattern') return (interval = 250, count = 1) => {
         let toggles = Math.max(1, Number(count) || 1);
-        const timer = setInterval(() => {
+        const timer = scriptInterval(() => {
           state = state ? 0 : 1; apply(state);
-          if (--toggles <= 0) { clearInterval(timer); state = 0; apply(0); }
+          if (--toggles <= 0) { cancelScriptInterval(timer); state = 0; apply(0); }
         }, Math.max(50, Number(interval) || 250));
       };
       if (prop === Symbol.toPrimitive) return () => state;
@@ -143,17 +153,17 @@ function createFlasherProxy(name: string): Record<string, any> {
       if (key === 'Off') return () => apply(0);
       if (key === 'Flash') return (value = 1, duration = 0) => {
         apply(Number(value) || 0);
-        if (Number(duration) > 0) setTimeout(() => apply(0), Number(duration));
+        if (Number(duration) > 0) scriptTimeout(() => apply(0), Number(duration));
       };
       if (key === 'FlashForMs') return (ms = 100, value = 1) => {
         apply(Number(value) || 0);
-        setTimeout(() => apply(0), Math.max(0, Number(ms) || 0));
+        scriptTimeout(() => apply(0), Math.max(0, Number(ms) || 0));
       };
       if (key === 'Blink') return (interval = 250, count = 1) => {
         let toggles = Math.max(1, Number(count) || 1);
-        const timer = setInterval(() => {
+        const timer = scriptInterval(() => {
           apply(intensity ? 0 : 1);
-          if (--toggles <= 0) { clearInterval(timer); apply(0); }
+          if (--toggles <= 0) { cancelScriptInterval(timer); apply(0); }
         }, Math.max(50, Number(interval) || 250));
       };
       if (prop === Symbol.toPrimitive) return () => intensity;
@@ -176,7 +186,7 @@ function createFlipperProxy(name: string): Record<string, any> {
       if (key === 'SolenoidOff') return () => { enabled = false; fpScriptLog(`[Flipper] ${name}.SolenoidOff`, 'debug'); };
       if (key === 'SolenoidPulse') return () => {
         enabled = true;
-        setTimeout(() => { enabled = false; }, 120);
+        scriptTimeout(() => { enabled = false; }, 120);
       };
       if (key === 'Enable') return () => { enabled = true; };
       if (key === 'Disable') return () => { enabled = false; };
@@ -194,7 +204,7 @@ function createFlipperProxy(name: string): Record<string, any> {
 
 function createElementProxy(name: string, kind?: string): Record<string, any> {
   const classification = kind ?? name;
-  if (/reel|score/i.test(classification)) return createReelProxy(name);
+  if (/reel|score/i.test(classification)) return createReelProxy(name, kind === 'reel');
   if (/flasher|flash/i.test(classification)) return createFlasherProxy(name);
   if (/light|lamp|gi/i.test(classification)) return createLightProxy(name);
   if (/flipper/i.test(classification)) return createFlipperProxy(name);
@@ -226,10 +236,10 @@ export function buildFPScriptAPI() {
   const timers: Record<string, any> = {};
 
   const makeTimer = (name: string) => ({
-    get Enabled() { return !!timers[`${name  }_id`]; },
+    get Enabled() { return isScriptIntervalActive(timers[`${name  }_id`]); },
     set Enabled(v: boolean) {
-      clearInterval(timers[`${name  }_id`]); delete timers[`${name  }_id`];
-      if (v) timers[`${name  }_id`] = setInterval(() => callScriptFn(`${name  }_Expired`), timers[`${name  }_ms`] || 1000);
+      cancelScriptInterval(timers[`${name  }_id`]); delete timers[`${name  }_id`];
+      if (v) timers[`${name  }_id`] = scriptInterval(() => callScriptFn(`${name  }_Expired`), timers[`${name  }_ms`] || 1000);
     },
     get Interval() { return timers[`${name  }_ms`] || 1000; },
     set Interval(ms: number) { timers[`${name  }_ms`] = ms; },
@@ -251,7 +261,9 @@ export function buildFPScriptAPI() {
     fpScriptLog('StartGame: New game started');
   };
 
-  return {
+  const api = {
+    // Native TYPELIB eBulbState constants (BulbBlink is 3, not 2).
+    BulbOff: 0, BulbOn: 1, BulbBlink: 3,
     AddScore:  (n: number) => { state.score += Math.floor(+n || 0); cb.updateHUD(); },
     AddBonus:  (n: number) => { state.score += Math.floor((+n || 0) * 0.5); cb.updateHUD(); },
     BIPScore:  (_t: any, n: number) => { state.score += Math.floor(+n || 0); cb.updateHUD(); },
@@ -963,24 +975,24 @@ export function buildFPScriptAPI() {
     // Timer helpers
     SetTimeout: (fn: (...args: any[]) => any, ms: number) => {
       if (typeof fn === 'function') {
-        return setTimeout(() => fn(), ms);
+        return scriptTimeout(() => fn(), ms);
       }
       return null;
     },
 
     SetInterval: (fn: (...args: any[]) => any, ms: number) => {
       if (typeof fn === 'function') {
-        return setInterval(() => fn(), ms);
+        return scriptInterval(() => fn(), ms);
       }
       return null;
     },
 
     ClearTimeout: (id: any) => {
-      if (typeof id === 'number') clearTimeout(id);
+      cancelScriptTimeout(id);
     },
 
     ClearInterval: (id: any) => {
-      if (typeof id === 'number') clearInterval(id);
+      cancelScriptInterval(id);
     },
 
     // Validation
@@ -1046,7 +1058,7 @@ export function buildFPScriptAPI() {
       physics.ballBody.applyImpulse({ x: 0, y: p * 1.5, z: 0 }, true);
       state.kickbacksRemaining--;
       state.kickbackActive = true;
-      setTimeout(() => { state.kickbackActive = false; }, 500);
+      scriptTimeout(() => { state.kickbackActive = false; }, 500);
       fpScriptLog(`FireKickback: Power ${p}, remaining ${state.kickbacksRemaining}`);
       cb.showNotification(`🎯 KICKBACK! ${state.kickbacksRemaining} left`);
     },
@@ -1947,6 +1959,8 @@ export function buildFPScriptAPI() {
     BeginGame: startGame,
 
     EndGame: () => {
+      state.numPlayers = 0;
+      cb.updateHUD();
       cb.showNotification('🕹️ GAME OVER');
       cb.updateBackglassModeInfo('GAME OVER');
       cb.triggerDrainVisual();
@@ -2015,7 +2029,7 @@ export function buildFPScriptAPI() {
       cb.disableFlippers?.();
       cb.dmdEvent('TILT!');
       fpScriptLog('TILT! Flippers disabled for 3s');
-      setTimeout(() => {
+      scriptTimeout(() => {
         state.tiltActive = false;
         cb.enableFlippers?.();
         fpScriptLog('Tilt: Flippers re-enabled');
@@ -2041,7 +2055,7 @@ export function buildFPScriptAPI() {
           cb.disableFlippers?.();
           cb.dmdEvent('TILT!');
           fpScriptLog('TILT! Flippers disabled for 3s');
-          setTimeout(() => {
+          scriptTimeout(() => {
             state.tiltActive = false;
             cb.enableFlippers?.();
             fpScriptLog('Tilt: Flippers re-enabled');
@@ -2062,7 +2076,7 @@ export function buildFPScriptAPI() {
         cb.tableShake?.(0.5, 300);
         cb.disableFlippers?.();
         cb.dmdEvent?.('TILT!');
-        setTimeout(() => { state.tiltActive = false; cb.enableFlippers?.(); }, 3000);
+        scriptTimeout(() => { state.tiltActive = false; cb.enableFlippers?.(); }, 3000);
       }
     },
     NudgeY: (force: number) => {
@@ -2077,7 +2091,7 @@ export function buildFPScriptAPI() {
         cb.tableShake?.(0.5, 300);
         cb.disableFlippers?.();
         cb.dmdEvent?.('TILT!');
-        setTimeout(() => { state.tiltActive = false; cb.enableFlippers?.(); }, 3000);
+        scriptTimeout(() => { state.tiltActive = false; cb.enableFlippers?.(); }, 3000);
       }
     },
 
@@ -2180,6 +2194,8 @@ export function buildFPScriptAPI() {
       fpScriptLog(`StopSound3D: ${name} (no-op in web)`);
     },
   };
+  const runtime = createRuntimeGlobals(state, () => cb.updateHUD());
+  return Object.defineProperties(api, Object.getOwnPropertyDescriptors(runtime)) as typeof api & typeof runtime;
 }
 
 function _collectTimers(api: any, jsCode: string): void {
@@ -2191,7 +2207,14 @@ function _collectTimers(api: any, jsCode: string): void {
 }
 
 // ─── Script Runner ────────────────────────────────────────────────────────────
+export function resetFPScript(): void {
+  disposeScriptTimers();
+  setFpScriptHandlers({});
+  clearReelDisplays();
+}
+
 export function runFPScript(vbsCode: string): void {
+  resetFPScript();
   const handlers: Record<string, (...args: unknown[]) => unknown> = {};
 
   // Phase 4.2: Debug hooks
@@ -2203,6 +2226,8 @@ export function runFPScript(vbsCode: string): void {
   catch(e: any) { fpScriptLog(`Transpile-Fehler: ${  e.message}`, 'error'); return; }
 
   const api = buildFPScriptAPI();
+  try { jsCode = bindLiveApiProperties(jsCode, api); }
+  catch (error) { fpScriptLog(`Script binding error: ${(error as Error).message}`, 'error'); return; }
   _collectTimers(api, jsCode);
 
   const fnNames: string[] = [];

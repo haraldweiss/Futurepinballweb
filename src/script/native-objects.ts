@@ -13,7 +13,7 @@ export function nativeScriptKind(element: ParsedTableElement): string {
 
 const adapterProperties = new Map([
   'Strength', 'AngleSwing', 'Enabled', 'State', 'Intensity', 'Brightness',
-  'Value', 'Score', 'Digits', 'Z', 'Angle',
+  'Value', 'Score', 'Digits', 'Count', 'Z', 'Angle',
 ].map(name => [name.toLowerCase(), name]));
 
 /** Session-local identities for decoded declarations, not native physics bodies. */
