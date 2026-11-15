@@ -30,7 +30,7 @@ import { initFileBrowserUI } from './app/file-browser-ui';
 import { createLibrarySelector } from './app/library-selector';
 import { handlePhysicsFrame, triggerVideoEvent, onMultiballStartVideo, onTiltVideo } from './app/physics-frame-handler';
 import { applyPhysicsGravityForRotation } from './app/game-helpers';
-import { resetBall, resetGameState } from './app/game-state';
+import { resetBall, resetGameState, createScriptBall, parkNativeBall } from './app/game-state';
 import { armLaunchBallSave } from './app/ball-save';
 import { initPWAInstall, installPWA } from './app/pwa-install';
 import { updateHUD } from './app/hud';
@@ -69,7 +69,7 @@ import { callScriptFlipper, callScriptDrain, dispatchFPScriptKey } from './scrip
 import { isEditableKeyTarget } from './script/key-input';
 import { releaseHeldControls } from './app/key-release';
 import { handleArcadeKey } from './app/arcade-input';
-import { usesNativeCoinRules } from './script/rule-ownership';
+import { usesNativeCoinRules, usesNativeScriptRules } from './script/rule-ownership';
 import { parseFPTFile, parseFPLFile, getBackglassArtwork } from './fpt-parser';
 import { getBackglassRenderer } from './backglass';
 import { getProfiler, QUALITY_PRESETS } from './profiler';
@@ -562,11 +562,7 @@ cb.launchMultiBall  = () => gameControls.launchMultiBall();
 cb.resetBall        = resetBall;
 
 // ─── Native script element bridge ────────────────────────────────────────────
-cb.createBall = () => {
-  if (state.inLane) { resetBall(); devLog('[Native] CreateBall re-armed the shooter-lane ball'); return; }
-  gameControls.launchMultiBall();
-  devLog('[Native] CreateBall added an extra ball');
-};
+cb.createBall = createScriptBall;
 cb.setFlipperSolenoid = (side, enabled) => {
   if (keys[side] === enabled) return;
   keys[side] = enabled;
@@ -1514,6 +1510,9 @@ if (FPW_ROLE === 'dmd') {
       playSound: playSound,
       updateHUD: updateHUD,
       callScriptDrain: callScriptDrain,
+      usesNativeScriptRules,
+      parkNativeBall,
+      isNativeBallParked: () => state.nativeBallParked,
       recordScore: recordScore,
       emitSyncFrame: emitSyncFrame,
       getLastLeftFlipperPower: () => lastLeftFlipperPower,

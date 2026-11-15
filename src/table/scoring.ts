@@ -4,11 +4,14 @@ import { state, physics, currentTableConfig, cb } from '../game';
 import { getScoreAnimationManager } from '../score-animation-manager';
 import { callScriptBumper, callScriptTarget, callScriptSlingshot } from '../script-engine';
 import { playBumperSoundWithIntensity } from '../audio-system';
+import { usesNativeScriptRules } from '../script/rule-ownership';
 
 const ROLLOVER_XS = [-1.8, -0.6, 0.6, 1.8];
 let rolloversHit = [false, false, false, false];
 
 export function checkRolloverLanes(): void {
+  // Demo-only lane construct; native tables own their lane scoring in script.
+  if (usesNativeScriptRules()) return;
   ROLLOVER_XS.forEach((rx, i) => {
     const dx = state.ballPos.x - rx, dy = state.ballPos.y - 5.4;
     if (Math.abs(dx) < 0.3 && Math.abs(dy) < 0.2) {
@@ -37,17 +40,21 @@ export function scoreBumperHit(bumperData: { x: number; y: number; mesh: any; in
   // Skip if ball is in lane (not yet launched) — prevent pre-launch scoring
   if (state.inLane) return;
 
-  state.score += (100 + (state.bumperCombo * 25)) * state.multiplier;
-  state.bumperHits++;
-  state.bumperCombo++;
-  state.lastBumperHitTime = performance.now();
-  const multi = Math.min(state.bumperComboMultiplier + (state.bumperCombo * 0.1), 5.0);
-  state.bumperComboMultiplier = multi;
+  // Native tables own scoring; keep only visuals, sound and script dispatch.
+  const nativeRules = usesNativeScriptRules();
+  if (!nativeRules) {
+    state.score += (100 + (state.bumperCombo * 25)) * state.multiplier;
+    state.bumperHits++;
+    state.bumperCombo++;
+    state.lastBumperHitTime = performance.now();
+    const multi = Math.min(state.bumperComboMultiplier + (state.bumperCombo * 0.1), 5.0);
+    state.bumperComboMultiplier = multi;
 
-  if (state.bumperCombo >= 3) {
-    cb.dmdEvent(`🔥 ${state.bumperCombo}x BUMPER COMBO!`);
-  } else {
-    cb.dmdEvent('BUMPER!');
+    if (state.bumperCombo >= 3) {
+      cb.dmdEvent(`🔥 ${state.bumperCombo}x BUMPER COMBO!`);
+    } else {
+      cb.dmdEvent('BUMPER!');
+    }
   }
 
   // Enhanced bumper hit visual effects via Phase 16+ system
@@ -90,7 +97,7 @@ export function updateSpinnerPhysics(): void {
 }
 
 export function scoreSpinnerHit(): void {
-  state.score += 250 * state.multiplier;
+  if (!usesNativeScriptRules()) state.score += 250 * state.multiplier;
   state.lastSpinnerHitTime = performance.now();
   cb.dmdEvent('SPINNER!');
   cb.playSound('bumper');
@@ -98,6 +105,13 @@ export function scoreSpinnerHit(): void {
 }
 
 export function scoreRampHit(rampData: any, index: number): void {
+  if (usesNativeScriptRules()) {
+    cb.triggerRampCompletion();
+    cb.triggerRampVisual();
+    cb.playSound('bumper');
+    cb.updateHUD();
+    return;
+  }
   state.score += (500 + (state.rampComboCounter * 100)) * state.multiplier;
   state.rampsHit.add(index);
 
@@ -129,43 +143,47 @@ export function updateTargetSequenceHighlights(): void {
 }
 
 export function scoreTargetHit(targetData: { x: number; y: number; mesh: any; index: number }): void {
-  state.score += (500 + (state.targetProgress * 100)) * state.multiplier;
-  state.targetHitCounts.set(targetData.index, (state.targetHitCounts.get(targetData.index) || 0) + 1);
+  // Native tables own scoring; keep visuals, sound and script dispatch.
+  const nativeRules = usesNativeScriptRules();
+  if (!nativeRules) {
+    state.score += (500 + (state.targetProgress * 100)) * state.multiplier;
+    state.targetHitCounts.set(targetData.index, (state.targetHitCounts.get(targetData.index) || 0) + 1);
 
-  let targetMsg = 'TARGET!';
-  const pMode: string = state.progressiveTargetMode;
-  if (pMode === 'sequence') {
-    if (targetData.index === state.targetSequence[state.sequenceProgress]) {
-      state.sequenceProgress++;
-      state.targetProgress++;
-      if (state.sequenceProgress >= state.targetSequence.length) {
-        state.score += 5000 * state.multiplier;
-        targetMsg = '🏆 SEQUENCE COMPLETE! +5000!';
-        state.sequenceProgress = 0;
-        state.targetProgress = 0;
-        state.progressiveTargetMode = 'none';
+    let targetMsg = 'TARGET!';
+    const pMode: string = state.progressiveTargetMode;
+    if (pMode === 'sequence') {
+      if (targetData.index === state.targetSequence[state.sequenceProgress]) {
+        state.sequenceProgress++;
+        state.targetProgress++;
+        if (state.sequenceProgress >= state.targetSequence.length) {
+          state.score += 5000 * state.multiplier;
+          targetMsg = '🏆 SEQUENCE COMPLETE! +5000!';
+          state.sequenceProgress = 0;
+          state.targetProgress = 0;
+          state.progressiveTargetMode = 'none';
+        } else {
+          targetMsg = `🎯 TARGET ${state.sequenceProgress}/${state.targetSequence.length}`;
+        }
       } else {
-        targetMsg = `🎯 TARGET ${state.sequenceProgress}/${state.targetSequence.length}`;
+        state.sequenceProgress = 0;
+        targetMsg = '❌ SEQUENCE BROKEN!';
       }
-    } else {
-      state.sequenceProgress = 0;
-      targetMsg = '❌ SEQUENCE BROKEN!';
+    } else if (pMode === 'countdown') {
+      state.targetProgress++;
+      const targetMax = (state as unknown as Record<string, number>).targetProgressMax ?? 5;
+      if (state.targetProgress >= targetMax) {
+        state.score += 3000 * state.multiplier;
+        targetMsg = '🏆 COUNTDOWN BONUS! +3000!';
+        state.targetProgress = 0;
+      } else {
+        targetMsg = `🎯 ${state.targetProgress}/${targetMax}`;
+      }
     }
-  } else if (pMode === 'countdown') {
-    state.targetProgress++;
-    const targetMax = (state as unknown as Record<string, number>).targetProgressMax ?? 5;
-    if (state.targetProgress >= targetMax) {
-      state.score += 3000 * state.multiplier;
-      targetMsg = '🏆 COUNTDOWN BONUS! +3000!';
-      state.targetProgress = 0;
-    } else {
-      targetMsg = `🎯 ${state.targetProgress}/${targetMax}`;
-    }
-  }
 
-  cb.dmdEvent(targetMsg);
+    cb.dmdEvent(targetMsg);
+    cb.showFloatingScore(new THREE.Vector3(targetData.x, targetData.y, 0.5), 500 * state.multiplier);
+  }
   cb.triggerBumperFlash();
-  cb.showFloatingScore(new THREE.Vector3(targetData.x, targetData.y, 0.5), 500 * state.multiplier);
   cb.playTargetSound(0.9);
   cb.playSound('bumper');
   callScriptTarget(targetData.index);
@@ -175,17 +193,19 @@ export function scoreTargetHit(targetData: { x: number; y: number; mesh: any; in
 export function scoreSlingshotHit(side: string): void {
   const dir = side === 'left' ? 1 : -1;
   physics!.ballBody.applyImpulse({ x: dir * 3.0, y: 2.5, z: 0 }, true);
-  const slingshotScore = 50 * state.multiplier;
-  state.score += slingshotScore;
+  if (!usesNativeScriptRules()) {
+    const slingshotScore = 50 * state.multiplier;
+    state.score += slingshotScore;
 
-  const scoreAnimMgr = getScoreAnimationManager();
-  if (scoreAnimMgr) {
+    const scoreAnimMgr = getScoreAnimationManager();
+    if (scoreAnimMgr) {
+      const slingshotPos = new THREE.Vector3(dir * 2.5, -2.0, 0.5);
+      scoreAnimMgr.addSlingshotHit(slingshotPos, slingshotScore);
+    }
+
     const slingshotPos = new THREE.Vector3(dir * 2.5, -2.0, 0.5);
-    scoreAnimMgr.addSlingshotHit(slingshotPos, slingshotScore);
+    cb.showFloatingScore(slingshotPos, slingshotScore);
   }
-
-  const slingshotPos = new THREE.Vector3(dir * 2.5, -2.0, 0.5);
-  cb.showFloatingScore(slingshotPos, slingshotScore);
   cb.playSound('bumper');
   callScriptSlingshot(side);
   cb.updateHUD();

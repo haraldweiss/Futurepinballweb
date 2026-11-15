@@ -5,6 +5,7 @@ export const state: GameState = {
   ballPos:         new THREE.Vector3(2.55, -5.0, 0.5),
   ballVel:         { x: 0, y: 0 },
   inLane:          true,
+  nativeBallParked: false,
   score:           0,
   ballNum:         1,
   multiplier:      1,

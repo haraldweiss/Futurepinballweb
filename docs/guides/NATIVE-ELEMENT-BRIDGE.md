@@ -69,3 +69,6 @@ Evidence: `analysis/future-pinball/2026-11-15-native-element-bridge/`
 
 A successful `CreateBall` request is still not proof of native ball creation,
 physics fidelity, rendering fidelity or playability.
+
+See [NATIVE-BALL-OWNERSHIP.md](NATIVE-BALL-OWNERSHIP.md) for the follow-up stage
+where script-owned tables also own drain handling and ball creation.

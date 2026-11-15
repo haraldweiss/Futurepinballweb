@@ -319,6 +319,10 @@ export function buildFPScriptAPI() {
     EnterHighScore: () => {
       const rank = recordScore(state.score);
       cb.showNotification(rank > 0 ? `🏆 HIGHSCORE #${rank}` : 'Kein Highscore');
+      // Native FP calls FuturePinball_NameEntryComplete once its name-entry UI
+      // finishes. The web adapter has no asynchronous entry, so complete it now.
+      callScriptFn('FuturePinball_NameEntryComplete', rank, 0)
+        || callScriptFn('_NameEntryComplete', rank, 0);
       return rank;
     },
 
@@ -1984,6 +1988,7 @@ export function buildFPScriptAPI() {
 
     EndGame: () => {
       state.numPlayers = 0;
+      state.ballNum = 1;
       cb.updateHUD();
       cb.showNotification('🕹️ GAME OVER');
       cb.updateBackglassModeInfo('GAME OVER');
@@ -2362,7 +2367,11 @@ export const callScriptSlingshot = (side: string) => callMatchingScriptFns((name
   const match = /(?:^|_)(left|right)_?slingshot.*(?:hit|slingshot)$/i.exec(name);
   return !!match && match[1].toLowerCase() === side;
 }) > 0;
-export const callScriptDrain     = () => callScriptFn('BallDrain') || callScriptFn('Table1_BallDrained') || callScriptFn('Table_BallDrain');
+export const callScriptDrain     = () => callMatchingScriptFns((name) => {
+  // Native tables use Drain_Hit / PinMechSound_Drain_Hit; demo paths use
+  // BallDrain / Table_BallDrain / Table1_BallDrained.
+  return /(?:^|_)(?:ball|table1|table)?_?drain(?:ed)?(?:_?hit)?$/i.test(name);
+}) > 0;
 export const callScriptFlipper   = (side: string, isDown: boolean) => callScriptFn((side==='left'?'LeftFlipper':'RightFlipper') + (isDown?'_Enabled':'_Disabled'));
 
 // ─── B.A.M. Event Dispatch (Session 20.2) ───

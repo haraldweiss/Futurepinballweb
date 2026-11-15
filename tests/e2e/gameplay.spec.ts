@@ -77,22 +77,39 @@ test('demo plays through three balls and game over', async ({ page }) => {
 
 async function playThroughGame(page: Page): Promise<void> {
   await page.keyboard.press('5');
+  // Native tables own start via their script key handler; the demo also starts
+  // on "1" once a credit is present, so both paths work with coin + 1.
+  await page.waitForTimeout(300);
+  await page.keyboard.press('1');
+  // Record every ball-number transition: script-owned tables can drain a ball
+  // faster than the polling interval, so sampling the current value would race.
+  await page.evaluate(() => {
+    const element = document.getElementById('ballnum');
+    const history: string[] = [(element?.textContent ?? '').trim()];
+    (window as unknown as { __ballHistory: string[] }).__ballHistory = history;
+    new MutationObserver(() => history.push((element?.textContent ?? '').trim()))
+      .observe(element!, { childList: true, subtree: true, characterData: true });
+  });
   let sawScore = false;
-  for (const nextBall of ['2', '3', '1']) {
-    await expect.poll(async () => {
-      // Observe completed transitions before sending another launch input.
-      const displayedBall = await page.locator('#ballnum').innerText();
-      if (displayedBall === nextBall) return displayedBall;
-      // Saves return the ball to the lane; Enter during play cannot force a drain.
-      await page.keyboard.down('Enter');
-      await page.waitForTimeout(250);
-      await page.keyboard.up('Enter');
-      const score = await page.locator('#score').textContent();
-      sawScore ||= Number((score || '0').replace(/[^0-9]/g, '')) > 0;
-      return page.locator('#ballnum').innerText();
-    }, { timeout: 80_000, intervals: [1500] }).toBe(nextBall);
-  }
-  expect(sawScore, 'At least one gameplay event should score during the reference run').toBe(true);
+  await expect.poll(async () => {
+    // Keep launching while the ball waits in the lane; this advances play.
+    await page.keyboard.down('Enter');
+    await page.waitForTimeout(250);
+    await page.keyboard.up('Enter');
+    const score = await page.locator('#score').textContent();
+    sawScore ||= Number((score || '0').replace(/[^0-9]/g, '')) > 0;
+    const history = await page.evaluate(() =>
+      (window as unknown as { __ballHistory: string[] }).__ballHistory);
+    const seen = history.join(',');
+    return {
+      second: seen.includes('2'),
+      third: seen.includes('3'),
+      backToOne: history[history.length - 1] === '1',
+      scored: sawScore,
+    };
+  }, { timeout: 120_000, intervals: [1200] }).toEqual({
+    second: true, third: true, backToOne: true, scored: true,
+  });
   // A held/repeated plunger input can start the following game as it ends.
   // Verify game-over persistence rather than demanding an idle zero score.
   await expect.poll(() => page.evaluate(() => {

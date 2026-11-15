@@ -152,7 +152,11 @@ export interface AnimationLoopDeps {
   showNotification: (msg: string) => void;
   playSound: (type: string) => void;
   updateHUD: () => void;
-  callScriptDrain: () => void;
+  callScriptDrain: () => boolean;
+  /** Native script owns drain/ball creation for this table. */
+  usesNativeScriptRules: () => boolean;
+  parkNativeBall: () => void;
+  isNativeBallParked: () => boolean;
   recordScore: (score: number) => number;
   emitSyncFrame: (data: any) => void;
 
@@ -300,14 +304,11 @@ export function createAnimationLoop(deps: AnimationLoopDeps): () => void {
           // the lane box and re-arm it. The speed guard means a ball flying up
           // through the lane at launch speed (13–16) never triggers this.
           const ballSpeed = Math.hypot(vel.x, vel.y);
-          if (
-            pos.x > PLUNGER_LANE_MIN_X &&
-            pos.y < PLUNGER_LANE_MAX_Y &&
-            ballSpeed < LANE_REARM_MAX_SPEED
-          ) {
+          if (!deps.isNativeBallParked() && pos.x > PLUNGER_LANE_MIN_X && pos.y < PLUNGER_LANE_MAX_Y
+              && ballSpeed < LANE_REARM_MAX_SPEED) {
             deps.resetBall();
             deps.showNotification('🎯 Ball back in the shooter lane — hold ENTER to charge, release to launch');
-          } else {
+          } else if (!deps.isNativeBallParked()) {
             // ─── Stuck watchdog ───
             // Catch-all for a ball wedged anywhere else on the playfield
             // (between rubbers, on a gate lip, …). A live ball is essentially
@@ -384,11 +385,17 @@ export function createAnimationLoop(deps: AnimationLoopDeps): () => void {
 
         // ─── Phase 4: Drain Guide + Phase 7: Extended Ball Saves & Drain Logic ───
         const ballSpeedSq = deps.state.ballVel.x * deps.state.ballVel.x + deps.state.ballVel.y * deps.state.ballVel.y;
-        if (deps.state.ballPos.y < -5.4 && ballSpeedSq < 2.25) {
+        if (!deps.isNativeBallParked() && deps.state.ballPos.y < -5.4 && ballSpeedSq < 2.25) {
           // ─── Phase 2: Trigger drain warning effect ───
           deps.cb.triggerDrainWarning();
 
-          if (deps.state.ballSaveTimer > 0) {
+          // Native ownership: the table script handles the drain and requests
+          // the next ball through CreateBall; keep the host's demo ball rules out.
+          const nativeHandled = deps.usesNativeScriptRules() && deps.callScriptDrain();
+          if (nativeHandled) {
+            deps.playSound('drain');
+            deps.parkNativeBall();
+          } else if (deps.state.ballSaveTimer > 0) {
             deps.state.ballSaveTimer = 0;
             deps.state.ballSaveMode = 'active';
             deps.dmdEvent('BALL SAVED!');

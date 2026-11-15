@@ -7,6 +7,8 @@ export interface GameState {
   ballPos: THREE.Vector3;
   ballVel: { x: number; y: number };
   inLane: boolean;
+  /** A native table script drained the ball and owns the next CreateBall. */
+  nativeBallParked: boolean;
   score: number;
   ballNum: number;
   multiplier: number;
