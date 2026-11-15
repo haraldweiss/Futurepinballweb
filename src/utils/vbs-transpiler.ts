@@ -11,7 +11,7 @@
 
 // ─── Line Continuation Preprocessing ───────────────────────────────────────────
 
-function preprocessLineContinuation(src: string): string {
+export function preprocessLineContinuation(src: string): string {
   // Join lines ending with _ (VB line continuation)
   return src.replace(/\s*_\s*\r?\n\s*/g, ' ');
 }
@@ -286,6 +286,8 @@ function _vbsStmt(s: string, withContext?: string): string {
     const args = _splitArgs(noParens[2]).map(a => a.trim() ? _vbsXpr(a) : 'undefined').join(', ');
     return `${noParens[1]}(${args})`;
   }
+  // A bare procedure/method name is a zero-argument statement call in VBScript.
+  if (target.split('.').every(part => /^[A-Za-z_]\w*$/.test(part)) && !keyword.test(target)) return `${target}()`;
   return _vbsXpr(target);
 }
 

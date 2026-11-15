@@ -2,8 +2,10 @@
 import { devLog } from '../utils/dev-log';
 import { coinSystemState } from './state';
 import { updateCoinDisplay } from './dmd-renderer';
+import { usesNativeCoinRules } from '../script/rule-ownership';
 
 export function showCoinScreen(): void {
+  if (usesNativeCoinRules()) { closeCoinScreen(); return; }
   if (coinSystemState.gameStarted) return;
 
   coinSystemState.coinScreenVisible = true;

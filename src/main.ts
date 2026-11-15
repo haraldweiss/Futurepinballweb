@@ -68,6 +68,8 @@ import { TABLE_CONFIGS, buildTable, buildRealisticFlipper, scoreBumperHit, score
 import { callScriptFlipper, callScriptDrain, dispatchFPScriptKey } from './script-engine';
 import { isEditableKeyTarget } from './script/key-input';
 import { releaseHeldControls } from './app/key-release';
+import { handleArcadeKey } from './app/arcade-input';
+import { usesNativeCoinRules } from './script/rule-ownership';
 import { parseFPTFile, parseFPLFile, getBackglassArtwork } from './fpt-parser';
 import { getBackglassRenderer } from './backglass';
 import { getProfiler, QUALITY_PRESETS } from './profiler';
@@ -105,11 +107,11 @@ import {
   initializeAnimationBinding, getAnimationBindingManager,
 } from './mechanics/animation-binding';
 import {
-  initializeCoinSystem, showCoinScreen, addCoin, startGame,
-  isCoinScreenVisible, isGameStarted, getPlayerCount, resetCoinSystem,
+  initializeCoinSystem, showCoinScreen, startGame,
+  isCoinScreenVisible, isGameStarted, getPlayerCount,
 } from './coin-system';
 import {
-  initializeKeyBindings, checkKeyBinding,
+  initializeKeyBindings,
 } from './keybindings';
 import {
   initializeAnimationScheduler, getAnimationScheduler,
@@ -960,80 +962,7 @@ document.addEventListener('keydown', e => {
     togglePerformanceMonitor();
   }
 
-  // ─── Arcade Mode: Player Start & Coin Input ───
-  // Key 1: 1-Player Start
-  if (e.key === '1' && !e.altKey && !e.ctrlKey && !e.shiftKey) {
-    if (state.credits > 0) {
-      state.credits--;
-      state.numPlayers = 1;
-      state.currentPlayer = 1;
-      state.playerScores = [0, 0, 0, 0];
-      state.score = 0;
-      state.ballNum = 1;
-      showNotification(`🎮 1-Player Game Started! Credits: ${state.credits}`);
-    } else {
-      showNotification('💰 Insert Coin');
-    }
-  }
-
-  // Key 2: 2-Player Start
-  if (e.key === '2' && !e.altKey && !e.ctrlKey && !e.shiftKey) {
-    if (state.credits >= 2) {
-      state.credits -= 2;
-      state.numPlayers = 2;
-      state.currentPlayer = 1;
-      state.playerScores = [0, 0, 0, 0];
-      state.score = 0;
-      state.ballNum = 1;
-      showNotification(`🎮 2-Player Game Started! Credits: ${state.credits}`);
-    } else if (state.credits === 1) {
-      showNotification('💰 Need 1 more coin for 2-Player');
-    } else {
-      showNotification('💰 Insert Coins');
-    }
-  }
-
-  // Key 5: Coin Up (legacy state) — also feed coin-system so its startGame()
-  // doesn't early-return with "no coins inserted" when the player then
-  // presses 1-4 and the new gate at line ~2266 routes through startGame().
-  // Without this the two coin systems drift apart and the DMD attract→launch
-  // transition never fires (coinScreenVisible stays true).
-  if (e.key === '5') {
-    state.credits++;
-    addCoin();
-    showNotification(`💰 Coin Inserted! Credits: ${state.credits}`);
-  }
-
-  // ─── Coin System Controls (Configurable) ─────────────────────────────────────
-  // Insert Coin
-  if (checkKeyBinding(e, 'insertCoin') && isCoinScreenVisible() && !isGameStarted()) {
-    addCoin();
-    return;
-  }
-
-  // Start Game if coin screen is showing.
-  // Enter is also the plunger key. If we just `return`-ed here we'd swallow
-  // the keypress and the plunger would never start charging — the player
-  // saw 'LAUNCH BALL' and pressed Enter, nothing happened, then on release
-  // their key-up was ignored too. Instead: start the game AND fall through
-  // so the plunger-charge code below also runs.
-  if (checkKeyBinding(e, 'startGame') && isCoinScreenVisible() && !isGameStarted()) {
-    if (getPlayerCount() > 0) {
-      startGame();
-      // do NOT return — let the Enter-handler below begin charging the plunger
-    } else {
-      dmdEvent('INSERT COIN FIRST');
-      return;
-    }
-  }
-
-  // Multi-player start: keys 1-4 pick the player count (capped at credits in)
-  if (isCoinScreenVisible() && !isGameStarted()
-      && (e.key === '1' || e.key === '2' || e.key === '3' || e.key === '4')) {
-    const requested = parseInt(e.key, 10);
-    startGame(requested);
-    return;
-  }
+  if (handleArcadeKey(e)) return;
 
   // ─── Phase 13.2: Quick Rotation Controls for Cabinet Mode (Alt+Number) ───
   // Alt+1=0°, Alt+2=90°, Alt+3=180°, Alt+4=270°
@@ -1112,6 +1041,10 @@ document.addEventListener('keyup', e => {
     // explicitly start, we auto-start now (more forgiving — the plunger
     // press is itself a clear "I want to play" signal).
     if (!isGameStarted()) {
+      if (usesNativeCoinRules()) {
+        state.plungerCharging = false; state.plungerCharge = 0;
+        return;
+      }
       if (getPlayerCount() > 0) {
         startGame();
       } else {
@@ -1226,7 +1159,6 @@ const { applyViewSettings, resetViewSettings, initViewSettings } = createViewSet
 
 const loadDemoTable = async (key: string) => {
   resetGameState();
-  resetCoinSystem();
   await loadTableWithPhysicsWorker(TABLE_CONFIGS[key], scene);
   setupBackglassForTable(() => backglassRenderer);
   closeLoader();

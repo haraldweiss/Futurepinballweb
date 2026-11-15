@@ -3,15 +3,20 @@ import { devLog } from '../utils/dev-log';
 import { coinSystemState } from './state';
 import { updateCoinDisplay } from './dmd-renderer';
 import { closeCoinScreen } from './screen-manager';
+import { state, cb } from '../game';
+import { usesNativeCoinRules } from '../script/rule-ownership';
 
-export function addCoin(): void {
+export function addCoin(): boolean {
+  if (usesNativeCoinRules()) return false;
   if (coinSystemState.coinsInserted >= 4) {
     devLog('⚠️ Max coins reached (4)');
-    return;
+    return false;
   }
 
   coinSystemState.coinsInserted++;
-  coinSystemState.currentPlayers = Math.min(coinSystemState.coinsInserted, 4);
+  if (!coinSystemState.gameStarted) coinSystemState.currentPlayers = Math.min(coinSystemState.coinsInserted, 4);
+  state.credits = coinSystemState.coinsInserted;
+  cb.updateHUD();
   coinSystemState.lastCoinTime = Date.now();
 
   try {
@@ -26,25 +31,30 @@ export function addCoin(): void {
   );
 
   updateCoinDisplay();
+  return true;
 }
 
-export function startGame(playerCount?: number): void {
+/** Demo-only transaction: spend credits and initialize game state once. */
+export function startGame(playerCount?: number): boolean {
+  if (usesNativeCoinRules()) return false;
+  if (playerCount !== undefined && !Number.isFinite(playerCount)) return false;
   if (coinSystemState.coinsInserted === 0) {
     devLog('⚠️ Cannot start game - no coins inserted');
-    return;
+    return false;
   }
-
-  if (playerCount !== undefined) {
-    const requested = Math.max(1, Math.min(4, Math.floor(playerCount)));
-    coinSystemState.currentPlayers = Math.min(requested, coinSystemState.coinsInserted);
-  }
-
+  const requested = playerCount === undefined
+    ? Math.max(1, coinSystemState.currentPlayers)
+    : Math.max(1, Math.min(4, Math.floor(playerCount)));
+  const players = Math.min(requested, coinSystemState.coinsInserted);
+  coinSystemState.currentPlayers = players;
+  coinSystemState.coinsInserted -= players;
   coinSystemState.gameStarted = true;
-  coinSystemState.coinScreenVisible = false;
-
-  devLog(
-    `🎮 Game started with ${coinSystemState.currentPlayers} player(s)`
-  );
-
+  state.credits = coinSystemState.coinsInserted;
+  state.numPlayers = players; state.currentPlayer = 1;
+  state.playerScores = [0, 0, 0, 0]; state.score = 0; state.ballNum = 1;
+  state.multiplier = 1; state.bumperHits = 0; state.tiltWarnings = 0; state.tiltActive = false;
+  cb.updateHUD();
   closeCoinScreen();
+  devLog(`🎮 Game started with ${players} player(s)`);
+  return true;
 }

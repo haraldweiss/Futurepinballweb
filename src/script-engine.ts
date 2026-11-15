@@ -9,9 +9,11 @@ import { dmdEvent } from './dmd';
 import { getBamBridge } from './bam-bridge';
 import { runSandboxed, ScriptSandboxError } from './utils/script-sandbox';
 import { magnetSystem } from './mechanics/magnet-system';
-import { vbsToJS } from './utils/vbs-transpiler';
+import { vbsToJS, preprocessLineContinuation } from './utils/vbs-transpiler';
 import { getTopScores, recordScore } from './highscore';
 import { NativeScriptObjects } from './script/native-objects';
+import { setNativeCoinRules } from './script/rule-ownership';
+import { closeCoinScreen } from './coin-system/screen-manager';
 import { nativeKeyActions, getNativeKeyCode, NativeKeyInput } from './script/key-input';
 import { createRuntimeGlobals, bindLiveApiProperties } from './script/runtime-globals';
 import { renderReelDisplay, clearReelDisplays } from './script/reel-display';
@@ -2214,6 +2216,7 @@ function _collectTimers(api: any, jsCode: string): void {
 
 // ─── Script Runner ────────────────────────────────────────────────────────────
 export function resetFPScript(): void {
+  setNativeCoinRules(false);
   nativeKeyInput.reset();
   disposeScriptTimers();
   setFpScriptHandlers({});
@@ -2222,6 +2225,10 @@ export function resetFPScript(): void {
 
 export function runFPScript(vbsCode: string): void {
   resetFPScript();
+  // Retain native ownership even if compiling/running the declared rules fails.
+  const nativeRules = /^\s*(?:(?:Public|Private)\s+)?(?:Sub|Function)\s+FuturePinball_KeyPressed\b/im.test(preprocessLineContinuation(vbsCode));
+  setNativeCoinRules(nativeRules);
+  if (nativeRules) closeCoinScreen();
   const handlers: Record<string, (...args: unknown[]) => unknown> = {};
 
   // Phase 4.2: Debug hooks
@@ -2291,12 +2298,13 @@ export function runFPScript(vbsCode: string): void {
 // ─── Event Dispatch ───────────────────────────────────────────────────────────
 import { fpScriptHandlers } from './game';
 
+/** True means a handler exists, including when its invocation logs an error. */
 export function callScriptFn(name: string, ...args: any[]): boolean {
-  try {
-    const fn = fpScriptHandlers[name];
-    if (typeof fn === 'function') { fn(...args); return true; }
-  } catch(e: any) { fpScriptLog(`${name} Fehler: ${e.message}`, 'warn'); }
-  return false;
+  const entry = Object.entries(fpScriptHandlers).find(([key, fn]) => key.toLowerCase() === name.toLowerCase() && typeof fn === 'function');
+  if (!entry) return false;
+  try { entry[1](...args); }
+  catch (error) { fpScriptLog(`${name} Fehler: ${error instanceof Error ? error.message : String(error)}`, 'warn'); }
+  return true;
 }
 
 export const callScriptBumper    = (i: number) => callScriptFn(`Bumper${  i+1  }_Hit`);

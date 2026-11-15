@@ -2,6 +2,8 @@
 import { devLog } from '../utils/dev-log';
 import { coinSystemState } from './state';
 import type { CoinSystemState } from './state';
+import { state } from '../game';
+import { usesNativeCoinRules } from '../script/rule-ownership';
 
 export function resetCoinSystem(): void {
   if (coinSystemState.insertCoinTimeout) {
@@ -23,13 +25,13 @@ export function getCoinSystemState(): CoinSystemState {
 }
 
 export function getPlayerCount(): number {
-  return coinSystemState.currentPlayers;
+  return usesNativeCoinRules() ? state.numPlayers : coinSystemState.currentPlayers;
 }
 
 export function isCoinScreenVisible(): boolean {
-  return coinSystemState.coinScreenVisible;
+  return !usesNativeCoinRules() && coinSystemState.coinScreenVisible;
 }
 
 export function isGameStarted(): boolean {
-  return coinSystemState.gameStarted;
+  return usesNativeCoinRules() ? state.numPlayers > 0 : coinSystemState.gameStarted;
 }

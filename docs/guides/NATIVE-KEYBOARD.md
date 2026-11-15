@@ -55,9 +55,9 @@ fixture checks separate Shift keys, repeated keydown, blur and later physical
 keyup against visible reel output. NewTable and LightSequencerDemo startup
 checks pass; AI1 still reports unsupported coordinate lookup.
 
-Input compatibility alone does not establish gameplay. Demo coin/start and
-native rules still overlap; rule ownership, native-configurable bindings and
-script-driven solenoid physics remain next work. The existing script sandbox
+Input compatibility alone does not establish gameplay. Coin/start ownership is now separated as described in
+[NATIVE-COIN-START.md](NATIVE-COIN-START.md). Native scoring/drain progression,
+native-configurable bindings and script-driven solenoid physics remain next work. The existing script sandbox
 is unchanged. Use trusted tables only.
 
 Verification: isolated commit tree **1,128 passed / 3 skipped**, typecheck/build
