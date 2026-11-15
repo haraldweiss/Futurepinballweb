@@ -561,6 +561,18 @@ cb.playSound        = playSound;
 cb.launchMultiBall  = () => gameControls.launchMultiBall();
 cb.resetBall        = resetBall;
 
+// ─── Native script element bridge ────────────────────────────────────────────
+cb.createBall = () => {
+  if (state.inLane) { resetBall(); devLog('[Native] CreateBall re-armed the shooter-lane ball'); return; }
+  gameControls.launchMultiBall();
+  devLog('[Native] CreateBall added an extra ball');
+};
+cb.setFlipperSolenoid = (side, enabled) => {
+  if (keys[side] === enabled) return;
+  keys[side] = enabled;
+  if (enabled) { playSound('flipper'); cb.playFlipperSound(0.8); }
+};
+
 // ─── Phase 1: Flipper + Nudge Control ───
 let _flippersDisabled = false;
 cb.disableFlippers = () => { _flippersDisabled = true; };

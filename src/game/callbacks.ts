@@ -48,6 +48,12 @@ export const cb = {
   enableFlippers:     (): void => {},
   applyNudgeForce:    (_x: number, _y: number): void => {},
 
+  // ─── Native script element bridge ───
+  /** Drive a host flipper from a table script's SolenoidOn/Off/Pulse. */
+  setFlipperSolenoid: (_side: 'left' | 'right', _enabled: boolean): void => {},
+  /** Provide a host ball in response to a native kicker's CreateBall. */
+  createBall: (): void => {},
+
   // ─── Phase 2: Light & Flasher Control (shared store) ───
   setLampState: (name: string, intensity: number): void => {
     _lampBlinkIntervals.get(name) && (clearInterval(_lampBlinkIntervals.get(name)!), _lampBlinkIntervals.delete(name));

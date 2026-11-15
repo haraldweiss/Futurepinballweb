@@ -180,6 +180,11 @@ function createFlasherProxy(name: string): Record<string, any> {
 
 function createFlipperProxy(name: string): Record<string, any> {
   let enabled = false, strength = 100, angleSwing = 50;
+  const side: 'left' | 'right' | null = /right/i.test(name) ? 'right' : /left/i.test(name) ? 'left' : null;
+  const solenoid = (on: boolean) => {
+    enabled = on;
+    if (side) cb.setFlipperSolenoid(side, on);
+  };
   return new Proxy({}, {
     get: (_target, prop) => {
       const key = String(prop);
@@ -187,11 +192,11 @@ function createFlipperProxy(name: string): Record<string, any> {
       if (key === 'Enabled') return enabled;
       if (key === 'Strength') return strength;
       if (key === 'AngleSwing') return angleSwing;
-      if (key === 'SolenoidOn') return () => { enabled = true; fpScriptLog(`[Flipper] ${name}.SolenoidOn`, 'debug'); };
-      if (key === 'SolenoidOff') return () => { enabled = false; fpScriptLog(`[Flipper] ${name}.SolenoidOff`, 'debug'); };
+      if (key === 'SolenoidOn') return () => { solenoid(true); fpScriptLog(`[Flipper] ${name}.SolenoidOn`, 'debug'); };
+      if (key === 'SolenoidOff') return () => { solenoid(false); fpScriptLog(`[Flipper] ${name}.SolenoidOff`, 'debug'); };
       if (key === 'SolenoidPulse') return () => {
-        enabled = true;
-        scriptTimeout(() => { enabled = false; }, 120);
+        solenoid(true);
+        scriptTimeout(() => { solenoid(false); }, 120);
       };
       if (key === 'Enable') return () => { enabled = true; };
       if (key === 'Disable') return () => { enabled = false; };
@@ -223,6 +228,13 @@ function createElementProxy(name: string, kind?: string): Record<string, any> {
       if (key === 'Enabled') return values.Enabled ?? false;
       if (key === 'Value' || key === 'State' || key === 'Intensity' || key === 'Brightness'
           || key === 'X' || key === 'Y' || key === 'Z' || key === 'Angle') return values[key] ?? 0;
+      if (key === 'CreateBall') return () => {
+        cb.createBall();
+        fpScriptLog(`[Element] ${name}.CreateBall() -> host ball requested`, 'debug');
+      };
+      if (key === 'DestroyBall') return () => {
+        fpScriptLog(`[Element] ${name}.DestroyBall() -> host drain owns the ball`, 'debug');
+      };
       if (key === 'toString' || prop === Symbol.toPrimitive) return () => 0;
       return (...args: any[]) => {
         if (key === 'SetValue') values.Value = args[0];
@@ -2314,9 +2326,42 @@ export function callScriptFn(name: string, ...args: any[]): boolean {
   return true;
 }
 
-export const callScriptBumper    = (i: number) => callScriptFn(`Bumper${  i+1  }_Hit`);
-export const callScriptTarget    = (i: number) => callScriptFn(`Target${  i+1  }_Hit`) || callScriptFn(`StandupTarget${  i+1  }_Hit`);
-export const callScriptSlingshot = (side: string) => { const n = side==='left'?'LeftSlingshot':'RightSlingshot'; callScriptFn(`${n}_Hit`) || callScriptFn(`${n}_Slingshot`); };
+/**
+ * Invoke every registered handler whose name satisfies `matches`.
+ *
+ * Native declarations and table libraries prefix handlers (for example
+ * `PinMechSound_Bumper1_Hit`) and suffix element names (`LeftSlingshotRubber_Hit`),
+ * so an exact-name lookup misses real table code. Returns the number invoked.
+ */
+export function callMatchingScriptFns(matches: (name: string) => boolean, ...args: any[]): number {
+  let invoked = 0;
+  for (const [name, fn] of Object.entries(fpScriptHandlers)) {
+    if (typeof fn !== 'function' || !matches(name)) continue;
+    try { fn(...args); invoked++; }
+    catch (error) { fpScriptLog(`${name} Fehler: ${error instanceof Error ? error.message : String(error)}`, 'warn'); }
+  }
+  return invoked;
+}
+
+function trailingHit(name: string): { word: string; index: number } | null {
+  const match = /(?:^|_)([a-z]+?)_?(\d+)_hit$/i.exec(name);
+  return match ? { word: match[1].toLowerCase(), index: Number(match[2]) } : null;
+}
+
+export const callScriptBumper    = (i: number) =>
+  callMatchingScriptFns((name) => {
+    const hit = trailingHit(name);
+    return !!hit && hit.word === 'bumper' && hit.index === i + 1;
+  }) > 0;
+export const callScriptTarget    = (i: number) =>
+  callMatchingScriptFns((name) => {
+    const hit = trailingHit(name);
+    return !!hit && hit.word.endsWith('target') && hit.index === i + 1;
+  }) > 0;
+export const callScriptSlingshot = (side: string) => callMatchingScriptFns((name) => {
+  const match = /(?:^|_)(left|right)_?slingshot.*(?:hit|slingshot)$/i.exec(name);
+  return !!match && match[1].toLowerCase() === side;
+}) > 0;
 export const callScriptDrain     = () => callScriptFn('BallDrain') || callScriptFn('Table1_BallDrained') || callScriptFn('Table_BallDrain');
 export const callScriptFlipper   = (side: string, isDown: boolean) => callScriptFn((side==='left'?'LeftFlipper':'RightFlipper') + (isDown?'_Enabled':'_Disabled'));
 
