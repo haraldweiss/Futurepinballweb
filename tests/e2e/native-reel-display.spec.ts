@@ -19,10 +19,18 @@ function reelTable(): Buffer {
     ' Player1Reel.State = BulbOff',
     'End Sub',
     'Sub FuturePinball_KeyPressed(ByVal key)',
-    ' If key = 53 Then',
+    ' If key = GetKeyCode(InsertCoinKey) Then',
     '  nvScore1 = nvScore1 + 25',
     '  Player1Reel.AddValue 25',
     ' End If',
+    ' If key = GetKeyCode(LeftFlipperKey) Then Player1Reel.AddValue 10',
+    ' If key = GetKeyCode(RightFlipperKey) Then Player1Reel.AddValue 100',
+    'End Sub',
+    'Sub LeftFlipper_Disabled()',
+    ' Player1Reel.AddValue 1000',
+    'End Sub',
+    'Sub FuturePinball_KeyReleased(ByVal key)',
+    ' If key = GetKeyCode(LeftFlipperKey) Then Player1Reel.AddValue 1',
     'End Sub',
   ].join('\n')));
   return Buffer.from(CFB.write(container, { type: 'array' }));
@@ -40,6 +48,15 @@ test('imported script scores update visible reels and reset when changing tables
   await expect(output).toHaveText('00125');
   await page.keyboard.press('5');
   await expect(output).toHaveText('00150');
+  await page.keyboard.down('ShiftLeft');
+  await page.keyboard.down('ShiftLeft');
+  await page.keyboard.down('ShiftRight');
+  await expect(output).toHaveText('00260');
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await expect(output).toHaveText('01261');
+  await page.keyboard.up('ShiftLeft');
+  await page.keyboard.up('ShiftRight');
+  await expect(output).toHaveText('01261');
   await expect(page.locator('#script-log')).not.toContainText(/Fehler:|Script binding error|Script blocked/);
   await page.screenshot({ path: test.info().outputPath('reels-desktop.png') });
   await page.setViewportSize({ width: 390, height: 844 });

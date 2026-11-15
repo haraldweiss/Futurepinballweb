@@ -12,6 +12,7 @@ import { magnetSystem } from './mechanics/magnet-system';
 import { vbsToJS } from './utils/vbs-transpiler';
 import { getTopScores, recordScore } from './highscore';
 import { NativeScriptObjects } from './script/native-objects';
+import { nativeKeyActions, getNativeKeyCode, NativeKeyInput } from './script/key-input';
 import { createRuntimeGlobals, bindLiveApiProperties } from './script/runtime-globals';
 import { renderReelDisplay, clearReelDisplays } from './script/reel-display';
 import { scriptTimeout, scriptInterval, cancelScriptTimeout, cancelScriptInterval, disposeScriptTimers, isScriptIntervalActive } from './script/timers';
@@ -276,7 +277,12 @@ export function buildFPScriptAPI() {
     get fpBallID() { return state.ballNum; },
     fpEventID: 0,
     fpInitialJackpot: 0,
-    GetKeyCode: () => 0,
+    ...nativeKeyActions,
+    GetKeyCode: (action?: unknown) => {
+      const code = getNativeKeyCode(action);
+      if (!code) fpScriptLog(`GetKeyCode unsupported action: ${String(action)}`, 'warn');
+      return code;
+    },
     AddDebugText: (text: unknown) => fpScriptLog(`[Debug] ${String(text)}`),
     LogDebugTextToDisk: (text: unknown) => fpScriptLog(`[DebugFile] ${String(text)}`),
     EffectMusic: (name: unknown, effect?: unknown) => fpScriptLog(`EffectMusic: ${String(name)} ${effect === undefined ? '' : String(effect)}`),
@@ -2208,6 +2214,7 @@ function _collectTimers(api: any, jsCode: string): void {
 
 // ─── Script Runner ────────────────────────────────────────────────────────────
 export function resetFPScript(): void {
+  nativeKeyInput.reset();
   disposeScriptTimers();
   setFpScriptHandlers({});
   clearReelDisplays();
@@ -2302,3 +2309,14 @@ export const callScriptFlipper   = (side: string, isDown: boolean) => callScript
 export function callScriptBAMEvent(eventName: string, ...args: any[]): boolean {
   return callScriptFn(`BAM_${  String(eventName)}`, ...args);
 }
+
+// Native handlers use DirectInput scan codes; older aliases retain browser VKs.
+const nativeKeyInput = new NativeKeyInput((scan, legacy, pressed) => {
+  const suffix = pressed ? 'Pressed' : 'Released';
+  callScriptFn(`FuturePinball_Key${suffix}`, scan)
+    || callScriptFn(`_Key${suffix}`, legacy) || callScriptFn(`Key${suffix}`, legacy);
+});
+export function dispatchFPScriptKey(event: KeyboardEvent, pressed: boolean): void {
+  nativeKeyInput.handle(event, pressed);
+}
+export function releaseFPScriptKeys(): void { nativeKeyInput.release(); }

@@ -65,7 +65,9 @@ import {
 } from './dmd';
 import { getTopScores, recordScore } from './highscore';
 import { TABLE_CONFIGS, buildTable, buildRealisticFlipper, scoreBumperHit, scoreTargetHit, scoreSlingshotHit, checkRolloverLanes, updateSpinnerPhysics, getAdvancedLighting } from './table';
-import { callScriptFlipper, callScriptDrain, callScriptFn } from './script-engine';
+import { callScriptFlipper, callScriptDrain, dispatchFPScriptKey } from './script-engine';
+import { isEditableKeyTarget } from './script/key-input';
+import { releaseHeldControls } from './app/key-release';
 import { parseFPTFile, parseFPLFile, getBackglassArtwork } from './fpt-parser';
 import { getBackglassRenderer } from './backglass';
 import { getProfiler, QUALITY_PRESETS } from './profiler';
@@ -907,10 +909,18 @@ const getCurrentPlayfieldRotation = () => {
 
 // see window-api.ts — applyRotationProfile, rotatePlayfieldAnimated, getCurrentPlayfieldRotation
 
+function releaseHeldGameInput(): void {
+  releaseHeldControls();
+  leftFlipperChargeStart = null; rightFlipperChargeStart = null;
+}
+window.addEventListener('blur', releaseHeldGameInput);
+document.addEventListener('visibilitychange', () => { if (document.hidden) releaseHeldGameInput(); });
+
 // ─── Input ────────────────────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
+  if (e.repeat || e.isComposing || isEditableKeyTarget(e.target)) return;
   getAudioCtx();
-  callScriptFn('FuturePinball_KeyPressed', e.keyCode) || callScriptFn('_KeyPressed', e.keyCode) || callScriptFn('KeyPressed', e.keyCode);
+  dispatchFPScriptKey(e, true);
   if (e.key === 'Shift' && e.location === 1) {
     keys.left = true;
     leftFlipperChargeStart = Date.now();  // Phase 5: Track charge time
@@ -1067,8 +1077,8 @@ document.addEventListener('keydown', e => {
   }
 });
 document.addEventListener('keyup', e => {
-  callScriptFn('FuturePinball_KeyReleased', e.keyCode) || callScriptFn('_KeyReleased', e.keyCode) || callScriptFn('KeyReleased', e.keyCode);
-  if (e.key === 'Shift' && e.location === 1) {
+  dispatchFPScriptKey(e, false);
+  if (e.key === 'Shift' && e.location === 1 && keys.left) {
     // ─── Phase 6: Calculate flipper power with skill-based curve ───
     if (leftFlipperChargeStart !== null) {
       const chargeMs = Date.now() - leftFlipperChargeStart;
@@ -1082,7 +1092,7 @@ document.addEventListener('keyup', e => {
     keys.left = false;
     callScriptFlipper('left', false);
   }
-  if (e.key === 'Shift' && e.location === 2) {
+  if (e.key === 'Shift' && e.location === 2 && keys.right) {
     // ─── Phase 6: Calculate flipper power with skill-based curve ───
     if (rightFlipperChargeStart !== null) {
       const chargeMs = Date.now() - rightFlipperChargeStart;

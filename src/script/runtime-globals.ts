@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { GameState } from '../types';
+import { nativeKeyActions } from './key-input';
 
 function integer(value: unknown, name: string): number {
   const number = Number(value);
@@ -51,7 +52,7 @@ export function createRuntimeGlobals(state: GameState, updated: () => void) {
 /** Rewrite bare accessor identifiers in transpiler output, preserving text/member names. */
 export function bindLiveApiProperties(code: string, api: object): string {
   const names = new Map(Object.entries(Object.getOwnPropertyDescriptors(api))
-    .filter(([name, descriptor]) => descriptor.get || descriptor.set || name === 'nvScore')
+    .filter(([name, descriptor]) => descriptor.get || descriptor.set || name === 'nvScore' || name === 'GetKeyCode' || Object.hasOwn(nativeKeyActions, name))
     .map(([name]) => [name.toLowerCase(), name]));
   // Mask text before locating function scopes and declarations. Only the simple
   // JS emitted by the VBScript transpiler is admitted here, not arbitrary JS.
