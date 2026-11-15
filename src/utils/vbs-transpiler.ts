@@ -86,17 +86,33 @@ function _replaceSimpleCalls(text: string, handlers: Record<string, (arg: string
   return out;
 }
 
-let _vbsArrayNames = new Set<string>();
+// Lowercase alias -> declared casing. VBScript names are case-insensitive, so
+// rewriting to the declared spelling keeps references bound to the same array.
+let _vbsArrayNames = new Map<string, string>();
 function _replaceArrayAccess(text: string): string {
-  let result = text;
-  for (const name of _vbsArrayNames) {
-    result = result.replace(new RegExp(`\\b${name}\\s*\\(([^()]*)\\)`, 'g'), `${name}[$1]`);
+  // Mask literals without changing offsets, so indexes can contain strings or
+  // nested calls while literal array-like text remains untouched.
+  const masked = text.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, value => ' '.repeat(value.length));
+  let result = '', cursor = 0;
+  for (const match of masked.matchAll(/(?<![\w.])([A-Za-z_]\w*)\s*\(/g)) {
+    const declared = _vbsArrayNames.get(match[1].toLowerCase());
+    if (match.index < cursor || !declared) continue;
+    if (masked.slice(0, match.index).trimEnd().endsWith('.')) continue;
+    const open = match.index + match[0].length - 1;
+    let depth = 1, close = open + 1;
+    for (; close < masked.length; close++) {
+      if (masked[close] === '(') depth++;
+      else if (masked[close] === ')' && --depth === 0) break;
+    }
+    if (depth !== 0) continue;
+    result += text.slice(cursor, match.index) + `${declared}[${_replaceArrayAccess(text.slice(open + 1, close))}]`;
+    cursor = close + 1;
   }
-  return result;
+  return result + text.slice(cursor);
 }
 
 function _vbsXpr(e: string): string {
-  let result = _replaceSimpleCalls(e, {
+  let result = _replaceSimpleCalls(_replaceArrayAccess(e), {
     len: arg => `(${_vbsXpr(arg)}).length`,
     ucase: arg => `(${_vbsXpr(arg)}).toUpperCase()`,
     lcase: arg => `(${_vbsXpr(arg)}).toLowerCase()`,
@@ -251,6 +267,61 @@ function _splitElse(raw: string): { thenPart: string; elsePart: string | null } 
   return { thenPart: raw.trim(), elsePart: null };
 }
 
+/** Locate a top-level assignment `=` while ignoring quotes, index brackets and comparisons. */
+function _findAssignmentEquals(text: string): number {
+  let quote = '', depth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (quote) { if (char === quote) quote = ''; continue; }
+    if (char === '"' || char === "'") { quote = char; continue; }
+    if (char === '(' || char === '[') depth++;
+    else if (char === ')' || char === ']') depth--;
+    else if (char === '=' && depth === 0) {
+      const previous = text[i - 1], next = text[i + 1];
+      if (previous === '<' || previous === '>' || previous === '!' || previous === '=') continue;
+      if (next === '=' || next === '<' || next === '>') continue;
+      return i;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Validate a VBScript assignment target (bare name, member chain or indexed
+ * access) and normalize call-style indexes to bracket access. Returns null for
+ * expressions that must not be treated as assignments.
+ */
+function _assignableTarget(lhs: string): string | null {
+  const head = /^[A-Za-z_]\w*/.exec(lhs);
+  if (!head) return null;
+  let result = head[0], i = head[0].length;
+  while (i < lhs.length) {
+    const char = lhs[i];
+    if (char === '.') {
+      const member = /^\.[A-Za-z_]\w*/.exec(lhs.slice(i));
+      if (!member) return null;
+      result += member[0]; i += member[0].length; continue;
+    }
+    if (char === '[' || char === '(') {
+      const close = char === '[' ? ']' : ')';
+      let depth = 0, quote = '', end = i;
+      for (; end < lhs.length; end++) {
+        const current = lhs[end];
+        if (quote) { if (current === quote) quote = ''; continue; }
+        if (current === '"' || current === "'") { quote = current; continue; }
+        if (current === char) depth++;
+        else if (current === close && --depth === 0) break;
+      }
+      if (end >= lhs.length) return null;
+      const index = lhs.slice(i + 1, end).trim();
+      if (!index) return null;
+      result += `[${_vbsXpr(index)}]`; i = end + 1; continue;
+    }
+    return null;
+  }
+  return result;
+}
+
 function _vbsStmt(s: string, withContext?: string): string {
 
   const t = s.trim();
@@ -275,10 +346,10 @@ function _vbsStmt(s: string, withContext?: string): string {
   if (/^Exit\s+(?:Sub|Function)$/i.test(target)) return 'return';
   if (/^Exit\s+(?:For|Do|While)$/i.test(target)) return 'break';
 
-  const eqIdx = target.search(/(?<![<>!])=(?!=)/);
-  if (eqIdx > 0 && /^[\w_.[\]()]+$/.test(target.slice(0, eqIdx).trim())) {
-    const lhs = target.slice(0, eqIdx).trim().replace(/^(\w+)\((.*)\)$/, '$1[$2]');
-    return `${lhs} = ${_vbsXpr(target.slice(eqIdx + 1).trim())}`;
+  const eqIdx = _findAssignmentEquals(target);
+  if (eqIdx > 0) {
+    const targetLhs = _assignableTarget(target.slice(0, eqIdx).trim());
+    if (targetLhs) return `${targetLhs} = ${_vbsXpr(target.slice(eqIdx + 1).trim())}`;
   }
   const noParens = target.match(/^([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s+(?![=<>])(.+)$/);
   const keyword = /^(Set|Let|Call|If|Then|Else|ElseIf|End|For|Each|Next|Do|Loop|While|Wend|Select|Case|Exit|On|Dim|ReDim|Const|Private|Public|Function|Sub|With|Erase|Randomize|Option|Rem)$/i;
@@ -344,7 +415,7 @@ function hoistFunctions(js: string): string {
 }
 
 export function vbsToJS(src: string): string {
-  _vbsArrayNames = new Set<string>();
+  _vbsArrayNames = new Map<string, string>();
   // Phase 1.1: Preprocess line continuation
   const preprocessed = preprocessLineContinuation(src);
   const rawLines = preprocessed.replace(/\r\n?/g, '\n').split('\n');
@@ -448,7 +519,7 @@ export function vbsToJS(src: string): string {
     if (/^End\s+Select$/i.test(code)) { depth=Math.max(0,depth-1); out.push(`${pad()}}`); continue; }
 
     if ((m = code.match(/^ReDim\s+(Preserve\s+)?([A-Za-z_]\w*)\s*\((.*)\)/i))) {
-      _vbsArrayNames.add(m[2]);
+      _vbsArrayNames.set(m[2].toLowerCase(), m[2]);
       const size = _vbsXpr(m[3]);
       out.push(m[1] ? `${pad()}${m[2]}.length = ${size} + 1;` : `${pad()}${m[2]} = new Array(${size} + 1);`);
       continue;
@@ -458,7 +529,13 @@ export function vbsToJS(src: string): string {
         const raw = v.trim();
         const isArray = raw.includes('(');
         const name = raw.replace(/\s+As\s+\w+/i, '').replace(/\(.*?\)/, '').trim();
-        if (isArray && name) _vbsArrayNames.add(name);
+        if (isArray && name) {
+          _vbsArrayNames.set(name.toLowerCase(), name);
+          const bounds = /\((.*)\)/.exec(raw)?.[1] ?? '';
+          // Only fixed 1D allocation is implemented; dynamic/multidimensional
+          // array and Empty/Variant semantics remain separate compatibility work.
+          if (bounds.trim() && _splitArgs(bounds).length === 1) return `${name} = new Array((${_vbsXpr(bounds)}) + 1)`;
+        }
         return name;
       }).filter(Boolean);
       out.push(`${pad()}var ${vars.join(', ')};`); continue;

@@ -207,12 +207,12 @@ export function runSandboxed(
   const { prelude, body } = splitLeadingFunctions(jsCode);
   const functionNames = new Set([...prelude.matchAll(/^function\s+(\w+)/gm)].map(match => match[1]));
   const sandbox = buildSandboxScope(new Set([...passthrough, ...bindingNames, ...functionNames]));
-  // Function declarations and API bindings live outside `with`; the proxy only
-  // traps unknown identifiers. Passthrough names resolve to the outer scope.
+  // Functions share the table scope with top-level variables/constants.
+  // API bindings remain outside `with`; unknown names still hit the same proxy.
   // eslint-disable-next-line no-new-func -- Dynamic code is necessary for VBScript sandbox (input pre-validated)
   const fn = new Function(
     '__api__', '__h__', '__sandbox__',
-    `${bindings}\n${prelude}\nwith (__sandbox__) {\n${body}\n${collect}\n}`
+    `${bindings}\nwith (__sandbox__) {\n${prelude}\n${body}\n${collect}\n}`
   );
   fn(api, handlers, sandbox);
 }

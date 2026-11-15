@@ -63,6 +63,7 @@ fixture. Working tree **1,146 passed / 3 skipped**; six production checks also
 passed, including private base-table startup and AI1's explicit unsupported
 boundary. Inherited changes/tests are excluded from the commit.
 
-Static next gap: NewTable game-start/scoring uses `nvTotalGamesPlayed`,
-`nvBallsPerGame` and `nvJackpot`, which are not in the runtime bridge yet. Native
-startup checks do not establish complete game initialization or persistence.
+The runtime bridge now includes `nvTotalGamesPlayed`, `nvBallsPerGame` and
+`nvJackpot`; see [NATIVE-GAME-SETTINGS.md](NATIVE-GAME-SETTINGS.md). The private
+NewTable start check reaches the delayed kicker request. Physical creation and
+persistent state remain incomplete.

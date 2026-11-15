@@ -8,11 +8,23 @@ function integer(value: unknown, name: string): number {
   return Math.trunc(number);
 }
 
+export interface NativeRuntimeSettings {
+  ballsPerGame: number;
+  totalGamesPlayed: number;
+  jackpot: number;
+  specialScores: [number, number, number, number];
+}
+
+/** Explicit web defaults; native registry defaults and persistence are unknown. */
+export function createNativeRuntimeSettings(): NativeRuntimeSettings {
+  return { ballsPerGame: 3, totalGamesPlayed: 0, jackpot: 0, specialScores: [0, 0, 0, 0] };
+}
+
 /** Runtime bridge only. Native nonvolatile storage is not implemented here. */
-export function createRuntimeGlobals(state: GameState, updated: () => void) {
-  const player = (value: unknown): number => {
+export function createRuntimeGlobals(state: GameState, updated: () => void, settings: NativeRuntimeSettings) {
+  const player = (value: unknown, name = 'nvScore'): number => {
     const index = Number(value);
-    if (!Number.isInteger(index) || index < 1 || index > 4) throw new RangeError('nvScore player must be 1..4');
+    if (!Number.isInteger(index) || index < 1 || index > 4) throw new RangeError(`${name} player must be 1..4`);
     return index - 1;
   };
   const getScore = (index: number): number => state.currentPlayer === index + 1
@@ -24,15 +36,45 @@ export function createRuntimeGlobals(state: GameState, updated: () => void) {
   };
   // VBScript uses the same indexed property as both a call and an assignment.
   const nvScore = new Proxy((index: unknown) => getScore(player(index)), {
-    get: (target, key, receiver) => typeof key === 'string' && /^\d+$/.test(key)
+    get: (target, key, receiver) => typeof key === 'string' && /^-?\d+$/.test(key)
       ? getScore(player(key)) : Reflect.get(target, key, receiver),
     set: (_target, key, value) => {
-      if (typeof key !== 'string' || !/^\d+$/.test(key)) throw new RangeError('nvScore player must be 1..4');
+      if (typeof key !== 'string' || !/^-?\d+$/.test(key)) throw new RangeError('nvScore player must be 1..4');
       setScore(player(key), value); return true;
     },
   });
+  const setSpecial = (index: number, value: unknown): void => {
+    settings.specialScores[index] = integer(value, 'nvSpecialScore');
+  };
+  const nvSpecialScore = new Proxy((index: unknown) => settings.specialScores[player(index, 'nvSpecialScore')], {
+    get: (target, key, receiver) => typeof key === 'string' && /^-?\d+$/.test(key)
+      ? settings.specialScores[player(key, 'nvSpecialScore')] : Reflect.get(target, key, receiver),
+    set: (_target, key, value) => {
+      if (typeof key !== 'string' || !/^-?\d+$/.test(key)) throw new RangeError('nvSpecialScore player must be 1..4');
+      setSpecial(player(key, 'nvSpecialScore'), value); return true;
+    },
+  });
   return {
-    nvScore,
+    // Callable indexed properties must not be replaceable by bare assignment:
+    // `nvSpecialScore = 0` would otherwise silently discard the accessor.
+    get nvScore() { return nvScore; },
+    set nvScore(_value: typeof nvScore) { throw new RangeError('nvScore requires a player index'); },
+    get nvSpecialScore() { return nvSpecialScore; },
+    set nvSpecialScore(_value: typeof nvSpecialScore) { throw new RangeError('nvSpecialScore requires a player index'); },
+    get nvSpecialScore1() { return settings.specialScores[0]; }, set nvSpecialScore1(v: number) { setSpecial(0, v); },
+    get nvSpecialScore2() { return settings.specialScores[1]; }, set nvSpecialScore2(v: number) { setSpecial(1, v); },
+    get nvSpecialScore3() { return settings.specialScores[2]; }, set nvSpecialScore3(v: number) { setSpecial(2, v); },
+    get nvSpecialScore4() { return settings.specialScores[3]; }, set nvSpecialScore4(v: number) { setSpecial(3, v); },
+    get nvBallsPerGame() { return settings.ballsPerGame; },
+    set nvBallsPerGame(v: number) {
+      const value = integer(v, 'nvBallsPerGame');
+      if (value < 1) throw new RangeError('nvBallsPerGame requires at least one ball');
+      settings.ballsPerGame = value;
+    },
+    get nvTotalGamesPlayed() { return settings.totalGamesPlayed; },
+    set nvTotalGamesPlayed(v: number) { settings.totalGamesPlayed = integer(v, 'nvTotalGamesPlayed'); },
+    get nvJackpot() { return settings.jackpot; },
+    set nvJackpot(v: number) { settings.jackpot = integer(v, 'nvJackpot'); },
     get nvScore1() { return getScore(0); }, set nvScore1(v: number) { setScore(0, v); },
     get nvScore2() { return getScore(1); }, set nvScore2(v: number) { setScore(1, v); },
     get nvScore3() { return getScore(2); }, set nvScore3(v: number) { setScore(2, v); },
@@ -52,7 +94,7 @@ export function createRuntimeGlobals(state: GameState, updated: () => void) {
 /** Rewrite bare accessor identifiers in transpiler output, preserving text/member names. */
 export function bindLiveApiProperties(code: string, api: object): string {
   const names = new Map(Object.entries(Object.getOwnPropertyDescriptors(api))
-    .filter(([name, descriptor]) => descriptor.get || descriptor.set || name === 'nvScore' || name === 'GetKeyCode' || Object.hasOwn(nativeKeyActions, name))
+    .filter(([name, descriptor]) => descriptor.get || descriptor.set || name === 'nvScore' || name === 'nvSpecialScore' || name === 'GetKeyCode' || Object.hasOwn(nativeKeyActions, name))
     .map(([name]) => [name.toLowerCase(), name]));
   // Mask text before locating function scopes and declarations. Only the simple
   // JS emitted by the VBScript transpiler is admitted here, not arbitrary JS.

@@ -30,3 +30,21 @@ test('private BAM table reports unsupported coordinate lookup instead of an unde
   await expect(page.locator('#script-log')).not.toContainText("Cannot read properties of undefined");
   expect(errors).toEqual([]);
 });
+
+// Trusted private input stays outside Git. Reaching this request verifies script
+// control flow only: the kicker adapter is still a placeholder, not native physics.
+test('private native game start reaches its delayed ball-creation request', async ({ page }) => {
+  const file = process.env.FPT_NATIVE_START_FILE;
+  test.skip(!file, 'Set FPT_NATIVE_START_FILE to the trusted local NewTable reference.');
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/');
+  await page.getByRole('button', { name: '📂 Importieren', exact: true }).click();
+  await page.locator('#file-input').setInputFiles(file!);
+  await expect(page.locator('#loader-modal')).toBeHidden();
+  await page.keyboard.press('5'); await page.keyboard.press('1');
+  await expect(page.locator('#script-log')).toContainText('StartGame: New game started');
+  await expect(page.locator('#script-log')).toContainText('PlungerKicker.CreateBall');
+  await expect(page.locator('#script-log')).not.toContainText(/Fehler:|Script blocked|Script binding error/);
+  await expect(page.locator('#score')).toHaveText('0');
+  expect(errors).toEqual([]);
+});

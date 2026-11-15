@@ -172,3 +172,32 @@ describe('VBScript sandbox', () => {
     });
   });
 });
+
+it('keeps unknown host names filtered inside deferred handlers', () => {
+  const api: Record<string, unknown> = {};
+  const handlers: Record<string, () => void> = {};
+  runSandboxed('function Check() { __api__.hostType = typeof document; __api__.nodeType = typeof process; }', '', '__h__.Check = Check;', api, handlers);
+  handlers.Check();
+  expect(api.hostType).toBe('undefined'); expect(api.nodeType).toBe('undefined');
+});
+
+it('keeps separate table variable scopes for separately compiled handlers', () => {
+  const first: Record<string, () => number> = {}, second: Record<string, () => number> = {};
+  const source = (value: number) => `function Read() { return counter; }\nvar counter = ${value};`;
+  runSandboxed(source(1), '', '__h__.Read = Read;', {}, first);
+  runSandboxed(source(2), '', '__h__.Read = Read;', {}, second);
+  expect(first.Read()).toBe(1); expect(second.Read()).toBe(2);
+});
+
+it('keeps allowlisted globals available inside deferred handlers', () => {
+  const handlers: Record<string, () => number> = {};
+  runSandboxed('function Round() { return Math.max(1, 3); }', '', '__h__.Round = Round;', {}, handlers);
+  expect(handlers.Round()).toBe(3);
+});
+
+it('keeps bare handler assignments inside their compiled script scope', () => {
+  const first: Record<string, () => number> = {}, second: Record<string, () => string> = {};
+  runSandboxed('function Set() { counter = 5; return counter; }', '', '__h__.Set = Set;', {}, first);
+  runSandboxed('function Read() { return typeof counter; }', '', '__h__.Read = Read;', {}, second);
+  expect(first.Set()).toBe(5); expect(second.Read()).toBe('undefined');
+});

@@ -15,9 +15,11 @@ import { NativeScriptObjects } from './script/native-objects';
 import { setNativeCoinRules } from './script/rule-ownership';
 import { closeCoinScreen } from './coin-system/screen-manager';
 import { nativeKeyActions, getNativeKeyCode, NativeKeyInput } from './script/key-input';
-import { createRuntimeGlobals, bindLiveApiProperties } from './script/runtime-globals';
+import { createRuntimeGlobals, bindLiveApiProperties, createNativeRuntimeSettings } from './script/runtime-globals';
 import { renderReelDisplay, clearReelDisplays } from './script/reel-display';
 import { scriptTimeout, scriptInterval, cancelScriptTimeout, cancelScriptInterval, disposeScriptTimers, isScriptIntervalActive } from './script/timers';
+
+let runtimeTableSettings = createNativeRuntimeSettings();
 
 // ─── Phase 2: Catalog-first sound resolution ──────────────────────────────────
 
@@ -233,6 +235,7 @@ function createElementProxy(name: string, kind?: string): Record<string, any> {
 }
 
 export function buildFPScriptAPI() {
+  const tableSettings = runtimeTableSettings;
   const sounds = fptResources.sounds;
   const nativeObjects = new NativeScriptObjects(fptResources.nativeElements ?? [], createElementProxy,
     message => fpScriptLog(message, 'warn'));
@@ -254,6 +257,7 @@ export function buildFPScriptAPI() {
     state.numPlayers = Math.max(1, state.numPlayers);
     state.currentPlayer = 1;
     state.playerScores = [0, 0, 0, 0];
+    tableSettings.specialScores.fill(0);
     state.tiltWarnings = 0;
     state.tiltActive = false;
     state.bumperHits = 0;
@@ -2202,7 +2206,7 @@ export function buildFPScriptAPI() {
       fpScriptLog(`StopSound3D: ${name} (no-op in web)`);
     },
   };
-  const runtime = createRuntimeGlobals(state, () => cb.updateHUD());
+  const runtime = createRuntimeGlobals(state, () => cb.updateHUD(), tableSettings);
   return Object.defineProperties(api, Object.getOwnPropertyDescriptors(runtime)) as typeof api & typeof runtime;
 }
 
@@ -2216,6 +2220,9 @@ function _collectTimers(api: any, jsCode: string): void {
 
 // ─── Script Runner ────────────────────────────────────────────────────────────
 export function resetFPScript(): void {
+  // Mutate in place so any API instance built before a reset cannot keep
+  // writing into an orphaned settings object.
+  Object.assign(runtimeTableSettings, createNativeRuntimeSettings());
   setNativeCoinRules(false);
   nativeKeyInput.reset();
   disposeScriptTimers();
