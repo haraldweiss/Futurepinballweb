@@ -2,6 +2,14 @@
 
 Use Node 22.13+ (22.x) or Node 24+. Install the committed dependency tree with `npm ci`.
 
+Project checks and builds run the native TypeScript 7 compiler through
+`npm run typecheck`; `npm run build` runs this check before bundling. The npm
+alias `typescript-native` keeps its executable unambiguous. The canonical
+`typescript` package remains at 6.0 for the compiler API used by
+typescript-eslint, whose supported range is still `<6.1`. Both dependencies are
+development tools; this does not change the Electron runtime or Windows targets.
+Use the npm script rather than bare `tsc` when validating the TypeScript 7 build.
+
 ## Required checks
 
 ```sh

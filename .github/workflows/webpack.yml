@@ -45,7 +45,7 @@ jobs:
       run: npm run test:run
 
     - name: Type check
-      run: npx tsc --noEmit
+      run: npm run typecheck
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v7
