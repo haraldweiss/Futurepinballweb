@@ -63,7 +63,7 @@
     "@codemirror/view": "^6.43.15",
     "electron-updater": "^6.8.11",
     "esbuild": "^0.28.1",
-    "three": "0.162.0"
+    "three": "0.187.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",
