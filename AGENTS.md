@@ -1399,6 +1399,15 @@ Nächste Schritte: cfb → devDeps, Browser-Smoke (Pharaoh boot/Ball/Flipper/Bum
 
 - Updated CodeMirror, Vite8.3.5, Vitest/UI5.1.0, electron-builder26.18.0, ESLint10.14.0, TS-ESLint8.72.1, fake-indexeddb6.2.7, rollup4.67.4, tsx4.23.15 and security plugin4.2.1. Scoped minimatch >=9 to ^11.0.2, preserving legacy callable consumers.
 - Retained three0.162.0 (renderer migration requires dedicated visual/gameplay comparison), Electron43.8.3 (45 removes the existing Windows ia32 build target), TypeScript5.9.3 (7 is a separate strict compiler migration), and electron-updater6.8.9 (requires the macOS arm64 update-build verification in §3.5). Existing experimental Electron46 PR #34 is untouched. Do not merge the remaining group blindly.
+
+- **TypeScript 7 (2026-11-18):** the renderer now type-checks with the native
+  compiler through the npm alias `typescript-native` (`npm run typecheck` →
+  `node node_modules/typescript-native/bin/tsc`); `npm run build` runs it before
+  Vite. Canonical `typescript` 6.0.3 stays installed because
+  `typescript-eslint` 8.72 supports only `<6.1`. Never replace the explicit
+  command with bare `tsc`/`npx tsc` — both packages ship a `tsc` binary and the
+  resolved one depends on the install order. `tsconfig.json` drops the removed
+  `baseUrl` option and declares `types: ["node"]` explicitly.
 - GitHub open security alerts were zero. The npm registry reports a new minimatch denial-of-service advisory GHSA-g3hv-75wg-m249 in legacy Electron packaging tools: 15 propagated moderate development entries remain. @electron/asar and dir-compare call minimatch as a function; minimatch11 exports an object and cannot be forced into them. Production audit is clean; established full-audit high threshold passes. No audit suppressions or unsafe overrides.
 - Verified 972 unit tests plus one existing corpus skip, strict TypeScript, build, security lint/probes and 20 security regression checks. Production-build browser checks passed boot/reload and a complete three-ball demo game (2 passed); 2 private-corpus cases skipped because trusted reference paths were not supplied. No cabinet release or production deployment was produced.
 
