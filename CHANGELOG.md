@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.24.2 — 2026-11-18
+
+### Changed — TypeScript 7 through the supported compiler split, and an auditable dependency gate
+
+- The renderer type-checks with **TypeScript 7.0.2** via the `typescript-native`
+  npm alias, while canonical **TypeScript 6.0.3** remains installed for
+  `typescript-eslint`'s classic compiler API (its peer range stops below 6.1).
+  `npm run build` runs the native compiler before Vite, so a type error can no
+  longer reach a bundle. `tsconfig.json` drops the removed `baseUrl` option and
+  declares Node ambient types explicitly.
+- `npm run audit:dependencies` now calls `scripts/audit-gate.mjs`: production
+  dependencies must be clean at moderate and above, and the full audit may only
+  pass findings that are listed in a small allowlist naming the advisory, the
+  package and the reason. An entry stops being accepted as soon as a
+  non-breaking fix exists, so the exception cannot outlive its cause. Today only
+  `GHSA-fc5q-39xc-vjpf` (picomatch, no published patch; npm's "fix" is a
+  semver-major downgrade of Vite) is listed. Eight unit tests cover the rules.
+- Verification: clean `npm install`, native compiler 7.0.2 and canonical 6.0.3
+  both resolve, `npm run build` passes, **54 test files / 972 tests** pass (one
+  private-corpus test skips), and `npm run security:check` (security lint,
+  security tests, audit gate) is green.
+
 ### 2026-11-04 — Stable Electron 43 security patch and modern FileList
 
 - Pin Electron **43.8.7**, released 3 November, with embedded **Node 24.22.1**. This closes the October embedded-Node version gap in the source/build runtime while retaining the existing Windows ia32 target; no major/platform migration or updater/preload changes.
