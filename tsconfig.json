@@ -9,10 +9,10 @@
       "DOM.Iterable"
     ],
     "strict": true,
+    "types": ["node"],
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "baseUrl": "src",
     "paths": {},
     "noUnusedLocals": false,
     "noUnusedParameters": false

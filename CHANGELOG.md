@@ -4,17 +4,38 @@
 
 ### Changed — Electron 45.3.2, Windows installers now x64-only
 
-- Electron **43.8.7 → 45.3.2**. The packaged runtime embeds Node **24.22.2** and
-  Chrome 156; the locally built unsigned macOS arm64 app starts and reports
+- Electron **43.8.7 → 45.3.2**, embedded Node **24.22.2**, Chrome 156. The
+  locally built unsigned macOS arm64 app starts and reports
   `electron 45.3.2 / node 24.22.2 / chrome 156`.
-- **Windows ia32 removed** from the NSIS target. Electron 44 dropped the 32-bit
+- **Windows ia32 removed** from the NSIS target: Electron 44 dropped the 32-bit
   Windows binaries, so keeping ia32 would have pinned the project to Electron 43
-  (support ends January 2027). `nsis` and `portable` both stay **x64**, which is
-  what the cabinet runs. Windows installer builds are produced by the release
-  workflow on a Windows runner, not by the PR CI.
+  until its January 2027 end of support. `nsis` and `portable` both stay **x64**,
+  which is what the cabinet runs.
 - Verification: clean install, `npm run build` (TypeScript 7), 54 test files /
   972 tests, `npm run security:check`, and an electron-builder `--dir` package
   smoke on macOS arm64.
+
+## v0.24.2 — 2026-11-18
+
+### Changed — TypeScript 7 through the supported compiler split, and an auditable dependency gate
+
+- The renderer type-checks with **TypeScript 7.0.2** via the `typescript-native`
+  npm alias, while canonical **TypeScript 6.0.3** remains installed for
+  `typescript-eslint`'s classic compiler API (its peer range stops below 6.1).
+  `npm run build` runs the native compiler before Vite, so a type error can no
+  longer reach a bundle. `tsconfig.json` drops the removed `baseUrl` option and
+  declares Node ambient types explicitly.
+- `npm run audit:dependencies` now calls `scripts/audit-gate.mjs`: production
+  dependencies must be clean at moderate and above, and the full audit may only
+  pass findings that are listed in a small allowlist naming the advisory, the
+  package and the reason. An entry stops being accepted as soon as a
+  non-breaking fix exists, so the exception cannot outlive its cause. Today only
+  `GHSA-fc5q-39xc-vjpf` (picomatch, no published patch; npm's "fix" is a
+  semver-major downgrade of Vite) is listed. Eight unit tests cover the rules.
+- Verification: clean `npm install`, native compiler 7.0.2 and canonical 6.0.3
+  both resolve, `npm run build` passes, **54 test files / 972 tests** pass (one
+  private-corpus test skips), and `npm run security:check` (security lint,
+  security tests, audit gate) is green.
 
 ### 2026-11-04 — Stable Electron 43 security patch and modern FileList
 
