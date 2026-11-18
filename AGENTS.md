@@ -147,7 +147,14 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 
 ### 2026-11-04 — Stable Electron 43 security patch and modern FileList
 
-- Pin Electron **43.8.7**, released 3 November, with embedded **Node 24.22.1**. This closes the October embedded-Node version gap in the source/build runtime while retaining the existing Windows ia32 target; no major/platform migration or updater/preload changes.
+- Pin Electron **45.3.2**, with embedded **Node 24.22.2**. This closes the
+  October embedded-Node version gap and moves to a supported stable series.
+  **Windows ia32 is dropped by decision (2026-11-18):** Electron 44 removed the
+  32-bit Windows binaries, so the NSIS `ia32` target was removed instead of
+  pinning 43 forever; `portable` stays x64. All cabinet installations are
+  x64. Packaging evidence: unsigned `--dir` build on macOS arm64 runs and
+  reports `electron 45.3.2 / node 24.22.2 / chrome 156`; the Windows installer
+  itself still needs a release-time build on a Windows runner.
 - Override transitive FileList to **^2.0.2**, preserving its CommonJS/Jake API and using the existing modern minimatch override. Twelve propagated moderate development findings remain from legacy minimatch 3 in Electron packaging dependencies; production audit is clean. No audit suppressions.
 - Verified clean install, npm 10.9.4 lock validation, strict TypeScript, **972 tests** plus the existing private-corpus skip, production build, canonical security gate, and independent dependency/FileList review. Built an unsigned macOS arm64 app with the normal packaging configuration; actual app reports Electron 43.8.7 / Node 24.22.1, sandbox/contextIsolation/webSecurity enabled and renderer require/process unavailable. Demo scored **50** after repeated normal coin/plunger/flipper inputs, with zero renderer errors. A single-launch probe initially scored zero; do not use one launch as a deterministic scoring test.
 - Local validation package only: no release published or cabinet deployment. Existing installations retain their previous embedded runtime until rebuilt packages are distributed. Runtime evidence and remaining platform/release checks: `docs/security/ELECTRON_RUNTIME_2026-10-25.md`.
@@ -1398,7 +1405,7 @@ Nächste Schritte: cfb → devDeps, Browser-Smoke (Pharaoh boot/Ball/Flipper/Bum
 ### 2026-11-03 — Compatible subset of Dependabot group #40
 
 - Updated CodeMirror, Vite8.3.5, Vitest/UI5.1.0, electron-builder26.18.0, ESLint10.14.0, TS-ESLint8.72.1, fake-indexeddb6.2.7, rollup4.67.4, tsx4.23.15 and security plugin4.2.1. Scoped minimatch >=9 to ^11.0.2, preserving legacy callable consumers.
-- Retained three0.162.0 (renderer migration requires dedicated visual/gameplay comparison), Electron43.8.3 (45 removes the existing Windows ia32 build target), TypeScript5.9.3 (7 is a separate strict compiler migration), and electron-updater6.8.9 (requires the macOS arm64 update-build verification in §3.5). Existing experimental Electron46 PR #34 is untouched. Do not merge the remaining group blindly.
+- Retained (historic) three0.162.0, Electron43.8.3, TypeScript5.9.3 and electron-updater6.8.9. **Superseded:** three reached 0.187 on 2026-11-18, Electron 45.3.2 with x64-only Windows targets, TypeScript 7 through the `typescript-native` alias. electron-updater still needs the macOS arm64 update-build verification in §3.5. Existing experimental Electron46 PR #34 is untouched.
 - GitHub open security alerts were zero. The npm registry reports a new minimatch denial-of-service advisory GHSA-g3hv-75wg-m249 in legacy Electron packaging tools: 15 propagated moderate development entries remain. @electron/asar and dir-compare call minimatch as a function; minimatch11 exports an object and cannot be forced into them. Production audit is clean; established full-audit high threshold passes. No audit suppressions or unsafe overrides.
 - Verified 972 unit tests plus one existing corpus skip, strict TypeScript, build, security lint/probes and 20 security regression checks. Production-build browser checks passed boot/reload and a complete three-ball demo game (2 passed); 2 private-corpus cases skipped because trusted reference paths were not supplied. No cabinet release or production deployment was produced.
 

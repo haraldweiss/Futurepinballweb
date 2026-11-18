@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.24.3 — 2026-11-18
+
+### Changed — Electron 45.3.2, Windows installers now x64-only
+
+- Electron **43.8.7 → 45.3.2**. The packaged runtime embeds Node **24.22.2** and
+  Chrome 156; the locally built unsigned macOS arm64 app starts and reports
+  `electron 45.3.2 / node 24.22.2 / chrome 156`.
+- **Windows ia32 removed** from the NSIS target. Electron 44 dropped the 32-bit
+  Windows binaries, so keeping ia32 would have pinned the project to Electron 43
+  (support ends January 2027). `nsis` and `portable` both stay **x64**, which is
+  what the cabinet runs. Windows installer builds are produced by the release
+  workflow on a Windows runner, not by the PR CI.
+- Verification: clean install, `npm run build` (TypeScript 7), 54 test files /
+  972 tests, `npm run security:check`, and an electron-builder `--dir` package
+  smoke on macOS arm64.
+
 ### 2026-11-04 — Stable Electron 43 security patch and modern FileList
 
 - Pin Electron **43.8.7**, released 3 November, with embedded **Node 24.22.1**. This closes the October embedded-Node version gap in the source/build runtime while retaining the existing Windows ia32 target; no major/platform migration or updater/preload changes.
