@@ -147,7 +147,15 @@ Don't fake verification. State explicitly what you ran and what you skipped.
 
 ### 2026-11-04 — Stable Electron 43 security patch and modern FileList
 
-- Pin Electron **43.8.7**, released 3 November, with embedded **Node 24.22.1**. This closes the October embedded-Node version gap in the source/build runtime while retaining the existing Windows ia32 target; no major/platform migration or updater/preload changes.
+- Pin Electron **45.3.2**, with embedded **Node 24.22.2**. This closes the
+  October embedded-Node version gap and moves to a supported stable series.
+  **Windows ia32 is dropped by decision (2026-11-18):** Electron 44 removed the
+  32-bit Windows binaries, so the NSIS `ia32` target was removed instead of
+  pinning 43 forever (support until January 2027); `portable` stays x64 and all
+  cabinet installations are x64. Evidence: unsigned `--dir` package build on
+  macOS arm64 starts and reports `electron 45.3.2 / node 24.22.2 / chrome 156`.
+  The Windows installer itself is still produced by the release workflow on a
+  Windows runner, not by PR CI.
 - Override transitive FileList to **^2.0.2**, preserving its CommonJS/Jake API and using the existing modern minimatch override. Twelve propagated moderate development findings remain from legacy minimatch 3 in Electron packaging dependencies; production audit is clean. No audit suppressions.
 - Verified clean install, npm 10.9.4 lock validation, strict TypeScript, **972 tests** plus the existing private-corpus skip, production build, canonical security gate, and independent dependency/FileList review. Built an unsigned macOS arm64 app with the normal packaging configuration; actual app reports Electron 43.8.7 / Node 24.22.1, sandbox/contextIsolation/webSecurity enabled and renderer require/process unavailable. Demo scored **50** after repeated normal coin/plunger/flipper inputs, with zero renderer errors. A single-launch probe initially scored zero; do not use one launch as a deterministic scoring test.
 - Local validation package only: no release published or cabinet deployment. Existing installations retain their previous embedded runtime until rebuilt packages are distributed. Runtime evidence and remaining platform/release checks: `docs/security/ELECTRON_RUNTIME_2026-10-25.md`.
