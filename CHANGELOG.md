@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.24.4] - 2026-11-25
+
+### Changed
+
+- Roll up the previously unpublished 0.24.2/0.24.3 changes and dependency
+  updates merged since 0.24.1, including Electron
+  **45.4.1**, electron-updater **6.8.11**, Three.js **0.187.0**, and the
+  TypeScript 7 compiler split described below.
+- Windows installers and portable builds are **x64-only**; 32-bit Windows is no
+  longer supported. macOS DMG/ZIP and Linux AppImage/DEB targets are retained.
+- Refresh the locked build, test and security tooling while preserving the
+  existing security overrides and dependency audit policy.
+
 ## v0.24.3 — 2026-11-18
 
 ### Changed — Electron 45.3.2, Windows installers now x64-only
